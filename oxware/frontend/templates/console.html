@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OXware – VM Konsol</title>
+  <link rel="icon" type="image/png" href="/static/img/sadeceikon.png">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .console-header {
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .console-header .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #00d4ff;
+    }
+
+    .console-header .logo img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 7px rgba(0,212,255,0.55));
+    }
+    .vm-name {
+      font-size: 13px;
+      color: #8b949e;
+    }
+    .vm-name span { color: #e6edf3; font-weight: 600; }
+    .spacer { flex: 1; }
+    .btn-small {
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid #30363d;
+      background: #21262d;
+      color: #e6edf3;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-small:hover { background: #30363d; border-color: #8b949e; }
+    .btn-small.danger { border-color: rgba(248,81,73,0.4); color: #f85149; }
+    .btn-small.danger:hover { background: rgba(248,81,73,0.1); }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #3fb950;
+      box-shadow: 0 0 6px #3fb950;
+    }
+    .status-dot.stopped { background: #6e7681; box-shadow: none; }
+    #novnc-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      position: relative;
+    }
+    #novnc-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    .loading-overlay .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid rgba(0,212,255,0.2);
+      border-top-color: #00d4ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    .loading-overlay p { color: #8b949e; font-size: 14px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="console-header">
+    <div class="logo">
+      <img src="/static/img/oxware2.png" alt="OXware"
+           onerror="this.style.display='none'">
+      OXware
+    </div>
+    <div class="vm-name">Konsol › <span id="vmNameLabel">Yükleniyor...</span></div>
+    <div class="status-dot" id="statusDot"></div>
+    <div class="spacer"></div>
+    <button class="btn-small" onclick="toggleFullscreen()">⛶ Tam Ekran</button>
+    <button class="btn-small danger" onclick="sendCtrlAltDel()">Ctrl+Alt+Del</button>
+    <button class="btn-small" onclick="window.close()">✕ Kapat</button>
+  </div>
+
+  <div id="novnc-container">
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="spinner"></div>
+      <p>VNC bağlantısı kuruluyor...</p>
+    </div>
+    <iframe id="novnc-iframe" style="display:none;"></iframe>
+  </div>
+
+  <script>
+    const vmId  = "{{ vm_id }}";
+    const token = localStorage.getItem("oxware_token") || localStorage.getItem("adaos_token");
+    if (!token) { window.location.href = "/login"; }
+
+    async function initConsole() {
+      try {
+        // Console bilgilerini al
+        const infoRes = await fetch(`/api/vms/${vmId}/console`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const info = await infoRes.json();
+
+        // VM bilgisini al
+        const vmRes = await fetch(`/api/vms/${vmId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const vmData = await vmRes.json();
+        const vm = vmData.vm || {};
+
+        document.getElementById("vmNameLabel").textContent = vm.name || vmId;
+        const dot = document.getElementById("statusDot");
+        dot.className = "status-dot" + (vm.state === "running" ? "" : " stopped");
+
+        // Websockify başlat
+        await fetch(`/api/vms/${vmId}/console/start`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const { host, websocket_port, vnc_port } = info;
+        const proto = location.protocol === "https:" ? "wss" : "ws";
+
+        // noVNC iframe URL
+        const novncUrl = `/novnc/vnc.html?` +
+          `host=${host}&` +
+          `port=${websocket_port}&` +
+          `path=websockify&` +
+          `encrypt=0&` +
+          `autoconnect=1&` +
+          `resize=scale&` +
+          `show_dot=1`;
+
+        const iframe = document.getElementById("novnc-iframe");
+        iframe.src = novncUrl;
+        iframe.style.display = "block";
+
+        iframe.onload = () => {
+          document.getElementById("loadingOverlay").style.display = "none";
+        };
+
+        setTimeout(() => {
+          document.getElementById("loadingOverlay").style.display = "none";
+        }, 5000);
+
+      } catch (e) {
+        document.querySelector(".loading-overlay p").textContent =
+          "Bağlantı kurulamadı: " + e.message;
+      }
+    }
+
+    function toggleFullscreen() {
+      const el = document.getElementById("novnc-container");
+      if (!document.fullscreenElement) {
+        el.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    function sendCtrlAltDel() {
+      try {
+        const iframe = document.getElementById("novnc-iframe");
+        iframe.contentWindow.postMessage({ type: "ctrlAltDel" }, "*");
+      } catch (e) {}
+    }
+
+    initConsole();
+  </script>
+</body>
+</html>

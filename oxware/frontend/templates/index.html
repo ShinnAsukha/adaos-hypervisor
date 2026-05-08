@@ -1,0 +1,2594 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OXware Hypervisor</title>
+  <link rel="icon" type="image/png" href="/static/img/sadeceikon.png">
+  <script src="/static/chart.umd.min.js"></script>
+  <script src="/static/socket.io.min.js"></script>
+  <link rel="stylesheet" href="/static/xterm.min.css">
+  <script src="/static/xterm.min.js"></script>
+  <script src="/static/addon-fit.min.js"></script>
+  <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    :root{
+      --bg:#080c14;--surface:#0e1420;--surface2:#141c2c;--surface3:#1a2438;
+      --border:#1e2d45;--border2:#253450;
+      --text:#c8d6e8;--text-muted:#5a7494;--text-dim:#3d5470;
+      --accent:#2a6dd9;--accent-lt:#3d82f0;
+      --green:#1a9e4a;--green-lt:#22c55e;
+      --red:#c0392b;--red-lt:#ef4444;
+      --yellow:#b07d10;--yellow-lt:#eab308;
+      --orange:#c2591a;
+      --topbar-h:44px;--tree-w:0px;--nav-w:200px;--taskbar-h:170px;
+    }
+    html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5}
+    a{color:inherit;text-decoration:none}
+    button{font-family:inherit;cursor:pointer}
+    ::-webkit-scrollbar{width:6px;height:6px}
+    ::-webkit-scrollbar-track{background:var(--surface)}
+    ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+    ::-webkit-scrollbar-thumb:hover{background:#2e4060}
+
+    /* App layout */
+    #app{display:flex;flex-direction:column;height:100vh}
+
+    /* ───── TOPBAR ───── */
+    #topbar{height:var(--topbar-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;flex-shrink:0;z-index:200}
+    .tb-logo{width:72px;height:100%;display:flex;align-items:center;justify-content:center;padding:0;border-right:1px solid var(--border);flex-shrink:0}
+    #tree-panel{display:none!important}
+    .tb-logo-icon{width:52px;height:52px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .tb-logo-icon img{width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(0,212,255,0.6))}
+    .tb-logo-icon .tb-logo-fb{width:40px;height:40px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center}
+    .tb-logo-icon .tb-logo-fb svg{width:24px;height:24px;fill:#fff}
+    .tb-logo-text{display:none}
+    .tb-logo-ver{display:none}
+    .tb-search{padding:0 12px;border-right:1px solid var(--border);height:100%;display:flex;align-items:center}
+    .tb-search input{background:var(--surface2);border:1px solid var(--border2);border-radius:3px;color:var(--text);font-size:12px;padding:5px 10px;width:200px;outline:none}
+    .tb-search input:focus{border-color:var(--accent)}
+    .tb-search input::placeholder{color:var(--text-dim)}
+    .tb-spacer{flex:1}
+    .tb-stats{height:100%;display:flex;align-items:center;border-left:1px solid var(--border);font-size:11px}
+    .tb-stat{display:flex;align-items:center;gap:5px;padding:0 12px;border-right:1px solid var(--border);height:100%;color:var(--text-muted)}
+    .tb-stat .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+    .tb-stat .dot.green{background:var(--green-lt)}
+    .tb-stat .dot.yellow{background:var(--yellow-lt)}
+    .tb-stat .val{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+    .tb-actions{display:flex;height:100%}
+    .tb-action{height:100%;padding:0 12px;background:none;border:none;border-right:1px solid var(--border);color:var(--text-muted);font-size:12px;display:flex;align-items:center;gap:6px;transition:background .12s,color .12s;white-space:nowrap}
+    .tb-action:hover{background:var(--surface2);color:var(--text)}
+    .tb-action.primary{background:var(--accent);color:#fff;border-right-color:var(--accent)}
+    .tb-action.primary:hover{background:var(--accent-lt)}
+    .tb-action svg{width:13px;height:13px;fill:currentColor}
+    .tb-user{height:100%;padding:0 14px;display:flex;align-items:center;gap:9px;cursor:pointer;transition:background .12s}
+    .tb-user:hover{background:var(--surface2)}
+    .tb-avatar{width:26px;height:26px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+    .tb-uname{font-size:12px;font-weight:600;line-height:1.1}
+    .tb-realm{font-size:10px;color:var(--text-muted)}
+
+    /* ───── 3-column ───── */
+    #middle{flex:1;display:flex;overflow:hidden;min-height:0}
+
+    /* ── Tree ── */
+    #tree-panel{width:var(--tree-w);background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0;user-select:none}
+    .tree-section-hdr{padding:9px 12px 4px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-dim);display:flex;align-items:center;justify-content:space-between}
+    .tree-section-hdr .refresh{cursor:pointer;color:var(--text-dim);font-size:12px}
+    .tree-section-hdr .refresh:hover{color:var(--accent-lt)}
+    .tree-item{display:flex;align-items:center;gap:6px;padding:5px 8px;margin:1px 4px;border-radius:3px;cursor:pointer;color:var(--text-muted);font-size:12px;transition:background .1s,color .1s;position:relative}
+    .tree-item:hover{background:var(--surface2);color:var(--text)}
+    .tree-item.selected{background:rgba(42,109,217,.18);color:var(--accent-lt)}
+    .tree-item.selected::before{content:'';position:absolute;left:0;top:3px;bottom:3px;width:2px;background:var(--accent);border-radius:1px}
+    .tree-item .t-icon{width:15px;height:15px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+    .tree-item .t-icon svg{width:13px;height:13px;fill:currentColor}
+    .tree-item .t-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .tree-item .t-badge{font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;text-transform:uppercase;flex-shrink:0;letter-spacing:.4px}
+    .t-badge.node{background:rgba(42,109,217,.2);color:#60a5fa}
+    .t-badge.dc{background:rgba(90,116,148,.2);color:#94a3b8}
+    .tree-dc{font-weight:600;color:var(--text)}
+    .tree-node{padding-left:16px}
+    .tree-vm{padding-left:30px;font-size:11.5px}
+    .vm-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+    .vm-dot.running{background:var(--green-lt)}
+    .vm-dot.stopped{background:var(--text-dim)}
+    .vm-dot.paused{background:var(--yellow-lt)}
+    .vm-dot.crashed{background:var(--red-lt)}
+    .vm-id{font-family:'Consolas',monospace;color:var(--text-dim);font-size:10px;margin-right:2px}
+
+    /* ── Context Nav ── */
+    #nav-panel{width:var(--nav-w);background:var(--surface2);border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0;padding:4px 0}
+    .ctx-section{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);padding:9px 12px 3px}
+    .ctx-item{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:12px;color:var(--text-muted);transition:background .1s,color .1s;position:relative}
+    .ctx-item:hover{background:rgba(255,255,255,.04);color:var(--text)}
+    .ctx-item.active{background:rgba(42,109,217,.14);color:var(--accent-lt)}
+    .ctx-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--accent)}
+    .ctx-item svg{width:13px;height:13px;fill:currentColor;flex-shrink:0}
+
+    /* ── Content ── */
+    #content-area{flex:1;overflow-y:auto;background:var(--bg)}
+    .page{display:none;padding:18px 22px}
+    .page.active{display:block}
+
+    /* ── Taskbar ── */
+    #taskbar{height:var(--taskbar-h);background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column}
+    .tb-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface2)}
+    .tb-tab{padding:6px 16px;font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .12s}
+    .tb-tab.active{color:var(--accent-lt);border-bottom-color:var(--accent)}
+    .tb-tab:hover{color:var(--text)}
+    .tb-tab-content{flex:1;overflow-y:auto;background:var(--surface)}
+    .task-table{width:100%;border-collapse:collapse}
+    .task-table th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text-dim);padding:5px 12px;background:var(--surface2);border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;position:sticky;top:0}
+    .task-table td{font-size:11px;padding:4px 12px;border-bottom:1px solid rgba(30,45,69,.4);white-space:nowrap;color:var(--text-muted)}
+    .task-table tr:hover td{background:var(--surface2);color:var(--text)}
+    .task-status{display:inline-flex;align-items:center;gap:4px}
+    .task-status.ok{color:var(--green-lt)}
+    .task-status.err{color:var(--red-lt)}
+    .task-status.running{color:var(--yellow-lt)}
+
+    /* ── Node Summary ── */
+    .node-hdr{margin-bottom:14px}
+    .node-hdr-title{font-size:14px;font-weight:700;color:var(--accent-lt)}
+    .node-hdr-uptime{font-size:11px;color:var(--text-muted);margin-left:8px;font-weight:400}
+
+    .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+    .summary-panel{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px 16px}
+    .summary-panel-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+
+    .res-row{display:flex;align-items:center;margin-bottom:11px;gap:10px}
+    .res-row:last-child{margin-bottom:0}
+    .res-lbl{width:95px;font-size:11px;color:var(--text-muted);flex-shrink:0;display:flex;align-items:center;gap:5px}
+    .res-lbl svg{width:11px;height:11px;fill:currentColor;flex-shrink:0}
+    .res-bar{flex:1;height:6px;background:var(--surface3);border-radius:2px;overflow:hidden;min-width:80px}
+    .res-bar-fill{height:100%;border-radius:2px;transition:width .4s;background:var(--accent-lt)}
+    .res-bar-fill.cpu{background:#3d82f0}
+    .res-bar-fill.mem{background:#22c55e}
+    .res-bar-fill.disk{background:#eab308}
+    .res-bar-fill.swap{background:#f97316}
+    .res-bar-fill.red{background:var(--red-lt)}
+    .res-val{width:170px;font-size:11px;color:var(--text);text-align:right;font-variant-numeric:tabular-nums;flex-shrink:0}
+
+    .info-table{width:100%;border-collapse:collapse}
+    .info-table td{font-size:11.5px;padding:5px 0;border-bottom:1px solid rgba(30,45,69,.4);vertical-align:top}
+    .info-table td:first-child{color:var(--text-muted);width:160px;padding-right:14px}
+    .info-table tr:last-child td{border-bottom:none}
+
+    .chart-panel{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:12px 16px;margin-bottom:14px}
+    .chart-panel-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .chart-panel-title{font-size:11px;font-weight:700;color:var(--accent-lt);text-transform:uppercase;letter-spacing:.5px}
+    .chart-legend{display:flex;align-items:center;gap:14px;font-size:10px;color:var(--text-muted)}
+    .legend-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
+    .chart-container{height:130px;position:relative}
+
+    /* ── VM Detail ── */
+    .vm-detail-hdr{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .vm-detail-hdr h2{font-size:15px;font-weight:700;color:var(--accent-lt)}
+    .vm-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+    .vm-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:12px 14px;border-left:3px solid var(--accent)}
+    .vm-stat-card.green{border-left-color:var(--green-lt)}
+    .vm-stat-card.yellow{border-left-color:var(--yellow-lt)}
+    .vm-stat-card.red{border-left-color:var(--red-lt)}
+    .vm-stat-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);margin-bottom:5px}
+    .vm-stat-value{font-size:20px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.1}
+    .vm-stat-sub{font-size:11px;color:var(--text-muted);margin-top:3px}
+
+    /* ── Section header ── */
+    .section-header{display:flex;align-items:flex-start;margin-bottom:12px;gap:10px}
+    .section-header h2{font-size:14px;font-weight:700;color:var(--text)}
+    .section-header h2 + p,.section-header div p{font-size:11px;color:var(--text-muted);margin-top:1px}
+    .spacer{flex:1}
+
+    /* ── Buttons ── */
+    .btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:12px;font-weight:500;cursor:pointer;transition:background .12s,border-color .12s;white-space:nowrap}
+    .btn:hover{background:var(--surface2);border-color:var(--accent)}
+    .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+    .btn.primary:hover{background:var(--accent-lt);border-color:var(--accent-lt)}
+    .btn.success{color:var(--green-lt);border-color:rgba(34,197,94,.3)}
+    .btn.success:hover{background:rgba(34,197,94,.1);border-color:var(--green-lt)}
+    .btn.danger{color:var(--red-lt);border-color:rgba(192,57,43,.3)}
+    .btn.danger:hover{background:rgba(192,57,43,.15);border-color:var(--red-lt)}
+    .btn.sm{padding:4px 8px;font-size:11px}
+
+    /* ── Badges ── */
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;border:1px solid}
+    .badge-dot{width:5px;height:5px;border-radius:50%}
+    .badge.running{color:var(--green-lt);border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.1)}
+    .badge.running .badge-dot{background:var(--green-lt)}
+    .badge.stopped{color:var(--text-dim);border-color:rgba(61,84,112,.3);background:rgba(61,84,112,.1)}
+    .badge.stopped .badge-dot{background:var(--text-dim)}
+    .badge.paused{color:var(--yellow-lt);border-color:rgba(234,179,8,.3);background:rgba(234,179,8,.1)}
+    .badge.paused .badge-dot{background:var(--yellow-lt)}
+    .badge.crashed{color:var(--red-lt);border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.1)}
+    .badge.crashed .badge-dot{background:var(--red-lt)}
+    .badge.active{color:var(--green-lt);border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.1)}
+    .badge.active .badge-dot{background:var(--green-lt)}
+    .badge.inactive{color:var(--text-dim);border-color:rgba(61,84,112,.3);background:rgba(61,84,112,.1)}
+    .badge.green{color:var(--green-lt);border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.1)}
+    .badge.gray{color:var(--text-dim);border-color:rgba(61,84,112,.3);background:rgba(61,84,112,.1)}
+
+    /* ── Progress ── */
+    .progress-bar{height:4px;background:var(--surface3);border-radius:2px;overflow:hidden}
+    .progress-fill{height:100%;border-radius:2px;transition:width .3s}
+    .progress-fill.blue{background:var(--accent-lt)}
+    .progress-fill.green{background:var(--green-lt)}
+    .progress-fill.red{background:var(--red-lt)}
+    .progress-fill.yellow{background:var(--yellow-lt)}
+
+    /* ── Tables ── */
+    .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:4px;background:var(--surface)}
+    table{width:100%;border-collapse:collapse}
+    thead th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim);padding:8px 12px;background:var(--surface2);border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+    tbody td{padding:8px 12px;border-bottom:1px solid rgba(30,45,69,.5);font-size:12px}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover td{background:var(--surface2)}
+
+    /* ── Forms ── */
+    .form-row{margin-bottom:12px}
+    .form-row label{display:block;font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.6px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .form-hint{font-size:10px;color:var(--text-dim);margin-top:3px}
+    input[type=text],input[type=password],input[type=number],input[type=email],select,textarea{width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:12px;outline:none;font-family:inherit}
+    input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+
+    /* ── Modal ── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;display:none;align-items:center;justify-content:center}
+    .modal-overlay.open{display:flex}
+    .modal{background:var(--surface);border:1px solid var(--border2);border-radius:6px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto}
+    .modal-header{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .modal-header h2,.modal-header h3{font-size:13px;font-weight:700}
+    .modal-close{background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:2px 6px;border-radius:3px}
+    .modal-close:hover{background:var(--surface2);color:var(--text)}
+    .modal-body{padding:18px}
+    .modal-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+
+    /* ── Toast ── */
+    #toast-container{position:fixed;bottom:calc(var(--taskbar-h) + 18px);right:18px;z-index:2000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+    .toast{display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--surface2);border:1px solid var(--border2);border-left:3px solid var(--accent);border-radius:4px;font-size:12px;color:var(--text);min-width:240px;max-width:380px;animation:slideIn .2s ease;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+    @keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+    .toast.success{border-left-color:var(--green-lt)}
+    .toast.error{border-left-color:var(--red-lt)}
+    .toast-icon{font-size:14px;flex-shrink:0}
+
+    /* ── Empty ── */
+    .empty-state{text-align:center;padding:28px 20px;color:var(--text-muted)}
+    .empty-state .icon{font-size:26px;margin-bottom:8px}
+    .empty-state h3{font-size:13px;color:var(--text);margin-bottom:4px}
+    .empty-state p{font-size:11px}
+
+    /* ── Settings tabs ── */
+    .settings-tab{background:none;border:none;border-bottom:2px solid transparent;padding:7px 14px;font-size:12px;cursor:pointer;color:var(--text-muted);transition:color .12s,border-color .12s;margin-bottom:-1px}
+    .settings-tab.active{color:var(--accent-lt);border-bottom-color:var(--accent)}
+    .settings-tab:hover{color:var(--text)}
+
+    .action-btns{display:flex;gap:4px;flex-wrap:wrap}
+    code{font-family:'Consolas','Courier New',monospace;font-size:11px;background:var(--surface2);padding:1px 4px;border-radius:2px;color:var(--accent-lt)}
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:14px}
+    .chart-card h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);margin-bottom:10px}
+    .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+
+    .info-list{display:grid;grid-template-columns:1fr;gap:0}
+    .info-row{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(30,45,69,.4);font-size:12px}
+    .info-row:last-child{border-bottom:none}
+    .info-key{color:var(--text-muted);width:140px;flex-shrink:0}
+    .info-val{color:var(--text)}
+
+    .spinner-sm{width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .user-avatar{width:30px;height:30px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+
+    /* Card */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px 16px}
+    .card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--accent-lt);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+
+    /* Topology */
+    #topo-canvas-wrap{position:relative;border:1px solid var(--border);border-radius:4px;background:var(--surface);overflow:hidden}
+    #topo-svg{width:100%;height:100%;cursor:grab;display:block}
+    #topo-svg:active{cursor:grabbing}
+    #topo-controls{position:absolute;top:10px;right:10px;display:flex;gap:6px}
+    #topo-detail{position:absolute;top:10px;left:10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:12px 14px;width:240px;display:none;font-size:11px}
+    #topo-detail h4{margin-bottom:8px;color:var(--accent-lt);font-size:12px}
+    #topo-close{position:absolute;top:6px;right:8px;cursor:pointer;color:var(--text-muted)}
+    #topo-legend{position:absolute;bottom:10px;right:10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:8px 10px;font-size:10px}
+    #topo-legend .legend-item{display:flex;align-items:center;gap:5px;margin-bottom:3px}
+    #topo-legend .legend-item:last-child{margin-bottom:0}
+    #topo-legend .legend-dot{width:8px;height:8px;border-radius:50%}
+
+    /* Agent card */
+    .agent-card{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:4px;margin-bottom:6px}
+    .agent-status{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .agent-cron{font-size:10px;padding:2px 6px;background:rgba(42,109,217,.15);border:1px solid rgba(42,109,217,.25);border-radius:2px;color:var(--accent-lt);font-family:'Consolas',monospace}
+
+    /* Shell console */
+    #shell-container{background:#0a0a0a;border-radius:4px;border:1px solid var(--border);overflow:hidden;height:460px;position:relative}
+    #shell-terminal{height:100%;width:100%}
+    .shell-toolbar{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0}
+    .shell-toolbar-title{font-size:11px;font-weight:700;color:var(--accent-lt);flex:1}
+    .shell-status{width:8px;height:8px;border-radius:50%;background:var(--text-dim);flex-shrink:0}
+    .shell-status.connected{background:var(--green-lt);box-shadow:0 0 6px var(--green-lt)}
+    .shell-status.disconnected{background:var(--red-lt)}
+
+    /* Fix: ensure ctx-item svg always renders */
+    .ctx-item svg{display:inline-block;vertical-align:middle}
+    .tree-item svg{display:inline-block;vertical-align:middle}
+    .tb-action svg{display:inline-block;vertical-align:middle}
+    .btn svg{display:inline-block;vertical-align:middle}
+  </style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ────────── TOPBAR ────────── -->
+  <header id="topbar">
+    <div class="tb-logo">
+      <div class="tb-logo-icon">
+        <img src="/static/img/oxware2.png" alt="OXware"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="tb-logo-fb" style="display:none;">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18L20 8.5v7l-8 4-8-4v-7l8-4.32zM12 7a5 5 0 100 10A5 5 0 0012 7zm0 2a3 3 0 110 6 3 3 0 010-6z"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="tb-search">
+      <input type="text" placeholder="🔍 Ara..." id="topbarSearch" oninput="filterTree(this.value)">
+    </div>
+
+    <div class="tb-spacer"></div>
+
+    <div class="tb-stats">
+      <div class="tb-stat"><div class="dot green"></div>CPU <span class="val" id="tb-cpu">0%</span></div>
+      <div class="tb-stat"><div class="dot yellow"></div>RAM <span class="val" id="tb-ram">0%</span></div>
+      <div class="tb-stat">VM <span class="val" id="tb-vms">0/0</span></div>
+    </div>
+
+    <div class="tb-actions">
+      <button class="tb-action primary" onclick="openCreateVMModal()">
+        <svg viewBox="0 0 16 16"><path d="M8 4a.5.5 0 01.5.5v3h3a.5.5 0 010 1h-3v3a.5.5 0 01-1 0v-3h-3a.5.5 0 010-1h3v-3A.5.5 0 018 4z"/></svg>
+        Create VM
+      </button>
+      <button class="tb-action" onclick="navigate('updates')">
+        <svg viewBox="0 0 16 16"><path d="M11.534 7h3.932a.25.25 0 01.192.41l-1.966 2.36a.25.25 0 01-.384 0l-1.966-2.36a.25.25 0 01.192-.41zm-11 2h3.932a.25.25 0 00.192-.41L2.692 6.23a.25.25 0 00-.384 0L.342 8.59A.25.25 0 00.534 9z"/></svg>
+        Updates <span id="update-badge" style="display:none;background:var(--orange);color:#000;font-size:9px;font-weight:700;border-radius:8px;padding:1px 5px">!</span>
+      </button>
+      <button class="tb-action" onclick="confirmShutdown('reboot')">
+        <svg viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 00-1 0V9a.5.5 0 00.252.434l3.5 2a.5.5 0 00.496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 108 0a8 8 0 000 16zm7-8A7 7 0 111 8a7 7 0 0114 0z"/></svg>
+        Reboot
+      </button>
+      <button class="tb-action" onclick="confirmShutdown('shutdown')">
+        <svg viewBox="0 0 16 16"><path d="M7.5 1v7h1V1h-1z"/><path d="M3 8.812a4.999 4.999 0 012.578-4.375l-.485-.874A6 6 0 1011 3.616l-.501.865A5 5 0 113 8.812z"/></svg>
+        Shutdown
+      </button>
+      <a class="tb-action" href="/docs" target="_blank">
+        <svg viewBox="0 0 16 16"><path d="M8 16A8 8 0 118 0a8 8 0 010 16zM8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13z"/><path d="M5.255 5.786a.237.237 0 00.241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 00.25.246h.811a.25.25 0 00.25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/></svg>
+        Help
+      </a>
+    </div>
+
+    <div class="tb-user" onclick="logout()">
+      <div class="tb-avatar" id="tbAvatar">A</div>
+      <div>
+        <div class="tb-uname" id="tbUsername">admin</div>
+        <div class="tb-realm" id="tbRealm">administrator</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ────────── MIDDLE: 3-column ────────── -->
+  <div id="middle">
+
+    <!-- ── Tree Panel ── -->
+    <div id="tree-panel">
+      <div class="tree-section-hdr">
+        <span>Server View</span>
+        <span class="refresh" onclick="refreshTreeVMs()" title="Yenile">↻</span>
+      </div>
+
+      <!-- Node -->
+      <div class="tree-item tree-node selected" id="tree-node-item" onclick="selectTreeItem('node')">
+        <div class="t-icon">
+          <svg viewBox="0 0 16 16"><path d="M0 4s0-2 2-2h12s2 0 2 2v6s0 2-2 2h-4c0 .667.083 1.167.25 1.5H11a.5.5 0 010 1H5a.5.5 0 010-1h.75c.167-.333.25-.833.25-1.5H2s-2 0-2-2V4z"/></svg>
+        </div>
+        <span class="t-name" id="tree-node-name">oxware</span>
+        <span class="t-badge node">NODE</span>
+      </div>
+
+      <!-- VM list (injected) -->
+      <div id="tree-vm-list"></div>
+    </div>
+
+    <!-- ── Context Nav (middle) ── -->
+    <div id="nav-panel"></div>
+
+    <!-- ── Content Area ── -->
+    <div id="content-area">
+      <div id="content">
+
+        <!-- ─────── Node Summary Page ─────── -->
+        <div class="page active" id="page-summary">
+          <div class="node-hdr">
+            <div class="node-hdr-title">Node '<span id="ns-hostname">oxware</span>'<span class="node-hdr-uptime">(Uptime: <span id="ns-uptime">—</span>)</span></div>
+          </div>
+
+          <div class="summary-grid">
+            <!-- Left: Resources -->
+            <div class="summary-panel">
+              <div class="summary-panel-title">Kaynaklar</div>
+
+              <div class="res-row">
+                <div class="res-lbl">
+                  <svg viewBox="0 0 16 16"><path d="M5 0a.5.5 0 01.5.5V2h1V.5a.5.5 0 011 0V2h1V.5a.5.5 0 011 0V2h1V.5a.5.5 0 011 0V2A2.5 2.5 0 0114 4.5h1.5a.5.5 0 010 1H14v1h1.5a.5.5 0 010 1H14v1h1.5a.5.5 0 010 1H14v1h1.5a.5.5 0 010 1H14a2.5 2.5 0 01-2.5 2.5v1.5a.5.5 0 01-1 0V14h-1v1.5a.5.5 0 01-1 0V14h-1v1.5a.5.5 0 01-1 0V14h-1v1.5a.5.5 0 01-1 0V14A2.5 2.5 0 012 11.5H.5a.5.5 0 010-1H2v-1H.5a.5.5 0 010-1H2v-1H.5a.5.5 0 010-1H2v-1H.5a.5.5 0 010-1H2A2.5 2.5 0 014.5 2V.5A.5.5 0 015 0zm-.5 3A1.5 1.5 0 003 4.5v7A1.5 1.5 0 004.5 13h7a1.5 1.5 0 001.5-1.5v-7A1.5 1.5 0 0011.5 3h-7zM5 6.5A1.5 1.5 0 016.5 5h3A1.5 1.5 0 0111 6.5v3A1.5 1.5 0 019.5 11h-3A1.5 1.5 0 015 9.5v-3z"/></svg>
+                  CPU usage
+                </div>
+                <div class="res-bar"><div class="res-bar-fill cpu" id="ns-cpu-bar" style="width:0%"></div></div>
+                <div class="res-val" id="ns-cpu-val">— of — CPU(s)</div>
+              </div>
+
+              <div class="res-row">
+                <div class="res-lbl">Load average</div>
+                <div style="flex:1"></div>
+                <div class="res-val" id="ns-load">—</div>
+              </div>
+
+              <div class="res-row">
+                <div class="res-lbl">
+                  <svg viewBox="0 0 16 16"><path d="M1 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-1 1H2a1 1 0 01-1-1V3zm14 0H2v3h12V3zM1 10a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-1 1H2a1 1 0 01-1-1v-3zm14 0H2v3h12v-3z"/></svg>
+                  RAM usage
+                </div>
+                <div class="res-bar"><div class="res-bar-fill mem" id="ns-ram-bar" style="width:0%"></div></div>
+                <div class="res-val" id="ns-ram-val">— / —</div>
+              </div>
+
+              <div class="res-row">
+                <div class="res-lbl">
+                  <svg viewBox="0 0 16 16"><path d="M2 5a2 2 0 012-2h8a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V5z"/></svg>
+                  / HD space
+                </div>
+                <div class="res-bar"><div class="res-bar-fill disk" id="ns-disk-bar" style="width:0%"></div></div>
+                <div class="res-val" id="ns-disk-val">— / —</div>
+              </div>
+
+              <div class="res-row">
+                <div class="res-lbl">SWAP usage</div>
+                <div class="res-bar"><div class="res-bar-fill swap" id="ns-swap-bar" style="width:0%"></div></div>
+                <div class="res-val" id="ns-swap-val">— / —</div>
+              </div>
+            </div>
+
+            <!-- Right: System Info -->
+            <div class="summary-panel">
+              <div class="summary-panel-title">Sistem Bilgisi</div>
+              <table class="info-table">
+                <tr><td>CPU(s)</td><td id="ns-cpuinfo">—</td></tr>
+                <tr><td>Kernel Version</td><td id="ns-kernel">—</td></tr>
+                <tr><td>KVM Available</td><td id="ns-kvm">—</td></tr>
+                <tr><td>Architecture</td><td id="ns-arch">—</td></tr>
+                <tr><td>IO Delay</td><td id="ns-iodelay">—</td></tr>
+                <tr><td>Hypervisor</td><td id="ns-hv">QEMU/KVM</td></tr>
+                <tr><td>OXware Version</td><td id="ns-oxware-ver">2.0.0</td></tr>
+              </table>
+            </div>
+          </div>
+
+          <!-- CPU Chart -->
+          <div class="chart-panel">
+            <div class="chart-panel-hdr">
+              <div class="chart-panel-title">CPU Usage</div>
+              <div class="chart-legend">
+                <span><span class="legend-dot" style="background:#3d82f0"></span>CPU usage</span>
+              </div>
+            </div>
+            <div class="chart-container"><canvas id="cpuChart"></canvas></div>
+          </div>
+
+          <!-- Memory Chart -->
+          <div class="chart-panel">
+            <div class="chart-panel-hdr">
+              <div class="chart-panel-title">Memory Usage</div>
+              <div class="chart-legend">
+                <span><span class="legend-dot" style="background:#22c55e"></span>RAM usage</span>
+              </div>
+            </div>
+            <div class="chart-container"><canvas id="ramChart"></canvas></div>
+          </div>
+
+          <!-- Server Load Chart -->
+          <div class="chart-panel">
+            <div class="chart-panel-hdr">
+              <div class="chart-panel-title">Server Load</div>
+              <div class="chart-legend">
+                <span><span class="legend-dot" style="background:#eab308"></span>Load average (1m)</span>
+              </div>
+            </div>
+            <div class="chart-container"><canvas id="loadChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- ─────── VM Detail Page ─────── -->
+        <div class="page" id="page-vm-detail">
+          <div class="vm-detail-hdr">
+            <h2>VM '<span id="vd-name">—</span>'</h2>
+            <span id="vd-state-badge"></span>
+            <div class="spacer"></div>
+            <div class="action-btns" id="vd-actions"></div>
+          </div>
+
+          <div class="vm-stat-grid">
+            <div class="vm-stat-card green">
+              <div class="vm-stat-label">Durum</div>
+              <div class="vm-stat-value" id="vd-state">—</div>
+              <div class="vm-stat-sub" id="vd-uptime">—</div>
+            </div>
+            <div class="vm-stat-card">
+              <div class="vm-stat-label">CPU</div>
+              <div class="vm-stat-value" id="vd-cpu">—</div>
+              <div class="vm-stat-sub">vCPU</div>
+            </div>
+            <div class="vm-stat-card yellow">
+              <div class="vm-stat-label">Bellek</div>
+              <div class="vm-stat-value" id="vd-mem">—</div>
+              <div class="vm-stat-sub">MB</div>
+            </div>
+            <div class="vm-stat-card">
+              <div class="vm-stat-label">Disk</div>
+              <div class="vm-stat-value" id="vd-disk">—</div>
+              <div class="vm-stat-sub" id="vd-disk-sub">GB</div>
+            </div>
+          </div>
+
+          <div class="section-header"><h2>Donanım</h2></div>
+          <div class="table-wrap" style="margin-bottom:14px">
+            <table>
+              <thead><tr><th>Tip</th><th>Detay</th></tr></thead>
+              <tbody id="vd-hw-tbody"></tbody>
+            </table>
+          </div>
+
+          <div class="section-header"><h2>Snapshot'lar</h2></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Ad</th><th>Tarih</th><th>Açıklama</th><th>İşlem</th></tr></thead>
+              <tbody id="vd-snap-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ─────── Host Shell Console Page ─────── -->
+        <div class="page" id="page-console">
+          <div class="section-header">
+            <div>
+              <h2>Host Shell Console</h2>
+              <p>Hypervisor üzerinde komut çalıştırın. Root yetkisiyle çalışır.</p>
+            </div>
+            <div class="spacer"></div>
+            <button class="btn sm" id="shell-connect-btn" onclick="shellToggleConnect()">▶ Bağlan</button>
+            <button class="btn sm" onclick="shellClear()">✕ Temizle</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:4px;overflow:hidden">
+            <div class="shell-toolbar">
+              <div class="shell-status disconnected" id="shell-status-dot"></div>
+              <div class="shell-toolbar-title">root@<span id="shell-hostname">oxware</span>:~#</div>
+              <span style="font-size:10px;color:var(--text-dim)" id="shell-status-text">Bağlı değil</span>
+            </div>
+            <div id="shell-container">
+              <div id="shell-terminal"></div>
+            </div>
+          </div>
+          <div style="margin-top:12px">
+            <div class="section-header"><h2>Hızlı Komutlar</h2></div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <button class="btn sm" onclick="shellSend('top -bn1 | head -20\n')">top</button>
+              <button class="btn sm" onclick="shellSend('df -h\n')">df -h</button>
+              <button class="btn sm" onclick="shellSend('free -h\n')">free -h</button>
+              <button class="btn sm" onclick="shellSend('uptime\n')">uptime</button>
+              <button class="btn sm" onclick="shellSend('virsh list --all\n')">virsh list</button>
+              <button class="btn sm" onclick="shellSend('systemctl status libvirtd\n')">libvirtd status</button>
+              <button class="btn sm" onclick="shellSend('journalctl -n 50 --no-pager\n')">journal</button>
+              <button class="btn sm" onclick="shellSend('ip a\n')">ip a</button>
+              <button class="btn sm" onclick="shellSend('lsblk\n')">lsblk</button>
+              <button class="btn sm" onclick="shellSend('ps aux --sort=-%cpu | head -15\n')">ps top cpu</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─────── VMs List Page ─────── -->
+        <div class="page" id="page-vms">
+          <div class="section-header">
+            <h2>Sanal Makineler</h2>
+            <div class="spacer"></div>
+            <button class="btn" onclick="loadVMs()">↻ Yenile</button>
+            <button class="btn primary" onclick="openCreateVMModal()">+ Yeni VM</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Ad</th><th>Durum</th><th>CPU</th><th>Bellek</th><th>Disk</th><th>Ağ</th><th>İşlemler</th></tr></thead>
+              <tbody id="vm-tbody">
+                <tr><td colspan="7"><div class="empty-state"><div class="spinner-sm"></div><p style="margin-top:8px">Yükleniyor...</p></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ─────── Networks Page ─────── -->
+        <div class="page" id="page-networks">
+          <div class="section-header">
+            <h2>Ağ Yönetimi</h2>
+            <div class="spacer"></div>
+            <button class="btn" onclick="loadNetworks()">↻ Yenile</button>
+            <button class="btn primary" onclick="openCreateNetworkModal()">+ Yeni Ağ</button>
+          </div>
+          <div class="table-wrap" style="margin-bottom:14px">
+            <table>
+              <thead><tr><th>Ad</th><th>Durum</th><th>Yönlendirme</th><th>IP Adresi</th><th>Köprü</th><th>DHCP</th><th>İşlemler</th></tr></thead>
+              <tbody id="net-tbody"><tr><td colspan="7"><div class="empty-state"><p>Yükleniyor...</p></div></td></tr></tbody>
+            </table>
+          </div>
+          <div class="section-header"><h2>Host Arayüzleri</h2></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Arayüz</th><th>Durum</th><th>MAC</th><th>IP Adresleri</th><th>MTU</th></tr></thead>
+              <tbody id="iface-tbody"><tr><td colspan="5"><div class="empty-state"><p>Yükleniyor...</p></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ─────── Storage Page ─────── -->
+        <div class="page" id="page-storage">
+          <div class="section-header">
+            <div>
+              <h2>Depolama</h2>
+              <p>Disk birimleri, ISO kütüphanesi ve host disk takibi.</p>
+            </div>
+            <div class="spacer"></div>
+            <button class="btn" onclick="loadStorage()">↻ Yenile</button>
+            <button class="btn primary" onclick="openCreatePoolModal()">+ Havuz Ekle</button>
+          </div>
+          <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:18px">
+            <button class="settings-tab active" data-stab="pools" onclick="switchStorageTab('pools')">⊞ Volumes</button>
+            <button class="settings-tab" data-stab="isos" onclick="switchStorageTab('isos')">◎ ISO Library</button>
+            <button class="settings-tab" data-stab="hostdisk" onclick="switchStorageTab('hostdisk')">▣ Host Disks</button>
+          </div>
+          <div id="storage-tab-pools">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Ad</th><th>Durum</th><th>Tür</th><th>Yol</th><th>Kapasite</th><th>Kullanılan</th><th>Boş</th><th>İşlemler</th></tr></thead>
+                <tbody id="pool-tbody"><tr><td colspan="8"><div class="empty-state"><p>Yükleniyor...</p></div></td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="storage-tab-isos" style="display:none">
+            <div class="section-header" style="margin-bottom:10px">
+              <span style="font-size:11px;color:var(--text-muted)">Kurulum için kullanılacak ISO imaj dosyaları.</span>
+              <div class="spacer"></div>
+              <label class="btn primary" style="cursor:pointer">↑ ISO Yükle <input type="file" accept=".iso" style="display:none" onchange="uploadISO(this)"></label>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Dosya Adı</th><th>Boyut</th><th>İşlemler</th></tr></thead>
+                <tbody id="iso-tbody"><tr><td colspan="3"><div class="empty-state"><p>Yükleniyor...</p></div></td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="storage-tab-hostdisk" style="display:none">
+            <div style="margin-bottom:18px">
+              <div style="margin-bottom:8px">
+                <div style="font-size:12px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.6px">Active VM-disk Pools</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:3px">Yeni VM'ler en çok boş alana sahip aktif havuza yazılır.</div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>LABEL</th><th>PATH</th><th>FREE / TOTAL</th><th>ACTIVE</th></tr></thead>
+                  <tbody id="vmdisk-pool-tbody"><tr><td colspan="4"><div class="empty-state"><p>Yükleniyor...</p></div></td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <div style="margin-bottom:8px">
+                <div style="font-size:12px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.6px">Detected Host Disks</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:3px">Host üzerindeki blok aygıtları.</div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>DEVICE</th><th>MODEL</th><th>SIZE</th><th>TYPE</th><th>STATUS</th><th>MOUNT</th><th>KULLANIM</th><th>ACTION</th></tr></thead>
+                  <tbody id="block-dev-tbody"><tr><td colspan="8"><div class="empty-state"><p>Yükleniyor...</p></div></td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─────── Monitor Page ─────── -->
+        <div class="page" id="page-monitor">
+          <div class="section-header"><h2>Sistem İzleme</h2><div class="spacer"></div><button class="btn sm" onclick="loadMonitor()">↻</button></div>
+          <div class="charts-row">
+            <div class="chart-card">
+              <h3>Sistem Bilgisi</h3>
+              <div class="info-list" id="sys-info-list"><p style="color:var(--text-muted)">Yükleniyor...</p></div>
+            </div>
+            <div class="chart-card">
+              <h3>Kaynak Durumu</h3>
+              <div id="res-monitor-detail"></div>
+            </div>
+          </div>
+          <div class="section-header"><h2>Süreçler (Top 20)</h2><div class="spacer"></div><button class="btn sm" onclick="loadProcesses()">↻</button></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>PID</th><th>Süreç</th><th>CPU %</th><th>RAM %</th><th>Durum</th><th>Kullanıcı</th></tr></thead>
+              <tbody id="proc-tbody"><tr><td colspan="6"><div class="empty-state"><p>Yükleniyor...</p></div></td></tr></tbody>
+            </table>
+          </div>
+          <div style="margin-top:18px">
+            <div class="section-header"><h2>Disk Kullanımı</h2></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Aygıt</th><th>FS</th><th>Boyut</th><th>Kullanılan</th><th>Boş</th><th>Doluluk</th><th>Bağlama</th></tr></thead>
+                <tbody id="disk-tbody"><tr><td colspan="7"><div class="empty-state"><p>Yükleniyor...</p></div></td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─────── Users Page ─────── -->
+        <div class="page" id="page-users">
+          <div class="section-header">
+            <h2>Kullanıcı Yönetimi</h2>
+            <div class="spacer"></div>
+            <button class="btn primary" onclick="openCreateUserModal()">+ Kullanıcı Ekle</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Kullanıcı Adı</th><th>Rol</th><th>Oluşturulma</th><th>İşlemler</th></tr></thead>
+              <tbody id="users-tbody"><tr><td colspan="4"><div class="empty-state"><p>Yükleniyor...</p></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ─────── Topology Page ─────── -->
+        <div class="page" id="page-topology">
+          <div class="section-header">
+            <h2>Ağ Topoloji Haritası</h2>
+            <div class="spacer"></div>
+            <button class="btn" onclick="loadTopology()">↻ Yenile</button>
+            <button class="btn" onclick="topoFit()">⊡ Sığdır</button>
+          </div>
+          <div id="topo-canvas-wrap" style="height:560px">
+            <svg id="topo-svg" viewBox="0 0 1200 680" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#30363d"/></marker>
+                <filter id="glow-green"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                <filter id="glow-blue"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              </defs>
+              <g id="topo-root"></g>
+            </svg>
+            <div id="topo-controls">
+              <button class="btn sm" onclick="topoZoom(1.2)">＋</button>
+              <button class="btn sm" onclick="topoZoom(0.8)">－</button>
+            </div>
+            <div id="topo-detail">
+              <span id="topo-close" onclick="document.getElementById('topo-detail').style.display='none'">✕</span>
+              <h4 id="det-title">—</h4>
+              <div id="det-body"></div>
+            </div>
+            <div id="topo-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:#3d82f0"></div>Hypervisor</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div>Aktif Ağ / Çalışan VM</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#5a7494"></div>Pasif</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>Çöktü</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─────── Snapshots Page ─────── -->
+        <div class="page" id="page-snapshots">
+          <div class="section-header">
+            <h2>Snapshot Yönetimi</h2>
+            <div class="spacer"></div>
+            <button class="btn" onclick="loadSnapshots()">↻ Yenile</button>
+          </div>
+          <div style="margin-bottom:14px;display:flex;align-items:center;gap:10px">
+            <label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">VM Seç</label>
+            <select id="snap-vm-select" onchange="loadSnapshotsForVM(this.value)" style="min-width:240px">
+              <option value="">— VM seçin —</option>
+            </select>
+            <div class="spacer"></div>
+            <button class="btn primary" onclick="openCreateSnapModal()" id="btn-create-snap" disabled>📷 Snapshot Al</button>
+          </div>
+          <div id="snap-list">
+            <div class="empty-state"><div class="icon">📸</div><h3>VM seçin</h3><p>Snapshot görmek için yukarıdan bir VM seçin</p></div>
+          </div>
+          <div id="snap-timeline" style="margin-top:14px;display:none">
+            <div class="section-header"><h2>Zaman Çizelgesi</h2></div>
+            <div id="snap-timeline-inner" style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:18px;position:relative;min-height:80px"></div>
+          </div>
+        </div>
+
+        <!-- ─────── Settings Page ─────── -->
+        <div class="page" id="page-settings">
+          <div class="section-header"><h2>Ayarlar</h2></div>
+          <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:18px">
+            <button class="settings-tab active" data-tab="notifications" onclick="switchSettingsTab('notifications')">🔔 Bildirimler</button>
+            <button class="settings-tab" data-tab="ai" onclick="switchSettingsTab('ai')">🤖 AI Ajanlar</button>
+          </div>
+          <div id="settings-tab-notifications">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="card">
+                <div class="card-title">📱 Telegram</div>
+                <div class="form-row"><label>Bot Token</label><input id="tg-token" type="password" placeholder="123456789:AAFxxxxxx" autocomplete="off"></div>
+                <div class="form-row"><label>Chat ID</label><input id="tg-chat-id" placeholder="123456789"></div>
+                <div style="display:flex;gap:8px;margin-top:10px">
+                  <button class="btn primary" onclick="saveNotifConfig()">💾 Kaydet</button>
+                  <button class="btn" onclick="testNotification('telegram')">🧪 Test</button>
+                </div>
+                <div style="margin-top:10px;font-size:10px;color:var(--text-muted);line-height:1.6">
+                  1. @BotFather'a /newbot yaz → Token al<br>
+                  2. Bota /start gönder<br>
+                  3. Chat ID için: api.telegram.org/bot&lt;TOKEN&gt;/getUpdates
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title">🎮 Discord</div>
+                <div class="form-row"><label>Webhook URL</label><input id="discord-webhook" type="password" placeholder="https://discord.com/api/webhooks/..." autocomplete="off"></div>
+                <div style="display:flex;gap:8px;margin-top:10px">
+                  <button class="btn primary" onclick="saveNotifConfig()">💾 Kaydet</button>
+                  <button class="btn" onclick="testNotification('discord')">🧪 Test</button>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="margin-top:14px">
+              <div class="card-title">⚙️ Bildirim Ayarları</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                <div class="form-row"><label>Minimum Seviye</label>
+                  <select id="notif-min-level">
+                    <option value="DEBUG">DEBUG</option>
+                    <option value="INFO">INFO</option>
+                    <option value="WARNING" selected>WARNING</option>
+                    <option value="ERROR">ERROR</option>
+                    <option value="CRITICAL">CRITICAL</option>
+                  </select>
+                </div>
+              </div>
+              <button class="btn primary" style="margin-top:10px" onclick="saveNotifConfig()">💾 Kaydet</button>
+            </div>
+          </div>
+          <div id="settings-tab-ai" style="display:none">
+            <div class="card" style="margin-bottom:14px;background:rgba(42,109,217,.05);border-color:rgba(42,109,217,.2)">
+              <div style="font-size:11px;color:var(--text-muted);line-height:1.7">
+                <strong style="color:var(--accent-lt)">AI Ajan Cron Sistemi</strong> — Ajanlar belirlenen aralıklarla otomatik olarak sistemin sağlığını kontrol eder.<br>
+                Eşikler aşıldığında (CPU, RAM) Telegram/Discord üzerinden otomatik uyarı gönderilir.<br>
+                <span style="color:var(--text-dim)">Ajanlar arka planda çalışır; servisi yeniden başlatırsanız otomatik devam eder.</span>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+              <button class="btn primary" onclick="openModal('modal-add-agent')">+ Ajan Ekle</button>
+            </div>
+            <div id="ai-agents-list"><div class="empty-state"><div class="icon">🤖</div><h3>AI Ajan yok</h3><p style="font-size:11px">Ajan ekleyerek sistem izlemeye başlayın</p></div></div>
+          </div>
+        </div>
+
+        <!-- ─────── Updates Page ─────── -->
+        <div class="page" id="page-updates">
+          <div class="section-header">
+            <h2>Güncellemeler</h2>
+            <div class="spacer"></div>
+            <button class="btn" onclick="checkUpdates()" id="btn-check-update">🔍 Kontrol Et</button>
+          </div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-title">⚙️ GitHub Repo Ayarı</div>
+            <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:flex-end">
+              <div class="form-row" style="margin:0"><label>GitHub Repo URL</label><input id="upd-repo-url" placeholder="https://github.com/kullanici/OXware"></div>
+              <div class="form-row" style="margin:0;min-width:120px"><label>Branch</label><input id="upd-branch" value="main"></div>
+              <button class="btn primary" onclick="saveUpdateConfig()">💾 Kaydet</button>
+            </div>
+          </div>
+          <div id="update-status-area"><div class="empty-state"><div class="icon">🔄</div><h3>Durum bilinmiyor</h3><p>"Kontrol Et" butonuna tıklayın</p></div></div>
+          <div id="update-commits-area" style="display:none;margin-top:14px">
+            <div class="section-header"><h2>Yeni Güncellemeler</h2></div>
+            <div id="update-commits-list"></div>
+            <div style="margin-top:10px"><button class="btn primary" onclick="applyUpdate()" id="btn-apply-update">⬇️ Uygula</button></div>
+          </div>
+          <div id="update-history-area" style="margin-top:18px;display:none">
+            <div class="section-header"><h2>Güncelleme Geçmişi</h2></div>
+            <div id="update-history-list"></div>
+          </div>
+        </div>
+
+      </div><!-- /content -->
+    </div><!-- /content-area -->
+
+  </div><!-- /middle -->
+
+  <!-- ────────── TASKBAR ────────── -->
+  <div id="taskbar">
+    <div class="tb-tabs">
+      <div class="tb-tab active" data-ttab="tasks" onclick="switchTaskTab('tasks')">Tasks</div>
+      <div class="tb-tab" data-ttab="events" onclick="switchTaskTab('events')">Event Log</div>
+      <div class="spacer" style="flex:1"></div>
+      <div style="display:flex;align-items:center;padding:0 12px">
+        <button class="btn sm" onclick="loadTaskLog()" style="font-size:10px">↻</button>
+      </div>
+    </div>
+    <div class="tb-tab-content">
+      <table class="task-table">
+        <thead>
+          <tr>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Node</th>
+            <th>User</th>
+            <th>Description</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="tasklog-tbody">
+          <tr><td colspan="6" style="padding:14px;text-align:center;color:var(--text-muted)">Yükleniyor...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- ────────── MODALS ────────── -->
+
+<!-- Create VM -->
+<div class="modal-overlay" id="modal-create-vm">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Yeni Sanal Makine Oluştur</h2>
+      <button class="modal-close" onclick="closeModal('modal-create-vm')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row"><label>VM Adı</label><input id="vm-name" placeholder="ornek-vm"></div>
+      <div class="form-grid">
+        <div class="form-row"><label>CPU (vCPU)</label><input id="vm-cpu" type="number" value="2" min="1" max="64"></div>
+        <div class="form-row"><label>Bellek (MB)</label><input id="vm-mem" type="number" value="2048" min="256" step="256"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>Disk (GB)</label><input id="vm-disk" type="number" value="20" min="1"></div>
+        <div class="form-row"><label>Disk Formatı</label>
+          <select id="vm-disk-fmt"><option value="qcow2">qcow2 (Önerilen)</option><option value="raw">raw</option></select>
+        </div>
+      </div>
+      <div class="form-row"><label>ISO (Opsiyonel)</label>
+        <select id="vm-iso"><option value="">— ISO seçme —</option></select>
+        <div class="form-hint">Kurulum için ISO seçin veya boş disk ile başlayın</div>
+      </div>
+      <div class="form-row"><label>Ağ</label>
+        <select id="vm-net"><option value="default">default (NAT)</option></select>
+      </div>
+      <div class="form-row"><label>İşletim Sistemi</label>
+        <select id="vm-os">
+          <option value="generic">Genel</option>
+          <option value="ubuntu20.04">Ubuntu 20.04</option>
+          <option value="ubuntu22.04">Ubuntu 22.04</option>
+          <option value="debian11">Debian 11</option>
+          <option value="centos8">CentOS 8</option>
+          <option value="win10">Windows 10</option>
+          <option value="win2019">Windows Server 2019</option>
+        </select>
+      </div>
+      <div class="form-row"><label>Açılış Sırası</label>
+        <select id="vm-boot">
+          <option value="cdrom,hd">CD-ROM → Disk</option>
+          <option value="hd,cdrom">Disk → CD-ROM</option>
+          <option value="hd">Yalnızca Disk</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-create-vm')">İptal</button>
+      <button class="btn primary" onclick="createVM()" id="btn-create-vm">VM Oluştur</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Network -->
+<div class="modal-overlay" id="modal-create-net">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Yeni Ağ Oluştur</h2>
+      <button class="modal-close" onclick="closeModal('modal-create-net')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row"><label>Ağ Adı</label><input id="net-name" placeholder="custom-net"></div>
+      <div class="form-row"><label>Yönlendirme Modu</label>
+        <select id="net-mode">
+          <option value="nat">NAT (Önerilen)</option>
+          <option value="route">Route</option>
+          <option value="isolated">İzole (İnternet Yok)</option>
+        </select>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>Ağ Geçidi IP</label><input id="net-ip" value="192.168.100.1"></div>
+        <div class="form-row"><label>Ağ Maskesi</label><input id="net-mask" value="255.255.255.0"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>DHCP Başlangıç</label><input id="net-dhcp-start" value="192.168.100.100"></div>
+        <div class="form-row"><label>DHCP Bitiş</label><input id="net-dhcp-end" value="192.168.100.200"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-create-net')">İptal</button>
+      <button class="btn primary" onclick="createNetwork()">Ağ Oluştur</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Pool -->
+<div class="modal-overlay" id="modal-create-pool">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Depolama Havuzu Ekle</h2>
+      <button class="modal-close" onclick="closeModal('modal-create-pool')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row"><label>Havuz Adı</label><input id="pool-name" placeholder="data-pool"></div>
+      <div class="form-row"><label>Yol</label><input id="pool-path" placeholder="/var/lib/oxware/data-pool"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-create-pool')">İptal</button>
+      <button class="btn primary" onclick="createPool()">Havuz Ekle</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create User -->
+<div class="modal-overlay" id="modal-create-user">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Yeni Kullanıcı</h2>
+      <button class="modal-close" onclick="closeModal('modal-create-user')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row"><label>Kullanıcı Adı</label><input id="new-username" placeholder="kullanici"></div>
+      <div class="form-row"><label>Şifre</label><input id="new-password" type="password" placeholder="En az 8 karakter"></div>
+      <div class="form-row"><label>Rol</label>
+        <select id="new-role">
+          <option value="viewer">İzleyici</option>
+          <option value="operator">Operatör</option>
+          <option value="administrator">Yönetici</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-create-user')">İptal</button>
+      <button class="btn primary" onclick="createUser()">Oluştur</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Snapshot -->
+<div class="modal-overlay" id="modal-create-snap">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>📷 Snapshot Al</h2>
+      <button class="modal-close" onclick="closeModal('modal-create-snap')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row"><label>Snapshot Adı</label><input id="new-snap-name" placeholder="snap-2024-01"></div>
+      <div class="form-row"><label>Açıklama</label><input id="new-snap-desc" placeholder="İsteğe bağlı açıklama"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-create-snap')">İptal</button>
+      <button class="btn primary" onclick="createSnapshot()">📷 Al</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add AI Agent -->
+<div class="modal-overlay" id="modal-add-agent">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>🤖 AI Ajan Ekle</h2>
+      <button class="modal-close" onclick="closeModal('modal-add-agent')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row"><label>Ajan ID</label><input id="agent-id" placeholder="main-agent"></div>
+      <div class="form-row"><label>Ajan Adı</label><input id="agent-name" placeholder="OXware İzleyici"></div>
+      <div class="form-row"><label>Sağlayıcı</label>
+        <select id="agent-provider" onchange="onProviderChange()">
+          <option value="openrouter">OpenRouter (100+ Model)</option>
+          <option value="anthropic">Anthropic Claude</option>
+          <option value="openai">OpenAI</option>
+          <option value="ollama">Ollama (Yerel)</option>
+        </select>
+      </div>
+      <div class="form-row" id="agent-apikey-row"><label>API Key</label><input id="agent-apikey" type="password" placeholder="sk-..." autocomplete="off"></div>
+      <div class="form-row"><label>Model</label><input id="agent-model" placeholder="anthropic/claude-3-haiku"></div>
+      <div class="form-row"><label>Kontrol Aralığı (dk)</label><input id="agent-interval" type="number" value="15" min="1" max="1440"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-add-agent')">İptal</button>
+      <button class="btn primary" onclick="addAIAgent()">🤖 Ekle</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════ Globals ══════════════════ */
+let currentPage = "summary";
+let currentTreeSelection = "node"; // 'datacenter' | 'node' | 'vm'
+let currentVmId = null;
+let currentVmName = null;
+let statsInterval = null;
+let cpuHistory = Array(30).fill(0);
+let ramHistory = Array(30).fill(0);
+let loadHistory = Array(30).fill(0);
+let cpuChart, ramChart, loadChart;
+
+// Support both old "adaos_token" and new "oxware_token" keys
+const TOKEN = () => localStorage.getItem("oxware_token") || localStorage.getItem("adaos_token");
+
+/* ══ Auth Guard ══ */
+(function() {
+  if (!TOKEN()) { window.location.href = "/login"; return; }
+  const user = localStorage.getItem("oxware_user") || localStorage.getItem("adaos_user") || "admin";
+  const role = localStorage.getItem("oxware_role") || localStorage.getItem("adaos_role") || "administrator";
+  document.getElementById("tbUsername").textContent = user;
+  document.getElementById("tbRealm").textContent = role;
+  document.getElementById("tbAvatar").textContent = user[0].toUpperCase();
+})();
+
+/* ══ API helper ══ */
+async function api(path, options = {}) {
+  const res = await fetch("/api" + path, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + TOKEN(),
+      ...(options.headers || {}),
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "API hatası");
+  return data;
+}
+
+/* ══ Toast ══ */
+function toast(msg, type = "info") {
+  const icons = { success: "✓", error: "✕", info: "ℹ" };
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+  el.style.pointerEvents = "auto";
+  el.innerHTML = `<span class="toast-icon">${icons[type] || ""}</span>${escHtml(msg)}`;
+  document.getElementById("toast-container").appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+function escHtml(s) {
+  if (s == null) return "";
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+/* ══ Modal helpers ══ */
+function openModal(id) { document.getElementById(id).classList.add("open"); }
+function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+window.addEventListener("click", e => {
+  if (e.target.classList.contains("modal-overlay")) e.target.classList.remove("open");
+});
+
+function openCreateVMModal() { loadISOOptions(); loadNetworkOptions(); openModal("modal-create-vm"); }
+function openCreateNetworkModal() { openModal("modal-create-net"); }
+function openCreatePoolModal() { openModal("modal-create-pool"); }
+function openCreateUserModal() { openModal("modal-create-user"); }
+function openCreateSnapModal() {
+  if (!_currentSnapVm) return toast("Önce VM seçin", "error");
+  openModal("modal-create-snap");
+}
+
+/* ══ State Badge ══ */
+function stateBadge(state) {
+  const map = { running: "running", stopped: "stopped", paused: "paused", crashed: "crashed", shutdown: "stopped", blocked: "paused" };
+  const cls = map[state] || "stopped";
+  const label = state === "running" ? "Çalışıyor" : state === "stopped" ? "Durdu" :
+                state === "paused" ? "Duraklatıldı" : state === "crashed" ? "Çöktü" : state;
+  return `<span class="badge ${cls}"><span class="badge-dot"></span>${label}</span>`;
+}
+
+/* ══ Logout ══ */
+function logout() {
+  if (!confirm("Çıkış yapmak istiyor musunuz?")) return;
+  localStorage.removeItem("oxware_token");
+  localStorage.removeItem("oxware_user");
+  localStorage.removeItem("oxware_role");
+  localStorage.removeItem("adaos_token");
+  localStorage.removeItem("adaos_user");
+  localStorage.removeItem("adaos_role");
+  window.location.href = "/login";
+}
+
+/* ══════════════════ TREE / NAV ══════════════════ */
+
+function selectTreeItem(type, vmId, vmName) {
+  // remove all selected
+  document.querySelectorAll(".tree-item").forEach(t => t.classList.remove("selected"));
+
+  if (type === "node") {
+    const nodeEl = document.getElementById("tree-node-item");
+    if (nodeEl) nodeEl.classList.add("selected");
+    currentTreeSelection = "node";
+    buildContextNav("node");
+    navigate("summary");
+  } else if (type === "vm" && vmId) {
+    const el = document.querySelector(`[data-vmid="${vmId}"]`);
+    if (el) el.classList.add("selected");
+    currentTreeSelection = "vm";
+    currentVmId = vmId;
+    currentVmName = vmName;
+    buildContextNav("vm");
+    navigate("vm-detail");
+    loadVMDetail(vmId);
+  }
+}
+
+function buildContextNav(type) {
+  const nav = document.getElementById("nav-panel");
+  let html = "";
+
+  if (type === "node") {
+    html = `
+      <div class="ctx-section">Genel Bakış</div>
+      <div class="ctx-item active" data-page="summary" onclick="navigate('summary')">
+        <svg viewBox="0 0 16 16"><path d="M0 1.5A1.5 1.5 0 011.5 0h3A1.5 1.5 0 016 1.5v3A1.5 1.5 0 014.5 6h-3A1.5 1.5 0 010 4.5v-3zm8 0A1.5 1.5 0 019.5 0h3A1.5 1.5 0 0114 1.5v3A1.5 1.5 0 0112.5 6h-3A1.5 1.5 0 018 4.5v-3zm-8 8A1.5 1.5 0 011.5 8h3A1.5 1.5 0 016 9.5v3A1.5 1.5 0 014.5 14h-3A1.5 1.5 0 010 12.5v-3zm8 0A1.5 1.5 0 019.5 8h3A1.5 1.5 0 0114 9.5v3A1.5 1.5 0 0112.5 14h-3A1.5 1.5 0 018 12.5v-3z"/></svg>
+        Summary
+      </div>
+      <div class="ctx-item" data-page="console" onclick="navigate('console')">
+        <svg viewBox="0 0 16 16"><path d="M6 9a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3A.5.5 0 016 9zM3.854 4.146a.5.5 0 100 .708L4.793 5.5 3.854 6.396a.5.5 0 100 .708l1.5-1.5a.5.5 0 000-.708l-1.5-1.5z"/><path d="M2 1a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V3a2 2 0 00-2-2H2zm12 1a1 1 0 011 1v10a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1h12z"/></svg>
+        Shell Console
+      </div>
+
+      <div class="ctx-section">Sanallaştırma</div>
+      <div class="ctx-item" data-page="vms" onclick="navigate('vms')">
+        <svg viewBox="0 0 16 16"><path d="M5.5 2A3.5 3.5 0 002 5.5v5A3.5 3.5 0 005.5 14h5a3.5 3.5 0 003.5-3.5v-5A3.5 3.5 0 0010.5 2h-5zm0 1h5A2.5 2.5 0 0113 5.5v5A2.5 2.5 0 0110.5 13h-5A2.5 2.5 0 013 10.5v-5A2.5 2.5 0 015.5 3z"/></svg>
+        Sanal Makineler
+      </div>
+      <div class="ctx-item" data-page="snapshots" onclick="navigate('snapshots')">
+        <svg viewBox="0 0 16 16"><path d="M8 3a5 5 0 110 10A5 5 0 018 3zm0 1a4 4 0 100 8A4 4 0 008 4z"/></svg>
+        Snapshot
+      </div>
+      <div class="ctx-item" data-page="topology" onclick="navigate('topology')">
+        <svg viewBox="0 0 16 16"><path d="M8 0a1 1 0 011 1v.5h2.5a.5.5 0 010 1H9V3a1 1 0 01-2 0v-.5H4.5a.5.5 0 010-1H7V1a1 1 0 011-1zM1 8a1 1 0 011-1h.5V4.5a.5.5 0 011 0V7H4a1 1 0 110 2h-.5v2.5a.5.5 0 01-1 0V9H2a1 1 0 01-1-1zm9 0a1 1 0 011-1h.5V4.5a.5.5 0 011 0V7H13a1 1 0 110 2h-.5v2.5a.5.5 0 01-1 0V9H11a1 1 0 01-1-1z"/></svg>
+        Topoloji
+      </div>
+
+      <div class="ctx-section">Sistem</div>
+      <div class="ctx-item" data-page="networks" onclick="navigate('networks')">
+        <svg viewBox="0 0 16 16"><path d="M14 1a1 1 0 011 1v12a1 1 0 01-1 1H2a1 1 0 01-1-1V2a1 1 0 011-1h12zm-1 1H3a.5.5 0 00-.5.5v11a.5.5 0 00.5.5h10a.5.5 0 00.5-.5v-11A.5.5 0 0013 2z"/></svg>
+        Ağ
+      </div>
+      <div class="ctx-item" data-page="storage" onclick="navigate('storage')">
+        <svg viewBox="0 0 16 16"><path d="M0 7a2 2 0 012-2h12a2 2 0 012 2v1a2 2 0 01-2 2H2a2 2 0 01-2-2V7zm.5 1a.5.5 0 00.5.5h12a.5.5 0 00.5-.5V7a.5.5 0 00-.5-.5H1a.5.5 0 00-.5.5v1z"/><path d="M2 11.5a.5.5 0 00.5.5h11a.5.5 0 000-1h-11a.5.5 0 00-.5.5zm0-3a.5.5 0 00.5.5h11a.5.5 0 000-1h-11a.5.5 0 00-.5.5z"/></svg>
+        Depolama
+      </div>
+      <div class="ctx-item" data-page="monitor" onclick="navigate('monitor')">
+        <svg viewBox="0 0 16 16"><path d="M0 4s0-2 2-2h12s2 0 2 2v6s0 2-2 2h-4c0 .667.083 1.167.25 1.5H11a.5.5 0 010 1H5a.5.5 0 010-1h.75c.167-.333.25-.833.25-1.5H2s-2 0-2-2V4zm1.398 0A1 1 0 002 3h12a1 1 0 001-1V4a1 1 0 00-1 1H2a1 1 0 00-1-1V4z"/></svg>
+        İzleme
+      </div>
+
+      <div class="ctx-section">Yönetim</div>
+      <div class="ctx-item" data-page="users" onclick="navigate('users')">
+        <svg viewBox="0 0 16 16"><path d="M11 6a3 3 0 11-6 0 3 3 0 016 0zM0 13.5a7 7 0 0114 0H0z"/></svg>
+        Kullanıcılar
+      </div>
+      <div class="ctx-item" data-page="updates" onclick="navigate('updates')">
+        <svg viewBox="0 0 16 16"><path d="M8 1a7 7 0 110 14A7 7 0 018 1zm0 1a6 6 0 100 12A6 6 0 008 2zm.5 9H8a.5.5 0 01-.5-.5v-5a.5.5 0 011 0V11h.5a.5.5 0 010 1z"/></svg>
+        Güncellemeler
+      </div>
+      <div class="ctx-item" data-page="settings" onclick="navigate('settings')">
+        <svg viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 100 6.492 3.246 3.246 0 000-6.492zM5.754 8a2.246 2.246 0 114.492 0 2.246 2.246 0 01-4.492 0z"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 01-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 01-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 01.52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 011.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 011.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 01.52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 01-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 01-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 002.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 001.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 00-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 00-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 00-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 003.06 8.377l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 004.175 3.92l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 002.692-1.115l.094-.319z"/></svg>
+        Ayarlar
+      </div>
+    `;
+  } else if (type === "vm") {
+    html = `
+      <div class="ctx-section">VM '${escHtml(currentVmName || "VM")}'</div>
+      <div class="ctx-item active" data-page="vm-detail" onclick="navigate('vm-detail')">
+        <svg viewBox="0 0 16 16"><path d="M0 1.5A1.5 1.5 0 011.5 0h13A1.5 1.5 0 0116 1.5v13a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 010 14.5v-13z"/></svg>
+        Summary
+      </div>
+      <div class="ctx-item" onclick="if(currentVmId) openConsole(currentVmId)">
+        <svg viewBox="0 0 16 16"><path d="M0 4s0-2 2-2h12s2 0 2 2v6s0 2-2 2h-4c0 .667.083 1.167.25 1.5H11a.5.5 0 010 1H5a.5.5 0 010-1h.75c.167-.333.25-.833.25-1.5H2s-2 0-2-2V4z"/></svg>
+        Console
+      </div>
+      <div class="ctx-item" data-page="snapshots" onclick="navigate('snapshots');setTimeout(()=>{const s=document.getElementById('snap-vm-select');if(s){s.value=currentVmId;loadSnapshotsForVM(currentVmId);}},100)">
+        <svg viewBox="0 0 16 16"><path d="M8 3a5 5 0 110 10A5 5 0 018 3z"/></svg>
+        Snapshots
+      </div>
+      <div class="ctx-divider"></div>
+      <div class="ctx-item" onclick="selectTreeItem('node')">
+        <svg viewBox="0 0 16 16"><path d="M11.354 1.646a.5.5 0 010 .708L5.707 8l5.647 5.646a.5.5 0 01-.708.708l-6-6a.5.5 0 010-.708l6-6a.5.5 0 01.708 0z"/></svg>
+        Geri (Node)
+      </div>
+    `;
+  }
+
+  nav.innerHTML = html;
+}
+
+/* ══ Navigate ══ */
+function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  const pageEl = document.getElementById("page-" + page);
+  if (pageEl) pageEl.classList.add("active");
+
+  // active state in ctx nav
+  document.querySelectorAll(".ctx-item").forEach(n => n.classList.remove("active"));
+  const ctxItem = document.querySelector(`.ctx-item[data-page="${page}"]`);
+  if (ctxItem) ctxItem.classList.add("active");
+
+  // page-specific loaders
+  const loaders = {
+    summary: loadNodeSummary,
+    console: () => shellInitIfNeeded(),
+    vms: loadVMs,
+    networks: loadNetworks,
+    storage: loadStorage,
+    monitor: loadMonitor,
+    users: loadUsers,
+    topology: loadTopology,
+    snapshots: loadSnapshots,
+    settings: loadSettings,
+    updates: loadUpdates,
+  };
+  loaders[page] && loaders[page]();
+}
+
+/* ══ Tree filter ══ */
+function filterTree(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll("#tree-vm-list .tree-item").forEach(el => {
+    el.style.display = el.textContent.toLowerCase().includes(q) ? "" : "none";
+  });
+}
+
+/* ══════════════════ Refresh tree VMs ══════════════════ */
+
+async function refreshTreeVMs() {
+  try {
+    const data = await api("/vms");
+    const vms = data.vms || [];
+    const list = document.getElementById("tree-vm-list");
+    list.innerHTML = vms.map(v => {
+      const stateClass = v.state === "running" ? "running" : v.state === "paused" ? "paused" : v.state === "crashed" ? "crashed" : "stopped";
+      const idStr = v.id.slice(0, 4);
+      return `<div class="tree-item tree-vm" data-vmid="${v.id}" onclick="selectTreeItem('vm','${v.id}','${escHtml(v.name)}')">
+        <div class="vm-dot ${stateClass}"></div>
+        <span class="vm-id">${idStr}</span>
+        <span class="t-name">${escHtml(v.name)}</span>
+      </div>`;
+    }).join("");
+
+    // restore selection if VM still exists
+    if (currentTreeSelection === "vm" && currentVmId) {
+      const el = document.querySelector(`[data-vmid="${currentVmId}"]`);
+      if (el) el.classList.add("selected");
+    }
+  } catch (e) {
+    console.error("Tree VM yenileme hatası:", e);
+  }
+}
+
+/* ══════════════════ Charts ══════════════════ */
+
+function initCharts() {
+  const makeChart = (id, color, label, max = 100) => {
+    const ctx = document.getElementById(id).getContext("2d");
+    return new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: Array(30).fill(""),
+        datasets: [{
+          label, data: Array(30).fill(0),
+          borderColor: color,
+          backgroundColor: color.replace("rgb", "rgba").replace(")", ", 0.12)"),
+          borderWidth: 2, pointRadius: 0, tension: 0.4, fill: true,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        animation: { duration: 300 },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { display: false },
+          y: {
+            min: 0, max: max,
+            grid: { color: "rgba(30,45,69,0.6)" },
+            ticks: { color: "#5a7494", font: { size: 9 }, callback: v => max === 100 ? v + "%" : v }
+          }
+        }
+      }
+    });
+  };
+  cpuChart = makeChart("cpuChart", "rgb(61,130,240)", "CPU %", 100);
+  ramChart = makeChart("ramChart", "rgb(34,197,94)", "RAM %", 100);
+  loadChart = makeChart("loadChart", "rgb(234,179,8)", "Load", null);
+  // load chart: dynamic max
+  loadChart.options.scales.y.max = undefined;
+  loadChart.options.scales.y.ticks.callback = v => Number(v).toFixed(2);
+  loadChart.update();
+}
+
+function updateCharts(cpu, ram, load) {
+  cpuHistory.push(cpu); cpuHistory.shift();
+  ramHistory.push(ram); ramHistory.shift();
+  loadHistory.push(load); loadHistory.shift();
+  if (cpuChart) { cpuChart.data.datasets[0].data = [...cpuHistory]; cpuChart.update("none"); }
+  if (ramChart) { ramChart.data.datasets[0].data = [...ramHistory]; ramChart.update("none"); }
+  if (loadChart) { loadChart.data.datasets[0].data = [...loadHistory]; loadChart.update("none"); }
+}
+
+/* ══════════════════ Node Summary ══════════════════ */
+
+async function loadNodeSummary() {
+  try {
+    const [statsData, vmSumData, infoData, diskData] = await Promise.all([
+      api("/system/stats"),
+      api("/system/vmsummary"),
+      api("/system/info"),
+      api("/storage/disks").catch(() => ({ disks: [] })),
+    ]);
+
+    const s = statsData.stats;
+    const cpuPct = s.cpu.percent;
+    const ramPct = s.memory.percent;
+    const swapPct = s.swap.percent;
+    const load1m = s.cpu.load_avg["1min"];
+    const cpuCount = infoData.host?.cpu_count_logical || 0;
+    const hostname = infoData.host?.hostname || "oxware";
+    const uptime = infoData.host?.uptime || "—";
+
+    // Header
+    document.getElementById("ns-hostname").textContent = hostname;
+    document.getElementById("ns-uptime").textContent = uptime;
+
+    // Tree node name
+    document.getElementById("tree-node-name").textContent = hostname;
+    // Shell hostname
+    const shellHostEl = document.getElementById("shell-hostname");
+    if (shellHostEl) shellHostEl.textContent = hostname;
+
+    // CPU
+    document.getElementById("ns-cpu-bar").style.width = cpuPct + "%";
+    document.getElementById("ns-cpu-val").textContent = `${cpuPct.toFixed(2)}% of ${cpuCount} CPU(s)`;
+
+    // Load
+    document.getElementById("ns-load").textContent = `${load1m}, ${s.cpu.load_avg["5min"]}, ${s.cpu.load_avg["15min"]}`;
+
+    // RAM
+    document.getElementById("ns-ram-bar").style.width = ramPct + "%";
+    const ramUsedGib = (s.memory.used_mb / 1024).toFixed(2);
+    const ramTotalGib = (s.memory.total_mb / 1024).toFixed(2);
+    document.getElementById("ns-ram-val").textContent = `${ramPct.toFixed(2)}% (${ramUsedGib} GiB of ${ramTotalGib} GiB)`;
+
+    // Disk (use root mount or first)
+    const rootDisk = (diskData.disks || []).find(d => d.mount === "/") || (diskData.disks || [])[0];
+    if (rootDisk) {
+      const dPct = parseInt(rootDisk.percent) || 0;
+      document.getElementById("ns-disk-bar").style.width = dPct + "%";
+      document.getElementById("ns-disk-val").textContent = `${dPct}% (${rootDisk.used} of ${rootDisk.size})`;
+    }
+
+    // Swap
+    document.getElementById("ns-swap-bar").style.width = swapPct + "%";
+    const swapUsedGib = (s.swap.used_mb / 1024).toFixed(2);
+    const swapTotalGib = (s.swap.total_mb / 1024).toFixed(2);
+    document.getElementById("ns-swap-val").textContent = `${swapPct.toFixed(2)}% (${swapUsedGib} GiB of ${swapTotalGib} GiB)`;
+
+    // System info
+    document.getElementById("ns-cpuinfo").textContent = `${cpuCount} x ${infoData.host?.cpu_model || "—"}`;
+    document.getElementById("ns-kernel").textContent = `${infoData.host?.os || "Linux"} ${infoData.host?.kernel || ""}`;
+    document.getElementById("ns-kvm").textContent = infoData.host?.kvm_available ? "Available ✓" : "Not Available ✗";
+    document.getElementById("ns-arch").textContent = infoData.host?.architecture || "—";
+    document.getElementById("ns-iodelay").textContent = ((s.disk_io?.read_count || 0) > 0 ? "< 1%" : "0%");
+    if (infoData.libvirt) {
+      document.getElementById("ns-hv").textContent = `${infoData.libvirt.hypervisor_type || "QEMU"} ${infoData.libvirt.hypervisor_version || ""}`;
+    }
+
+    // Topbar stats
+    document.getElementById("tb-cpu").textContent = cpuPct.toFixed(0) + "%";
+    document.getElementById("tb-ram").textContent = ramPct.toFixed(0) + "%";
+    document.getElementById("tb-vms").textContent = `${vmSumData.running}/${vmSumData.total}`;
+
+    updateCharts(cpuPct, ramPct, load1m);
+  } catch (e) {
+    console.error("Node summary yüklenemedi:", e);
+  }
+}
+
+/* ══════════════════ VM Detail ══════════════════ */
+
+async function loadVMDetail(vmId) {
+  try {
+    const data = await api(`/vms/${vmId}`);
+    const v = data.vm || data;
+
+    document.getElementById("vd-name").textContent = v.name;
+    document.getElementById("vd-state-badge").innerHTML = stateBadge(v.state);
+    document.getElementById("vd-state").textContent = v.state === "running" ? "Çalışıyor" : "Durdu";
+    document.getElementById("vd-uptime").textContent = v.uptime || (v.state === "running" ? "Aktif" : "Kapalı");
+    document.getElementById("vd-cpu").textContent = v.vcpus;
+    document.getElementById("vd-mem").textContent = v.memory_mb.toLocaleString();
+    const totalDisk = (v.disks || []).reduce((sum, d) => sum + (d.capacity_gb || 0), 0);
+    document.getElementById("vd-disk").textContent = totalDisk.toFixed(1);
+    document.getElementById("vd-disk-sub").textContent = `GB · ${(v.disks || []).length} disk`;
+
+    // Actions
+    let actHtml = "";
+    if (v.state !== "running") {
+      actHtml += `<button class="btn sm success" onclick="vmAction('${v.id}','start')">▶ Başlat</button>`;
+    } else {
+      actHtml += `<button class="btn sm danger" onclick="vmAction('${v.id}','stop')">■ Durdur</button>`;
+      actHtml += `<button class="btn sm" onclick="vmAction('${v.id}','reboot')">↺ Yeniden Başlat</button>`;
+      actHtml += `<button class="btn sm" onclick="openConsole('${v.id}')">▣ Konsol</button>`;
+    }
+    actHtml += `<button class="btn sm danger" onclick="deleteVM('${v.id}','${escHtml(v.name)}')">✕ Sil</button>`;
+    document.getElementById("vd-actions").innerHTML = actHtml;
+
+    // Hardware
+    const hw = [];
+    hw.push(["CPU", `${v.vcpus} vCPU`]);
+    hw.push(["Bellek", `${v.memory_mb.toLocaleString()} MB`]);
+    hw.push(["İşletim Sistemi", v.os_type || "generic"]);
+    (v.disks || []).forEach((d, i) => {
+      hw.push([`Disk ${i + 1}`, `${d.device || ""} · ${d.capacity_gb || "?"} GB · ${d.format || "qcow2"}`]);
+    });
+    (v.networks || []).forEach((n, i) => {
+      hw.push([`Ağ Arayüzü ${i + 1}`, `${n.network || n.type || "—"} · ${n.mac || ""}`]);
+    });
+    document.getElementById("vd-hw-tbody").innerHTML = hw.map(([k, val]) => `<tr><td style="width:160px;color:var(--text-muted)">${k}</td><td><code>${escHtml(val)}</code></td></tr>`).join("");
+
+    // Snapshots
+    try {
+      const snapData = await api(`/vms/${vmId}/snapshots`);
+      const snaps = snapData.snapshots || [];
+      document.getElementById("vd-snap-tbody").innerHTML = snaps.length
+        ? snaps.map(s => `<tr>
+            <td><strong>${escHtml(s.name)}</strong></td>
+            <td>${s.creation_time ? new Date(s.creation_time * 1000).toLocaleString("tr-TR") : "—"}</td>
+            <td>${escHtml(s.description || "—")}</td>
+            <td>
+              <button class="btn sm" onclick="revertSnapshot('${vmId}','${escHtml(s.name)}')">↶ Geri Yükle</button>
+              <button class="btn sm danger" onclick="deleteSnapshot('${vmId}','${escHtml(s.name)}')">✕</button>
+            </td>
+          </tr>`).join("")
+        : `<tr><td colspan="4"><div class="empty-state"><p>Snapshot yok</p></div></td></tr>`;
+    } catch (e) {
+      document.getElementById("vd-snap-tbody").innerHTML = `<tr><td colspan="4"><div class="empty-state"><p>Snapshot alınamadı</p></div></td></tr>`;
+    }
+  } catch (e) {
+    toast("VM detayı alınamadı: " + e.message, "error");
+  }
+}
+
+/* ══════════════════ VMs ══════════════════ */
+
+async function loadVMs() {
+  try {
+    const data = await api("/vms");
+    const vms = data.vms || [];
+    const tbody = document.getElementById("vm-tbody");
+    if (!vms.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">🖥️</div><h3>Sanal makine yok</h3><p>"+ Yeni VM" ile oluşturun</p></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = vms.map(v => {
+      const disks = v.disks?.map(d => d.device).join(", ") || "—";
+      const nets = v.networks?.map(n => n.network || n.type).join(", ") || "—";
+      return `<tr>
+        <td><a style="color:var(--accent-lt);cursor:pointer" onclick="selectTreeItem('vm','${v.id}','${escHtml(v.name)}')"><strong>${escHtml(v.name)}</strong></a><br><small style="color:var(--text-muted)">${v.id.slice(0, 8)}</small></td>
+        <td>${stateBadge(v.state)}</td>
+        <td>${v.vcpus} vCPU</td>
+        <td>${v.memory_mb.toLocaleString()} MB</td>
+        <td style="font-size:11px">${escHtml(disks)}</td>
+        <td style="font-size:11px">${escHtml(nets)}</td>
+        <td>
+          <div class="action-btns">
+            ${v.state !== "running"
+              ? `<button class="btn sm success" onclick="vmAction('${v.id}','start')">▶</button>`
+              : `<button class="btn sm danger" onclick="vmAction('${v.id}','stop')">■</button>`}
+            <button class="btn sm" onclick="vmAction('${v.id}','reboot')">↺</button>
+            ${v.state === "running" ? `<button class="btn sm" onclick="openConsole('${v.id}')">▣</button>` : ""}
+            <button class="btn sm danger" onclick="deleteVM('${v.id}','${escHtml(v.name)}')">✕</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join("");
+  } catch (e) { toast("VM listesi alınamadı: " + e.message, "error"); }
+}
+
+async function loadISOOptions() {
+  try {
+    const data = await api("/storage/isos");
+    const sel = document.getElementById("vm-iso");
+    sel.innerHTML = `<option value="">— ISO seçme —</option>`;
+    (data.isos || []).forEach(i => { sel.innerHTML += `<option value="${escHtml(i.path || i.name)}">${escHtml(i.name)} (${i.size_mb} MB)</option>`; });
+  } catch {}
+}
+
+async function loadNetworkOptions() {
+  try {
+    const data = await api("/networks");
+    const sel = document.getElementById("vm-net");
+    sel.innerHTML = "";
+    (data.networks || []).forEach(n => { sel.innerHTML += `<option value="${escHtml(n.name)}">${escHtml(n.name)} (${n.mode || "nat"})</option>`; });
+    if (!sel.innerHTML) sel.innerHTML = `<option value="default">default (NAT)</option>`;
+  } catch {
+    document.getElementById("vm-net").innerHTML = `<option value="default">default (NAT)</option>`;
+  }
+}
+
+async function createVM() {
+  const name = document.getElementById("vm-name").value.trim();
+  if (!name) return toast("VM adı boş olamaz", "error");
+  try {
+    await api("/vms", {
+      method: "POST",
+      body: {
+        name,
+        vcpus: parseInt(document.getElementById("vm-cpu").value),
+        memory_mb: parseInt(document.getElementById("vm-mem").value),
+        disk_gb: parseInt(document.getElementById("vm-disk").value),
+        disk_format: document.getElementById("vm-disk-fmt").value,
+        iso_path: document.getElementById("vm-iso").value || null,
+        network_name: document.getElementById("vm-net").value,
+        os_type: document.getElementById("vm-os").value,
+        boot_order: document.getElementById("vm-boot").value,
+      }
+    });
+    toast(`"${name}" oluşturuldu`, "success");
+    closeModal("modal-create-vm");
+    loadVMs();
+    refreshTreeVMs();
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function deleteVM(id, name) {
+  if (!confirm(`"${name}" VM'i ve diskleri silinsin mi?`)) return;
+  try {
+    await api(`/vms/${id}`, { method: "DELETE" });
+    toast(`"${name}" silindi`, "success");
+    loadVMs();
+    refreshTreeVMs();
+    if (currentVmId === id) { selectTreeItem("node"); }
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function vmAction(id, action) {
+  try {
+    await api(`/vms/${id}/${action}`, { method: "POST" });
+    toast(`İşlem: ${action}`, "success");
+    setTimeout(() => { loadVMs(); refreshTreeVMs(); if (currentVmId === id) loadVMDetail(id); }, 500);
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function openConsole(id) {
+  try {
+    await api(`/vms/${id}/console/start`, { method: "POST" });
+    setTimeout(() => window.open(`/console/${id}`, "_blank", "width=1024,height=768"), 800);
+  } catch (e) { toast(e.message, "error"); }
+}
+
+/* ══════════════════ Networks ══════════════════ */
+
+async function loadNetworks() {
+  try {
+    const data = await api("/networks");
+    const nets = data.networks || [];
+    document.getElementById("net-tbody").innerHTML = nets.length ? nets.map(n => `<tr>
+      <td><strong>${escHtml(n.name)}</strong></td>
+      <td>${n.active ? '<span class="badge active"><span class="badge-dot"></span>Aktif</span>' : '<span class="badge inactive">Pasif</span>'}</td>
+      <td>${n.mode || "nat"}</td>
+      <td>${escHtml(n.gateway || "—")}/${n.netmask || "—"}</td>
+      <td><code>${escHtml(n.bridge || "—")}</code></td>
+      <td>${n.dhcp ? `${n.dhcp.start}–${n.dhcp.end}` : "—"}</td>
+      <td>
+        <div class="action-btns">
+          ${n.active
+            ? `<button class="btn sm" onclick="netAction('${n.uuid}','stop')">■</button>`
+            : `<button class="btn sm success" onclick="netAction('${n.uuid}','start')">▶</button>`}
+          <button class="btn sm danger" onclick="deleteNetwork('${n.uuid}','${escHtml(n.name)}')">✕</button>
+        </div>
+      </td>
+    </tr>`).join("") : `<tr><td colspan="7"><div class="empty-state"><div class="icon">🌐</div><h3>Ağ yok</h3></div></td></tr>`;
+
+    const ifaceData = await api("/networks/host-interfaces");
+    document.getElementById("iface-tbody").innerHTML = (ifaceData.interfaces || []).map(i => `<tr>
+      <td><code>${escHtml(i.name)}</code></td>
+      <td>${i.up ? '<span class="badge active"><span class="badge-dot"></span>UP</span>' : '<span class="badge inactive">DOWN</span>'}</td>
+      <td><code>${escHtml(i.mac || "—")}</code></td>
+      <td>${(i.addresses || []).map(a => `<code>${escHtml(a)}</code>`).join(" ") || "—"}</td>
+      <td>${i.mtu || "—"}</td>
+    </tr>`).join("");
+  } catch (e) { toast("Ağ alınamadı: " + e.message, "error"); }
+}
+
+async function createNetwork() {
+  try {
+    await api("/networks", {
+      method: "POST",
+      body: {
+        name: document.getElementById("net-name").value.trim(),
+        mode: document.getElementById("net-mode").value,
+        gateway: document.getElementById("net-ip").value,
+        netmask: document.getElementById("net-mask").value,
+        dhcp_start: document.getElementById("net-dhcp-start").value,
+        dhcp_end: document.getElementById("net-dhcp-end").value,
+      }
+    });
+    toast("Ağ oluşturuldu", "success");
+    closeModal("modal-create-net");
+    loadNetworks();
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function deleteNetwork(uuid, name) {
+  if (!confirm(`"${name}" ağı silinsin mi?`)) return;
+  try { await api(`/networks/${uuid}`, { method: "DELETE" }); toast("Ağ silindi", "success"); loadNetworks(); }
+  catch (e) { toast(e.message, "error"); }
+}
+
+async function netAction(uuid, action) {
+  try { await api(`/networks/${uuid}/${action}`, { method: "POST" }); loadNetworks(); }
+  catch (e) { toast(e.message, "error"); }
+}
+
+/* ══════════════════ Storage ══════════════════ */
+let _currentStorageTab = "pools";
+
+function switchStorageTab(tab) {
+  _currentStorageTab = tab;
+  document.querySelectorAll("[data-stab]").forEach(t => t.classList.remove("active"));
+  document.querySelector(`[data-stab="${tab}"]`).classList.add("active");
+  document.getElementById("storage-tab-pools").style.display = tab === "pools" ? "" : "none";
+  document.getElementById("storage-tab-isos").style.display = tab === "isos" ? "" : "none";
+  document.getElementById("storage-tab-hostdisk").style.display = tab === "hostdisk" ? "" : "none";
+  if (tab === "hostdisk") { loadVMDiskPools(); loadBlockDevices(); }
+  if (tab === "isos") loadISOList();
+}
+
+async function loadStorage() { await loadPoolList(); }
+
+async function loadPoolList() {
+  try {
+    const data = await api("/storage/pools");
+    const pools = data.pools || [];
+    document.getElementById("pool-tbody").innerHTML = pools.length ? pools.map(p => {
+      const usePct = p.capacity_gb > 0 ? Math.round(p.allocation_gb / p.capacity_gb * 100) : 0;
+      const barCls = usePct > 80 ? "red" : "blue";
+      return `<tr>
+        <td><strong>${escHtml(p.name)}</strong></td>
+        <td>${p.active ? '<span class="badge active"><span class="badge-dot"></span>Aktif</span>' : '<span class="badge inactive">Pasif</span>'}</td>
+        <td><code>${escHtml(p.type)}</code></td>
+        <td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(p.path)}</td>
+        <td>${p.capacity_gb} GB</td>
+        <td>
+          <div style="min-width:90px">
+            <div style="font-size:11px;margin-bottom:3px">${p.allocation_gb} GB (${usePct}%)</div>
+            <div class="progress-bar"><div class="progress-fill ${barCls}" style="width:${usePct}%"></div></div>
+          </div>
+        </td>
+        <td>${p.available_gb} GB</td>
+        <td><div class="action-btns"><button class="btn sm danger" onclick="deletePool('${p.uuid}','${escHtml(p.name)}')">✕</button></div></td>
+      </tr>`;
+    }).join("") : `<tr><td colspan="8"><div class="empty-state"><div class="icon">💾</div><h3>Depolama havuzu yok</h3></div></td></tr>`;
+  } catch (e) { toast("Havuzlar alınamadı: " + e.message, "error"); }
+}
+
+async function loadISOList() {
+  try {
+    const data = await api("/storage/isos");
+    const isos = data.isos || [];
+    document.getElementById("iso-tbody").innerHTML = isos.length ? isos.map(i => `<tr>
+      <td>◎ ${escHtml(i.name)}</td>
+      <td>${i.size_mb.toLocaleString()} MB</td>
+      <td><button class="btn sm danger" onclick="deleteISO('${escHtml(i.name)}')">✕ Sil</button></td>
+    </tr>`).join("") : `<tr><td colspan="3"><div class="empty-state"><div class="icon">💿</div><h3>ISO yok</h3></div></td></tr>`;
+  } catch (e) { toast("ISO alınamadı: " + e.message, "error"); }
+}
+
+async function loadVMDiskPools() {
+  try {
+    const data = await api("/storage/pools");
+    const pools = (data.pools || []).filter(p => p.active && p.type === "dir");
+    const tbody = document.getElementById("vmdisk-pool-tbody");
+    if (!pools.length) { tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><p>Aktif havuz yok</p></div></td></tr>`; return; }
+    const maxFree = Math.max(...pools.map(p => p.available_gb));
+    tbody.innerHTML = pools.map(p => {
+      const isDefault = p.available_gb === maxFree;
+      return `<tr>
+        <td><strong>${escHtml(p.name)}</strong>${isDefault ? '<span class="badge active" style="margin-left:8px;font-size:9px">default</span>' : ""}</td>
+        <td><code>${escHtml(p.path)}</code></td>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-variant-numeric:tabular-nums">${p.available_gb} GB / ${p.capacity_gb} GB</span>
+            <div class="progress-bar" style="width:80px"><div class="progress-fill ${(p.allocation_gb/p.capacity_gb)>.8?"red":"blue"}" style="width:${p.capacity_gb>0?Math.round(p.allocation_gb/p.capacity_gb*100):0}%"></div></div>
+          </div>
+        </td>
+        <td><span style="font-size:11px;color:var(--text-muted)">${isDefault ? "always" : "—"}</span></td>
+      </tr>`;
+    }).join("");
+  } catch (e) {}
+}
+
+async function loadBlockDevices() {
+  const tbody = document.getElementById("block-dev-tbody");
+  try {
+    const data = await api("/storage/block-devices");
+    const devices = data.devices || [];
+    if (!devices.length) { tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><p>Aygıt yok</p></div></td></tr>`; return; }
+    function renderRows(list, depth = 0) {
+      return list.map(d => {
+        const indent = depth > 0 ? `<span style="color:var(--text-dim);margin-right:4px">${"└─".padStart(depth*2)}</span>` : "";
+        const isRoot = d.mountpoint === "/";
+        const statusCls = d.mountpoint ? "active" : "stopped";
+        const statusLbl = d.mountpoint ? "mounted" : (isRoot ? "system" : "available");
+        const pct = d.percent ? parseInt(d.percent) : 0;
+        const barCls = pct > 85 ? "red" : pct > 60 ? "yellow" : "blue";
+        const usageTxt = d.percent
+          ? `<div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-variant-numeric:tabular-nums;min-width:34px">${d.percent}</span><div class="progress-bar" style="width:70px"><div class="progress-fill ${barCls}" style="width:${pct}%"></div></div></div>`
+          : '<span style="color:var(--text-dim)">—</span>';
+        const canAdd = !isRoot && !d.mountpoint && d.type === "disk";
+        const actionBtn = canAdd ? `<button class="btn sm" onclick="addDiskAsPool('${d.device}','${d.name}')">+ Havuz</button>` : (isRoot ? '<span style="font-size:10px;color:var(--text-dim)">read-only</span>' : "—");
+        const row = `<tr>
+          <td><code>${indent}${escHtml(d.device)}</code></td>
+          <td style="font-size:11px;color:var(--text-muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(d.model || "—")}</td>
+          <td style="font-variant-numeric:tabular-nums">${escHtml(d.size)}</td>
+          <td><code style="font-size:10px;color:var(--text-muted)">${escHtml(d.type)}</code></td>
+          <td><span class="badge ${statusCls}"><span class="badge-dot"></span>${statusLbl}</span></td>
+          <td><code>${escHtml(d.mountpoint || d.fstype || "—")}</code></td>
+          <td>${usageTxt}</td>
+          <td>${actionBtn}</td>
+        </tr>`;
+        const childRows = d.children?.length ? renderRows(d.children, depth + 1) : [];
+        return [row, ...childRows].join("");
+      }).join("");
+    }
+    tbody.innerHTML = renderRows(devices);
+  } catch (e) { tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><p style="color:var(--red-lt)">${escHtml(e.message)}</p></div></td></tr>`; }
+}
+
+function addDiskAsPool(device, name) {
+  document.getElementById("pool-name").value = name;
+  document.getElementById("pool-path").value = `/mnt/${name}`;
+  openCreatePoolModal();
+  toast(`"${device}" için havuz formu açıldı.`, "info");
+}
+
+async function createPool() {
+  try {
+    await api("/storage/pools", { method: "POST", body: { name: document.getElementById("pool-name").value.trim(), path: document.getElementById("pool-path").value.trim() } });
+    toast("Havuz oluşturuldu", "success");
+    closeModal("modal-create-pool");
+    loadStorage();
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function deletePool(uuid, name) {
+  if (!confirm(`"${name}" havuzu silinsin mi?`)) return;
+  try { await api(`/storage/pools/${uuid}`, { method: "DELETE" }); toast("Silindi", "success"); loadStorage(); }
+  catch (e) { toast(e.message, "error"); }
+}
+
+async function uploadISO(input) {
+  const file = input.files[0]; if (!file) return;
+  const fd = new FormData(); fd.append("file", file);
+  toast(`"${file.name}" yükleniyor...`, "info");
+  try {
+    const res = await fetch("/api/storage/isos", { method: "POST", headers: { "Authorization": "Bearer " + TOKEN() }, body: fd });
+    if (!res.ok) throw new Error((await res.json()).error);
+    toast("ISO yüklendi", "success");
+    loadStorage();
+  } catch (e) { toast(e.message, "error"); }
+  input.value = "";
+}
+
+async function deleteISO(name) {
+  if (!confirm(`"${name}" silinsin mi?`)) return;
+  try { await api(`/storage/isos/${encodeURIComponent(name)}`, { method: "DELETE" }); toast("Silindi", "success"); loadStorage(); }
+  catch (e) { toast(e.message, "error"); }
+}
+
+/* ══════════════════ Monitor ══════════════════ */
+
+async function loadMonitor() {
+  try {
+    const [info, stats] = await Promise.all([api("/system/info"), api("/system/stats")]);
+    const h = info.host || {};
+    document.getElementById("sys-info-list").innerHTML = `
+      <div class="info-row"><div class="info-key">Hostname</div><div class="info-val">${escHtml(h.hostname)}</div></div>
+      <div class="info-row"><div class="info-key">İşletim Sistemi</div><div class="info-val">${escHtml(h.os)}</div></div>
+      <div class="info-row"><div class="info-key">Kernel</div><div class="info-val">${escHtml(h.kernel)}</div></div>
+      <div class="info-row"><div class="info-key">CPU</div><div class="info-val">${escHtml(h.cpu_model)} (${h.cpu_count_logical} core)</div></div>
+      <div class="info-row"><div class="info-key">Mimari</div><div class="info-val">${escHtml(h.architecture)}</div></div>
+      <div class="info-row"><div class="info-key">KVM</div><div class="info-val">${h.kvm_available ? "✓ Mevcut" : "✗ Yok"}</div></div>
+      <div class="info-row"><div class="info-key">Çalışma Süresi</div><div class="info-val">${escHtml(h.uptime)}</div></div>
+    `;
+    const s = stats.stats;
+    document.getElementById("res-monitor-detail").innerHTML = `
+      <div class="info-row"><div class="info-key">CPU</div><div class="info-val">${s.cpu.percent.toFixed(1)}% · ${s.cpu.frequency_mhz} MHz</div></div>
+      <div class="info-row"><div class="info-key">Yük (1/5/15)</div><div class="info-val">${s.cpu.load_avg["1min"]} / ${s.cpu.load_avg["5min"]} / ${s.cpu.load_avg["15min"]}</div></div>
+      <div class="info-row"><div class="info-key">Bellek</div><div class="info-val">${s.memory.used_mb}/${s.memory.total_mb} MB (${s.memory.percent.toFixed(1)}%)</div></div>
+      <div class="info-row"><div class="info-key">Swap</div><div class="info-val">${s.swap.used_mb}/${s.swap.total_mb} MB</div></div>
+      <div class="info-row"><div class="info-key">Disk I/O</div><div class="info-val">↓${s.disk_io.read_mb} MB · ↑${s.disk_io.write_mb} MB</div></div>
+      <div class="info-row"><div class="info-key">Ağ</div><div class="info-val">↓${s.network.bytes_recv_mb} MB · ↑${s.network.bytes_sent_mb} MB</div></div>
+    `;
+    loadProcesses();
+    loadDiskUsage();
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function loadProcesses() {
+  try {
+    const data = await api("/system/processes?limit=20");
+    document.getElementById("proc-tbody").innerHTML = (data.processes || []).map(p => `<tr>
+      <td><code>${p.pid}</code></td>
+      <td><strong>${escHtml(p.name)}</strong></td>
+      <td>${p.cpu_percent}%</td>
+      <td>${p.mem_percent}%</td>
+      <td><span class="badge ${p.status === "running" ? "running" : "stopped"}">${escHtml(p.status)}</span></td>
+      <td style="font-size:11px">${escHtml(p.user)}</td>
+    </tr>`).join("");
+  } catch {}
+}
+
+async function loadDiskUsage() {
+  try {
+    const data = await api("/storage/disks");
+    document.getElementById("disk-tbody").innerHTML = (data.disks || []).map(d => `<tr>
+      <td><code>${escHtml(d.device)}</code></td>
+      <td>${escHtml(d.fstype)}</td>
+      <td>${escHtml(d.size)}</td>
+      <td>${escHtml(d.used)}</td>
+      <td>${escHtml(d.avail)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="min-width:34px">${escHtml(d.percent)}</span>
+          <div class="progress-bar" style="width:60px"><div class="progress-fill ${parseInt(d.percent)>80?"red":"blue"}" style="width:${parseInt(d.percent)||0}%"></div></div>
+        </div>
+      </td>
+      <td><code style="font-size:11px">${escHtml(d.mount)}</code></td>
+    </tr>`).join("");
+  } catch {}
+}
+
+/* ══════════════════ Users ══════════════════ */
+
+async function loadUsers() {
+  try {
+    const data = await api("/users");
+    const users = data.users || [];
+    document.getElementById("users-tbody").innerHTML = users.map(u => `<tr>
+      <td><div style="display:flex;align-items:center;gap:10px">
+        <div class="user-avatar" style="width:26px;height:26px;font-size:11px">${u.username[0].toUpperCase()}</div>
+        <strong>${escHtml(u.username)}</strong>
+      </div></td>
+      <td><span class="badge ${u.role==="administrator"?"running":u.role==="operator"?"paused":"stopped"}">${u.role==="administrator"?"Yönetici":u.role==="operator"?"Operatör":"İzleyici"}</span></td>
+      <td>${u.created ? new Date(u.created*1000).toLocaleString("tr-TR") : "—"}</td>
+      <td>${u.username !== "admin" ? `<button class="btn sm danger" onclick="deleteUser('${escHtml(u.username)}')">✕</button>` : "—"}</td>
+    </tr>`).join("");
+  } catch (e) { toast("Kullanıcılar alınamadı: " + e.message, "error"); }
+}
+
+async function createUser() {
+  const username = document.getElementById("new-username").value.trim();
+  const password = document.getElementById("new-password").value;
+  const role = document.getElementById("new-role").value;
+  if (!username || !password) return toast("Tüm alanlar zorunlu", "error");
+  if (password.length < 8) return toast("Şifre en az 8 karakter", "error");
+  try {
+    await api("/users", { method: "POST", body: { username, password, role } });
+    toast("Kullanıcı oluşturuldu", "success");
+    closeModal("modal-create-user");
+    loadUsers();
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function deleteUser(username) {
+  if (!confirm(`"${username}" silinsin mi?`)) return;
+  try { await api(`/users/${username}`, { method: "DELETE" }); toast("Silindi", "success"); loadUsers(); }
+  catch (e) { toast(e.message, "error"); }
+}
+
+/* ══════════════════ Topology ══════════════════ */
+
+let _topoScale = 1, _topoPanX = 0, _topoPanY = 0;
+
+function loadTopology() {
+  api("/topology").then(d => renderTopology(d)).catch(e => toast("Topoloji: " + e.message, "error"));
+}
+
+function renderTopology(data) {
+  const root = document.getElementById("topo-root");
+  root.innerHTML = "";
+  _topoScale = 1; _topoPanX = 0; _topoPanY = 0;
+
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const networks = data.networks || [];
+  const totalNets = networks.length || 1;
+  const SVG_W = 1200, SVG_H = 680;
+  const HOST_X = SVG_W / 2, HOST_Y = 80, NET_Y = 260, VM_Y = 460;
+  const NET_SPACING = Math.min(220, (SVG_W - 80) / totalNets);
+  const NET_START_X = SVG_W / 2 - ((totalNets - 1) * NET_SPACING) / 2;
+
+  const mkEl = (tag, attrs) => { const el = document.createElementNS(SVG_NS, tag); Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v)); return el; };
+  const mkText = (txt, x, y) => { const e = mkEl("text", { x, y, "text-anchor": "middle", "font-size": "11", fill: "#c8d6e8" }); e.textContent = txt; return e; };
+  const mkLine = (x1, y1, x2, y2, color = "#1e2d45") => mkEl("line", { x1, y1, x2, y2, stroke: color, "stroke-width": "1.5", "marker-end": "url(#arrow)" });
+
+  function mkNode(x, y, r, fill, stroke, filter, label, sub, clickData) {
+    const g = mkEl("g", { style: "cursor:pointer" });
+    g.appendChild(mkEl("circle", { cx: x, cy: y, r, fill, stroke, "stroke-width": "2", filter: filter ? `url(#${filter})` : "" }));
+    g.appendChild(mkText(label, x, y + r + 14));
+    if (sub) { const s = mkText(sub, x, y + r + 27); s.setAttribute("font-size", "10"); s.setAttribute("fill", "#5a7494"); g.appendChild(s); }
+    g.addEventListener("click", e => { e.stopPropagation(); showTopoDetail(clickData); });
+    return g;
+  }
+
+  const hostLabel = (data.name || "oxware").slice(0, 18);
+  const hostSub = `CPU ${(data.cpu_pct || 0).toFixed(0)}% · RAM ${(data.ram_pct || 0).toFixed(0)}%`;
+  root.appendChild(mkNode(HOST_X, HOST_Y, 38, "#0d1d3a", "#3d82f0", "glow-blue", hostLabel, hostSub, { type: "hypervisor", data }));
+
+  networks.forEach((net, ni) => {
+    const nx = NET_START_X + ni * NET_SPACING;
+    const netActive = net.active;
+    const netFill = netActive ? "#0a3020" : "#141c2c";
+    const netStroke = netActive ? "#22c55e" : "#5a7494";
+    root.insertBefore(mkLine(HOST_X, HOST_Y + 38, nx, NET_Y - 28, netActive ? "#22c55e" : "#1e2d45"), root.firstChild);
+    root.appendChild(mkNode(nx, NET_Y, 28, netFill, netStroke, netActive ? "glow-green" : "", (net.name || "net").slice(0, 14), net.gateway || "", { type: "network", data: net }));
+
+    const vms = net.vms || [];
+    const vmSpacing = 140;
+    const vmStartX = nx - ((vms.length - 1) * vmSpacing) / 2;
+    vms.forEach((vm, vi) => {
+      const vx = vmStartX + vi * vmSpacing;
+      const vmActive = vm.state === "running", vmPaused = vm.state === "paused";
+      const vmFill = vmActive ? "#0a3020" : vmPaused ? "#2d2000" : "#141c2c";
+      const vmStroke = vmActive ? "#22c55e" : vmPaused ? "#eab308" : "#ef4444";
+      root.insertBefore(mkLine(nx, NET_Y + 28, vx, VM_Y - 22, vmStroke), root.firstChild);
+      root.appendChild(mkNode(vx, VM_Y, 22, vmFill, vmStroke, vmActive ? "glow-green" : "", (vm.name || "vm").slice(0, 12), vm.ip || "", { type: "vm", data: vm }));
+    });
+  });
+}
+
+function showTopoDetail(item) {
+  const det = document.getElementById("topo-detail");
+  document.getElementById("det-title").textContent = item.data?.name || item.type;
+  let body = "";
+  if (item.type === "hypervisor") body = `<div>CPU: ${(item.data.cpu_pct || 0).toFixed(1)}%</div><div>RAM: ${(item.data.ram_pct || 0).toFixed(1)}%</div>`;
+  else if (item.type === "network") body = `<div>Mode: ${item.data.mode}</div><div>Gateway: ${item.data.gateway || "—"}</div><div>Active: ${item.data.active ? "✓" : "✗"}</div>`;
+  else if (item.type === "vm") body = `<div>State: ${item.data.state}</div><div>IP: ${item.data.ip || "—"}</div><div>vCPU: ${item.data.vcpus || "—"}</div>`;
+  document.getElementById("det-body").innerHTML = body;
+  det.style.display = "block";
+}
+
+function topoZoom(f) {
+  _topoScale = Math.max(0.3, Math.min(3, _topoScale * f));
+  document.getElementById("topo-root").setAttribute("transform", `translate(${_topoPanX},${_topoPanY}) scale(${_topoScale})`);
+}
+
+function topoFit() {
+  _topoScale = 1; _topoPanX = 0; _topoPanY = 0;
+  document.getElementById("topo-root").setAttribute("transform", "");
+}
+
+/* ══════════════════ Snapshots ══════════════════ */
+let _currentSnapVm = null;
+
+async function loadSnapshots() {
+  try {
+    const data = await api("/vms");
+    const sel = document.getElementById("snap-vm-select");
+    sel.innerHTML = `<option value="">— VM seçin —</option>`;
+    (data.vms || []).forEach(v => { sel.innerHTML += `<option value="${v.id}">${escHtml(v.name)} (${v.state})</option>`; });
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function loadSnapshotsForVM(vmId) {
+  _currentSnapVm = vmId;
+  document.getElementById("btn-create-snap").disabled = !vmId;
+  if (!vmId) { document.getElementById("snap-list").innerHTML = `<div class="empty-state"><div class="icon">📸</div><h3>VM seçin</h3></div>`; document.getElementById("snap-timeline").style.display = "none"; return; }
+  try {
+    const data = await api(`/vms/${vmId}/snapshots`);
+    const snaps = data.snapshots || [];
+    if (!snaps.length) { document.getElementById("snap-list").innerHTML = `<div class="empty-state"><div class="icon">📷</div><h3>Snapshot yok</h3></div>`; document.getElementById("snap-timeline").style.display = "none"; return; }
+    document.getElementById("snap-list").innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Ad</th><th>Tarih</th><th>Açıklama</th><th>Durum</th><th>İşlemler</th></tr></thead>
+      <tbody>${snaps.map(s => `<tr>
+        <td><strong>${escHtml(s.name)}</strong></td>
+        <td>${s.creation_time ? new Date(s.creation_time*1000).toLocaleString("tr-TR") : "—"}</td>
+        <td>${escHtml(s.description || "—")}</td>
+        <td><span class="badge ${s.state === "running" ? "running" : "stopped"}">${escHtml(s.state || "—")}</span></td>
+        <td>
+          <button class="btn sm" onclick="revertSnapshot('${vmId}','${escHtml(s.name)}')">↶ Geri Yükle</button>
+          <button class="btn sm danger" onclick="deleteSnapshot('${vmId}','${escHtml(s.name)}')">✕ Sil</button>
+        </td>
+      </tr>`).join("")}</tbody></table></div>`;
+    document.getElementById("snap-timeline").style.display = "block";
+    _renderSnapTimeline(snaps);
+  } catch (e) { toast(e.message, "error"); }
+}
+
+function _renderSnapTimeline(snaps) {
+  const inner = document.getElementById("snap-timeline-inner");
+  if (!snaps.length) { inner.innerHTML = ""; return; }
+  const sorted = [...snaps].sort((a, b) => (a.creation_time || 0) - (b.creation_time || 0));
+  inner.innerHTML = `<div style="display:flex;align-items:center;gap:14px;overflow-x:auto;padding:10px 0">
+    ${sorted.map(s => `<div style="text-align:center;min-width:100px">
+      <div style="width:14px;height:14px;border-radius:50%;background:var(--accent);margin:0 auto 6px;border:2px solid var(--surface)"></div>
+      <div style="font-size:11px;font-weight:600">${escHtml(s.name)}</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${s.creation_time ? new Date(s.creation_time*1000).toLocaleDateString("tr-TR") : "—"}</div>
+    </div>`).join('<div style="height:2px;background:var(--border);flex:1;min-width:30px"></div>')}
+  </div>`;
+}
+
+async function createSnapshot() {
+  const name = document.getElementById("new-snap-name").value.trim();
+  const desc = document.getElementById("new-snap-desc").value.trim();
+  if (!name || !_currentSnapVm) return toast("Ad gerekli", "error");
+  try {
+    await api(`/vms/${_currentSnapVm}/snapshots`, { method: "POST", body: { name, description: desc } });
+    toast("Snapshot alındı", "success");
+    closeModal("modal-create-snap");
+    document.getElementById("new-snap-name").value = "";
+    document.getElementById("new-snap-desc").value = "";
+    loadSnapshotsForVM(_currentSnapVm);
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function revertSnapshot(vmId, name) {
+  if (!confirm(`"${name}"'e geri dönülsün mü?`)) return;
+  try { await api(`/vms/${vmId}/snapshots/${name}/revert`, { method: "POST" }); toast("Geri yüklendi", "success"); loadSnapshotsForVM(vmId); }
+  catch (e) { toast(e.message, "error"); }
+}
+
+async function deleteSnapshot(vmId, name) {
+  if (!confirm(`"${name}" silinsin mi?`)) return;
+  try { await api(`/vms/${vmId}/snapshots/${name}`, { method: "DELETE" }); toast("Silindi", "success"); loadSnapshotsForVM(vmId); }
+  catch (e) { toast(e.message, "error"); }
+}
+
+/* ══════════════════ Settings ══════════════════ */
+
+function switchSettingsTab(tab) {
+  document.querySelectorAll(".settings-tab[data-tab]").forEach(t => t.classList.remove("active"));
+  document.querySelector(`[data-tab="${tab}"]`).classList.add("active");
+  document.getElementById("settings-tab-notifications").style.display = tab === "notifications" ? "" : "none";
+  document.getElementById("settings-tab-ai").style.display = tab === "ai" ? "" : "none";
+  if (tab === "ai") loadAIAgents();
+}
+
+async function loadSettings() {
+  try {
+    const data = await api("/notifications/config");
+    if (data.telegram_enabled) document.getElementById("tg-token").placeholder = "••••••• (ayarlı)";
+    if (data.telegram_chat_id) document.getElementById("tg-chat-id").value = data.telegram_chat_id;
+    if (data.discord_webhook_set) document.getElementById("discord-webhook").placeholder = "••••••• (ayarlı)";
+    if (data.min_level) document.getElementById("notif-min-level").value = data.min_level;
+  } catch {}
+}
+
+async function saveNotifConfig() {
+  try {
+    await api("/notifications/config", {
+      method: "POST",
+      body: {
+        telegram_token: document.getElementById("tg-token").value.trim(),
+        telegram_chat_id: document.getElementById("tg-chat-id").value.trim(),
+        discord_webhook: document.getElementById("discord-webhook").value.trim(),
+        min_level: document.getElementById("notif-min-level").value,
+      }
+    });
+    toast("Kaydedildi", "success");
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function testNotification(channel) {
+  try { await api("/notifications/test", { method: "POST", body: { message: "OXware test ✓", level: "INFO", channel } }); toast(`Test → ${channel}`, "success"); }
+  catch (e) { toast(e.message, "error"); }
+}
+
+const PROVIDER_MODELS = { openrouter: "anthropic/claude-3-haiku", anthropic: "claude-haiku-4-5-20251001", openai: "gpt-4o-mini", ollama: "llama3" };
+
+function onProviderChange() {
+  const prov = document.getElementById("agent-provider").value;
+  document.getElementById("agent-model").value = PROVIDER_MODELS[prov] || "";
+  document.getElementById("agent-apikey-row").style.display = prov === "ollama" ? "none" : "";
+}
+
+async function loadAIAgents() {
+  try {
+    const data = await api("/ai/agents");
+    const agents = data.agents || [];
+    const el = document.getElementById("ai-agents-list");
+    if (!agents.length) { el.innerHTML = `<div class="empty-state"><div class="icon">🤖</div><h3>AI Ajan yok</h3></div>`; return; }
+    el.innerHTML = agents.map(a => `<div class="agent-card">
+      <div class="agent-status" style="background:${a.running ? "var(--green-lt)" : "var(--border2)"}"></div>
+      <div style="flex:1">
+        <div style="font-weight:600;display:flex;align-items:center;gap:8px">
+          ${escHtml(a.name)}
+          <span class="agent-cron">⏱ ${a.interval}dk</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:3px">
+          ${escHtml(a.provider)} · <code style="font-size:10px">${escHtml(a.model)}</code>
+          ${(a.tasks||[]).map(t => `<span style="margin-left:4px;font-size:9px;padding:1px 5px;background:rgba(30,45,69,.5);border-radius:2px">${t}</span>`).join("")}
+        </div>
+      </div>
+      <span class="badge ${a.running ? "running" : (a.enabled ? "green" : "gray")}" style="margin-right:4px">
+        <span class="badge-dot"></span>${a.running ? "Çalışıyor" : (a.enabled ? "Aktif" : "Pasif")}
+      </span>
+      <button class="btn sm" onclick="triggerAgent('${escHtml(a.id)}')" title="Şimdi çalıştır">▶</button>
+      <button class="btn sm danger" onclick="deleteAIAgent('${escHtml(a.id)}')">✕</button>
+    </div>`).join("");
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function addAIAgent() {
+  const agent_id = document.getElementById("agent-id").value.trim();
+  const name = document.getElementById("agent-name").value.trim();
+  const provider = document.getElementById("agent-provider").value;
+  const api_key = document.getElementById("agent-apikey").value.trim();
+  const model = document.getElementById("agent-model").value.trim();
+  const interval = parseInt(document.getElementById("agent-interval").value) || 15;
+  if (!agent_id || !name) return toast("ID ve Ad zorunlu", "error");
+  if (provider !== "ollama" && !api_key) return toast("API Key zorunlu", "error");
+  try {
+    await api("/ai/agents", {
+      method: "POST",
+      body: {
+        agent_id,
+        name,
+        provider,
+        api_key: api_key || "none",
+        model: model || undefined,
+        interval_minutes: interval,
+        tasks: ["monitor", "events", "alerts"],
+        enabled: true
+      }
+    });
+    toast("Ajan eklendi", "success");
+    closeModal("modal-add-agent");
+    // Reset form
+    document.getElementById("agent-id").value = "";
+    document.getElementById("agent-name").value = "";
+    document.getElementById("agent-apikey").value = "";
+    loadAIAgents();
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function deleteAIAgent(id) {
+  if (!confirm(`"${id}" silinsin mi?`)) return;
+  try { await api(`/ai/agents/${id}`, { method: "DELETE" }); toast("Silindi", "success"); loadAIAgents(); }
+  catch (e) { toast(e.message, "error"); }
+}
+
+async function triggerAgent(id) {
+  try {
+    await api(`/ai/agents/${id}/query`, {
+      method: "POST",
+      body: { prompt: "Şu an sistemin genel durumunu analiz et ve kısaca özetle.", system_prompt: "Sen OXware Hypervisor için bir sistem izleme yapay zekasısın. Türkçe, kısa ve net yanıt ver." }
+    });
+    toast(`Agent '${id}' tetiklendi`, "success");
+    setTimeout(loadAIAgents, 1000);
+  } catch (e) { toast(e.message, "error"); }
+}
+
+/* ══════════════════ Updates ══════════════════ */
+
+async function loadUpdates() {
+  try {
+    const cfg = await api("/update/config");
+    if (cfg.repo_url) document.getElementById("upd-repo-url").value = cfg.repo_url;
+    if (cfg.branch) document.getElementById("upd-branch").value = cfg.branch;
+  } catch {}
+  loadUpdateHistory();
+}
+
+async function saveUpdateConfig() {
+  const repo_url = document.getElementById("upd-repo-url").value.trim();
+  const branch = document.getElementById("upd-branch").value.trim() || "main";
+  if (!repo_url) return toast("Repo URL boş", "error");
+  try { await api("/update/config", { method: "POST", body: { repo_url, branch } }); toast("Kaydedildi", "success"); }
+  catch (e) { toast(e.message, "error"); }
+}
+
+async function checkUpdates() {
+  const btn = document.getElementById("btn-check-update");
+  btn.disabled = true; btn.textContent = "⏳ Kontrol...";
+  const area = document.getElementById("update-status-area");
+  area.innerHTML = `<div class="empty-state"><div class="icon">⏳</div><h3>GitHub kontrol ediliyor...</h3></div>`;
+  try {
+    const data = await api("/update/check");
+    if (data.error) { area.innerHTML = `<div class="card" style="border-color:var(--red)"><div style="color:var(--red-lt)">✗ ${escHtml(data.error)}</div></div>`; return; }
+    document.getElementById("update-badge").style.display = data.up_to_date ? "none" : "inline";
+    area.innerHTML = `<div class="card" style="border-left:3px solid ${data.up_to_date ? "var(--green-lt)" : "var(--orange)"}">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="font-size:28px">${data.up_to_date ? "✅" : "🔔"}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:${data.up_to_date ? "var(--green-lt)" : "var(--orange)"}">${data.up_to_date ? "Sistem güncel" : `${data.new_count} yeni güncelleme`}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:3px">Yerel: <code>${data.current_sha}</code> → Uzak: <code>${data.remote_sha}</code> · Branch: <code>${data.branch}</code></div>
+        </div>
+      </div>
+    </div>`;
+    const commitsArea = document.getElementById("update-commits-area");
+    if (!data.up_to_date && data.new_commits?.length) {
+      commitsArea.style.display = "block";
+      document.getElementById("update-commits-list").innerHTML = data.new_commits.map(c => `<div style="display:flex;gap:10px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;margin-bottom:5px">
+        <code style="flex-shrink:0">${c.sha}</code>
+        <div style="flex:1">
+          <div style="font-size:12px">${escHtml(c.message)}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${escHtml(c.author)} · ${new Date(c.date).toLocaleString("tr-TR")}</div>
+        </div>
+      </div>`).join("");
+    } else commitsArea.style.display = "none";
+  } catch (e) { area.innerHTML = `<div class="card" style="border-color:var(--red)"><div style="color:var(--red-lt)">${escHtml(e.message)}</div></div>`; }
+  finally { btn.disabled = false; btn.textContent = "🔍 Kontrol Et"; }
+}
+
+async function applyUpdate() {
+  if (!confirm("Güncelleme uygulanacak ve servis yeniden başlayacak. Devam?")) return;
+  const btn = document.getElementById("btn-apply-update");
+  btn.disabled = true; btn.textContent = "⏳ Uygulanıyor...";
+  try {
+    const data = await api("/update/apply", { method: "POST" });
+    if (data.success) {
+      toast("Güncelleme uygulandı! Servis yeniden başlıyor...", "success");
+      setTimeout(() => location.reload(), 8000);
+    } else { toast("Hata: " + data.error, "error"); btn.disabled = false; btn.textContent = "⬇️ Uygula"; }
+  } catch (e) { toast(e.message, "error"); btn.disabled = false; btn.textContent = "⬇️ Uygula"; }
+  loadUpdateHistory();
+}
+
+async function loadUpdateHistory() {
+  try {
+    const data = await api("/update/history");
+    const area = document.getElementById("update-history-area");
+    const history = data.history || [];
+    if (!history.length) { area.style.display = "none"; return; }
+    area.style.display = "block";
+    document.getElementById("update-history-list").innerHTML = history.map(h => `<div style="display:flex;gap:10px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;margin-bottom:5px">
+      <div>📦</div>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:600"><code>${h.old_sha || "—"}</code> → <code>${h.new_sha || "—"}</code></div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${new Date(h.datetime).toLocaleString("tr-TR")} · ${h.branch}</div>
+      </div>
+    </div>`).join("");
+  } catch {}
+}
+
+/* ══════════════════ Task Log ══════════════════ */
+
+async function loadTaskLog() {
+  try {
+    const data = await api("/events?limit=50");
+    const events = data.events || [];
+    const tbody = document.getElementById("tasklog-tbody");
+    if (!events.length) { tbody.innerHTML = `<tr><td colspan="6" style="padding:14px;text-align:center;color:var(--text-muted)">Olay yok</td></tr>`; return; }
+    const hostname = document.getElementById("tree-node-name").textContent || "oxware";
+    tbody.innerHTML = events.map(e => {
+      const cls = e.level === "ERROR" || e.level === "CRITICAL" ? "err" : e.level === "WARNING" ? "running" : "ok";
+      const status = e.level === "ERROR" || e.level === "CRITICAL" ? "FAILED" : "OK";
+      const icon = e.level === "ERROR" || e.level === "CRITICAL" ? "✗" : e.level === "WARNING" ? "⚠" : "✓";
+      return `<tr>
+        <td>${e.timestamp ? new Date(e.timestamp * 1000).toLocaleString("tr-TR") : "—"}</td>
+        <td>${e.timestamp ? new Date(e.timestamp * 1000).toLocaleString("tr-TR") : "—"}</td>
+        <td>${escHtml(hostname)}</td>
+        <td>${escHtml(e.user || "system")}</td>
+        <td>${escHtml(e.message || "")}</td>
+        <td><span class="task-status ${cls}">${icon} ${status}</span></td>
+      </tr>`;
+    }).join("");
+  } catch (e) {
+    document.getElementById("tasklog-tbody").innerHTML = `<tr><td colspan="6" style="padding:14px;text-align:center;color:var(--text-muted)">Yüklenemedi</td></tr>`;
+  }
+}
+
+function switchTaskTab(tab) {
+  document.querySelectorAll(".tb-tab[data-ttab]").forEach(t => t.classList.remove("active"));
+  document.querySelector(`[data-ttab="${tab}"]`).classList.add("active");
+  loadTaskLog();
+}
+
+/* ══════════════════ Confirm shutdown / reboot ══════════════════ */
+
+function confirmShutdown(action) {
+  const lbl = action === "reboot" ? "yeniden başlatılsın" : "kapatılsın";
+  if (!confirm(`Sunucu ${lbl} mı?`)) return;
+  toast("Bu özellik yakında eklenecek", "info");
+}
+
+/* ══════════════════ Shell Console ══════════════════ */
+
+let _shellTerm = null;
+let _shellSocket = null;
+let _shellFit = null;
+let _shellConnected = false;
+let _shellInitDone = false;
+
+function shellInitIfNeeded() {
+  if (_shellInitDone) return;
+  _shellInitDone = true;
+  _initShellTerminal();
+}
+
+function _initShellTerminal() {
+  if (typeof Terminal === "undefined") {
+    document.getElementById("shell-terminal").innerHTML = '<div style="padding:20px;color:#ef4444">xterm.js yüklenemedi. İnternet bağlantısını kontrol edin.</div>';
+    return;
+  }
+  _shellTerm = new Terminal({
+    theme: {
+      background: "#0a0a0a",
+      foreground: "#c8d6e8",
+      cursor: "#3d82f0",
+      selection: "rgba(61,130,240,0.3)",
+      black: "#080c14",
+      brightBlack: "#3d5470",
+      blue: "#3d82f0",
+      brightBlue: "#60a5fa",
+      green: "#22c55e",
+      brightGreen: "#4ade80",
+      red: "#ef4444",
+      brightRed: "#f87171",
+      yellow: "#eab308",
+      white: "#c8d6e8",
+    },
+    fontFamily: "'Consolas','Cascadia Code','Fira Code',monospace",
+    fontSize: 13,
+    lineHeight: 1.35,
+    cursorBlink: true,
+    cursorStyle: "block",
+    scrollback: 2000,
+    convertEol: true,
+  });
+
+  if (typeof FitAddon !== "undefined") {
+    _shellFit = new FitAddon.FitAddon();
+    _shellTerm.loadAddon(_shellFit);
+  }
+
+  const termEl = document.getElementById("shell-terminal");
+  _shellTerm.open(termEl);
+  if (_shellFit) {
+    setTimeout(() => { try { _shellFit.fit(); } catch(e){} }, 50);
+  }
+
+  _shellTerm.writeln("\x1b[36m╔══════════════════════════════════════════╗\x1b[0m");
+  _shellTerm.writeln("\x1b[36m║  OXware Host Shell — Bağlanmak için      ║\x1b[0m");
+  _shellTerm.writeln("\x1b[36m║  yukarıdaki ▶ Bağlan butonuna tıklayın  ║\x1b[0m");
+  _shellTerm.writeln("\x1b[36m╚══════════════════════════════════════════╝\x1b[0m");
+
+  // Resize observer
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(() => {
+      if (_shellFit) {
+        try { _shellFit.fit(); _shellSendResize(); } catch(e) {}
+      }
+    }).observe(termEl);
+  }
+}
+
+function shellToggleConnect() {
+  if (_shellConnected) {
+    shellDisconnect();
+  } else {
+    shellConnect();
+  }
+}
+
+function shellConnect() {
+  if (!_shellTerm) { _initShellTerminal(); }
+  if (_shellConnected) return;
+
+  const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+  const wsUrl = `${protocol}//${location.host}/socket.io/`;
+
+  // Use socket.io
+  const io = window.io;
+  if (!io) {
+    _shellTerm.writeln("\r\n\x1b[31m[Hata: socket.io yüklenemedi]\x1b[0m");
+    return;
+  }
+
+  if (_shellSocket) {
+    try { _shellSocket.disconnect(); } catch(e) {}
+  }
+
+  _shellSocket = io({ transports: ["websocket"], reconnection: false });
+
+  _shellSocket.on("connect", () => {
+    _shellConnected = true;
+    _shellUpdateStatus(true);
+    _shellSocket.emit("shell_open", { token: TOKEN() });
+
+    // Send terminal input to server
+    _shellTerm.onData(data => {
+      _shellSocket.emit("shell_input", { data });
+    });
+
+    _shellSendResize();
+  });
+
+  _shellSocket.on("shell_output", (msg) => {
+    if (_shellTerm && msg.data) _shellTerm.write(msg.data);
+  });
+
+  _shellSocket.on("disconnect", () => {
+    _shellConnected = false;
+    _shellUpdateStatus(false);
+    if (_shellTerm) _shellTerm.writeln("\r\n\x1b[33m[Bağlantı kesildi]\x1b[0m");
+  });
+
+  _shellSocket.on("connect_error", (err) => {
+    _shellConnected = false;
+    _shellUpdateStatus(false);
+    if (_shellTerm) _shellTerm.writeln(`\r\n\x1b[31m[Bağlantı hatası: ${err.message}]\x1b[0m`);
+  });
+}
+
+function shellDisconnect() {
+  if (_shellSocket) {
+    try { _shellSocket.disconnect(); } catch(e) {}
+    _shellSocket = null;
+  }
+  _shellConnected = false;
+  _shellUpdateStatus(false);
+}
+
+function _shellUpdateStatus(connected) {
+  const dot = document.getElementById("shell-status-dot");
+  const txt = document.getElementById("shell-status-text");
+  const btn = document.getElementById("shell-connect-btn");
+  if (dot) {
+    dot.className = `shell-status ${connected ? "connected" : "disconnected"}`;
+  }
+  if (txt) txt.textContent = connected ? "Bağlı" : "Bağlı değil";
+  if (btn) btn.textContent = connected ? "⏹ Kes" : "▶ Bağlan";
+}
+
+function _shellSendResize() {
+  if (!_shellSocket || !_shellTerm || !_shellConnected) return;
+  _shellSocket.emit("shell_resize", {
+    rows: _shellTerm.rows,
+    cols: _shellTerm.cols,
+  });
+}
+
+function shellSend(cmd) {
+  if (!_shellConnected) {
+    toast("Önce shell'e bağlanın", "error");
+    return;
+  }
+  if (_shellSocket) _shellSocket.emit("shell_input", { data: cmd });
+}
+
+function shellClear() {
+  if (_shellTerm) _shellTerm.clear();
+}
+
+/* ══════════════════ Init ══════════════════ */
+
+window.addEventListener("DOMContentLoaded", () => {
+  initCharts();
+  buildContextNav("node");
+  selectTreeItem("node");
+  loadNodeSummary();
+  refreshTreeVMs();
+  loadTaskLog();
+
+  statsInterval = setInterval(() => {
+    if (currentPage === "summary") loadNodeSummary();
+    if (currentPage === "vm-detail" && currentVmId) loadVMDetail(currentVmId);
+    refreshTreeVMs();
+    if (currentPage === "topology") loadTopology();
+  }, 8000);
+
+  // Task log every 15s
+  setInterval(loadTaskLog, 15000);
+});
+</script>
+</body>
+</html>

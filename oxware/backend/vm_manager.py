@@ -1,0 +1,537 @@
+import libvirt
+import xml.etree.ElementTree as ET
+import subprocess
+import os
+import time
+import json
+import uuid
+import config
+
+LIBVIRT_URI = config.LIBVIRT_URI
+
+STATE_MAP = {
+    libvirt.VIR_DOMAIN_NOSTATE:  "unknown",
+    libvirt.VIR_DOMAIN_RUNNING:  "running",
+    libvirt.VIR_DOMAIN_BLOCKED:  "blocked",
+    libvirt.VIR_DOMAIN_PAUSED:   "paused",
+    libvirt.VIR_DOMAIN_SHUTDOWN: "shutdown",
+    libvirt.VIR_DOMAIN_SHUTOFF:  "stopped",
+    libvirt.VIR_DOMAIN_CRASHED:  "crashed",
+    libvirt.VIR_DOMAIN_PMSUSPENDED: "suspended",
+}
+
+_VNC_REGISTRY_FILE = os.path.join(config.DATA_DIR, "vnc_registry.json")
+
+
+def _connect():
+    return libvirt.open(LIBVIRT_URI)
+
+
+def _load_vnc_registry():
+    if os.path.exists(_VNC_REGISTRY_FILE):
+        with open(_VNC_REGISTRY_FILE) as f:
+            return json.load(f)
+    return {}
+
+
+def _save_vnc_registry(reg):
+    with open(_VNC_REGISTRY_FILE, "w") as f:
+        json.dump(reg, f, indent=2)
+
+
+def _next_vnc_port():
+    reg = _load_vnc_registry()
+    used = set(reg.values())
+    for p in range(config.VNC_START, config.VNC_END + 1):
+        if p not in used:
+            return p
+    raise RuntimeError("Boş VNC portu bulunamadı")
+
+
+def _get_domain_stats(dom):
+    try:
+        state, reason = dom.state()
+        info = dom.info()
+        mem_used = info[1]
+        mem_total = info[1]
+        cpu_time = info[4]
+        return {
+            "state": STATE_MAP.get(state, "unknown"),
+            "cpu_time": cpu_time,
+            "memory_used_kb": mem_used,
+            "memory_max_kb": mem_total,
+        }
+    except Exception:
+        return {"state": "unknown", "cpu_time": 0, "memory_used_kb": 0, "memory_max_kb": 0}
+
+
+def _parse_disk_info(xml_str):
+    disks = []
+    try:
+        root = ET.fromstring(xml_str)
+        for disk in root.findall(".//disk[@type='file'][@device='disk']"):
+            source = disk.find("source")
+            target = disk.find("target")
+            if source is not None and target is not None:
+                disks.append({
+                    "path": source.get("file", ""),
+                    "device": target.get("dev", ""),
+                    "bus": target.get("bus", ""),
+                })
+    except Exception:
+        pass
+    return disks
+
+
+def _parse_net_info(xml_str):
+    interfaces = []
+    try:
+        root = ET.fromstring(xml_str)
+        for iface in root.findall(".//interface"):
+            mac = iface.find("mac")
+            source = iface.find("source")
+            target = iface.find("target")
+            interfaces.append({
+                "mac": mac.get("address", "") if mac is not None else "",
+                "network": source.get("network", source.get("bridge", "")) if source is not None else "",
+                "device": target.get("dev", "") if target is not None else "",
+                "type": iface.get("type", ""),
+            })
+    except Exception:
+        pass
+    return interfaces
+
+
+def _parse_vnc_port(xml_str):
+    try:
+        root = ET.fromstring(xml_str)
+        graphics = root.find(".//graphics[@type='vnc']")
+        if graphics is not None:
+            port = graphics.get("port", "-1")
+            return int(port)
+    except Exception:
+        pass
+    return -1
+
+
+def list_vms():
+    conn = _connect()
+    vms = []
+    try:
+        for dom in conn.listAllDomains():
+            stats = _get_domain_stats(dom)
+            xml_str = dom.XMLDesc()
+            disks = _parse_disk_info(xml_str)
+            nets = _parse_net_info(xml_str)
+            vnc_port = _parse_vnc_port(xml_str)
+
+            info = dom.info()
+            vms.append({
+                "id": dom.UUIDString(),
+                "name": dom.name(),
+                "state": stats["state"],
+                "vcpus": info[3],
+                "memory_mb": info[1] // 1024,
+                "memory_max_mb": info[1] // 1024,
+                "cpu_time": stats["cpu_time"],
+                "disks": disks,
+                "networks": nets,
+                "vnc_port": vnc_port,
+                "autostart": bool(dom.autostart()),
+            })
+    finally:
+        conn.close()
+    return vms
+
+
+def get_vm(vm_id):
+    conn = _connect()
+    try:
+        try:
+            dom = conn.lookupByUUIDString(vm_id)
+        except libvirt.libvirtError:
+            dom = conn.lookupByName(vm_id)
+
+        stats = _get_domain_stats(dom)
+        xml_str = dom.XMLDesc()
+        disks = _parse_disk_info(xml_str)
+        nets = _parse_net_info(xml_str)
+        vnc_port = _parse_vnc_port(xml_str)
+        info = dom.info()
+
+        return {
+            "id": dom.UUIDString(),
+            "name": dom.name(),
+            "state": stats["state"],
+            "vcpus": info[3],
+            "memory_mb": info[1] // 1024,
+            "cpu_time": stats["cpu_time"],
+            "disks": disks,
+            "networks": nets,
+            "vnc_port": vnc_port,
+            "autostart": bool(dom.autostart()),
+            "xml": xml_str,
+        }
+    finally:
+        conn.close()
+
+
+def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
+              network="default", disk_format="qcow2", os_variant="generic",
+              boot_order="cdrom,hd"):
+
+    vm_uuid = str(uuid.uuid4())
+    disk_path = os.path.join(config.DISK_DIR, f"{name}.qcow2")
+    vnc_port = _next_vnc_port()
+
+    os.makedirs(config.DISK_DIR, exist_ok=True)
+
+    # Disk oluştur
+    subprocess.run(
+        ["qemu-img", "create", "-f", disk_format, disk_path, f"{disk_gb}G"],
+        check=True, capture_output=True
+    )
+
+    # XML şablonu
+    iso_block = ""
+    if iso_path and os.path.exists(iso_path):
+        iso_block = f"""
+    <disk type='file' device='cdrom'>
+      <driver name='qemu' type='raw'/>
+      <source file='{iso_path}'/>
+      <target dev='sdb' bus='sata'/>
+      <readonly/>
+    </disk>"""
+
+    boot_xml = "".join(
+        f"<boot dev='{dev}'/>"
+        for dev in boot_order.split(",")
+    )
+
+    xml = f"""<domain type='kvm'>
+  <name>{name}</name>
+  <uuid>{vm_uuid}</uuid>
+  <memory unit='MiB'>{memory_mb}</memory>
+  <currentMemory unit='MiB'>{memory_mb}</currentMemory>
+  <vcpu placement='static'>{vcpus}</vcpu>
+  <os>
+    <type arch='x86_64' machine='pc-q35-8.2'>hvm</type>
+    {boot_xml}
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+    <vmport state='off'/>
+  </features>
+  <cpu mode='host-model' check='partial'>
+    <model fallback='allow'/>
+  </cpu>
+  <clock offset='utc'>
+    <timer name='rtc' tickpolicy='catchup'/>
+    <timer name='pit' tickpolicy='delay'/>
+    <timer name='hpet' present='no'/>
+  </clock>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <pm>
+    <suspend-to-mem enabled='no'/>
+    <suspend-to-disk enabled='no'/>
+  </pm>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='{disk_format}' cache='none' io='native'/>
+      <source file='{disk_path}'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>{iso_block}
+    <interface type='network'>
+      <mac address='52:54:00:{":".join([f"{b:02x}" for b in os.urandom(3)])}' />
+      <source network='{network}'/>
+      <model type='virtio'/>
+    </interface>
+    <serial type='pty'>
+      <target type='isa-serial' port='0'>
+        <model name='isa-serial'/>
+      </target>
+    </serial>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
+    <channel type='unix'>
+      <target type='virtio' name='org.qemu.guest_agent.0'/>
+    </channel>
+    <input type='mouse' bus='ps2'/>
+    <input type='keyboard' bus='ps2'/>
+    <graphics type='vnc' port='{vnc_port}' autoport='no' listen='0.0.0.0' keymap='tr'>
+      <listen type='address' address='0.0.0.0'/>
+    </graphics>
+    <sound model='ich9'>
+    </sound>
+    <video>
+      <model type='virtio' heads='1' primary='yes'/>
+    </video>
+    <memballoon model='virtio'>
+    </memballoon>
+    <rng model='virtio'>
+      <backend model='random'>/dev/urandom</backend>
+    </rng>
+  </devices>
+</domain>"""
+
+    conn = _connect()
+    try:
+        dom = conn.defineXML(xml)
+        reg = _load_vnc_registry()
+        reg[vm_uuid] = vnc_port
+        _save_vnc_registry(reg)
+        return {"id": vm_uuid, "name": name, "vnc_port": vnc_port}
+    finally:
+        conn.close()
+
+
+def start_vm(vm_id):
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        if dom.isActive():
+            return {"status": "already_running"}
+        dom.create()
+        return {"status": "started"}
+    finally:
+        conn.close()
+
+
+def stop_vm(vm_id, force=False):
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        if not dom.isActive():
+            return {"status": "already_stopped"}
+        if force:
+            dom.destroy()
+            return {"status": "forced_stop"}
+        dom.shutdown()
+        return {"status": "shutting_down"}
+    finally:
+        conn.close()
+
+
+def reboot_vm(vm_id, force=False):
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        if force:
+            dom.reset()
+        else:
+            dom.reboot()
+        return {"status": "rebooting"}
+    finally:
+        conn.close()
+
+
+def pause_vm(vm_id):
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        dom.suspend()
+        return {"status": "paused"}
+    finally:
+        conn.close()
+
+
+def resume_vm(vm_id):
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        dom.resume()
+        return {"status": "resumed"}
+    finally:
+        conn.close()
+
+
+def delete_vm(vm_id, delete_disk=True):
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+
+        if dom.isActive():
+            dom.destroy()
+            time.sleep(1)
+
+        xml_str = dom.XMLDesc()
+        disks = _parse_disk_info(xml_str)
+
+        dom.undefineFlags(
+            libvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE |
+            libvirt.VIR_DOMAIN_UNDEFINE_SNAPSHOTS_METADATA
+        )
+
+        if delete_disk:
+            for disk in disks:
+                path = disk.get("path", "")
+                if path and os.path.exists(path):
+                    os.remove(path)
+
+        reg = _load_vnc_registry()
+        reg.pop(vm_id, None)
+        _save_vnc_registry(reg)
+
+        return {"status": "deleted"}
+    finally:
+        conn.close()
+
+
+def get_vm_stats(vm_id):
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        if not dom.isActive():
+            return {"state": "stopped"}
+
+        info = dom.info()
+        stats = dom.getCPUStats(True)[0]
+
+        # Disk I/O
+        disk_stats = {}
+        xml_str = dom.XMLDesc()
+        for disk in _parse_disk_info(xml_str):
+            dev = disk.get("device", "vda")
+            try:
+                rd, wr = dom.blockStats(dev)[:2], dom.blockStats(dev)[2:4]
+                disk_stats[dev] = {"read_bytes": rd[0], "write_bytes": wr[0]}
+            except Exception:
+                pass
+
+        # Ağ istatistikleri
+        net_stats = {}
+        for iface in _parse_net_info(xml_str):
+            dev = iface.get("device", "")
+            if dev:
+                try:
+                    ns = dom.interfaceStats(dev)
+                    net_stats[dev] = {
+                        "rx_bytes": ns[0], "tx_bytes": ns[4],
+                        "rx_packets": ns[1], "tx_packets": ns[5],
+                    }
+                except Exception:
+                    pass
+
+        return {
+            "state": STATE_MAP.get(info[0], "unknown"),
+            "cpu_time_ns": stats.get("cpu_time", 0),
+            "memory_kb": info[1],
+            "vcpus": info[3],
+            "disk_stats": disk_stats,
+            "net_stats": net_stats,
+        }
+    finally:
+        conn.close()
+
+
+def set_autostart(vm_id, enabled):
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        dom.setAutostart(1 if enabled else 0)
+        return {"autostart": enabled}
+    finally:
+        conn.close()
+
+
+def take_snapshot(vm_id, snap_name, description=""):
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        xml = f"""<domainsnapshot>
+  <name>{snap_name}</name>
+  <description>{description}</description>
+</domainsnapshot>"""
+        dom.snapshotCreateXML(xml, 0)
+        return {"status": "snapshot_created", "name": snap_name}
+    finally:
+        conn.close()
+
+
+def list_snapshots(vm_id):
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        snaps = []
+        for snap in dom.listAllSnapshots():
+            xml_str = snap.getXMLDesc()
+            root = ET.fromstring(xml_str)
+            created_el = root.find("creationTime")
+            snaps.append({
+                "name": snap.getName(),
+                "created": int(created_el.text) if created_el is not None else 0,
+                "description": (root.findtext("description") or ""),
+                "current": snap.isCurrent(),
+            })
+        return snaps
+    finally:
+        conn.close()
+
+
+def revert_snapshot(vm_id, snap_name):
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        snap = dom.snapshotLookupByName(snap_name)
+        dom.revertToSnapshot(snap)
+        return {"status": "reverted", "snapshot": snap_name}
+    finally:
+        conn.close()
+
+
+def delete_snapshot(vm_id, snap_name):
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        snap = dom.snapshotLookupByName(snap_name)
+        snap.delete()
+        return {"status": "deleted", "snapshot": snap_name}
+    finally:
+        conn.close()
+
+
+def clone_vm(vm_id, new_name):
+    source = get_vm(vm_id)
+    src_disk = source["disks"][0]["path"] if source["disks"] else None
+
+    if not src_disk:
+        raise ValueError("Kaynak VM diski bulunamadı")
+
+    new_disk = os.path.join(config.DISK_DIR, f"{new_name}.qcow2")
+    subprocess.run(
+        ["qemu-img", "create", "-f", "qcow2", "-b", src_disk, "-F", "qcow2", new_disk],
+        check=True, capture_output=True
+    )
+
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        xml_str = dom.XMLDesc()
+        root = ET.fromstring(xml_str)
+
+        root.find("name").text = new_name
+        import uuid as _uuid
+        root.find("uuid").text = str(_uuid.uuid4())
+
+        for source_el in root.findall(".//disk[@device='disk']/source"):
+            source_el.set("file", new_disk)
+
+        vnc_port = _next_vnc_port()
+        for g in root.findall(".//graphics[@type='vnc']"):
+            g.set("port", str(vnc_port))
+
+        new_xml = ET.tostring(root, encoding="unicode")
+        new_dom = conn.defineXML(new_xml)
+
+        reg = _load_vnc_registry()
+        reg[new_dom.UUIDString()] = vnc_port
+        _save_vnc_registry(reg)
+
+        return {"id": new_dom.UUIDString(), "name": new_name, "cloned_from": vm_id}
+    finally:
+        conn.close()

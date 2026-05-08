@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OXware Dokümantasyon</title>
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --surface2: #21262d;
+      --border:   #30363d;
+      --text:     #e6edf3;
+      --muted:    #8b949e;
+      --accent:   #00d4ff;
+      --green:    #3fb950;
+      --yellow:   #d29922;
+      --red:      #f85149;
+      --purple:   #bc8cff;
+      --orange:   #f0883e;
+      --sidebar-w: 280px;
+    }
+    html, body { height:100%; font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); font-size:14px; }
+    a { color:var(--accent); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+    /* ── Layout ── */
+    #app { display:flex; height:100vh; overflow:hidden; }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width:var(--sidebar-w);
+      background:var(--surface);
+      border-right:1px solid var(--border);
+      display:flex; flex-direction:column;
+      overflow-y:auto; flex-shrink:0;
+    }
+    .sidebar-header {
+      padding:20px 20px 16px;
+      border-bottom:1px solid var(--border);
+    }
+    .sidebar-header .logo {
+      display:flex; align-items:center; gap:10px;
+      font-size:18px; font-weight:700; color:var(--accent);
+    }
+    .sidebar-header .logo svg { width:28px; height:28px; }
+    .sidebar-header .subtitle {
+      font-size:11px; color:var(--muted); margin-top:4px;
+    }
+    .back-btn {
+      display:flex; align-items:center; gap:6px;
+      margin:12px 16px 0;
+      padding:7px 12px;
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:7px; color:var(--muted); font-size:12px;
+      cursor:pointer; transition:color .15s;
+    }
+    .back-btn:hover { color:var(--text); }
+
+    .nav-group { padding:12px 0; }
+    .nav-group-title {
+      font-size:10px; font-weight:700; text-transform:uppercase;
+      letter-spacing:1px; color:var(--muted);
+      padding:4px 20px 8px;
+    }
+    .nav-link {
+      display:flex; align-items:center; gap:8px;
+      padding:6px 20px; font-size:13px; color:var(--muted);
+      cursor:pointer; transition:color .12s, background .12s;
+      border-radius:0;
+    }
+    .nav-link:hover { color:var(--text); background:var(--surface2); }
+    .nav-link.active { color:var(--accent); background:rgba(0,212,255,.07); }
+    .nav-link .dot {
+      width:5px; height:5px; border-radius:50%;
+      background:var(--border); flex-shrink:0;
+    }
+    .nav-link.active .dot { background:var(--accent); }
+
+    /* ── Content ── */
+    #content {
+      flex:1; overflow-y:auto;
+      padding:0;
+    }
+    .doc-page { display:none; }
+    .doc-page.active { display:block; }
+
+    .doc-hero {
+      background:linear-gradient(135deg, #0d1117 0%, #0d2033 50%, #0d1117 100%);
+      border-bottom:1px solid var(--border);
+      padding:48px 56px 40px;
+    }
+    .doc-hero h1 {
+      font-size:36px; font-weight:800; color:var(--text);
+      letter-spacing:-.5px;
+    }
+    .doc-hero h1 span { color:var(--accent); }
+    .doc-hero p { color:var(--muted); font-size:15px; margin-top:10px; max-width:600px; line-height:1.6; }
+    .hero-badges { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
+    .badge {
+      padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600;
+    }
+    .badge-blue   { background:rgba(0,212,255,.12); color:var(--accent); border:1px solid rgba(0,212,255,.2); }
+    .badge-green  { background:rgba(63,185,80,.12);  color:var(--green);  border:1px solid rgba(63,185,80,.2); }
+    .badge-purple { background:rgba(188,140,255,.12);color:var(--purple); border:1px solid rgba(188,140,255,.2); }
+    .badge-yellow { background:rgba(210,153,34,.12); color:var(--yellow); border:1px solid rgba(210,153,34,.2); }
+
+    .doc-body { padding:40px 56px; max-width:900px; }
+
+    h2 { font-size:22px; font-weight:700; color:var(--text); margin:36px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+    h2:first-of-type { margin-top:0; }
+    h3 { font-size:16px; font-weight:600; color:var(--text); margin:24px 0 10px; }
+    h4 { font-size:13px; font-weight:600; color:var(--muted); margin:16px 0 8px; text-transform:uppercase; letter-spacing:.5px; }
+    p  { color:var(--muted); line-height:1.7; margin-bottom:12px; }
+    ul, ol { color:var(--muted); line-height:1.8; padding-left:20px; margin-bottom:12px; }
+    li { margin-bottom:2px; }
+    strong { color:var(--text); }
+
+    code {
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:4px; padding:1px 6px; font-family:'Consolas','Courier New',monospace;
+      font-size:12px; color:var(--orange);
+    }
+    pre {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:10px; padding:18px 20px; margin:12px 0 20px;
+      overflow-x:auto; line-height:1.6;
+    }
+    pre code {
+      background:none; border:none; padding:0;
+      font-size:12px; color:#c9d1d9;
+    }
+    .pre-label {
+      font-size:10px; color:var(--muted); text-transform:uppercase;
+      letter-spacing:.8px; margin-bottom:6px;
+    }
+
+    /* ── Cards ── */
+    .card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; margin:16px 0 24px; }
+    .doc-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:10px; padding:16px;
+      transition:border-color .15s;
+    }
+    .doc-card:hover { border-color:#484f58; }
+    .doc-card .icon { font-size:24px; margin-bottom:8px; }
+    .doc-card h4 { margin:0 0 6px; font-size:13px; color:var(--text); text-transform:none; letter-spacing:0; }
+    .doc-card p  { font-size:12px; margin:0; }
+
+    /* ── Table ── */
+    table { width:100%; border-collapse:collapse; margin:12px 0 20px; font-size:13px; }
+    th { background:var(--surface2); color:var(--text); font-weight:600; padding:8px 12px; text-align:left; border:1px solid var(--border); }
+    td { padding:8px 12px; border:1px solid var(--border); color:var(--muted); vertical-align:top; }
+    tr:hover td { background:rgba(255,255,255,.02); }
+
+    /* ── Alert boxes ── */
+    .alert {
+      border-radius:8px; padding:12px 16px; margin:12px 0;
+      font-size:13px; line-height:1.6; display:flex; gap:10px;
+    }
+    .alert-info    { background:rgba(0,212,255,.07);  border:1px solid rgba(0,212,255,.2);  color:#9dcfde; }
+    .alert-warning { background:rgba(210,153,34,.07); border:1px solid rgba(210,153,34,.2); color:#c9a84c; }
+    .alert-danger  { background:rgba(248,81,73,.07);  border:1px solid rgba(248,81,73,.2);  color:#d07070; }
+    .alert-success { background:rgba(63,185,80,.07);  border:1px solid rgba(63,185,80,.2);  color:#6db97a; }
+
+    /* ── Step list ── */
+    .steps { counter-reset:step; list-style:none; padding:0; margin:12px 0 20px; }
+    .steps li {
+      counter-increment:step;
+      display:flex; gap:14px; align-items:flex-start;
+      padding:12px 0; border-bottom:1px solid var(--border);
+    }
+    .steps li:last-child { border-bottom:none; }
+    .steps li::before {
+      content:counter(step);
+      width:26px; height:26px; border-radius:50%;
+      background:var(--accent); color:#000;
+      font-size:12px; font-weight:700;
+      display:flex; align-items:center; justify-content:center;
+      flex-shrink:0; margin-top:1px;
+    }
+    .steps li .step-content h4 { margin:0 0 4px; color:var(--text); font-size:13px; text-transform:none; letter-spacing:0; }
+    .steps li .step-content p  { margin:0; font-size:12px; }
+
+    /* ── API endpoint ── */
+    .endpoint {
+      display:flex; align-items:flex-start; gap:10px;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:8px; padding:12px 14px; margin:8px 0;
+    }
+    .method {
+      padding:2px 8px; border-radius:4px; font-size:11px;
+      font-weight:700; font-family:monospace; flex-shrink:0; margin-top:1px;
+    }
+    .method.get    { background:rgba(63,185,80,.15);  color:var(--green); }
+    .method.post   { background:rgba(0,102,255,.15);  color:#5b9fff; }
+    .method.delete { background:rgba(248,81,73,.15);  color:var(--red); }
+    .method.put    { background:rgba(210,153,34,.15); color:var(--yellow); }
+    .endpoint-path { font-family:monospace; font-size:13px; color:var(--text); }
+    .endpoint-desc { font-size:12px; color:var(--muted); margin-top:2px; }
+
+    /* ── Topbar ── */
+    #topbar {
+      background:var(--surface); border-bottom:1px solid var(--border);
+      padding:0 24px; height:48px; display:flex; align-items:center;
+      gap:12px; position:sticky; top:0; z-index:10;
+    }
+    #search-input {
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:7px; padding:6px 12px; font-size:13px;
+      color:var(--text); outline:none; width:260px;
+    }
+    #search-input::placeholder { color:var(--muted); }
+    #search-input:focus { border-color:var(--accent); }
+
+    /* ── Home grid ── */
+    .home-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin-top:20px; }
+    .home-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:12px; padding:20px; cursor:pointer;
+      transition:border-color .15s, transform .15s;
+    }
+    .home-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+    .home-card .hc-icon { font-size:32px; margin-bottom:12px; }
+    .home-card h3 { font-size:15px; color:var(--text); margin-bottom:6px; }
+    .home-card p  { font-size:12px; color:var(--muted); line-height:1.5; margin:0; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Sidebar ── -->
+  <nav id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#00d4ff" fill-opacity=".15"/>
+          <path d="M8 24L16 8l8 16H8z" stroke="#00d4ff" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M11 20h10" stroke="#00d4ff" stroke-width="2"/>
+        </svg>
+        OXware Docs
+      </div>
+      <div class="subtitle">Hypervisor Yönetim Sistemi</div>
+    </div>
+
+    <a href="/" class="back-btn">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M11 12.5a.5.5 0 01-.5.5h-8a.5.5 0 01-.5-.5v-9a.5.5 0 01.5-.5h8a.5.5 0 01.5.5v2a.5.5 0 001 0v-2A1.5 1.5 0 009.5 2h-8A1.5 1.5 0 000 3.5v9A1.5 1.5 0 001.5 14h8a1.5 1.5 0 001.5-1.5v-2a.5.5 0 00-1 0v2z"/><path d="M15.854 8.354a.5.5 0 000-.708l-3-3a.5.5 0 10-.708.708L14.293 7.5H5.5a.5.5 0 000 1h8.793l-2.147 2.146a.5.5 0 00.708.708l3-3z"/></svg>
+      Panele Dön
+    </a>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Başlangıç</div>
+      <div class="nav-link active" onclick="showPage('home')"><div class="dot"></div>Ana Sayfa</div>
+      <div class="nav-link" onclick="showPage('overview')"><div class="dot"></div>Sisteme Genel Bakış</div>
+      <div class="nav-link" onclick="showPage('install')"><div class="dot"></div>Kurulum</div>
+      <div class="nav-link" onclick="showPage('first-login')"><div class="dot"></div>İlk Giriş</div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Özellikler</div>
+      <div class="nav-link" onclick="showPage('vms')"><div class="dot"></div>Sanal Makineler</div>
+      <div class="nav-link" onclick="showPage('networks')"><div class="dot"></div>Ağ Yönetimi</div>
+      <div class="nav-link" onclick="showPage('storage')"><div class="dot"></div>Depolama</div>
+      <div class="nav-link" onclick="showPage('snapshots')"><div class="dot"></div>Snapshot Sistemi</div>
+      <div class="nav-link" onclick="showPage('ippool')"><div class="dot"></div>IP Havuzu</div>
+      <div class="nav-link" onclick="showPage('provisioning')"><div class="dot"></div>Otomatik Provisioning</div>
+      <div class="nav-link" onclick="showPage('topology')"><div class="dot"></div>Topoloji Haritası</div>
+      <div class="nav-link" onclick="showPage('console')"><div class="dot"></div>VM Konsol (noVNC)</div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Sistem</div>
+      <div class="nav-link" onclick="showPage('monitor')"><div class="dot"></div>Sistem İzleme</div>
+      <div class="nav-link" onclick="showPage('events')"><div class="dot"></div>Olay Günlüğü</div>
+      <div class="nav-link" onclick="showPage('ai-agents')"><div class="dot"></div>AI Ajan Sistemi</div>
+      <div class="nav-link" onclick="showPage('notifications')"><div class="dot"></div>Bildirimler</div>
+      <div class="nav-link" onclick="showPage('security')"><div class="dot"></div>Güvenlik</div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Referans</div>
+      <div class="nav-link" onclick="showPage('api')"><div class="dot"></div>API Referansı</div>
+      <div class="nav-link" onclick="showPage('config')"><div class="dot"></div>Yapılandırma Dosyaları</div>
+      <div class="nav-link" onclick="showPage('troubleshoot')"><div class="dot"></div>Sorun Giderme</div>
+    </div>
+  </nav>
+
+  <!-- ── Content ── -->
+  <div id="content">
+    <div id="topbar">
+      <input id="search-input" placeholder="🔍 Dokümanlarda ara..." oninput="searchDocs(this.value)"/>
+      <div id="search-results" style="position:absolute;top:48px;left:var(--sidebar-w);background:var(--surface);border:1px solid var(--border);border-radius:0 0 8px 8px;width:300px;display:none;z-index:100"></div>
+    </div>
+
+    <!-- ══════════════════════ HOME ══════════════════════ -->
+    <div class="doc-page active" id="page-home">
+      <div class="doc-hero">
+        <h1>OXware <span>Hypervisor</span> Dokümantasyonu</h1>
+        <p>OXware, Ubuntu tabanlı, KVM/QEMU üzerine inşa edilmiş açık kaynaklı bir hypervisor yönetim platformudur. VMware ESXi ve Proxmox'a alternatif olarak tasarlanmıştır.</p>
+        <div class="hero-badges">
+          <span class="badge badge-blue">KVM / QEMU</span>
+          <span class="badge badge-green">libvirt</span>
+          <span class="badge badge-purple">Flask + SocketIO</span>
+          <span class="badge badge-yellow">noVNC Konsol</span>
+          <span class="badge badge-blue">AI Ajan Sistemi</span>
+          <span class="badge badge-green">Port 8006 HTTPS</span>
+        </div>
+      </div>
+      <div class="doc-body">
+        <h2>Hızlı Başlangıç</h2>
+        <div class="home-grid">
+          <div class="home-card" onclick="showPage('install')">
+            <div class="hc-icon">⚙️</div>
+            <h3>Kurulum</h3>
+            <p>Ubuntu sunucuya adım adım OXware kurulum rehberi.</p>
+          </div>
+          <div class="home-card" onclick="showPage('vms')">
+            <div class="hc-icon">💻</div>
+            <h3>VM Oluşturma</h3>
+            <p>İlk sanal makinenizi oluşturun ve yönetin.</p>
+          </div>
+          <div class="home-card" onclick="showPage('ai-agents')">
+            <div class="hc-icon">🤖</div>
+            <h3>AI Ajanlar</h3>
+            <p>OpenRouter, Claude veya Ollama ile sistem izleme.</p>
+          </div>
+          <div class="home-card" onclick="showPage('notifications')">
+            <div class="hc-icon">🔔</div>
+            <h3>Bildirimler</h3>
+            <p>Telegram ve Discord ile anlık uyarı sistemi.</p>
+          </div>
+          <div class="home-card" onclick="showPage('api')">
+            <div class="hc-icon">🔌</div>
+            <h3>API Referansı</h3>
+            <p>Tüm REST API endpoint'lerinin tam listesi.</p>
+          </div>
+          <div class="home-card" onclick="showPage('troubleshoot')">
+            <div class="hc-icon">🔧</div>
+            <h3>Sorun Giderme</h3>
+            <p>Sık karşılaşılan hataların çözüm yöntemleri.</p>
+          </div>
+        </div>
+
+        <h2>Sistem Gereksinimleri</h2>
+        <table>
+          <tr><th>Bileşen</th><th>Minimum</th><th>Önerilen</th></tr>
+          <tr><td>CPU</td><td>2 çekirdek + VT-x/AMD-V</td><td>8+ çekirdek</td></tr>
+          <tr><td>RAM</td><td>2 GB</td><td>32 GB+</td></tr>
+          <tr><td>Disk</td><td>20 GB</td><td>500 GB+ SSD/NVMe</td></tr>
+          <tr><td>OS</td><td>Ubuntu 22.04 LTS</td><td>Ubuntu 22.04/24.04 LTS</td></tr>
+          <tr><td>Ağ</td><td>1x Ethernet</td><td>2x Ethernet</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ OVERVIEW ══════════════════════ -->
+    <div class="doc-page" id="page-overview">
+      <div class="doc-hero">
+        <h1>Sisteme <span>Genel Bakış</span></h1>
+        <p>OXware'un mimarisi, bileşenleri ve teknoloji yığını hakkında kapsamlı bilgi.</p>
+      </div>
+      <div class="doc-body">
+        <h2>OXware Nedir?</h2>
+        <p>OXware; KVM (Kernel-based Virtual Machine) ve QEMU altyapısı üzerine inşa edilmiş, web tabanlı bir hypervisor yönetim sistemidir. Sunucu üzerinde doğrudan çalışır — herhangi bir dış hypervisor'a bağlanmaz. Sistem kendisi hypervisor'dur.</p>
+
+        <div class="alert alert-info">
+          <span>ℹ️</span>
+          <div>OXware <strong>Type-1 hypervisor</strong> mantığıyla çalışır: Linux çekirdeğinin KVM modülü doğrudan donanım üzerinde sanallaştırma sağlar.</div>
+        </div>
+
+        <h2>Mimari</h2>
+        <pre><code>┌─────────────────────────────────────────────┐
+│              Tarayıcı (HTTPS :8006)          │
+│         HTML + CSS + JS  ←→  WebSocket      │
+└────────────────────┬────────────────────────┘
+                     │ REST API + WS
+┌────────────────────▼────────────────────────┐
+│          Flask + Flask-SocketIO              │
+│              (Backend API)                  │
+│  ┌──────────┐ ┌──────────┐ ┌─────────────┐  │
+│  │ vm_mgr   │ │ topology │ │  ai_agent   │  │
+│  │ networks │ │ ip_pool  │ │ notif/alert │  │
+│  │ storage  │ │ snapshot │ │ event_log   │  │
+│  └──────────┘ └──────────┘ └─────────────┘  │
+└────────────────────┬────────────────────────┘
+                     │ libvirt API
+┌────────────────────▼────────────────────────┐
+│              libvirtd (daemon)               │
+└────────────────────┬────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────┐
+│           KVM / QEMU (Hypervisor)            │
+│     VM1      VM2      VM3     ...           │
+└─────────────────────────────────────────────┘</code></pre>
+
+        <h2>Teknoloji Yığını</h2>
+        <table>
+          <tr><th>Katman</th><th>Teknoloji</th><th>Amaç</th></tr>
+          <tr><td>Hypervisor</td><td>KVM + QEMU</td><td>Donanım sanallaştırma motoru</td></tr>
+          <tr><td>VM Yönetimi</td><td>libvirt + libvirt-python</td><td>VM yaşam döngüsü yönetimi</td></tr>
+          <tr><td>Backend API</td><td>Flask + Flask-SocketIO</td><td>REST API + gerçek zamanlı WS</td></tr>
+          <tr><td>Kimlik Doğrulama</td><td>Flask-JWT-Extended</td><td>JWT token auth (8 saat)</td></tr>
+          <tr><td>VM Konsol</td><td>noVNC + websockify</td><td>Tarayıcı tabanlı VNC konsol</td></tr>
+          <tr><td>Şifreleme</td><td>AES-256-CBC + PBKDF2</td><td>Kimlik bilgisi güvenliği</td></tr>
+          <tr><td>AI Entegrasyon</td><td>OpenRouter / Claude / OpenAI</td><td>Akıllı sistem izleme</td></tr>
+          <tr><td>Bildirimler</td><td>Telegram Bot + Discord Webhook</td><td>Anlık uyarılar</td></tr>
+          <tr><td>Güvenlik Duvarı</td><td>UFW + fail2ban</td><td>Ağ güvenliği</td></tr>
+          <tr><td>SSL</td><td>OpenSSL (self-signed)</td><td>HTTPS şifreleme</td></tr>
+        </table>
+
+        <h2>Port Haritası</h2>
+        <table>
+          <tr><th>Port</th><th>Protokol</th><th>Servis</th></tr>
+          <tr><td><code>22</code></td><td>TCP</td><td>SSH uzak erişim</td></tr>
+          <tr><td><code>8006</code></td><td>TCP / HTTPS</td><td>OXware web arayüzü (ana port)</td></tr>
+          <tr><td><code>5900–5999</code></td><td>TCP</td><td>VM VNC portları (her VM için 1 port)</td></tr>
+          <tr><td><code>6080</code></td><td>TCP / WS</td><td>noVNC WebSocket proxy</td></tr>
+        </table>
+
+        <h2>Dosya Yapısı</h2>
+        <pre><code>/opt/oxware/               ← Python sanal ortam
+/etc/oxware/
+  ├── oxware.conf          ← Ana yapılandırma
+  ├── ssl/oxware.crt       ← SSL sertifikası
+  ├── ssl/oxware.key       ← SSL özel anahtarı
+  ├── .auth               ← Şifrelenmiş kimlik bilgileri
+  ├── .setup_done         ← İlk kurulum tamamlandı bayrağı
+  ├── ai_agents.conf      ← AI ajan yapılandırması
+  └── notifications.conf  ← Bildirim yapılandırması
+
+/var/lib/oxware/
+  ├── isos/               ← ISO dosyaları
+  ├── disks/              ← VM disk görüntüleri
+  ├── backups/            ← Yedekler
+  ├── templates/          ← VM şablonları
+  └── ip_pool.json        ← IP havuzu veritabanı
+
+/var/log/oxware/
+  ├── oxware.log           ← Ana uygulama logu
+  ├── events.jsonl        ← Olay günlüğü (JSONL)
+  └── ai_agent.jsonl      ← AI ajan log kayıtları
+
+~/OXware/oxware/
+  ├── backend/            ← Python backend
+  │   ├── app.py          ← Flask uygulaması
+  │   ├── vm_manager.py   ← VM işlemleri
+  │   ├── topology.py     ← Topoloji haritası
+  │   ├── ip_pool.py      ← IP havuzu yönetimi
+  │   ├── ai_agent.py     ← AI ajan sistemi
+  │   ├── notifications.py← Bildirim sistemi
+  │   ├── event_logger.py ← Olay kayıt sistemi
+  │   ├── security.py     ← Güvenlik katmanı
+  │   ├── credentials.py  ← Kimlik doğrulama
+  │   └── config.py       ← Yapılandırma okuyucu
+  └── frontend/
+      └── templates/
+          ├── index.html  ← Ana panel
+          ├── setup.html  ← İlk kurulum sihirbazı
+          └── docs.html   ← Bu sayfa</code></pre>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ INSTALL ══════════════════════ -->
+    <div class="doc-page" id="page-install">
+      <div class="doc-hero">
+        <h1>OXware <span>Kurulumu</span></h1>
+        <p>Mevcut bir Ubuntu 22.04 / 24.04 LTS sunucusuna OXware kurulum adımları.</p>
+      </div>
+      <div class="doc-body">
+        <h2>Ön Koşullar</h2>
+        <div class="alert alert-warning">
+          <span>⚠️</span>
+          <div>BIOS/UEFI üzerinden <strong>VT-x (Intel)</strong> veya <strong>AMD-V (AMD)</strong> sanallaştırma aktif olmalıdır. Aksi hâlde VM'ler çalışmaz.</div>
+        </div>
+        <pre><code># Sanallaştırma kontrolü
+grep -Ec "vmx|svm" /proc/cpuinfo
+# 0 çıkarsa BIOS'ta aktif etmeniz gerekir</code></pre>
+
+        <h2>Otomatik Kurulum (Önerilen)</h2>
+        <ol class="steps">
+          <li><div class="step-content"><h4>Ubuntu 22.04 LTS sunucuya SSH ile bağlanın</h4><p>Root veya sudo yetkili kullanıcı ile giriş yapın.</p></div></li>
+          <li><div class="step-content"><h4>OXware dosyalarını sunucuya kopyalayın</h4>
+            <pre><code>scp -r ./OXware root@&lt;ip&gt;:~/OXware</code></pre>
+          </div></li>
+          <li><div class="step-content"><h4>Kurulum scriptini çalıştırın</h4>
+            <pre><code>cd ~/OXware
+sudo bash install.sh</code></pre>
+          </div></li>
+          <li><div class="step-content"><h4>Tarayıcıdan erişin</h4>
+            <pre><code>https://&lt;sunucu-ip&gt;:8006</code></pre>
+          </div></li>
+        </ol>
+
+        <h2>Manuel Kurulum</h2>
+        <h3>1. Sistem Güncelleme ve Paketler</h3>
+        <pre><code>sudo apt update && sudo apt upgrade -y
+sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients \
+  bridge-utils virtinst python3 python3-pip python3-venv python3-dev \
+  libvirt-dev pkg-config gcc novnc websockify ufw fail2ban openssl curl</code></pre>
+
+        <h3>2. Kullanıcı Grupları</h3>
+        <pre><code>sudo usermod -aG libvirt $USER
+sudo usermod -aG kvm $USER
+sudo systemctl enable --now libvirtd</code></pre>
+
+        <h3>3. Python Ortamı</h3>
+        <pre><code>python3 -m venv /opt/oxware/venv
+/opt/oxware/venv/bin/pip install flask flask-socketio flask-jwt-extended \
+  flask-cors eventlet libvirt-python psutil cryptography requests</code></pre>
+
+        <h3>4. Yapılandırma Dosyası</h3>
+        <pre><code>cat > /etc/oxware/oxware.conf &lt;&lt; 'EOF'
+[server]
+host        = 0.0.0.0
+port        = 8006
+ssl         = true
+ssl_cert    = /etc/oxware/ssl/oxware.crt
+ssl_key     = /etc/oxware/ssl/oxware.key
+secret_key  = $(python3 -c "import secrets; print(secrets.token_hex(32))")
+novnc_dir   = /usr/share/novnc
+
+[storage]
+data_dir     = /var/lib/oxware
+iso_dir      = /var/lib/oxware/isos
+disk_dir     = /var/lib/oxware/disks
+backup_dir   = /var/lib/oxware/backups
+template_dir = /var/lib/oxware/templates
+
+[vnc]
+start_port     = 5900
+end_port       = 5999
+websocket_port = 6080
+
+[libvirt]
+uri = qemu:///system
+
+[logging]
+log_dir = /var/log/oxware
+level   = INFO
+EOF</code></pre>
+
+        <h3>5. SSL Sertifikası</h3>
+        <pre><code>sudo mkdir -p /etc/oxware/ssl
+sudo openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+  -keyout /etc/oxware/ssl/oxware.key \
+  -out    /etc/oxware/ssl/oxware.crt \
+  -subj   "/CN=$(hostname -I | awk '{print $1}')"</code></pre>
+
+        <h3>6. systemd Servisi</h3>
+        <pre><code>cat > /etc/systemd/system/oxware.service &lt;&lt; 'EOF'
+[Unit]
+Description=OXware Hypervisor Management Panel
+After=network.target libvirtd.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/OXware/oxware/backend
+ExecStart=/opt/oxware/venv/bin/python app.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/var/log/oxware/oxware.log
+StandardError=append:/var/log/oxware/oxware.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now oxware</code></pre>
+
+        <h3>7. Güvenlik Duvarı</h3>
+        <pre><code>sudo ufw allow 22/tcp
+sudo ufw allow 8006/tcp
+sudo ufw allow 5900:5999/tcp
+sudo ufw allow 6080/tcp
+sudo ufw --force enable</code></pre>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ FIRST LOGIN ══════════════════════ -->
+    <div class="doc-page" id="page-first-login">
+      <div class="doc-hero">
+        <h1>İlk Giriş ve <span>Kurulum Sihirbazı</span></h1>
+        <p>OXware'a ilk kez giriş yaparken izlenecek adımlar.</p>
+      </div>
+      <div class="doc-body">
+        <h2>İlk Erişim</h2>
+        <p>Tarayıcıdan <code>https://&lt;sunucu-ip&gt;:8006</code> adresine gidin. Self-signed SSL sertifikası nedeniyle uyarı gelecektir:</p>
+        <ul>
+          <li><strong>Chrome/Edge:</strong> Gelişmiş → Devam et</li>
+          <li><strong>Firefox:</strong> Gelişmiş → Riski kabul et ve devam et</li>
+        </ul>
+
+        <h2>Kurulum Sihirbazı</h2>
+        <p>Sistem ilk açılışta <code>/setup</code> sayfasına yönlendirir:</p>
+        <ol class="steps">
+          <li><div class="step-content"><h4>Kullanıcı adı belirleyin</h4><p>Harf ve rakamlardan oluşan benzersiz bir kullanıcı adı girin.</p></div></li>
+          <li><div class="step-content"><h4>Güçlü bir parola girin</h4><p>Parola gücü göstergesi yeşile dönünce devam edebilirsiniz. En az 8 karakter önerilir.</p></div></li>
+          <li><div class="step-content"><h4>Kurulumu Tamamla</h4><p>Sistem kimlik bilgilerini AES-256 şifreleyerek <code>/etc/oxware/.auth</code> dosyasına kaydeder ve sizi ana panele yönlendirir.</p></div></li>
+        </ol>
+
+        <h2>Parola Sıfırlama</h2>
+        <p>Parolanızı unutursanız SSH ile sunucuya bağlanın:</p>
+        <pre><code>sudo nano /etc/oxware/.passwd_reset
+
+# Dosya içeriği:
+USERNAME=yeni_kullanici
+PASSWORD=YeniParola123!</code></pre>
+        <pre><code>sudo systemctl restart oxware
+# Servis başlarken dosyayı okur, uygular ve otomatik olarak siler</code></pre>
+
+        <h2>JWT Token</h2>
+        <p>Başarılı girişte JWT token <code>localStorage</code>'a kaydedilir. Token 8 saat geçerlidir. Süre dolunca otomatik olarak çıkış yapılır.</p>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ VMs ══════════════════════ -->
+    <div class="doc-page" id="page-vms">
+      <div class="doc-hero">
+        <h1>Sanal Makine <span>Yönetimi</span></h1>
+        <p>VM oluşturma, başlatma, durdurma, silme ve konsol erişimi.</p>
+      </div>
+      <div class="doc-body">
+        <h2>VM Oluşturma</h2>
+        <p>Sol menüden <strong>Sanal Makineler</strong> → <strong>VM Oluştur</strong> butonuna tıklayın.</p>
+        <table>
+          <tr><th>Alan</th><th>Açıklama</th><th>Örnek</th></tr>
+          <tr><td>VM Adı</td><td>Benzersiz, harf/rakam/tire/alt çizgi</td><td><code>web-server-01</code></td></tr>
+          <tr><td>ISO</td><td>Daha önce yüklenmiş ISO dosyası</td><td><code>ubuntu-22.04.iso</code></td></tr>
+          <tr><td>vCPU</td><td>Sanal işlemci sayısı (1–512)</td><td><code>2</code></td></tr>
+          <tr><td>RAM (MB)</td><td>Bellek miktarı megabayt cinsinden</td><td><code>2048</code></td></tr>
+          <tr><td>Disk (GB)</td><td>Disk boyutu gigabayt cinsinden</td><td><code>20</code></td></tr>
+          <tr><td>Ağ</td><td>libvirt ağ adı</td><td><code>default</code></td></tr>
+        </table>
+
+        <h2>VM Durumları</h2>
+        <table>
+          <tr><th>Durum</th><th>Açıklama</th></tr>
+          <tr><td><code>running</code></td><td>Çalışıyor — tam aktif</td></tr>
+          <tr><td><code>stopped</code></td><td>Kapalı — kaynaklar serbest</td></tr>
+          <tr><td><code>paused</code></td><td>Duraklatıldı — bellekte askıda</td></tr>
+          <tr><td><code>crashed</code></td><td>Beklenmedik şekilde durdu</td></tr>
+          <tr><td><code>suspended</code></td><td>PM suspend modunda</td></tr>
+        </table>
+
+        <h2>VM İşlemleri</h2>
+        <ul>
+          <li><strong>▶ Başlat</strong> — VM'i çalıştırır</li>
+          <li><strong>⏸ Duraklat</strong> — Çalışan VM'i belleğe alır</li>
+          <li><strong>⏹ Durdur</strong> — Güvenli kapatma gönderir</li>
+          <li><strong>⚡ Zorla Kapat</strong> — Anında güç keser</li>
+          <li><strong>🔄 Yeniden Başlat</strong> — Soft reboot</li>
+          <li><strong>🖥 Konsol</strong> — noVNC tarayıcı konsolunu açar</li>
+        </ul>
+
+        <h2>VM Konsol Erişimi</h2>
+        <p>VM sayfasında <strong>Konsol</strong> butonuna tıklandığında noVNC penceresi açılır. VNC, websockify üzerinden WebSocket tüneli ile tarayıcıya iletilir.</p>
+        <div class="alert alert-info">
+          <span>ℹ️</span>
+          <div>Her VM için <code>5900–5999</code> arasında bir VNC portu atanır. noVNC bu portu <code>6080</code> üzerinden WebSocket'e dönüştürür.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ NETWORKS ══════════════════════ -->
+    <div class="doc-page" id="page-networks">
+      <div class="doc-hero">
+        <h1>Ağ <span>Yönetimi</span></h1>
+        <p>libvirt sanal ağları, bridge konfigürasyonu ve VM ağ bağlantıları.</p>
+      </div>
+      <div class="doc-body">
+        <h2>Ağ Türleri</h2>
+        <table>
+          <tr><th>Tür</th><th>Açıklama</th><th>Kullanım</th></tr>
+          <tr><td><code>nat</code></td><td>NAT ile internete çıkış</td><td>Genel VM'ler için</td></tr>
+          <tr><td><code>bridge</code></td><td>Fiziksel ağa köprü</td><td>Sunucu ile aynı ağ</td></tr>
+          <tr><td><code>isolated</code></td><td>Dış erişim yok</td><td>İç test ortamları</td></tr>
+          <tr><td><code>route</code></td><td>Yönlendirme tabanlı</td><td>Gelişmiş ağ yapıları</td></tr>
+        </table>
+
+        <h2>Yeni Ağ Oluşturma</h2>
+        <p>Ağ Yönetimi sayfasından <strong>Ağ Ekle</strong> butonu ile yeni bir libvirt sanal ağı tanımlayabilirsiniz.</p>
+        <table>
+          <tr><th>Alan</th><th>Örnek</th></tr>
+          <tr><td>Ağ Adı</td><td><code>internal-net</code></td></tr>
+          <tr><td>Ağ CIDR</td><td><code>192.168.100.0/24</code></td></tr>
+          <tr><td>Gateway</td><td><code>192.168.100.1</code></td></tr>
+          <tr><td>DHCP Başlangıç</td><td><code>192.168.100.10</code></td></tr>
+          <tr><td>DHCP Bitiş</td><td><code>192.168.100.100</code></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ STORAGE ══════════════════════ -->
+    <div class="doc-page" id="page-storage">
+      <div class="doc-hero">
+        <h1>Depolama <span>Yönetimi</span></h1>
+        <p>ISO havuzu, disk havuzları ve VM disk görüntüleri.</p>
+      </div>
+      <div class="doc-body">
+        <h2>Depolama Havuzu</h2>
+        <p>Depolama havuzları, VM disk görüntülerinin saklandığı dizinlerdir. Varsayılan havuz <code>/var/lib/oxware/disks</code> dizinidir.</p>
+
+        <h3>Yeni Havuz Ekleme</h3>
+        <p>Depolama sayfasından <strong>Havuz Ekle</strong> ile yeni bir dizin havuz olarak tanımlanabilir.</p>
+
+        <h2>ISO Yönetimi</h2>
+        <p>VM kurulumu için ISO dosyaları <code>/var/lib/oxware/isos/</code> dizininde saklanır.</p>
+        <ul>
+          <li>Web arayüzünden sürükle-bırak ile ISO yüklenebilir (maks. 5 istek/5 dakika)</li>
+          <li>Desteklenen format: <code>.iso</code></li>
+          <li>Yükleme limiti: rate limiter ile korunur</li>
+        </ul>
+
+        <h3>Terminalde ISO kopyalama</h3>
+        <pre><code>scp ubuntu-22.04-server.iso root@&lt;ip&gt;:/var/lib/oxware/isos/</code></pre>
+
+        <h2>Disk Görüntü Formatları</h2>
+        <table>
+          <tr><th>Format</th><th>Açıklama</th></tr>
+          <tr><td><code>qcow2</code></td><td>QEMU Copy-on-Write — thin provisioning, snapshot desteği (önerilen)</td></tr>
+          <tr><td><code>raw</code></td><td>Ham disk görüntüsü — daha hızlı ama daha fazla yer kaplar</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ SNAPSHOTS ══════════════════════ -->
+    <div class="doc-page" id="page-snapshots">
+      <div class="doc-hero">
+        <h1>Snapshot <span>Sistemi</span></h1>
+        <p>VM anlık görüntüleri alma, geri yükleme ve yönetme.</p>
+      </div>
+      <div class="doc-body">
+        <h2>Snapshot Nedir?</h2>
+        <p>Snapshot, bir VM'in belirli bir andaki tam durumunu (disk + bellek) kaydeder. İstediğiniz zaman o ana geri dönebilirsiniz.</p>
+        <div class="alert alert-warning">
+          <span>⚠️</span>
+          <div>Snapshot geri yüklemesi VM'i o anki durumdan <strong>geri döndürür</strong>. Geri yükleme sonrası mevcut değişiklikler kaybolur.</div>
+        </div>
+
+        <h2>Snapshot Alma</h2>
+        <ol class="steps">
+          <li><div class="step-content"><h4>Snapshot sayfasına gidin</h4><p>Sol menüden Snapshot Yönetimi'ni seçin.</p></div></li>
+          <li><div class="step-content"><h4>VM seçin</h4><p>Üstteki açılır listeden snapshot almak istediğiniz VM'i seçin.</p></div></li>
+          <li><div class="step-content"><h4>📷 Snapshot Al</h4><p>Butona tıklayın, ad ve açıklama girin, onaylayın.</p></div></li>
+        </ol>
+
+        <h2>Geri Yükleme</h2>
+        <p>Snapshot listesindeki <strong>↩ Geri Yükle</strong> butonuna tıklayın. Onay kutusunu geçtikten sonra VM otomatik olarak o snapshot anına döner.</p>
+
+        <h2>libvirt Snapshot Komutu</h2>
+        <pre><code># Snapshot al
+virsh snapshot-create-as &lt;vm-adi&gt; &lt;snap-adi&gt; --description "Açıklama"
+
+# Listele
+virsh snapshot-list &lt;vm-adi&gt;
+
+# Geri yükle
+virsh snapshot-revert &lt;vm-adi&gt; &lt;snap-adi&gt;
+
+# Sil
+virsh snapshot-delete &lt;vm-adi&gt; &lt;snap-adi&gt;</code></pre>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ IP POOL ══════════════════════ -->
+    <div class="doc-page" id="page-ippool">
+      <div class="doc-hero">
+        <h1>IP Havuzu <span>Yönetimi</span></h1>
+        <p>VM'lere otomatik IP ataması için IP havuzu tanımlama ve yönetme.</p>
+      </div>
+      <div class="doc-body">
+        <h2>IP Havuzu Nedir?</h2>
+        <p>IP havuzu, VM'lere otomatik olarak atanacak IP adresleri aralığını tanımlar. Yeni bir VM oluşturulduğunda veya otomatik provisioning yapıldığında havuzdan bir sonraki boş IP atanır.</p>
+
+        <h2>Havuz Oluşturma</h2>
+        <pre><code>POST /api/ippool
+{
+  "name":     "main-pool",
+  "network":  "192.168.100.0/24",
+  "gateway":  "192.168.100.1",
+  "start_ip": "192.168.100.10",
+  "end_ip":   "192.168.100.100"
+}</code></pre>
+
+        <h2>IP Tahsis Mantığı</h2>
+        <ol>
+          <li>Önce <strong>OXware IP havuzu</strong> sorgulanır</li>
+          <li>Bulunamazsa <strong>libvirt DHCP lease</strong> tablosuna bakılır</li>
+          <li>O da yoksa <strong>ARP tablosu</strong> taranır</li>
+          <li>Hiçbiri bulunamazsa IP alanı boş kalır</li>
+        </ol>
+
+        <h2>Veri Dosyası</h2>
+        <p>IP havuzu bilgileri <code>/var/lib/oxware/ip_pool.json</code> dosyasında saklanır.</p>
+        <pre><code>{
+  "pools": {
+    "main-pool": {
+      "network":  "192.168.100.0/24",
+      "gateway":  "192.168.100.1",
+      "start_ip": "192.168.100.10",
+      "end_ip":   "192.168.100.100",
+      "allocations": {
+        "192.168.100.10": { "vm_id": "uuid...", "vm_name": "web-01" }
+      }
+    }
+  }
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ PROVISIONING ══════════════════════ -->
+    <div class="doc-page" id="page-provisioning">
+      <div class="doc-hero">
+        <h1>Otomatik <span>Provisioning</span></h1>
+        <p>Tek API çağrısı ile VM oluşturma, IP atama ve parola üretme.</p>
+      </div>
+      <div class="doc-body">
+        <h2>Provisioning Nedir?</h2>
+        <p>Otomatik provisioning; VM oluşturma, IP atama, güvenli parola üretme ve VM başlatma adımlarını tek bir işlemde gerçekleştirir. CI/CD pipeline'larında veya toplu VM dağıtımlarında kullanılır.</p>
+
+        <h2>API ile Provisioning</h2>
+        <pre><code>POST /api/provision
+Authorization: Bearer &lt;token&gt;
+
+{
+  "name":      "app-server-01",
+  "memory_mb": 2048,
+  "vcpus":     2,
+  "disk_gb":   20,
+  "pool_name": "main-pool"
+}</code></pre>
+        <p>Başarılı yanıt:</p>
+        <pre><code>{
+  "vm_id":    "550e8400-e29b-41d4-a716-446655440000",
+  "name":     "app-server-01",
+  "ip":       "192.168.100.10",
+  "password": "Xk9mP2qR8nL5vT3w",
+  "status":   "running"
+}</code></pre>
+        <div class="alert alert-success">
+          <span>✓</span>
+          <div>Provisioning tamamlandığında Telegram ve Discord'a otomatik bildirim gönderilir.</div>
+        </div>
+
+        <h2>Provisioning Kaydı</h2>
+        <p>Tüm provisioning işlemleri <code>/var/lib/oxware/provisions.json</code> dosyasına kaydedilir.</p>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ TOPOLOGY ══════════════════════ -->
+    <div class="doc-page" id="page-topology">
+      <div class="doc-hero">
+        <h1>Topoloji <span>Haritası</span></h1>
+        <p>Hypervisor → Ağlar → VM'ler hiyerarşik görselleştirme.</p>
+      </div>
+      <div class="doc-body">
+        <h2>Topoloji Görünümü</h2>
+        <p>Topoloji haritası, sistemdeki tüm bileşenleri hiyerarşik olarak SVG üzerinde görselleştirir:</p>
+        <pre><code>       [Hypervisor]
+      /      |      \
+  [Ağ-1]  [Ağ-2]  [Ağ-3]
+   / \       |
+[VM] [VM]  [VM]</code></pre>
+
+        <h2>Renk Kodlaması</h2>
+        <table>
+          <tr><th>Renk</th><th>Bileşen</th><th>Durum</th></tr>
+          <tr><td style="color:var(--accent)">■ Mavi</td><td>Hypervisor</td><td>Her zaman aktif</td></tr>
+          <tr><td style="color:var(--green)">■ Yeşil</td><td>Ağ / VM</td><td>Aktif / Çalışıyor</td></tr>
+          <tr><td style="color:#6e7681">■ Gri</td><td>Ağ</td><td>Pasif / Kapalı</td></tr>
+          <tr><td style="color:var(--red)">■ Kırmızı</td><td>VM</td><td>Durdu / Çöktü</td></tr>
+          <tr><td style="color:var(--yellow)">■ Sarı</td><td>VM</td><td>Duraklatıldı</td></tr>
+        </table>
+
+        <h2>Etkileşim</h2>
+        <ul>
+          <li><strong>Node'a tıkla</strong> → Sağda detay paneli açılır (IP, CPU%, RAM%, uptime)</li>
+          <li><strong>Fare tekerleği</strong> → Zoom in/out</li>
+          <li><strong>Sürükle</strong> → Haritayı kaydır</li>
+          <li><strong>⊡ Sığdır</strong> → Görünümü sıfırla</li>
+          <li><strong>Otomatik yenileme</strong> → Her 10 saniyede güncellenir</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ CONSOLE ══════════════════════ -->
+    <div class="doc-page" id="page-console">
+      <div class="doc-hero">
+        <h1>VM Konsol <span>(noVNC)</span></h1>
+        <p>Tarayıcı üzerinden VM ekranına doğrudan erişim.</p>
+      </div>
+      <div class="doc-body">
+        <h2>noVNC Nasıl Çalışır?</h2>
+        <p>Her VM, QEMU tarafından bir VNC sunucusu üzerinden erişilebilir hale getirilir. websockify bu VNC portunu WebSocket protokolüne dönüştürür. noVNC bu WebSocket bağlantısını tarayıcıda görselleştirir.</p>
+        <pre><code>VM (QEMU) → VNC :590x → websockify :6080 → WebSocket → noVNC (Tarayıcı)</code></pre>
+
+        <h2>Port Ataması</h2>
+        <p>VM'ler <code>5900–5999</code> arasında VNC portlarına atanır. İlk VM <code>5900</code>, ikincisi <code>5901</code> vb.</p>
+
+        <h2>Güvenlik</h2>
+        <div class="alert alert-warning">
+          <span>⚠️</span>
+          <div>VNC portları (<code>5900–5999</code>) doğrudan internete açık olmamalıdır. Tüm VNC erişimi noVNC üzerinden JWT doğrulamalı WebSocket ile yapılmalıdır.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ MONITOR ══════════════════════ -->
+    <div class="doc-page" id="page-monitor">
+      <div class="doc-hero">
+        <h1>Sistem <span>İzleme</span></h1>
+        <p>Gerçek zamanlı CPU, RAM, disk ve ağ metrikleri.</p>
+      </div>
+      <div class="doc-body">
+        <h2>İzlenen Metrikler</h2>
+        <table>
+          <tr><th>Metrik</th><th>Açıklama</th><th>Güncelleme</th></tr>
+          <tr><td>CPU %</td><td>Toplam işlemci kullanımı</td><td>5 saniye</td></tr>
+          <tr><td>RAM %</td><td>Fiziksel bellek kullanımı</td><td>5 saniye</td></tr>
+          <tr><td>Swap %</td><td>Takas alanı kullanımı</td><td>5 saniye</td></tr>
+          <tr><td>Disk I/O</td><td>Saniyede okuma/yazma MB</td><td>5 saniye</td></tr>
+          <tr><td>Ağ I/O</td><td>Gelen/giden MB</td><td>5 saniye</td></tr>
+          <tr><td>Yük Ort.</td><td>1/5/15 dakika load average</td><td>5 saniye</td></tr>
+          <tr><td>VM Özeti</td><td>Toplam/çalışan/durmuş VM sayısı</td><td>5 saniye</td></tr>
+        </table>
+
+        <h2>API</h2>
+        <pre><code>GET /api/system/stats   # Anlık metrikler
+GET /api/system/info    # Host ve libvirt bilgileri</code></pre>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ EVENTS ══════════════════════ -->
+    <div class="doc-page" id="page-events">
+      <div class="doc-hero">
+        <h1>Olay <span>Günlüğü</span></h1>
+        <p>Sistemde gerçekleşen tüm olayların zaman damgalı kayıtları.</p>
+      </div>
+      <div class="doc-body">
+        <h2>Olay Formatı</h2>
+        <p>Olaylar <code>/var/log/oxware/events.jsonl</code> dosyasına JSONL (JSON Lines) formatında eklenir:</p>
+        <pre><code>{"timestamp":1715000000,"datetime":"2026-05-07T10:00:00","level":"INFO",
+ "category":"vm","message":"VM başlatıldı: web-01","vm_id":"uuid...","source":"api"}</code></pre>
+
+        <h2>Seviyeler</h2>
+        <table>
+          <tr><th>Seviye</th><th>Renk</th><th>Kullanım</th></tr>
+          <tr><td>DEBUG</td><td style="color:var(--muted)">■ Gri</td><td>Geliştirici bilgisi</td></tr>
+          <tr><td>INFO</td><td style="color:var(--accent)">■ Mavi</td><td>Normal işlemler</td></tr>
+          <tr><td>WARNING</td><td style="color:var(--yellow)">■ Sarı</td><td>Dikkat gerektiren durumlar</td></tr>
+          <tr><td>ERROR</td><td style="color:var(--red)">■ Kırmızı</td><td>Başarısız işlemler</td></tr>
+          <tr><td>CRITICAL</td><td style="color:var(--red)">■ Koyu Kırmızı</td><td>Sistem düzeyinde hatalar</td></tr>
+        </table>
+
+        <h2>Kategoriler</h2>
+        <p><code>vm</code>, <code>network</code>, <code>storage</code>, <code>auth</code>, <code>system</code>, <code>ai</code>, <code>provision</code>, <code>snapshot</code></p>
+
+        <h2>Logları Görüntüleme</h2>
+        <pre><code># Terminal
+tail -f /var/log/oxware/events.jsonl | python3 -m json.tool
+
+# API
+GET /api/events?limit=100&level=WARNING&category=vm</code></pre>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ AI AGENTS ══════════════════════ -->
+    <div class="doc-page" id="page-ai-agents">
+      <div class="doc-hero">
+        <h1>AI Ajan <span>Sistemi</span></h1>
+        <p>OpenRouter, Claude, OpenAI veya Ollama ile akıllı sistem izleme ve anomali tespiti.</p>
+      </div>
+      <div class="doc-body">
+        <h2>AI Ajan Nedir?</h2>
+        <p>Her AI ajan, arka planda belirli aralıklarla sistem metriklerini toplayarak bir dil modeline gönderir. Model yanıtını analiz eder, anormal durumlar varsa bildirim gönderir ve sonuçları loglar.</p>
+
+        <h2>Desteklenen Sağlayıcılar</h2>
+        <table>
+          <tr><th>Sağlayıcı</th><th>Önerilen Model</th><th>API Key</th></tr>
+          <tr><td>OpenRouter</td><td><code>anthropic/claude-3-haiku</code></td><td>openrouter.ai</td></tr>
+          <tr><td>Anthropic</td><td><code>claude-haiku-4-5-20251001</code></td><td>console.anthropic.com</td></tr>
+          <tr><td>OpenAI</td><td><code>gpt-4o-mini</code></td><td>platform.openai.com</td></tr>
+          <tr><td>Ollama</td><td><code>llama3</code></td><td>Gerekmez (yerel)</td></tr>
+        </table>
+
+        <h2>Ajan Görevleri</h2>
+        <table>
+          <tr><th>Görev</th><th>Açıklama</th></tr>
+          <tr><td><code>monitor</code></td><td>CPU/RAM/Disk metriklerini analiz eder, anormallik arar</td></tr>
+          <tr><td><code>events</code></td><td>Son 1 saatteki olayları özetler</td></tr>
+          <tr><td><code>alerts</code></td><td>Eşik aşıldığında bildirim gönderir</td></tr>
+        </table>
+
+        <h2>Uyarı Eşikleri</h2>
+        <pre><code>{
+  "alert_thresholds": {
+    "cpu_percent":    85,   // CPU %85 üzeri → uyarı
+    "memory_percent": 90,   // RAM %90 üzeri → uyarı
+    "disk_percent":   80    // Disk %80 üzeri → uyarı
+  }
+}</code></pre>
+
+        <h2>Web Arayüzünden Ajan Ekleme</h2>
+        <ol class="steps">
+          <li><div class="step-content"><h4>Ayarlar → AI Ajanlar sekmesi</h4></div></li>
+          <li><div class="step-content"><h4>Ajan Ekle butonuna tıklayın</h4></div></li>
+          <li><div class="step-content"><h4>Sağlayıcı, API key ve modeli girin</h4></div></li>
+          <li><div class="step-content"><h4>Kontrol aralığını belirleyin (dakika)</h4></div></li>
+        </ol>
+
+        <h2>Manuel Konfigürasyon</h2>
+        <pre><code># /etc/oxware/ai_agents.conf
+{
+  "agents": {
+    "main": {
+      "name":             "OXware İzleyici",
+      "provider":         "openrouter",
+      "api_key":          "sk-or-v1-xxx",
+      "model":            "anthropic/claude-3-haiku",
+      "interval_minutes": 15,
+      "tasks":            ["monitor", "events"],
+      "enabled":          true
+    }
+  }
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ NOTIFICATIONS ══════════════════════ -->
+    <div class="doc-page" id="page-notifications">
+      <div class="doc-hero">
+        <h1>Bildirim <span>Sistemi</span></h1>
+        <p>Telegram Bot ve Discord Webhook ile anlık uyarılar.</p>
+      </div>
+      <div class="doc-body">
+        <h2>Bildirim Kanalları</h2>
+        <div class="card-grid">
+          <div class="doc-card">
+            <div class="icon">📱</div>
+            <h4>Telegram</h4>
+            <p>Bot Token + Chat ID ile HTML formatlı mesajlar.</p>
+          </div>
+          <div class="doc-card">
+            <div class="icon">🎮</div>
+            <h4>Discord</h4>
+            <p>Webhook URL ile embed formatlı zengin mesajlar.</p>
+          </div>
+        </div>
+
+        <h2>Telegram Kurulumu</h2>
+        <ol class="steps">
+          <li><div class="step-content"><h4>Bot oluşturun</h4><p>Telegram'da <code>@BotFather</code>'a <code>/newbot</code> yazın, token alın.</p></div></li>
+          <li><div class="step-content"><h4>Botu başlatın</h4><p>Oluşturduğunuz bota <code>/start</code> gönderin.</p></div></li>
+          <li><div class="step-content"><h4>Chat ID alın</h4>
+            <pre><code>curl "https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates"
+# "chat":{"id":123456789} değerini alın</code></pre>
+          </div></li>
+          <li><div class="step-content"><h4>OXware'a kaydedin</h4><p>Ayarlar → Bildirimler → Token ve Chat ID girin → Kaydet.</p></div></li>
+        </ol>
+
+        <h2>Discord Kurulumu</h2>
+        <ol class="steps">
+          <li><div class="step-content"><h4>Webhook oluşturun</h4><p>Discord kanalı → Kanal Ayarları → Entegrasyonlar → Webhook Oluştur</p></div></li>
+          <li><div class="step-content"><h4>URL'yi kopyalayın</h4><p><code>https://discord.com/api/webhooks/...</code> şeklindeki URL'yi alın.</p></div></li>
+          <li><div class="step-content"><h4>OXware'a kaydedin</h4><p>Ayarlar → Bildirimler → Discord Webhook URL → Kaydet.</p></div></li>
+        </ol>
+
+        <h2>Konfigürasyon Dosyası</h2>
+        <pre><code># /etc/oxware/notifications.conf
+TELEGRAM_TOKEN   = 123456789:AAFxxxxxxxxxx
+TELEGRAM_CHAT_ID = 123456789
+DISCORD_WEBHOOK  = https://discord.com/api/webhooks/xxx/yyy
+MIN_LEVEL        = WARNING</code></pre>
+
+        <h2>Bildirim Kategorileri</h2>
+        <p>VM durum değişiklikleri, kaynak uyarıları, provisioning tamamlandı, AI agent uyarıları, sistem başlangıç/kapanış, auth hataları.</p>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ SECURITY ══════════════════════ -->
+    <div class="doc-page" id="page-security">
+      <div class="doc-hero">
+        <h1>Güvenlik <span>Katmanı</span></h1>
+        <p>Rate limiting, güvenlik başlıkları, input doğrulama ve şifreleme.</p>
+      </div>
+      <div class="doc-body">
+        <h2>Güvenlik Özellikleri</h2>
+        <div class="card-grid">
+          <div class="doc-card"><div class="icon">🛡️</div><h4>Rate Limiting</h4><p>Her IP için endpoint bazlı istek sınırlama.</p></div>
+          <div class="doc-card"><div class="icon">🔒</div><h4>PBKDF2 Hashing</h4><p>200.000 iterasyon ile güvenli parola saklama.</p></div>
+          <div class="doc-card"><div class="icon">🔐</div><h4>AES-256-CBC</h4><p>Kimlik dosyası makine UUID'si ile şifrelenmiş.</p></div>
+          <div class="doc-card"><div class="icon">📋</div><h4>CSP / HSTS</h4><p>Sıkı güvenlik HTTP başlıkları.</p></div>
+          <div class="doc-card"><div class="icon">🚫</div><h4>Path Traversal</h4><p>realpath() ile dosya yolu saldırısı engelleme.</p></div>
+          <div class="doc-card"><div class="icon">📊</div><h4>Denetim Logu</h4><p>Tüm değiştirici API işlemlerinin kaydı.</p></div>
+        </div>
+
+        <h2>Rate Limit Tablosu</h2>
+        <table>
+          <tr><th>Endpoint</th><th>Limit</th><th>Pencere</th></tr>
+          <tr><td><code>POST /api/auth/login</code></td><td>5 istek</td><td>60 saniye</td></tr>
+          <tr><td><code>POST /api/setup/init</code></td><td>3 istek</td><td>5 dakika</td></tr>
+          <tr><td><code>POST /api/provision</code></td><td>10 istek</td><td>60 saniye</td></tr>
+          <tr><td><code>POST /api/storage/isos</code></td><td>5 istek</td><td>5 dakika</td></tr>
+          <tr><td>Diğer tüm API</td><td>120 istek</td><td>60 saniye</td></tr>
+        </table>
+
+        <h2>HTTP Güvenlik Başlıkları</h2>
+        <pre><code>X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+X-XSS-Protection: 1; mode=block
+Referrer-Policy: strict-origin-when-cross-origin
+Content-Security-Policy: default-src 'self'; ...
+Strict-Transport-Security: max-age=31536000 (HTTPS'de)
+Cache-Control: no-store, no-cache</code></pre>
+
+        <h2>Input Doğrulama Kuralları</h2>
+        <table>
+          <tr><th>Alan</th><th>Kural</th></tr>
+          <tr><td>VM Adı</td><td>Regex: <code>^[a-zA-Z0-9_-]{1,64}$</code></td></tr>
+          <tr><td>UUID</td><td>Standart UUID formatı</td></tr>
+          <tr><td>Dosya Adı</td><td>Yol traversal karakterleri yasak</td></tr>
+          <tr><td>IP Adresi</td><td>IPv4 format doğrulama</td></tr>
+          <tr><td>Port</td><td>1–65535 aralığı</td></tr>
+          <tr><td>RAM</td><td>64 MB – 1 TB aralığı</td></tr>
+          <tr><td>Disk</td><td>1 GB – 64 TB aralığı</td></tr>
+          <tr><td>vCPU</td><td>1–512 aralığı</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ API ══════════════════════ -->
+    <div class="doc-page" id="page-api">
+      <div class="doc-hero">
+        <h1>API <span>Referansı</span></h1>
+        <p>Tüm REST API endpoint'leri. Tüm istekler <code>Authorization: Bearer &lt;token&gt;</code> başlığı gerektirir.</p>
+      </div>
+      <div class="doc-body">
+        <h2>Kimlik Doğrulama</h2>
+        <div class="endpoint">
+          <span class="method post">POST</span>
+          <div><div class="endpoint-path">/api/auth/login</div><div class="endpoint-desc">Giriş yap, JWT token al — <code>{"username":"...", "password":"..."}</code></div></div>
+        </div>
+        <div class="endpoint">
+          <span class="method post">POST</span>
+          <div><div class="endpoint-path">/api/auth/change-password</div><div class="endpoint-desc">Parola değiştir</div></div>
+        </div>
+        <div class="endpoint">
+          <span class="method get">GET</span>
+          <div><div class="endpoint-path">/api/setup/status</div><div class="endpoint-desc">İlk kurulum yapıldı mı kontrol et</div></div>
+        </div>
+        <div class="endpoint">
+          <span class="method post">POST</span>
+          <div><div class="endpoint-path">/api/setup/init</div><div class="endpoint-desc">İlk kullanıcıyı oluştur</div></div>
+        </div>
+
+        <h2>Sanal Makineler</h2>
+        <div class="endpoint"><span class="method get">GET</span><div><div class="endpoint-path">/api/vms</div><div class="endpoint-desc">Tüm VM'leri listele</div></div></div>
+        <div class="endpoint"><span class="method post">POST</span><div><div class="endpoint-path">/api/vms</div><div class="endpoint-desc">Yeni VM oluştur</div></div></div>
+        <div class="endpoint"><span class="method get">GET</span><div><div class="endpoint-path">/api/vms/&lt;id&gt;</div><div class="endpoint-desc">VM detayı</div></div></div>
+        <div class="endpoint"><span class="method delete">DEL</span><div><div class="endpoint-path">/api/vms/&lt;id&gt;</div><div class="endpoint-desc">VM sil</div></div></div>
+        <div class="endpoint"><span class="method post">POST</span><div><div class="endpoint-path">/api/vms/&lt;id&gt;/start</div><div class="endpoint-desc">VM başlat</div></div></div>
+        <div class="endpoint"><span class="method post">POST</span><div><div class="endpoint-path">/api/vms/&lt;id&gt;/stop</div><div class="endpoint-desc">VM kapat</div></div></div>
+        <div class="endpoint"><span class="method post">POST</span><div><div class="endpoint-path">/api/vms/&lt;id&gt;/pause</div><div class="endpoint-desc">VM duraklat</div></div></div>
+        <div class="endpoint"><span class="method post">POST</span><div><div class="endpoint-path">/api/vms/&lt;id&gt;/restart</div><div class="endpoint-desc">VM yeniden başlat</div></div></div>
+
+        <h2>Snapshot</h2>
+        <div class="endpoint"><span class="method get">GET</span><div><div class="endpoint-path">/api/vms/&lt;id&gt;/snapshots</div><div class="endpoint-desc">VM snapshot listesi</div></div></div>
+        <div class="endpoint"><span class="method post">POST</span><div><div class="endpoint-path">/api/vms/&lt;id&gt;/snapshots</div><div class="endpoint-desc">Snapshot al — <code>{"name":"...","description":"..."}</code></div></div></div>
+        <div class="endpoint"><span class="method post">POST</span><div><div class="endpoint-path">/api/vms/&lt;id&gt;/snapshots/&lt;name&gt;/revert</div><div class="endpoint-desc">Snapshot'a geri dön</div></div></div>
+        <div class="endpoint"><span class="method delete">DEL</span><div><div class="endpoint-path">/api/vms/&lt;id&gt;/snapshots/&lt;name&gt;</div><div class="endpoint-desc">Snapshot sil</div></div></div>
+
+        <h2>Ağ</h2>
+        <div class="endpoint"><span class="method get">GET</span><div><div class="endpoint-path">/api/networks</div><div class="endpoint-desc">Tüm ağları listele</div></div></div>
+        <div class="endpoint"><span class="method post">POST</span><div><div class="endpoint-path">/api/networks</div><div class="endpoint-desc">Yeni ağ oluştur</div></div></div>
+        <div class="endpoint"><span class="method delete">DEL</span><div><div class="endpoint-path">/api/networks/&lt;id&gt;</div><div class="endpoint-desc">Ağ sil</div></div></div>
+
+        <h2>Depolama</h2>
+        <div class="endpoint"><span class="method get">GET</span><div><div class="endpoint-path">/api/storage/pools</div><div class="endpoint-desc">Havuzları listele</div></div></div>
+        <div class="endpoint"><span class="method post">POST</span><div><div class="endpoint-path">/api/storage/pools</div><div class="endpoint-desc">Havuz ekle</div></div></div>
+        <div class="endpoint"><span class="method get">GET</span><div><div class="endpoint-path">/api/storage/isos</div><div class="endpoint-desc">ISO listesi</div></div></div>
+        <div class="endpoint"><span class="method post">POST</span><div><div class="endpoint-path">/api/storage/isos</div><div class="endpoint-desc">ISO yükle (multipart/form-data)</div></div></div>
+        <div class="endpoint"><span class="method delete">DEL</span><div><div class="endpoint-path">/api/storage/isos/&lt;name&gt;</div><div class="endpoint-desc">ISO sil</div></div></div>
+
+        <h2>Sistem</h2>
+        <div class="endpoint"><span class="method get">GET</span><div><div class="endpoint-path">/api/system/stats</div><div class="endpoint-desc">CPU, RAM, disk, ağ metrikleri</div></div></div>
+        <div class="endpoint"><span class="method get">GET</span><div><div class="endpoint-path">/api/system/info</div><div class="endpoint-desc">Host ve libvirt bilgileri</div></div></div>
+        <div class="endpoint"><span class="method get">GET</span><div><div class="endpoint-path">/api/topology</div><div class="endpoint-desc">Hiyerarşik topoloji verisi</div></div></div>
+        <div class="endpoint"><span class="method get">GET</span><div><div class="endpoint-path">/api/events</div><div class="endpoint-desc">Olay günlüğü — ?limit=&level=&category=&vm_id=</div></div></div>
+
+        <h2>IP Havuzu & Provisioning</h2>
+        <div class="endpoint"><span class="method get">GET</span><div><div class="endpoint-path">/api/ippool</div><div class="endpoint-desc">Havuz listesi</div></div></div>
+        <div class="endpoint"><span class="method post">POST</span><div><div class="endpoint-path">/api/ippool</div><div class="endpoint-desc">Yeni havuz oluştur</div></div></div>
+        <div class="endpoint"><span class="method post">POST</span><div><div class="endpoint-path">/api/provision</div><div class="endpoint-desc">Otomatik VM provisioning</div></div></div>
+
+        <h2>AI & Bildirimler</h2>
+        <div class="endpoint"><span class="method get">GET</span><div><div class="endpoint-path">/api/ai/agents</div><div class="endpoint-desc">Ajan listesi</div></div></div>
+        <div class="endpoint"><span class="method post">POST</span><div><div class="endpoint-path">/api/ai/agents</div><div class="endpoint-desc">Yeni ajan ekle</div></div></div>
+        <div class="endpoint"><span class="method delete">DEL</span><div><div class="endpoint-path">/api/ai/agents/&lt;id&gt;</div><div class="endpoint-desc">Ajan sil</div></div></div>
+        <div class="endpoint"><span class="method post">POST</span><div><div class="endpoint-path">/api/ai/agents/&lt;id&gt;/query</div><div class="endpoint-desc">Ajana soru sor</div></div></div>
+        <div class="endpoint"><span class="method get">GET</span><div><div class="endpoint-path">/api/notifications/config</div><div class="endpoint-desc">Bildirim yapılandırmasını oku</div></div></div>
+        <div class="endpoint"><span class="method post">POST</span><div><div class="endpoint-path">/api/notifications/config</div><div class="endpoint-desc">Bildirim yapılandırmasını kaydet</div></div></div>
+        <div class="endpoint"><span class="method post">POST</span><div><div class="endpoint-path">/api/notifications/test</div><div class="endpoint-desc">Test bildirimi gönder</div></div></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ CONFIG ══════════════════════ -->
+    <div class="doc-page" id="page-config">
+      <div class="doc-hero">
+        <h1>Yapılandırma <span>Dosyaları</span></h1>
+        <p>Tüm konfigürasyon dosyalarının tam referansı.</p>
+      </div>
+      <div class="doc-body">
+        <h2>/etc/oxware/oxware.conf</h2>
+        <p>Ana uygulama yapılandırması. INI formatı, bölümlü.</p>
+        <pre><code>[server]
+host         = 0.0.0.0        # Dinleme adresi
+port         = 8006            # Web arayüzü portu
+ssl          = true            # HTTPS aktif
+ssl_cert     = /etc/oxware/ssl/oxware.crt
+ssl_key      = /etc/oxware/ssl/oxware.key
+secret_key   = &lt;32-byte-hex&gt;  # JWT imzalama anahtarı
+novnc_dir    = /usr/share/novnc
+
+[storage]
+data_dir     = /var/lib/oxware
+iso_dir      = /var/lib/oxware/isos
+disk_dir     = /var/lib/oxware/disks
+backup_dir   = /var/lib/oxware/backups
+template_dir = /var/lib/oxware/templates
+
+[vnc]
+start_port     = 5900
+end_port       = 5999
+websocket_port = 6080
+
+[libvirt]
+uri = qemu:///system
+
+[logging]
+log_dir = /var/log/oxware
+level   = INFO                 # DEBUG / INFO / WARNING / ERROR</code></pre>
+
+        <h2>/etc/oxware/ai_agents.conf</h2>
+        <p>AI ajan yapılandırması. JSON formatı.</p>
+        <pre><code>{
+  "agents": {
+    "&lt;agent-id&gt;": {
+      "name":             "Ajan Adı",
+      "provider":         "openrouter",   // openrouter|anthropic|openai|ollama
+      "api_key":          "sk-...",
+      "model":            "anthropic/claude-3-haiku",
+      "base_url":         "",             // Özel URL (ollama için gerekli)
+      "interval_minutes": 15,
+      "tasks":            ["monitor", "events", "alerts"],
+      "alert_thresholds": {
+        "cpu_percent":    85,
+        "memory_percent": 90,
+        "disk_percent":   80
+      },
+      "enabled": true
+    }
+  }
+}</code></pre>
+
+        <h2>/etc/oxware/notifications.conf</h2>
+        <p>Bildirim yapılandırması. KEY=VALUE formatı.</p>
+        <pre><code>TELEGRAM_TOKEN   = 123456789:AAFxxxxxxxxxx
+TELEGRAM_CHAT_ID = 123456789
+DISCORD_WEBHOOK  = https://discord.com/api/webhooks/xxx/yyy
+MIN_LEVEL        = WARNING     # DEBUG|INFO|WARNING|ERROR|CRITICAL
+HOSTNAME_TAG     = oxware-prod  # Mesajlara eklenecek sunucu etiketi</code></pre>
+
+        <h2>/etc/oxware/.passwd_reset</h2>
+        <p>Parola sıfırlama dosyası. Servis başlarken okunur, otomatik silinir.</p>
+        <pre><code>USERNAME=yeni_kullanici
+PASSWORD=YeniParola123!</code></pre>
+
+        <h2>Ortam Değişkenleri</h2>
+        <table>
+          <tr><th>Değişken</th><th>Varsayılan</th><th>Açıklama</th></tr>
+          <tr><td><code>ADAOS_CONFIG</code></td><td><code>/etc/oxware/oxware.conf</code></td><td>Ana config yolu</td></tr>
+          <tr><td><code>ADAOS_AI_CONFIG</code></td><td><code>/etc/oxware/ai_agents.conf</code></td><td>AI config yolu</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ TROUBLESHOOT ══════════════════════ -->
+    <div class="doc-page" id="page-troubleshoot">
+      <div class="doc-hero">
+        <h1>Sorun <span>Giderme</span></h1>
+        <p>Sık karşılaşılan hatalar ve çözüm yöntemleri.</p>
+      </div>
+      <div class="doc-body">
+        <h2>Servis Başlamıyor</h2>
+        <pre><code>sudo systemctl status oxware
+sudo journalctl -u oxware -n 50 --no-pager
+
+# Doğrudan Python ile çalıştır (tam hata görüntüle)
+sudo systemctl stop oxware
+cd /root/OXware/oxware/backend
+/opt/oxware/venv/bin/python app.py</code></pre>
+
+        <h2>Config Dosyası Hatası</h2>
+        <div class="alert alert-danger">
+          <span>✗</span>
+          <div><code>MissingSectionHeaderError</code> hatası alıyorsanız <code>/etc/oxware/oxware.conf</code> dosyasında <code>[server]</code> gibi bölüm başlıkları eksiktir.</div>
+        </div>
+        <pre><code># Kontrol et
+head -5 /etc/oxware/oxware.conf
+# İlk satır [server] olmalı</code></pre>
+
+        <h2>libvirt Bağlantı Hatası</h2>
+        <pre><code>sudo systemctl status libvirtd
+sudo systemctl restart libvirtd
+sudo usermod -aG libvirt root
+virsh list --all  # Bağlantı testi</code></pre>
+
+        <h2>noVNC Konsol Açılmıyor</h2>
+        <pre><code>sudo systemctl status novnc
+sudo ss -tlnp | grep 6080   # Port açık mı?
+sudo ss -tlnp | grep 590    # VNC portları açık mı?</code></pre>
+
+        <h2>SSL Sertifika Yenileme</h2>
+        <pre><code>sudo openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+  -keyout /etc/oxware/ssl/oxware.key \
+  -out    /etc/oxware/ssl/oxware.crt \
+  -subj   "/CN=$(hostname -I | awk '{print $1}')"
+sudo systemctl restart oxware</code></pre>
+
+        <h2>Sanallaştırma Aktif Değil</h2>
+        <pre><code>grep -c vmx /proc/cpuinfo   # Intel: 0 → VT-x kapalı
+grep -c svm /proc/cpuinfo   # AMD:   0 → AMD-V kapalı
+
+# KVM modüllerini yükle
+sudo modprobe kvm-intel   # veya kvm-amd
+lsmod | grep kvm</code></pre>
+
+        <h2>Faydalı Komutlar</h2>
+        <pre><code># Tüm logları canlı izle
+tail -f /var/log/oxware/oxware.log
+
+# Olay günlüğü
+tail -f /var/log/oxware/events.jsonl
+
+# Servis yönetimi
+sudo systemctl restart oxware
+sudo systemctl stop oxware
+sudo systemctl start oxware
+
+# Güvenlik duvarı
+sudo ufw status verbose
+sudo fail2ban-client status
+
+# VM listesi (terminal)
+virsh list --all
+
+# Ağ listesi
+virsh net-list --all</code></pre>
+
+        <h2>Log Konumları</h2>
+        <table>
+          <tr><th>Log Dosyası</th><th>İçerik</th></tr>
+          <tr><td><code>/var/log/oxware/oxware.log</code></td><td>Ana uygulama logu</td></tr>
+          <tr><td><code>/var/log/oxware/events.jsonl</code></td><td>Yapısal olay günlüğü</td></tr>
+          <tr><td><code>/var/log/oxware/ai_agent.jsonl</code></td><td>AI ajan sonuçları</td></tr>
+          <tr><td><code>/var/log/syslog</code></td><td>Sistem logu</td></tr>
+          <tr><td><code>journalctl -u oxware</code></td><td>systemd servis logu</td></tr>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<script>
+  const searchIndex = [
+    { page:"overview",      title:"Sisteme Genel Bakış",    keywords:"mimari kvm qemu libvirt flask teknoloji port" },
+    { page:"install",       title:"Kurulum",                keywords:"ubuntu apt kurulum install script ssl systemd ufw" },
+    { page:"first-login",   title:"İlk Giriş",              keywords:"setup wizard parola sıfırlama jwt token" },
+    { page:"vms",           title:"Sanal Makineler",        keywords:"vm oluşturma başlatma durdurma konsol vcpu ram disk" },
+    { page:"networks",      title:"Ağ Yönetimi",            keywords:"network ağ nat bridge isolated dhcp" },
+    { page:"storage",       title:"Depolama",               keywords:"storage iso havuz disk qcow2 raw" },
+    { page:"snapshots",     title:"Snapshot Sistemi",       keywords:"snapshot anlık görüntü geri yükleme revert" },
+    { page:"ippool",        title:"IP Havuzu",              keywords:"ip pool havuz atama dhcp otomatik" },
+    { page:"provisioning",  title:"Otomatik Provisioning",  keywords:"provisioning otomatik vm oluşturma parola" },
+    { page:"topology",      title:"Topoloji Haritası",      keywords:"topoloji harita svg görselleştirme ağ vm" },
+    { page:"console",       title:"VM Konsol (noVNC)",      keywords:"novnc websockify vnc konsol tarayıcı" },
+    { page:"monitor",       title:"Sistem İzleme",          keywords:"izleme cpu ram disk network metrik" },
+    { page:"events",        title:"Olay Günlüğü",           keywords:"event log olay günlük jsonl seviye kategori" },
+    { page:"ai-agents",     title:"AI Ajan Sistemi",        keywords:"ai ajan openrouter claude openai ollama izleme anomali" },
+    { page:"notifications", title:"Bildirimler",            keywords:"telegram discord webhook bildirim alert" },
+    { page:"security",      title:"Güvenlik Katmanı",       keywords:"güvenlik rate limit csp hsts pbkdf2 aes şifreleme" },
+    { page:"api",           title:"API Referansı",          keywords:"api endpoint rest jwt bearer token" },
+    { page:"config",        title:"Yapılandırma Dosyaları", keywords:"conf config oxware.conf ai_agents notifications" },
+    { page:"troubleshoot",  title:"Sorun Giderme",          keywords:"hata error sorun debug log libvirt ssl" },
+  ];
+
+  function showPage(name) {
+    document.querySelectorAll(".doc-page").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".nav-link").forEach(l => l.classList.remove("active"));
+    const pg = document.getElementById("page-" + name);
+    if (pg) pg.classList.add("active");
+    document.querySelectorAll(".nav-link").forEach(l => {
+      if (l.getAttribute("onclick") === `showPage('${name}')`) l.classList.add("active");
+    });
+    document.getElementById("content").scrollTop = 0;
+    document.getElementById("search-results").style.display = "none";
+    document.getElementById("search-input").value = "";
+  }
+
+  function searchDocs(q) {
+    const res = document.getElementById("search-results");
+    if (!q.trim()) { res.style.display = "none"; return; }
+    const lower = q.toLowerCase();
+    const hits = searchIndex.filter(item =>
+      item.title.toLowerCase().includes(lower) ||
+      item.keywords.includes(lower)
+    );
+    if (!hits.length) { res.style.display = "none"; return; }
+    res.innerHTML = hits.map(h => `
+      <div onclick="showPage('${h.page}')"
+        style="padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px"
+        onmouseover="this.style.background='var(--surface2)'"
+        onmouseout="this.style.background=''">
+        ${h.title}
+      </div>`).join("");
+    res.style.display = "block";
+  }
+
+  document.addEventListener("click", e => {
+    if (!e.target.closest("#search-input") && !e.target.closest("#search-results")) {
+      document.getElementById("search-results").style.display = "none";
+    }
+  });
+</script>
+</body>
+</html>

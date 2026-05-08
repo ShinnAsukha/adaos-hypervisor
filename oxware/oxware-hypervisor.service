@@ -1,0 +1,43 @@
+[Unit]
+Description=OXware Hypervisor Management Service
+Documentation=https://github.com/ShinnAsukha/oxware-hypervisor
+After=network.target libvirtd.service
+Requires=libvirtd.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/oxware
+Environment=OXWARE_CONFIG=/etc/oxware/oxware.conf
+Environment=PYTHONUNBUFFERED=1
+
+# Gerekli dizinleri otomatik oluştur (fresh kurulum için)
+LogsDirectory=oxware
+LogsDirectoryMode=0755
+StateDirectory=oxware
+StateDirectoryMode=0755
+ConfigurationDirectory=oxware
+ConfigurationDirectoryMode=0755
+
+# Başlatma
+ExecStartPre=/bin/bash -c 'mkdir -p /var/log/oxware /etc/oxware /var/lib/oxware/{isos,disks,backups,templates}'
+ExecStartPre=/bin/sleep 2
+ExecStart=/opt/oxware/venv/bin/python3 /opt/oxware/backend/app.py
+ExecReload=/bin/kill -HUP $MAINPID
+
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillMode=mixed
+StandardOutput=append:/var/log/oxware/oxware.log
+StandardError=append:/var/log/oxware/oxware-error.log
+SyslogIdentifier=oxware
+
+# Güvenlik
+NoNewPrivileges=false
+PrivateTmp=false
+
+[Install]
+WantedBy=multi-user.target

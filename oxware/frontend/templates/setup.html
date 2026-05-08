@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OXware — İlk Kurulum</title>
+  <link rel="icon" type="image/png" href="/static/img/sadeceikon.png">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family:'Segoe UI',system-ui,sans-serif;
+      background:#0d1117; min-height:100vh;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .bg-dots {
+      position:fixed; inset:0;
+      background-image: radial-gradient(rgba(0,212,255,0.04) 1px, transparent 1px);
+      background-size:30px 30px; pointer-events:none;
+    }
+    .card {
+      position:relative; background:rgba(22,27,34,0.97);
+      border:1px solid #30363d; border-radius:18px;
+      padding:52px 48px; width:480px; max-width:96vw;
+      box-shadow:0 32px 100px rgba(0,0,0,.6), 0 0 0 1px rgba(0,212,255,.04);
+    }
+    .badge {
+      display:inline-flex; align-items:center; gap:6px;
+      background:rgba(0,212,255,.1); border:1px solid rgba(0,212,255,.25);
+      color:#00d4ff; border-radius:20px; padding:4px 12px;
+      font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px;
+      margin-bottom:20px;
+    }
+    .badge .dot { width:6px;height:6px;border-radius:50%;background:#00d4ff; animation:blink 1.5s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    h1 { font-size:28px;font-weight:800;color:#e6edf3;margin-bottom:6px; }
+    .subtitle { font-size:13px;color:#8b949e;margin-bottom:32px;line-height:1.5; }
+    .step { display:flex;gap:12px;align-items:flex-start;margin-bottom:24px; }
+    .step-num {
+      width:28px;height:28px;border-radius:50%;
+      background:linear-gradient(135deg,#00d4ff,#0066ff);
+      display:flex;align-items:center;justify-content:center;
+      font-size:12px;font-weight:700;color:white;flex-shrink:0;
+    }
+    .step-content h3 { font-size:13px;font-weight:700;color:#e6edf3;margin-bottom:3px; }
+    .step-content p  { font-size:12px;color:#8b949e;line-height:1.4; }
+    hr { border:none;border-top:1px solid #30363d;margin:28px 0; }
+    label { display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#8b949e;margin-bottom:6px; }
+    input {
+      width:100%;padding:11px 14px;background:#0d1117;border:1px solid #30363d;
+      border-radius:8px;color:#e6edf3;font-size:14px;outline:none;transition:border-color .15s;
+      margin-bottom:16px;
+    }
+    input:focus { border-color:#00d4ff;box-shadow:0 0 0 3px rgba(0,212,255,.1); }
+    input::placeholder { color:#484f58; }
+    .strength { height:3px;border-radius:2px;margin:-12px 0 16px;transition:all .3s; }
+    .hint { font-size:11px;color:#8b949e;margin:-12px 0 16px; }
+    .btn {
+      width:100%;padding:14px;border-radius:9px;border:none;
+      background:linear-gradient(135deg,#00d4ff,#0066ff);
+      color:white;font-size:15px;font-weight:700;cursor:pointer;
+      transition:all .2s;letter-spacing:.3px;
+    }
+    .btn:hover { transform:translateY(-1px);box-shadow:0 8px 25px rgba(0,212,255,.3); }
+    .btn:disabled { opacity:.5;cursor:not-allowed;transform:none; }
+    .err { display:none;background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);color:#f85149;padding:10px 14px;border-radius:6px;font-size:13px;margin-top:12px;text-align:center; }
+    .spinner { display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .success { display:none;text-align:center;padding:20px 0; }
+    .success .check { font-size:48px;margin-bottom:12px; }
+    .success h2 { font-size:20px;color:#3fb950;margin-bottom:8px; }
+    .success p { font-size:13px;color:#8b949e; }
+  </style>
+</head>
+<body>
+<div class="bg-dots"></div>
+<div class="card">
+  <div id="setupForm">
+    <div style="text-align:center;margin-bottom:18px;">
+      <img src="/static/img/oxware2.png" alt="OXware"
+           style="width:110px;height:110px;object-fit:contain;filter:drop-shadow(0 0 20px rgba(0,212,255,0.45));"
+           onerror="this.style.display='none'">
+    </div>
+    <div class="badge"><div class="dot"></div>İlk Kurulum</div>
+    <h1>OXware Hypervisor</h1>
+    <p class="subtitle">
+      Bu kurulum yalnızca <strong>bir kez</strong> çalışır. Yönetici kimlik bilgilerinizi belirleyin.
+      Şifreler <strong>AES-256</strong> ile makineye özgü anahtarla şifreli saklanır.
+    </p>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Kimlik Bilgileri</h3>
+        <p>Kullanıcı adı ve güçlü bir şifre belirleyin. Sonradan değiştirmek için <code>/etc/oxware/.passwd_reset</code> dosyasını kullanın.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Güvenli Depolama</h3>
+        <p>Kimlik bilgileri <code>/etc/oxware/.auth</code> dosyasına şifreli kaydedilir ve hiçbir zaman düz metin olarak tutulmaz.</p>
+      </div>
+    </div>
+
+    <hr>
+
+    <label for="su-username">Kullanıcı Adı</label>
+    <input id="su-username" type="text" placeholder="hypervisor-admin" autocomplete="off" oninput="validateForm()">
+
+    <label for="su-password">Şifre</label>
+    <input id="su-password" type="password" placeholder="En az 12 karakter önerilir" autocomplete="new-password" oninput="checkStrength()">
+    <div class="strength" id="strength-bar"></div>
+    <div class="hint" id="strength-hint">Şifre gücü: —</div>
+
+    <label for="su-password2">Şifre Tekrar</label>
+    <input id="su-password2" type="password" placeholder="Şifreyi tekrar girin" autocomplete="new-password" oninput="validateForm()">
+
+    <button class="btn" id="setupBtn" onclick="doSetup()" disabled>Kurulumu Tamamla</button>
+    <div class="err" id="setupErr"></div>
+  </div>
+
+  <div class="success" id="setupSuccess">
+    <div class="check">✅</div>
+    <h2>Kurulum Tamamlandı!</h2>
+    <p>OXware Hypervisor hazır. Yönlendiriliyorsunuz...</p>
+  </div>
+</div>
+
+<script>
+function checkStrength() {
+  const p = document.getElementById("su-password").value;
+  const bar  = document.getElementById("strength-bar");
+  const hint = document.getElementById("strength-hint");
+  let score = 0;
+  if (p.length >= 8)  score++;
+  if (p.length >= 12) score++;
+  if (/[A-Z]/.test(p)) score++;
+  if (/[0-9]/.test(p)) score++;
+  if (/[^A-Za-z0-9]/.test(p)) score++;
+  const colors = ["","#f85149","#d29922","#f0883e","#3fb950","#00d4ff"];
+  const labels = ["","Çok Zayıf","Zayıf","Orta","Güçlü","Çok Güçlü"];
+  bar.style.background = colors[score] || "transparent";
+  bar.style.width = (score * 20) + "%";
+  hint.textContent = "Şifre gücü: " + (labels[score] || "—");
+  hint.style.color = colors[score] || "#8b949e";
+  validateForm();
+}
+
+function validateForm() {
+  const u  = document.getElementById("su-username").value.trim();
+  const p1 = document.getElementById("su-password").value;
+  const p2 = document.getElementById("su-password2").value;
+  const btn = document.getElementById("setupBtn");
+  btn.disabled = !(u.length >= 3 && p1.length >= 8 && p1 === p2);
+}
+
+async function doSetup() {
+  const username = document.getElementById("su-username").value.trim();
+  const password = document.getElementById("su-password").value;
+  const password2 = document.getElementById("su-password2").value;
+  const btn = document.getElementById("setupBtn");
+  const errEl = document.getElementById("setupErr");
+
+  if (password !== password2) {
+    errEl.textContent = "Şifreler eşleşmiyor";
+    errEl.style.display = "block";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Kurulum yapılıyor...';
+  errEl.style.display = "none";
+
+  try {
+    const res = await fetch("/api/setup/init", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({username, password}),
+    });
+    const data = await res.json();
+    if (res.ok && data.token) {
+      localStorage.setItem("oxware_token", data.token);
+      localStorage.setItem("oxware_user", data.username);
+      document.getElementById("setupForm").style.display = "none";
+      document.getElementById("setupSuccess").style.display = "block";
+      setTimeout(() => window.location.href = "/", 2000);
+    } else {
+      errEl.textContent = data.error || "Kurulum başarısız";
+      errEl.style.display = "block";
+      btn.disabled = false;
+      btn.innerHTML = "Kurulumu Tamamla";
+    }
+  } catch(e) {
+    errEl.textContent = "Sunucuya bağlanılamadı";
+    errEl.style.display = "block";
+    btn.disabled = false;
+    btn.innerHTML = "Kurulumu Tamamla";
+  }
+}
+
+// Zaten kuruluysa yönlendir
+fetch("/api/setup/status").then(r => r.json()).then(d => {
+  if (d.done) window.location.href = "/login";
+});
+</script>
+</body>
+</html>

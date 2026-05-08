@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OXware Hypervisor – Giriş</title>
+  <link rel="icon" type="image/png" href="/static/img/sadeceikon.png">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0d1117;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    .glow-orb {
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,212,255,0.06) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      animation: pulse 4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+      50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+    }
+
+    .login-card {
+      position: relative;
+      background: rgba(22, 27, 34, 0.95);
+      border: 1px solid rgba(48, 54, 61, 0.8);
+      border-radius: 16px;
+      padding: 48px 44px;
+      width: 420px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,212,255,0.05);
+    }
+
+    .logo-area {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .logo-icon {
+      width: 140px;
+      height: 140px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .logo-icon img {
+      width: 140px;
+      height: 140px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 24px rgba(0,212,255,0.5));
+    }
+
+    /* SVG fallback (logo yoksa gösterilir) */
+    .logo-icon .logo-fallback {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, #00d4ff, #0066ff);
+      border-radius: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 36px rgba(0,212,255,0.35);
+    }
+
+    .logo-icon .logo-fallback svg { width: 54px; height: 54px; fill: white; }
+
+    .logo-text {
+      font-size: 26px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #00d4ff, #ffffff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 1px;
+    }
+
+    .logo-sub {
+      font-size: 12px;
+      color: #8b949e;
+      margin-top: 4px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(13, 17, 23, 0.8);
+      border: 1px solid rgba(48, 54, 61, 0.8);
+      border-radius: 8px;
+      color: #e6edf3;
+      font-size: 15px;
+      transition: all 0.2s;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #00d4ff;
+      box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+      background: rgba(13, 17, 23, 1);
+    }
+
+    input::placeholder { color: #484f58; }
+
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #00d4ff, #0066ff);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-login:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 25px rgba(0,212,255,0.35);
+    }
+
+    .btn-login:active { transform: translateY(0); }
+
+    .btn-login:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .error-msg {
+      display: none;
+      background: rgba(248, 81, 73, 0.1);
+      border: 1px solid rgba(248, 81, 73, 0.3);
+      color: #f85149;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-top: 16px;
+      text-align: center;
+    }
+
+    .version-badge {
+      text-align: center;
+      margin-top: 32px;
+      font-size: 11px;
+      color: #484f58;
+    }
+
+    .version-badge span {
+      color: #00d4ff;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="glow-orb"></div>
+
+  <div class="login-card">
+    <div class="logo-area">
+      <div class="logo-icon">
+        <img src="/static/img/oxware2.png" alt="OXware"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="logo-fallback" style="display:none;">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18L20 8.5v7l-8 4-8-4v-7l8-4.32zM12 7a5 5 0 100 10A5 5 0 0012 7zm0 2a3 3 0 110 6 3 3 0 010-6z"/>
+          </svg>
+        </div>
+      </div>
+      <div class="logo-text">OXware</div>
+      <div class="logo-sub">Hypervisor Management</div>
+    </div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="username">Kullanıcı Adı</label>
+        <input type="text" id="username" name="username"
+               placeholder="admin" autocomplete="username" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Şifre</label>
+        <input type="password" id="password" name="password"
+               placeholder="••••••••" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn-login" id="loginBtn">Giriş Yap</button>
+      <div class="error-msg" id="errorMsg"></div>
+    </form>
+
+    <div class="version-badge">
+      OXware Hypervisor <span>v2.0.0</span> &nbsp;·&nbsp; KVM/QEMU
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn   = document.getElementById("loginBtn");
+      const errEl = document.getElementById("errorMsg");
+      const user  = document.getElementById("username").value.trim();
+      const pass  = document.getElementById("password").value;
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Giriş yapılıyor...';
+      errEl.style.display = "none";
+
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: user, password: pass }),
+        });
+        const data = await res.json();
+
+        if (res.ok && data.token) {
+          localStorage.setItem("oxware_token", data.token);
+          localStorage.setItem("oxware_user", data.username);
+          localStorage.setItem("oxware_role", data.role || "administrator");
+          window.location.href = "/";
+        } else {
+          errEl.textContent = data.error || "Giriş başarısız";
+          errEl.style.display = "block";
+        }
+      } catch {
+        errEl.textContent = "Sunucuya bağlanılamadı";
+        errEl.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = "Giriş Yap";
+      }
+    });
+
+    // Token varsa direkt ana sayfaya yönlendir
+    if (localStorage.getItem("oxware_token") || localStorage.getItem("adaos_token")) {
+      window.location.href = "/";
+    }
+  </script>
+</body>
+</html>

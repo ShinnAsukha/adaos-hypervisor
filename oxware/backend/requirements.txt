@@ -1,0 +1,15 @@
+flask==3.0.3
+flask-socketio==5.3.6
+flask-cors==4.0.1
+flask-jwt-extended==4.6.0
+eventlet==0.35.2
+libvirt-python==10.3.0
+psutil==5.9.8
+cryptography==42.0.8
+pyOpenSSL==24.2.1
+paramiko==3.4.0
+requests==2.32.3
+Werkzeug==3.0.3
+python-dotenv==1.0.1
+configparser==7.0.0
+anthropic==0.32.0
