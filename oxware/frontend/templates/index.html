@@ -1939,6 +1939,110 @@ function t(key) {
   return (LANGS[currentLang]?.strings?.[key.toLowerCase()] || key);
 }
 
+/* ── Sayfa içeriği çeviri tablosu ── */
+const PAGE_STRINGS = {
+  en: {
+    /* Topbar */
+    'Create VM':'Create VM','Updates':'Updates','Reboot':'Reboot','Shutdown':'Shutdown','Help':'Help',
+    /* Summary page */
+    'KAYNAKLAR':'RESOURCES','SİSTEM BİLGİSİ':'SYSTEM INFO','CPU usage':'CPU Usage',
+    'Load average':'Load Average','RAM usage':'RAM Usage','/ HD space':'/ Disk Space','SWAP usage':'SWAP Usage',
+    'CPU USAGE':'CPU USAGE','MEMORY USAGE':'MEMORY USAGE','DISK I/O':'DISK I/O','NETWORK I/O':'NETWORK I/O',
+    /* Storage */
+    'YENİ SİTE EKLE':'ADD NEW SITE','Depolama':'Storage','ISO Kütüphanesi':'ISO Library',
+    'Disk birimleri':'Disk Volumes','DOSYA ADI':'FILE NAME','BOYUT':'SIZE','İŞLEMLER':'OPERATIONS',
+    'ISO yok':'No ISO files','ISO Yükle':'Upload ISO','Havuz Ekle':'Add Pool',
+    /* VM */
+    'Sanal Makineler':'Virtual Machines','VM Oluştur':'Create VM','Durum':'Status',
+    'Çalışıyor':'Running','Durduruldu':'Stopped','Bekliyor':'Paused',
+    /* Common */
+    'Kaydet':'Save','İptal':'Cancel','Sil':'Delete','Ekle':'Add','Yenile':'Refresh',
+    'Tamam':'OK','Hata':'Error','Başarılı':'Success','Uyarı':'Warning',
+    'Yükleniyor...':'Loading...','Veri yok':'No data',
+    /* Network */
+    'Ağ Yönetimi':'Network Management','Host Arayüzleri':'Host Interfaces',
+    'Yeni Ağ Oluştur':'Create Network','Ağ Adı':'Network Name',
+    /* Monitor */
+    'Sistem İzleme':'System Monitoring','Süreçler':'Processes','Disk Kullanımı':'Disk Usage',
+    /* Users */
+    'Kullanıcı Yönetimi':'User Management','Kullanıcı Adı':'Username','Şifre':'Password',
+    'Rol':'Role','Yönetici':'Administrator',
+    /* Proxy */
+    'Nginx Reverse Proxy':'Nginx Reverse Proxy','HAProxy Load Balancer':'HAProxy Load Balancer',
+    'AD':'Name','DOMAIN':'Domain','UPSTREAM HOST':'Upstream Host','UPSTREAM PORT':'Upstream Port',
+    'Site Ekle':'Add Site','Site yok':'No sites',
+    /* Firewall */
+    'Güvenlik Duvarı (nftables)':'Firewall (nftables)','Kural Ekle':'Add Rule',
+    /* VPN */
+    'WireGuard VPN':'WireGuard VPN','Peer Listesi':'Peer List','Peer Ekle':'Add Peer',
+    /* DNS */
+    'DNS Yönetimi':'DNS Management','Host Kayıtları':'Host Records','DHCP Kiralamaları':'DHCP Leases',
+    /* AI */
+    'AI Asistan':'AI Assistant','Öneriler':'Recommendations','Doğal Dil Komutları':'Natural Language Commands',
+    'Anomali Dedektörü':'Anomaly Detector','Kapasite Tahmini':'Capacity Forecast',
+    'AI Ajanlar':'AI Agents','Ajan Ekle':'Add Agent',
+    /* Security */
+    'Güvenlik':'Security','2FA Yönetimi':'2FA Management','API Anahtarları':'API Keys',
+    'Audit Log':'Audit Log','LDAP / Active Directory':'LDAP / Active Directory',
+    /* Integrations */
+    'Entegrasyonlar':'Integrations','Webhook Yönetimi':'Webhook Management',
+    'S3 / MinIO Depolama':'S3 / MinIO Storage','VLAN Yönetimi':'VLAN Management',
+    /* Settings */
+    'Sistem Ayarları':'System Settings','SDN Durumu':'SDN Status',
+    'SSL Sertifika Yönetimi':'SSL Certificate Management',
+    'Auto-Scaler Politikaları':'Auto-Scaler Policies','Kaynak Kotaları':'Resource Quotas',
+    /* Backup */
+    'Yedekleme Zamanlamaları':'Backup Schedules','Backup Geçmişi':'Backup History',
+    /* Tasks */
+    'Tasks':'Tasks','Event Log':'Event Log',
+    'START TIME':'Start Time','END TIME':'End Time','NODE':'Node','USER':'User',
+    'DESCRIPTION':'Description','STATUS':'Status',
+  },
+  tr: {},  // TR zaten default
+  es: {
+    'Create VM':'Crear VM','Updates':'Actualizaciones','Reboot':'Reiniciar','Shutdown':'Apagar',
+    'KAYNAKLAR':'RECURSOS','SİSTEM BİLGİSİ':'INFO DEL SISTEMA',
+    'CPU usage':'Uso de CPU','RAM usage':'Uso de RAM',
+    'Kaydet':'Guardar','İptal':'Cancelar','Sil':'Eliminar','Ekle':'Añadir','Yenile':'Actualizar',
+    'Yükleniyor...':'Cargando...','Veri yok':'Sin datos',
+    'Sanal Makineler':'Máquinas Virtuales','Çalışıyor':'Ejecutando','Durduruldu':'Detenido',
+  },
+  de: {
+    'Create VM':'VM erstellen','Updates':'Updates','Reboot':'Neustart','Shutdown':'Herunterfahren',
+    'KAYNAKLAR':'RESSOURCEN','SİSTEM BİLGİSİ':'SYSTEMINFO',
+    'CPU usage':'CPU-Auslastung','RAM usage':'RAM-Auslastung',
+    'Kaydet':'Speichern','İptal':'Abbrechen','Sil':'Löschen','Ekle':'Hinzufügen','Yenile':'Aktualisieren',
+    'Yükleniyor...':'Lädt...','Veri yok':'Keine Daten',
+    'Sanal Makineler':'Virtuelle Maschinen','Çalışıyor':'Läuft','Durduruldu':'Gestoppt',
+  },
+  zh: {
+    'Create VM':'创建VM','Updates':'更新','Reboot':'重启','Shutdown':'关机',
+    'KAYNAKLAR':'资源','SİSTEM BİLGİSİ':'系统信息',
+    'CPU usage':'CPU使用率','RAM usage':'内存使用率',
+    'Kaydet':'保存','İptal':'取消','Sil':'删除','Ekle':'添加','Yenile':'刷新',
+    'Yükleniyor...':'加载中...','Veri yok':'无数据',
+    'Sanal Makineler':'虚拟机','Çalışıyor':'运行中','Durduruldu':'已停止',
+  }
+};
+
+function applyPageTranslations(code) {
+  if (code === 'tr') return; // TR zaten default, değiştirme
+  const map = PAGE_STRINGS[code];
+  if (!map) return;
+  // data-i18n attribute olan elementler
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (map[key]) el.textContent = map[key];
+  });
+  // Butonlar ve başlıklar — text node ile eşleştir
+  document.querySelectorAll(
+    '.section-header h2, .card-title, th, .btn-primary, button.btn, label, .tb-action span'
+  ).forEach(el => {
+    const txt = el.textContent.trim();
+    if (map[txt]) el.textContent = map[txt];
+  });
+}
+
 function setLang(code) {
   currentLang = code;
   localStorage.setItem('ox-lang', code);
@@ -1947,7 +2051,9 @@ function setLang(code) {
   const m = document.getElementById('lang-menu');
   if (m) m.style.display = 'none';
   buildContextNav('node');
-  toast('Dil değiştirildi', 'info');
+  applyPageTranslations(code);
+  if (code !== 'tr') toast(code === 'en' ? 'Language changed to English' : 'Language changed', 'info');
+  else toast('Dil Türkçe olarak ayarlandı', 'info');
 }
 
 function toggleLangMenu() {
@@ -1965,10 +2071,11 @@ document.addEventListener('click', (e) => {
 /* ══════════════════ Collapsible Nav Sections ══════════════════ */
 
 function toggleNavSection(btn) {
-  const body = btn.parentElement.nextElementSibling;
+  const body = btn.nextElementSibling;          // düzeltildi: parentElement değil
+  if (!body) return;
   const arrow = btn.querySelector('.ctx-section-arrow');
   const collapsed = body.classList.toggle('collapsed');
-  arrow.style.transform = collapsed ? '' : 'rotate(90deg)';
+  if (arrow) arrow.style.transform = collapsed ? '' : 'rotate(90deg)';
 }
 
 function toggleVmSubList(e) {
