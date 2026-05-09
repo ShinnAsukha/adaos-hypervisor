@@ -2000,33 +2000,44 @@ def license_status():
 @app.route("/api/license/validate", methods=["POST"])
 @require_auth
 def license_validate():
-    m = _license_mgr()
-    if not m:
-        return jsonify({"valid": False, "error": "Lisans modülü yüklenemedi"}), 500
-    code = (request.json or {}).get("code", "").strip()
-    if not code:
-        return jsonify({"valid": False, "error": "Kod boş"}), 400
-    result = m.validate_license(code)
-    username = get_jwt_identity()
-    if audit_log:
-        audit_log.log(username, "license_validate", code[:14], "success" if result.get("valid") else "fail")
-    else:
-        log.info("Audit: %s license_validate %s %s", username, code[:14], "success" if result.get("valid") else "fail")
-    return jsonify(result)
+    try:
+        m = _license_mgr()
+        if not m:
+            return jsonify({"valid": False, "error": "Lisans modülü yüklenemedi"})
+        code = (request.json or {}).get("code", "").strip()
+        if not code:
+            return jsonify({"valid": False, "error": "Kod boş"}), 400
+        result = m.validate_license(code)
+        try:
+            username = get_jwt_identity() or "unknown"
+            if audit_log:
+                audit_log.log(username, "license_validate", code[:14],
+                              "success" if result.get("valid") else "fail")
+        except Exception:
+            pass
+        return jsonify(result)
+    except Exception as e:
+        log.error("license_validate hata: %s", e, exc_info=True)
+        return jsonify({"valid": False, "error": "Doğrulama sırasında hata oluştu"})
 
 @app.route("/api/license/deactivate", methods=["POST"])
 @require_auth
 def license_deactivate():
-    m = _license_mgr()
-    if not m:
-        return jsonify({"success": False}), 500
-    result = m.deactivate_license()
-    username = get_jwt_identity()
-    if audit_log:
-        audit_log.log(username, "license_deactivate", "", "success")
-    else:
-        log.info("Audit: %s license_deactivate success", username)
-    return jsonify(result)
+    try:
+        m = _license_mgr()
+        if not m:
+            return jsonify({"success": False, "error": "Lisans modülü yüklenemedi"})
+        result = m.deactivate_license()
+        try:
+            username = get_jwt_identity() or "unknown"
+            if audit_log:
+                audit_log.log(username, "license_deactivate", "", "success")
+        except Exception:
+            pass
+        return jsonify(result)
+    except Exception as e:
+        log.error("license_deactivate hata: %s", e, exc_info=True)
+        return jsonify({"success": False, "error": str(e)})
 
 
 # ── Dil Tercihi ─────────────────────────────────────────────────────────────────

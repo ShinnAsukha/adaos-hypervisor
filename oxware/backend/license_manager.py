@@ -72,25 +72,28 @@ def _fetch_license_codes() -> list:
 
 def validate_license(code: str) -> dict:
     """Lisans kodunu doğrula."""
-    code = code.strip().upper()
-    if not code.startswith("OXWARE-"):
-        return {"valid": False, "error": "Geçersiz lisans kodu formatı"}
+    try:
+        code = code.strip().upper()
+        if not code.startswith("OXWARE-"):
+            return {"valid": False, "error": "Geçersiz lisans kodu formatı"}
 
-    # Format check: OXWARE-XXXX-XXXX-XXXX-XXXX
-    parts = code.split("-")
-    if len(parts) != 5:
-        return {"valid": False, "error": "Geçersiz lisans kodu formatı"}
+        # Format check: OXWARE-XXXX-XXXX-XXXX-XXXX
+        parts = code.split("-")
+        if len(parts) != 5 or not all(len(p) == 4 for p in parts[1:]):
+            return {"valid": False, "error": "Geçersiz lisans kodu formatı (OXWARE-XXXX-XXXX-XXXX-XXXX)"}
 
-    codes = _fetch_license_codes()
-    if not codes:
-        return {"valid": False, "error": "Lisans sunucusuna bağlanılamadı"}
+        codes = _fetch_license_codes()
+        if codes is None or len(codes) == 0:
+            return {"valid": False, "error": "Lisans sunucusuna bağlanılamadı. Lütfen internet bağlantısını kontrol edin."}
 
-    if code in codes:
-        # Kaydet
-        _save_license(code)
-        return {"valid": True, "code": code, "message": "Lisans başarıyla doğrulandı"}
-    else:
-        return {"valid": False, "error": "Lisans kodu bulunamadı"}
+        if code in codes:
+            _save_license(code)
+            return {"valid": True, "code": code, "message": "Lisans başarıyla doğrulandı"}
+        else:
+            return {"valid": False, "error": "Lisans kodu bulunamadı veya geçersiz"}
+    except Exception as e:
+        log.error("validate_license beklenmeyen hata: %s", e, exc_info=True)
+        return {"valid": False, "error": "Doğrulama hatası: " + str(e)}
 
 def _save_license(code: str):
     """Lisans bilgisini yerel olarak kaydet."""
