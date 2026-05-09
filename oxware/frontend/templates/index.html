@@ -461,19 +461,19 @@
       </button>
       <button class="tb-action" onclick="navigate('updates')">
         <svg viewBox="0 0 16 16"><path d="M11.534 7h3.932a.25.25 0 01.192.41l-1.966 2.36a.25.25 0 01-.384 0l-1.966-2.36a.25.25 0 01.192-.41zm-11 2h3.932a.25.25 0 00.192-.41L2.692 6.23a.25.25 0 00-.384 0L.342 8.59A.25.25 0 00.534 9z"/></svg>
-        Updates <span id="update-badge" style="display:none;background:var(--orange);color:#000;font-size:9px;font-weight:700;border-radius:8px;padding:1px 5px">!</span>
+        <span data-i18n="Updates">Updates</span> <span id="update-badge" style="display:none;background:var(--orange);color:#000;font-size:9px;font-weight:700;border-radius:8px;padding:1px 5px">!</span>
       </button>
       <button class="tb-action" onclick="confirmShutdown('reboot')">
         <svg viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 00-1 0V9a.5.5 0 00.252.434l3.5 2a.5.5 0 00.496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 108 0a8 8 0 000 16zm7-8A7 7 0 111 8a7 7 0 0114 0z"/></svg>
-        Reboot
+        <span data-i18n="Reboot">Reboot</span>
       </button>
       <button class="tb-action" onclick="confirmShutdown('shutdown')">
         <svg viewBox="0 0 16 16"><path d="M7.5 1v7h1V1h-1z"/><path d="M3 8.812a4.999 4.999 0 012.578-4.375l-.485-.874A6 6 0 1011 3.616l-.501.865A5 5 0 113 8.812z"/></svg>
-        Shutdown
+        <span data-i18n="Shutdown">Shutdown</span>
       </button>
       <a class="tb-action" href="/docs" target="_blank">
         <svg viewBox="0 0 16 16"><path d="M8 16A8 8 0 118 0a8 8 0 010 16zM8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13z"/><path d="M5.255 5.786a.237.237 0 00.241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 00.25.246h.811a.25.25 0 00.25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/></svg>
-        Help
+        <span data-i18n="Help">Help</span>
       </a>
     </div>
 
@@ -2058,21 +2058,65 @@ const PAGE_STRINGS = {
   }
 };
 
+/* i18n originals store — WeakMap so GC can clean up removed nodes */
+const _i18nOrig = new WeakMap();
+
+/** Get only direct text-node content of an element (skips child elements like icons) */
+function _i18nGetText(el) {
+  let s = '';
+  for (const n of el.childNodes) {
+    if (n.nodeType === Node.TEXT_NODE) s += n.textContent;
+  }
+  return s.trim();
+}
+
+/** Set text-node content while preserving child elements (icons etc.) */
+function _i18nSetText(el, newText) {
+  for (const n of el.childNodes) {
+    if (n.nodeType === Node.TEXT_NODE && n.textContent.trim()) {
+      const lead = /^\s+/.exec(n.textContent)?.[0] ?? '';
+      n.textContent = lead + newText;
+      return;
+    }
+  }
+  // No existing text node — append one
+  el.appendChild(document.createTextNode(newText));
+}
+
 function applyPageTranslations(code) {
-  if (code === 'tr') return; // TR zaten default, değiştirme
-  const map = PAGE_STRINGS[code];
-  if (!map) return;
-  // data-i18n attribute olan elementler
+  const map = (code && code !== 'tr') ? PAGE_STRINGS[code] : null;
+
+  const selectors = [
+    '.section-header h2',
+    '.card-title',
+    'th',
+    'label',
+    '.tb-action span',
+    '.ctx-section-header > span:first-child',
+  ];
+
+  document.querySelectorAll(selectors.join(',')).forEach(el => {
+    // Save original Turkish text on first encounter
+    const orig = _i18nOrig.get(el) ?? _i18nGetText(el) ?? el.textContent.trim();
+    if (!_i18nOrig.has(el)) _i18nOrig.set(el, orig);
+    if (!orig) return;
+
+    if (!map) {
+      // Restore Turkish
+      _i18nSetText(el, orig);
+    } else if (map[orig]) {
+      _i18nSetText(el, map[orig]);
+    }
+  });
+
+  // data-i18n attribute — key IS the Turkish text
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    if (map[key]) el.textContent = map[key];
-  });
-  // Butonlar ve başlıklar — text node ile eşleştir
-  document.querySelectorAll(
-    '.section-header h2, .card-title, th, .btn-primary, button.btn, label, .tb-action span'
-  ).forEach(el => {
-    const txt = el.textContent.trim();
-    if (map[txt]) el.textContent = map[txt];
+    if (!map) {
+      el.textContent = key;
+    } else if (map[key]) {
+      el.textContent = map[key];
+    }
   });
 }
 
@@ -2084,9 +2128,10 @@ function setLang(code) {
   const m = document.getElementById('lang-menu');
   if (m) m.style.display = 'none';
   buildContextNav('node');
-  applyPageTranslations(code);
-  if (code !== 'tr') toast(code === 'en' ? 'Language changed to English' : 'Language changed', 'info');
-  else toast('Dil Türkçe olarak ayarlandı', 'info');
+  applyPageTranslations(code);   // null map → restores TR originals
+  const msgs = {en:'Language changed to English',tr:'Dil Türkçe olarak ayarlandı',
+                es:'Idioma cambiado a Español',de:'Sprache auf Deutsch geändert',zh:'语言已更改为中文'};
+  toast(msgs[code] || 'Language changed', 'info');
 }
 
 function toggleLangMenu() {
@@ -2474,6 +2519,10 @@ function navigate(page) {
     loaders[page]();
   } else if (page.startsWith('tab-')) {
     loadTabData(page);
+  }
+  // Re-apply language after page loader rebuilds DOM
+  if (currentLang && currentLang !== 'tr') {
+    setTimeout(() => applyPageTranslations(currentLang), 80);
   }
 }
 
