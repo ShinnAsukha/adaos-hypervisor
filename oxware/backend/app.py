@@ -2115,6 +2115,119 @@ def not_found(e):
 def server_error(e):
     return jsonify({"error": "Sunucu hatası"}), 500
 
+# ── Live Migration ────────────────────────────────────────────────────────────
+@app.route("/api/vms/migrate", methods=["POST"])
+@require_auth
+def api_vm_migrate():
+    data = request.get_json() or {}
+    vm_id = data.get("vm_id", "")
+    target = data.get("target_host", "")
+    protocol = data.get("protocol", "qemu+ssh")
+    if not vm_id or not target:
+        return err("vm_id ve target_host zorunludur")
+    try:
+        import subprocess
+        uri = f"{protocol}://{target}/system"
+        cmd = ["virsh", "-c", uri, "migrate", "--live", "--persistent", vm_id,
+               f"qemu+ssh://{target}/system"]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        if result.returncode != 0:
+            return err(result.stderr or "Geçiş başarısız", 500)
+        ev.info(f"Canlı geçiş: {vm_id} → {target}", category="vm")
+        return ok(status="ok", message=f"{vm_id} → {target} geçişi başlatıldı")
+    except subprocess.TimeoutExpired:
+        return err("Geçiş zaman aşımına uğradı (120s)", 504)
+    except Exception as e:
+        return err(e, 500)
+
+# ── Backup Schedule ───────────────────────────────────────────────────────────
+BACKUP_SCHEDULE_FILE = os.path.join(config.DATA_DIR if hasattr(config,'DATA_DIR') else '/var/lib/oxware', 'backup_schedule.json')
+
+@app.route("/api/backup/schedule", methods=["GET"])
+@require_auth
+def api_backup_schedule_get():
+    try:
+        if os.path.exists(BACKUP_SCHEDULE_FILE):
+            with open(BACKUP_SCHEDULE_FILE) as f:
+                return ok(schedule=json.load(f))
+        return ok(schedule=[])
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/backup/schedule", methods=["POST"])
+@require_auth
+def api_backup_schedule_set():
+    data = request.get_json() or {}
+    try:
+        schedules = []
+        if os.path.exists(BACKUP_SCHEDULE_FILE):
+            with open(BACKUP_SCHEDULE_FILE) as f:
+                schedules = json.load(f)
+        # Add or update
+        vm_id = data.get("vm_id", "all")
+        schedules = [s for s in schedules if s.get("vm_id") != vm_id]
+        schedules.append(data)
+        os.makedirs(os.path.dirname(BACKUP_SCHEDULE_FILE), exist_ok=True)
+        with open(BACKUP_SCHEDULE_FILE, 'w') as f:
+            json.dump(schedules, f, indent=2)
+        ev.info(f"Yedekleme planı güncellendi: {vm_id}", category="backup")
+        return ok(status="ok")
+    except Exception as e:
+        return err(e, 500)
+
+# ── HA Status ─────────────────────────────────────────────────────────────────
+@app.route("/api/ha/status", methods=["GET"])
+@require_auth
+def api_ha_status():
+    """Basit HA durumu — libvirt multi-host veya tek node kontrolü."""
+    try:
+        import subprocess
+        # Check if there are any remote libvirt connections configured
+        nodes = []
+        # Try to get local node info
+        hostname_r = subprocess.run(['hostname', '-s'], capture_output=True, text=True)
+        local_ip_r = subprocess.run(['hostname', '-I'], capture_output=True, text=True)
+        local_name = hostname_r.stdout.strip() or 'local'
+        local_ip = local_ip_r.stdout.strip().split()[0] if local_ip_r.stdout.strip() else '127.0.0.1'
+        nodes.append({"name": local_name, "ip": local_ip, "role": "primary", "online": True})
+        # Check for HA config file
+        ha_cfg = '/etc/oxware/ha_nodes.json'
+        if os.path.exists(ha_cfg):
+            with open(ha_cfg) as f:
+                extra_nodes = json.load(f)
+            for n in extra_nodes:
+                # Ping check
+                ping = subprocess.run(['ping', '-c', '1', '-W', '2', n.get('ip','')],
+                                      capture_output=True, timeout=5)
+                n['online'] = ping.returncode == 0
+                nodes.append(n)
+        return ok(nodes=nodes, ha_enabled=len(nodes) > 1)
+    except Exception as e:
+        return ok(nodes=[], ha_enabled=False, error=str(e))
+
+# ── VM Clone ──────────────────────────────────────────────────────────────────
+@app.route("/api/vms/<vm_id>/clone", methods=["POST"])
+@require_auth
+def api_vm_clone(vm_id):
+    data = request.get_json() or {}
+    new_name = data.get("name", "")
+    if not new_name:
+        return err("name zorunludur")
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["virt-clone", "--original", vm_id, "--name", new_name, "--auto-clone"],
+            capture_output=True, text=True, timeout=300
+        )
+        if result.returncode != 0:
+            return err(result.stderr or "Klonlama başarısız", 500)
+        ev.info(f"VM klonlandı: {vm_id} → {new_name}", category="vm")
+        return ok(status="ok", name=new_name)
+    except subprocess.TimeoutExpired:
+        return err("Klonlama zaman aşımına uğradı", 504)
+    except Exception as e:
+        return err(e, 500)
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     log.info("OXware Hypervisor v2.0 başlatılıyor")

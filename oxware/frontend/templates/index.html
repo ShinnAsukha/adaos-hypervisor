@@ -418,6 +418,96 @@
     /* Lang selector */
     .lang-opt{padding:7px 14px;cursor:pointer;font-size:12px;color:var(--text);white-space:nowrap}
     .lang-opt:hover{background:var(--surface3)}
+
+    /* form-control — alias for standard inputs */
+    .form-control{width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:12px;font-family:inherit;outline:none;transition:border-color .15s}
+    .form-control:focus{border-color:var(--accent)}
+    .form-control::placeholder{color:var(--text-dim)}
+    input:not([type=checkbox]):not([type=radio]):not([class]){width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:12px;font-family:inherit;outline:none;transition:border-color .15s}
+    input:not([type=checkbox]):not([type=radio]):not([class]):focus{border-color:var(--accent)}
+    select:not([class]){width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:12px;font-family:inherit;outline:none}
+
+    /* Batch operations toolbar */
+    #vm-batch-bar{display:none;align-items:center;gap:8px;padding:8px 12px;background:rgba(42,109,217,.08);border:1px solid rgba(42,109,217,.25);border-radius:6px;margin-bottom:10px}
+    #vm-batch-bar.visible{display:flex}
+    .batch-count{font-size:12px;font-weight:600;color:var(--accent-lt);flex:1}
+
+    /* Global Search Dropdown */
+    #global-search-wrap{position:relative}
+    #global-search-results{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:500;max-height:360px;overflow-y:auto;min-width:300px}
+    .gsr-item{padding:8px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+    .gsr-item:last-child{border-bottom:none}
+    .gsr-item:hover{background:var(--surface3)}
+    .gsr-icon{width:26px;height:26px;border-radius:4px;background:rgba(42,109,217,.15);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+    .gsr-title{font-size:12px;font-weight:600;color:var(--text)}
+    .gsr-sub{font-size:10px;color:var(--text-muted);margin-top:1px}
+    .gsr-section{padding:6px 14px;font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;background:var(--surface);border-bottom:1px solid var(--border)}
+
+    /* ── OXY Chat Widget ── */
+    #oxy-btn{position:relative;height:100%;padding:0 14px;background:none;border:none;border-right:1px solid var(--border);color:var(--text-muted);font-size:12px;display:flex;align-items:center;gap:7px;cursor:pointer;transition:background .12s,color .12s;white-space:nowrap}
+    #oxy-btn:hover{background:var(--surface2);color:var(--text)}
+    #oxy-btn.active{background:rgba(42,109,217,.12);color:var(--accent-lt);border-right-color:rgba(42,109,217,.3)}
+    #oxy-notif{display:none;position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--orange);border:2px solid var(--surface)}
+
+    #oxy-panel{position:fixed;top:var(--topbar-h);right:0;bottom:0;width:360px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;z-index:400;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
+    #oxy-panel.open{transform:translateX(0)}
+
+    .oxy-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
+    .oxy-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#7c3aed);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+    .oxy-name{font-weight:700;font-size:13px}
+    .oxy-status{font-size:10px;color:var(--green-lt)}
+    .oxy-header-btns{margin-left:auto;display:flex;gap:6px}
+    .oxy-header-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:4px 6px;border-radius:3px}
+    .oxy-header-btn:hover{background:var(--surface2);color:var(--text)}
+
+    .oxy-agent-bar{padding:8px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .oxy-agent-sel{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:11px;padding:5px 8px}
+
+    .oxy-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+    .oxy-msg{display:flex;gap:8px;align-items:flex-start;max-width:100%;animation:fadeInUp .2s ease}
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .oxy-msg.user{flex-direction:row-reverse}
+    .oxy-msg-avatar{width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px}
+    .oxy-msg.user .oxy-msg-avatar{background:var(--accent)}
+    .oxy-msg.ai .oxy-msg-avatar{background:linear-gradient(135deg,var(--accent),#7c3aed)}
+    .oxy-bubble{max-width:82%;padding:8px 12px;border-radius:10px;font-size:12px;line-height:1.5;word-break:break-word}
+    .oxy-msg.user .oxy-bubble{background:var(--accent);color:#fff;border-top-right-radius:2px}
+    .oxy-msg.ai .oxy-bubble{background:var(--surface2);color:var(--text);border-top-left-radius:2px;border:1px solid var(--border)}
+    .oxy-bubble code{background:rgba(0,0,0,.2);border-radius:3px;padding:1px 4px;font-size:10px}
+    .oxy-time{font-size:9px;color:var(--text-dim);margin-top:3px;text-align:right}
+    .oxy-msg.ai .oxy-time{text-align:left}
+    .oxy-typing{display:flex;gap:4px;align-items:center;padding:8px 12px}
+    .oxy-typing span{width:6px;height:6px;border-radius:50%;background:var(--text-muted);animation:bounce .8s infinite}
+    .oxy-typing span:nth-child(2){animation-delay:.15s}
+    .oxy-typing span:nth-child(3){animation-delay:.3s}
+    @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+
+    .oxy-suggestions{padding:8px 12px;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+    .oxy-suggestion{font-size:11px;padding:4px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;cursor:pointer;color:var(--text-muted);transition:all .15s}
+    .oxy-suggestion:hover{background:rgba(42,109,217,.1);border-color:rgba(42,109,217,.3);color:var(--accent-lt)}
+
+    .oxy-input-bar{padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;flex-shrink:0}
+    #oxy-input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:18px;color:var(--text);font-size:12px;padding:8px 14px;resize:none;max-height:120px;outline:none;font-family:inherit;line-height:1.4}
+    #oxy-input:focus{border-color:var(--accent)}
+    #oxy-send{width:34px;height:34px;border-radius:50%;background:var(--accent);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s}
+    #oxy-send:hover{background:var(--accent-lt)}
+    #oxy-send:disabled{background:var(--border2);cursor:default}
+
+    /* VM Templates section */
+    .template-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .15s}
+    .template-card:hover{border-color:var(--accent)}
+    .template-icon{width:40px;height:40px;border-radius:8px;background:rgba(42,109,217,.1);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+
+    /* HA status */
+    .ha-node{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:4px;margin-bottom:6px}
+    .ha-indicator{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+    /* PDF print */
+    @media print{
+      #topbar,#ctx-nav,#oxy-panel,#oxy-btn,.tb-actions,.tb-search,#themeToggle,#lang-btn,.section-header button,.action-btns{display:none!important}
+      .page{display:block!important;overflow:visible!important}
+      body{background:#fff!important;color:#000!important}
+    }
   </style>
 </head>
 <body>
@@ -436,8 +526,12 @@
       </div>
     </div>
 
-    <div class="tb-search">
-      <input type="text" placeholder="🔍 Ara..." id="topbarSearch" oninput="filterTree(this.value)">
+    <div class="tb-search" id="global-search-wrap">
+      <input type="text" placeholder="🔍 Ara... (VM, ağ, sayfa)" id="topbarSearch"
+        oninput="globalSearch(this.value)" onblur="setTimeout(()=>closeGlobalSearch(),200)"
+        onfocus="if(this.value.trim())globalSearch(this.value)"
+        autocomplete="off">
+      <div id="global-search-results"></div>
     </div>
 
     <div id="license-banner" style="display:none;padding:0 14px;font-size:11px;height:100%;align-items:center;gap:8px;background:linear-gradient(90deg,rgba(42,109,217,.1),rgba(42,109,217,.05));border-right:1px solid rgba(42,109,217,.2)">
@@ -475,6 +569,12 @@
         <svg viewBox="0 0 16 16"><path d="M8 16A8 8 0 118 0a8 8 0 010 16zM8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13z"/><path d="M5.255 5.786a.237.237 0 00.241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 00.25.246h.811a.25.25 0 00.25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/></svg>
         <span data-i18n="Help">Help</span>
       </a>
+      <!-- OXY AI Chat Button -->
+      <button id="oxy-btn" onclick="toggleOxyPanel()" title="OXY — AI Asistan">
+        <span style="font-size:16px">🤖</span>
+        <span style="font-weight:700;color:var(--accent-lt)">OXY</span>
+        <div id="oxy-notif"></div>
+      </button>
     </div>
 
     <div style="height:100%;display:flex;align-items:center;padding:0 10px;border-left:1px solid var(--border)">
@@ -728,14 +828,30 @@
           <div class="section-header">
             <h2>Sanal Makineler</h2>
             <div class="spacer"></div>
+            <button class="btn" onclick="exportPDF('vms')" title="PDF olarak indir">📄 PDF</button>
             <button class="btn" onclick="loadVMs()">↻ Yenile</button>
+            <button class="btn" onclick="openModal('modal-vm-template')">📋 Şablonlar</button>
             <button class="btn primary" onclick="openCreateVMModal()">+ Yeni VM</button>
           </div>
+
+          <!-- Batch toolbar -->
+          <div id="vm-batch-bar">
+            <span class="batch-count" id="batch-count-label">0 VM seçili</span>
+            <button class="btn sm success" onclick="batchVmAction('start')">▶ Tümünü Başlat</button>
+            <button class="btn sm danger" onclick="batchVmAction('stop')">■ Tümünü Durdur</button>
+            <button class="btn sm" onclick="batchVmAction('reboot')">↺ Yeniden Başlat</button>
+            <button class="btn sm danger" onclick="batchVmDelete()">✕ Seçilenleri Sil</button>
+            <button class="btn sm" onclick="clearVmSelection()">✕ Seçimi Temizle</button>
+          </div>
+
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Ad</th><th>Durum</th><th>CPU</th><th>Bellek</th><th>Disk</th><th>Ağ</th><th>İşlemler</th></tr></thead>
+              <thead><tr>
+                <th style="width:32px"><input type="checkbox" id="vm-select-all" onchange="toggleAllVms(this.checked)" title="Tümünü seç"></th>
+                <th>Ad</th><th>Durum</th><th>CPU</th><th>Bellek</th><th>Disk</th><th>Ağ</th><th>İşlemler</th>
+              </tr></thead>
               <tbody id="vm-tbody">
-                <tr><td colspan="7"><div class="empty-state"><div class="spinner-sm"></div><p style="margin-top:8px">Yükleniyor...</p></div></td></tr>
+                <tr><td colspan="8"><div class="empty-state"><div class="spinner-sm"></div><p style="margin-top:8px">Yükleniyor...</p></div></td></tr>
               </tbody>
             </table>
           </div>
@@ -1233,6 +1349,23 @@
             <div style="height:200px;position:relative"><canvas id="perfHistoryChart"></canvas></div>
           </div>
 
+          <!-- Trend Analysis -->
+          <div class="section-header" style="margin-top:14px">
+            <h2>📈 Trend Analizi</h2>
+            <div class="spacer"></div>
+            <button class="btn" onclick="exportPDF('monitoring')">📄 PDF</button>
+            <button class="btn sm" onclick="openModal('modal-backup-schedule')">⏰ Yedekleme Planı</button>
+          </div>
+          <div id="trend-container" style="margin-bottom:14px">
+            <div class="empty-state" style="padding:20px"><p>Yükleniyor...</p></div>
+          </div>
+
+          <!-- HA Status -->
+          <div class="section-header"><h2>🔄 Yüksek Kullanılabilirlik (HA)</h2></div>
+          <div id="ha-status-container" style="margin-bottom:14px">
+            <div class="empty-state" style="padding:20px"><p>Yükleniyor...</p></div>
+          </div>
+
           <div class="section-header"><h2>SMART Disk Sağlığı</h2></div>
           <div class="table-wrap" style="margin-bottom:14px">
             <table>
@@ -1663,6 +1796,18 @@
           <option value="hd">Yalnızca Disk</option>
         </select>
       </div>
+      <!-- Cloud-Init -->
+      <details style="margin-top:8px">
+        <summary style="font-size:11px;font-weight:700;color:var(--text-muted);cursor:pointer;text-transform:uppercase;letter-spacing:.06em;padding:6px 0">☁️ Cloud-Init (Opsiyonel)</summary>
+        <div style="margin-top:10px">
+          <div class="form-row"><label>Kullanıcı Adı</label><input id="ci-user" placeholder="ubuntu"></div>
+          <div class="form-row"><label>Şifre</label><input id="ci-password" type="password" placeholder="••••"></div>
+          <div class="form-row"><label>SSH Public Key</label><input id="ci-sshkey" placeholder="ssh-rsa AAAA..."></div>
+          <div class="form-row"><label>Başlangıç Script'i</label>
+            <textarea id="ci-userdata" rows="3" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:11px;padding:7px 10px;resize:vertical;font-family:monospace" placeholder="#!/bin/bash&#10;apt-get update"></textarea>
+          </div>
+        </div>
+      </details>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-create-vm')">İptal</button>
@@ -1819,6 +1964,170 @@
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-add-agent')">İptal</button>
       <button class="btn primary" onclick="addAIAgent()">🤖 Ekle</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ OXY CHAT PANEL ══════════════════════ -->
+<div id="oxy-panel">
+  <div class="oxy-header">
+    <div class="oxy-avatar">🤖</div>
+    <div>
+      <div class="oxy-name">OXY</div>
+      <div class="oxy-status">● AI Asistan</div>
+    </div>
+    <div class="oxy-header-btns">
+      <button class="oxy-header-btn" onclick="clearOxyHistory()" title="Geçmişi temizle">🗑️</button>
+      <button class="oxy-header-btn" onclick="toggleOxyPanel()" title="Kapat">✕</button>
+    </div>
+  </div>
+  <div class="oxy-agent-bar">
+    <select id="oxy-agent-select" class="oxy-agent-sel" onchange="oxyAgentChanged()">
+      <option value="">— Ajan yükle —</option>
+    </select>
+  </div>
+  <div class="oxy-messages" id="oxy-messages">
+    <div class="oxy-msg ai">
+      <div class="oxy-msg-avatar">🤖</div>
+      <div>
+        <div class="oxy-bubble">Merhaba! Ben OXY. OXware sisteminizi analiz etmeme, soruları yanıtlamama veya günlük rapor almana yardımcı olabilirim. 🚀</div>
+        <div class="oxy-time">OXY</div>
+      </div>
+    </div>
+  </div>
+  <div class="oxy-suggestions" id="oxy-suggestions">
+    <button class="oxy-suggestion" onclick="oxyQuickSend('Bugün ne yaptın? Günlük rapor ver.')">📊 Günlük Rapor</button>
+    <button class="oxy-suggestion" onclick="oxyQuickSend('Sistem sağlığı nasıl?')">💊 Sistem Sağlığı</button>
+    <button class="oxy-suggestion" onclick="oxyQuickSend('Çalışan VM listesini göster ve önerilerde bulun.')">🖥️ VM Analizi</button>
+    <button class="oxy-suggestion" onclick="oxyQuickSend('Son olayları özetle ve dikkat edilmesi gereken bir şey var mı?')">📋 Olay Özeti</button>
+  </div>
+  <div class="oxy-input-bar">
+    <textarea id="oxy-input" placeholder="OXY'ye bir şey sor..." rows="1"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendOxyMessage()}"
+      oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+    <button id="oxy-send" onclick="sendOxyMessage()" title="Gönder">
+      <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M15.964.686a.5.5 0 00-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 00-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 00.886-.083l6-15Zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 00-.154-.154l-.338-.215 7.494-7.494 1.178-.471-.471 1.178Z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════ VM TEMPLATES MODAL ══════════════════════ -->
+<div class="modal-overlay" id="modal-vm-template">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header">
+      <h2>📋 VM Şablonları</h2>
+      <button class="modal-close" onclick="closeModal('modal-vm-template')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <p class="text-muted" style="font-size:12px">Hazır şablonlardan hızlı VM oluşturun veya mevcut VM'den şablon kaydedin.</p>
+        <button class="btn primary" onclick="openModal('modal-save-template')">+ Şablon Kaydet</button>
+      </div>
+      <div id="template-list" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="template-card" onclick="deployTemplate('ubuntu22')">
+          <div class="template-icon">🐧</div>
+          <div><div style="font-weight:600;font-size:13px">Ubuntu 22.04 LTS</div><div style="font-size:11px;color:var(--text-muted)">2 vCPU · 2GB RAM · 20GB Disk</div></div>
+          <button class="btn sm primary" style="margin-left:auto" onclick="event.stopPropagation();deployTemplate('ubuntu22')">▶ Dağıt</button>
+        </div>
+        <div class="template-card" onclick="deployTemplate('debian12')">
+          <div class="template-icon">🌀</div>
+          <div><div style="font-weight:600;font-size:13px">Debian 12</div><div style="font-size:11px;color:var(--text-muted)">1 vCPU · 1GB RAM · 15GB Disk</div></div>
+          <button class="btn sm primary" style="margin-left:auto" onclick="event.stopPropagation();deployTemplate('debian12')">▶ Dağıt</button>
+        </div>
+        <div class="template-card" onclick="deployTemplate('win2022')">
+          <div class="template-icon">🪟</div>
+          <div><div style="font-weight:600;font-size:13px">Windows Server 2022</div><div style="font-size:11px;color:var(--text-muted)">4 vCPU · 4GB RAM · 60GB Disk</div></div>
+          <button class="btn sm primary" style="margin-left:auto" onclick="event.stopPropagation();deployTemplate('win2022')">▶ Dağıt</button>
+        </div>
+        <div class="template-card" onclick="deployTemplate('alpine')">
+          <div class="template-icon">🏔️</div>
+          <div><div style="font-weight:600;font-size:13px">Alpine Linux (Minimal)</div><div style="font-size:11px;color:var(--text-muted)">1 vCPU · 512MB RAM · 5GB Disk</div></div>
+          <button class="btn sm primary" style="margin-left:auto" onclick="event.stopPropagation();deployTemplate('alpine')">▶ Dağıt</button>
+        </div>
+      </div>
+      <div id="custom-template-list" style="margin-top:14px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ SAVE TEMPLATE MODAL ══════════════════════ -->
+<div class="modal-overlay" id="modal-save-template">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Şablon Kaydet</h2>
+      <button class="modal-close" onclick="closeModal('modal-save-template')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row"><label>Şablon Adı</label><input id="tpl-name" placeholder="my-template"></div>
+      <div class="form-row"><label>Kaynak VM</label>
+        <select id="tpl-vm-select"><option value="">— VM seç —</option></select>
+      </div>
+      <div class="form-row"><label>Açıklama</label><input id="tpl-desc" placeholder="Şablonun açıklaması"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-save-template')">İptal</button>
+      <button class="btn primary" onclick="saveVMTemplate()">💾 Şablon Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ LIVE MIGRATION MODAL ══════════════════════ -->
+<div class="modal-overlay" id="modal-live-migrate">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>🚀 Canlı Geçiş (Live Migration)</h2>
+      <button class="modal-close" onclick="closeModal('modal-live-migrate')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row"><label>Kaynak VM</label>
+        <select id="migrate-vm-select"><option value="">— VM seç —</option></select>
+      </div>
+      <div class="form-row"><label>Hedef Host</label><input id="migrate-target" placeholder="192.168.1.100"></div>
+      <div class="form-row"><label>Protokol</label>
+        <select id="migrate-protocol">
+          <option value="qemu+ssh">QEMU+SSH (önerilen)</option>
+          <option value="qemu+tcp">QEMU+TCP</option>
+        </select>
+      </div>
+      <div style="background:rgba(42,109,217,.05);border:1px solid rgba(42,109,217,.2);border-radius:6px;padding:10px 12px;font-size:11px;color:var(--text-muted)">
+        ⚠️ Canlı geçiş için hedef hostta da KVM/libvirt kurulu olmalı ve SSH erişimi gereklidir.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-live-migrate')">İptal</button>
+      <button class="btn primary" onclick="doLiveMigration()">🚀 Geçişi Başlat</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ BACKUP SCHEDULE MODAL ══════════════════════ -->
+<div class="modal-overlay" id="modal-backup-schedule">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>⏰ Otomatik Yedekleme Planı</h2>
+      <button class="modal-close" onclick="closeModal('modal-backup-schedule')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row"><label>VM</label>
+        <select id="backup-vm-select"><option value="all">Tüm VM'ler</option></select>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>Saat</label><input id="backup-hour" type="number" value="2" min="0" max="23"></div>
+        <div class="form-row"><label>Dakika</label><input id="backup-minute" type="number" value="0" min="0" max="59"></div>
+      </div>
+      <div class="form-row"><label>Sıklık</label>
+        <select id="backup-freq">
+          <option value="daily">Her gün</option>
+          <option value="weekly">Haftalık (Pazartesi)</option>
+          <option value="hourly">Saatlik</option>
+        </select>
+      </div>
+      <div class="form-row"><label>Saklama (gün)</label><input id="backup-retention" type="number" value="7" min="1" max="90"></div>
+      <div class="form-row"><label>Yedek Dizini</label><input id="backup-dest" value="/var/lib/oxware/backups/"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-backup-schedule')">İptal</button>
+      <button class="btn primary" onclick="saveBackupSchedule()">💾 Planı Kaydet</button>
     </div>
   </div>
 </div>
@@ -2660,7 +2969,61 @@ function navigate(page) {
   }
 }
 
-/* ══ Tree filter ══ */
+/* ══ Global Search ══ */
+let _gsCacheVMs = [];
+let _gsDebounce = null;
+
+async function globalSearch(q) {
+  clearTimeout(_gsDebounce);
+  const box = document.getElementById('global-search-results');
+  if (!q.trim()) { box.style.display = 'none'; return; }
+  _gsDebounce = setTimeout(async () => {
+    const lower = q.toLowerCase();
+    const results = [];
+
+    // Pages
+    const PAGES = [
+      {icon:'📊',title:'Özet',page:'summary'},{icon:'🖥️',title:'Sanal Makineler',page:'vms'},
+      {icon:'🌐',title:'Ağ Yönetimi',page:'networks'},{icon:'💾',title:'Depolama',page:'storage'},
+      {icon:'📈',title:'Sistem İzleme',page:'monitor'},{icon:'👥',title:'Kullanıcılar',page:'users'},
+      {icon:'🔐',title:'Güvenlik',page:'tab-security'},{icon:'🤖',title:'AI Ajanlar',page:'tab-ai'},
+      {icon:'🔗',title:'Entegrasyonlar',page:'tab-integrations'},{icon:'⚙️',title:'Ayarlar',page:'tab-settings'},
+    ];
+    PAGES.filter(p => p.title.toLowerCase().includes(lower)).forEach(p => results.push({type:'page',...p}));
+
+    // VMs from cache
+    if (!_gsCacheVMs.length) {
+      try { const d = await api('/vms'); _gsCacheVMs = d.vms || []; } catch {}
+    }
+    _gsCacheVMs.filter(v => v.name.toLowerCase().includes(lower) || v.id.toLowerCase().includes(lower))
+      .forEach(v => results.push({type:'vm',icon:v.state==='running'?'🟢':'⚫',title:v.name,sub:`${v.state} · ${v.vcpus}vCPU · ${v.memory_mb}MB`,vmId:v.id,vmName:v.name}));
+
+    if (!results.length) { box.style.display = 'none'; return; }
+
+    let html = '';
+    const pages = results.filter(r=>r.type==='page');
+    const vms = results.filter(r=>r.type==='vm');
+    if (pages.length) {
+      html += `<div class="gsr-section">Sayfalar</div>`;
+      html += pages.map(r=>`<div class="gsr-item" onclick="navigate('${r.page}');closeGlobalSearch();document.getElementById('topbarSearch').value=''">
+        <div class="gsr-icon">${r.icon}</div><div><div class="gsr-title">${r.title}</div></div></div>`).join('');
+    }
+    if (vms.length) {
+      html += `<div class="gsr-section">Sanal Makineler</div>`;
+      html += vms.map(r=>`<div class="gsr-item" onclick="selectTreeItem('vm','${r.vmId}','${escHtml(r.vmName)}');closeGlobalSearch();document.getElementById('topbarSearch').value=''">
+        <div class="gsr-icon">${r.icon}</div><div><div class="gsr-title">${escHtml(r.title)}</div><div class="gsr-sub">${escHtml(r.sub||'')}</div></div></div>`).join('');
+    }
+    box.innerHTML = html;
+    box.style.display = 'block';
+  }, 200);
+}
+
+function closeGlobalSearch() {
+  const box = document.getElementById('global-search-results');
+  if (box) box.style.display = 'none';
+}
+
+/* ══ Tree filter (legacy, hidden tree) ══ */
 function filterTree(q) {
   q = q.toLowerCase();
   document.querySelectorAll("#tree-vm-list .tree-item").forEach(el => {
@@ -2889,19 +3252,86 @@ async function loadVMDetail(vmId) {
 
 /* ══════════════════ VMs ══════════════════ */
 
+/* ══════════ Batch VM ══════════ */
+let _selectedVMs = new Set();
+
+function updateBatchBar() {
+  const bar = document.getElementById('vm-batch-bar');
+  const lbl = document.getElementById('batch-count-label');
+  if (_selectedVMs.size > 0) {
+    bar.classList.add('visible');
+    lbl.textContent = `${_selectedVMs.size} VM seçili`;
+  } else {
+    bar.classList.remove('visible');
+  }
+  const all = document.getElementById('vm-select-all');
+  if (all) {
+    const checkboxes = document.querySelectorAll('.vm-checkbox');
+    all.checked = checkboxes.length > 0 && checkboxes.length === _selectedVMs.size;
+    all.indeterminate = _selectedVMs.size > 0 && _selectedVMs.size < checkboxes.length;
+  }
+}
+
+function toggleVmSelection(id, checked) {
+  if (checked) _selectedVMs.add(id);
+  else _selectedVMs.delete(id);
+  updateBatchBar();
+}
+
+function toggleAllVms(checked) {
+  document.querySelectorAll('.vm-checkbox').forEach(cb => {
+    cb.checked = checked;
+    if (checked) _selectedVMs.add(cb.dataset.vmid);
+    else _selectedVMs.delete(cb.dataset.vmid);
+  });
+  updateBatchBar();
+}
+
+function clearVmSelection() {
+  _selectedVMs.clear();
+  document.querySelectorAll('.vm-checkbox').forEach(cb => cb.checked = false);
+  const all = document.getElementById('vm-select-all');
+  if (all) { all.checked = false; all.indeterminate = false; }
+  updateBatchBar();
+}
+
+async function batchVmAction(action) {
+  if (!_selectedVMs.size) return;
+  if (!confirm(`${_selectedVMs.size} VM üzerinde "${action}" uygulanacak. Devam?`)) return;
+  const promises = [..._selectedVMs].map(id => api(`/vms/${id}/${action}`, {method:'POST'}).catch(e => e));
+  await Promise.all(promises);
+  toast(`${_selectedVMs.size} VM → ${action} gönderildi`, 'success');
+  clearVmSelection();
+  setTimeout(loadVMs, 800);
+}
+
+async function batchVmDelete() {
+  if (!_selectedVMs.size) return;
+  if (!confirm(`${_selectedVMs.size} VM silinecek. Bu işlem geri alınamaz!`)) return;
+  const promises = [..._selectedVMs].map(id => api(`/vms/${id}`, {method:'DELETE'}).catch(e => e));
+  await Promise.all(promises);
+  toast(`${_selectedVMs.size} VM silindi`, 'success');
+  clearVmSelection();
+  loadVMs(); refreshTreeVMs();
+}
+
 async function loadVMs() {
   try {
     const data = await api("/vms");
     const vms = data.vms || [];
+    _gsCacheVMs = vms; // update search cache
     const tbody = document.getElementById("vm-tbody");
     if (!vms.length) {
-      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">🖥️</div><h3>Sanal makine yok</h3><p>"+ Yeni VM" ile oluşturun</p></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="icon">🖥️</div><h3>Sanal makine yok</h3><p>"+ Yeni VM" ile oluşturun</p></div></td></tr>`;
+      clearVmSelection();
       return;
     }
     tbody.innerHTML = vms.map(v => {
       const disks = v.disks?.map(d => d.device).join(", ") || "—";
       const nets = v.networks?.map(n => n.network || n.type).join(", ") || "—";
+      const checked = _selectedVMs.has(v.id) ? 'checked' : '';
       return `<tr>
+        <td style="width:32px"><input type="checkbox" class="vm-checkbox" data-vmid="${v.id}" ${checked} onchange="toggleVmSelection('${v.id}',this.checked)"></td>
         <td><a style="color:var(--accent-lt);cursor:pointer" onclick="selectTreeItem('vm','${v.id}','${escHtml(v.name)}')"><strong>${escHtml(v.name)}</strong></a><br><small style="color:var(--text-muted)">${v.id.slice(0, 8)}</small></td>
         <td>${stateBadge(v.state)}</td>
         <td>${v.vcpus} vCPU</td>
@@ -2915,11 +3345,13 @@ async function loadVMs() {
               : `<button class="btn sm danger" onclick="vmAction('${v.id}','stop')">■</button>`}
             <button class="btn sm" onclick="vmAction('${v.id}','reboot')">↺</button>
             ${v.state === "running" ? `<button class="btn sm" onclick="openConsole('${v.id}')">▣</button>` : ""}
+            <button class="btn sm" onclick="openLiveMigrate('${v.id}','${escHtml(v.name)}')" title="Canlı Geçiş">🚀</button>
             <button class="btn sm danger" onclick="deleteVM('${v.id}','${escHtml(v.name)}')">✕</button>
           </div>
         </td>
       </tr>`;
     }).join("");
+    updateBatchBar();
   } catch (e) { toast("VM listesi alınamadı: " + e.message, "error"); }
 }
 
@@ -2947,26 +3379,211 @@ async function loadNetworkOptions() {
 async function createVM() {
   const name = document.getElementById("vm-name").value.trim();
   if (!name) return toast("VM adı boş olamaz", "error");
+  const body = {
+    name,
+    vcpus: parseInt(document.getElementById("vm-cpu").value),
+    memory_mb: parseInt(document.getElementById("vm-mem").value),
+    disk_gb: parseInt(document.getElementById("vm-disk").value),
+    disk_format: document.getElementById("vm-disk-fmt").value,
+    iso_path: document.getElementById("vm-iso").value || null,
+    network_name: document.getElementById("vm-net").value,
+    os_type: document.getElementById("vm-os").value,
+    boot_order: document.getElementById("vm-boot").value,
+  };
+  // Cloud-Init fields
+  const ciUser = document.getElementById("ci-user")?.value.trim();
+  const ciPass = document.getElementById("ci-password")?.value.trim();
+  const ciKey  = document.getElementById("ci-sshkey")?.value.trim();
+  const ciData = document.getElementById("ci-userdata")?.value.trim();
+  if (ciUser || ciPass || ciKey || ciData) {
+    body.cloud_init = { user: ciUser||undefined, password: ciPass||undefined, ssh_key: ciKey||undefined, user_data: ciData||undefined };
+  }
   try {
-    await api("/vms", {
-      method: "POST",
-      body: {
-        name,
-        vcpus: parseInt(document.getElementById("vm-cpu").value),
-        memory_mb: parseInt(document.getElementById("vm-mem").value),
-        disk_gb: parseInt(document.getElementById("vm-disk").value),
-        disk_format: document.getElementById("vm-disk-fmt").value,
-        iso_path: document.getElementById("vm-iso").value || null,
-        network_name: document.getElementById("vm-net").value,
-        os_type: document.getElementById("vm-os").value,
-        boot_order: document.getElementById("vm-boot").value,
-      }
-    });
+    await api("/vms", { method: "POST", body });
     toast(`"${name}" oluşturuldu`, "success");
     closeModal("modal-create-vm");
-    loadVMs();
-    refreshTreeVMs();
+    loadVMs(); refreshTreeVMs();
   } catch (e) { toast(e.message, "error"); }
+}
+
+/* ══════════ PDF Export ══════════ */
+function exportPDF(section) {
+  // Navigate to the relevant section first, then print
+  if (section === 'vms') navigate('vms');
+  setTimeout(() => {
+    const title = document.title;
+    document.title = `OXware — ${section.toUpperCase()} Raporu — ${new Date().toLocaleDateString()}`;
+    window.print();
+    document.title = title;
+  }, 200);
+}
+
+/* ══════════ VM Templates ══════════ */
+const BUILTIN_TEMPLATES = {
+  ubuntu22: {name:'Ubuntu 22.04 LTS', vcpus:2, memory_mb:2048, disk_gb:20, os_type:'ubuntu22.04', icon:'🐧'},
+  debian12: {name:'Debian 12', vcpus:1, memory_mb:1024, disk_gb:15, os_type:'debian11', icon:'🌀'},
+  win2022:  {name:'Windows Server 2022', vcpus:4, memory_mb:4096, disk_gb:60, os_type:'win2019', icon:'🪟'},
+  alpine:   {name:'Alpine Linux', vcpus:1, memory_mb:512, disk_gb:5, os_type:'generic', icon:'🏔️'},
+};
+
+async function deployTemplate(key) {
+  const tpl = BUILTIN_TEMPLATES[key];
+  if (!tpl) return;
+  // Pre-fill create VM modal
+  await openCreateVMModal();
+  closeModal('modal-vm-template');
+  document.getElementById('vm-name').value = tpl.name.toLowerCase().replace(/\s+/g,'-') + '-' + Date.now().toString(36);
+  document.getElementById('vm-cpu').value = tpl.vcpus;
+  document.getElementById('vm-mem').value = tpl.memory_mb;
+  document.getElementById('vm-disk').value = tpl.disk_gb;
+  const osEl = document.getElementById('vm-os');
+  if (osEl) osEl.value = tpl.os_type;
+  toast(`Şablon yüklendi: ${tpl.name}`, 'info');
+}
+
+async function saveVMTemplate() {
+  const name = document.getElementById('tpl-name').value.trim();
+  const vmId = document.getElementById('tpl-vm-select').value;
+  const desc = document.getElementById('tpl-desc').value.trim();
+  if (!name || !vmId) return toast('Ad ve VM zorunlu', 'error');
+  const existing = JSON.parse(localStorage.getItem('ox-vm-templates')||'[]');
+  existing.push({name, vmId, desc, created: Date.now()});
+  localStorage.setItem('ox-vm-templates', JSON.stringify(existing));
+  toast('Şablon kaydedildi', 'success');
+  closeModal('modal-save-template');
+  loadCustomTemplates();
+}
+
+function loadCustomTemplates() {
+  const list = JSON.parse(localStorage.getItem('ox-vm-templates')||'[]');
+  const el = document.getElementById('custom-template-list');
+  if (!el) return;
+  if (!list.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:8px;text-transform:uppercase">Özel Şablonlar</div>`
+    + list.map((t,i) => `
+      <div class="template-card" style="margin-bottom:8px">
+        <div class="template-icon">💿</div>
+        <div><div style="font-weight:600;font-size:13px">${escHtml(t.name)}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${escHtml(t.desc||'—')} · ${new Date(t.created).toLocaleDateString()}</div></div>
+        <button class="btn sm danger" style="margin-left:auto" onclick="deleteCustomTemplate(${i})">✕</button>
+      </div>`).join('');
+}
+
+function deleteCustomTemplate(idx) {
+  const list = JSON.parse(localStorage.getItem('ox-vm-templates')||'[]');
+  list.splice(idx, 1);
+  localStorage.setItem('ox-vm-templates', JSON.stringify(list));
+  loadCustomTemplates();
+}
+
+/* ══════════ Live Migration ══════════ */
+async function openLiveMigrate(vmId, vmName) {
+  openModal('modal-live-migrate');
+  const sel = document.getElementById('migrate-vm-select');
+  sel.innerHTML = `<option value="${vmId}">${escHtml(vmName)}</option>`;
+}
+
+async function doLiveMigration() {
+  const vmId  = document.getElementById('migrate-vm-select').value;
+  const target = document.getElementById('migrate-target').value.trim();
+  const proto  = document.getElementById('migrate-protocol').value;
+  if (!vmId || !target) return toast('VM ve hedef host zorunlu', 'error');
+  try {
+    const r = await _api('/api/vms/migrate', 'POST', {vm_id: vmId, target_host: target, protocol: proto});
+    toast(r.status === 'ok' ? 'Canlı geçiş başlatıldı!' : (r.error || 'Hata'), r.status === 'ok' ? 'success' : 'error');
+    closeModal('modal-live-migrate');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+/* ══════════ Backup Schedule ══════════ */
+async function openBackupSchedule() {
+  openModal('modal-backup-schedule');
+  const sel = document.getElementById('backup-vm-select');
+  try {
+    const d = await api('/vms');
+    sel.innerHTML = `<option value="all">Tüm VM'ler</option>` + (d.vms||[]).map(v=>`<option value="${v.id}">${escHtml(v.name)}</option>`).join('');
+  } catch {}
+}
+
+async function saveBackupSchedule() {
+  const body = {
+    vm_id: document.getElementById('backup-vm-select').value,
+    hour: parseInt(document.getElementById('backup-hour').value),
+    minute: parseInt(document.getElementById('backup-minute').value),
+    frequency: document.getElementById('backup-freq').value,
+    retention_days: parseInt(document.getElementById('backup-retention').value),
+    destination: document.getElementById('backup-dest').value.trim(),
+  };
+  try {
+    await _api('/api/backup/schedule', 'POST', body);
+    toast('Yedekleme planı kaydedildi', 'success');
+    closeModal('modal-backup-schedule');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+/* ══════════ HA Status ══════════ */
+async function loadHAStatus() {
+  try {
+    const d = await _api('/api/ha/status');
+    const el = document.getElementById('ha-status-container');
+    if (!el) return;
+    const nodes = d.nodes || [];
+    if (!nodes.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:20px"><p>HA yapılandırılmamış veya tek node modunda çalışıyor.</p></div>';
+      return;
+    }
+    el.innerHTML = nodes.map(n => `
+      <div class="ha-node">
+        <div class="ha-indicator" style="background:${n.online ? 'var(--green-lt)' : 'var(--red-lt)'}"></div>
+        <div style="flex:1"><strong>${escHtml(n.name)}</strong>
+          <div style="font-size:11px;color:var(--text-muted)">${n.ip || '—'} · ${n.role || 'node'}</div>
+        </div>
+        <span class="badge ${n.online ? 'running' : 'stopped'}">${n.online ? 'Çevrimiçi' : 'Çevrimdışı'}</span>
+      </div>`).join('');
+  } catch(e) {
+    const el = document.getElementById('ha-status-container');
+    if (el) el.innerHTML = '<div class="empty-state" style="padding:20px"><p>HA durumu alınamadı. Tek node modunda çalışıyor.</p></div>';
+  }
+}
+
+/* ══════════ Trend Analysis ══════════ */
+let _trendCharts = {};
+async function loadTrendAnalysis(periods=['7d','30d']) {
+  const el = document.getElementById('trend-container');
+  if (!el) return;
+  el.innerHTML = '<div class="spinner-sm" style="margin:20px auto"></div>';
+  try {
+    const datasets7 = [], datasets30 = [];
+    const [d7, d30] = await Promise.all([
+      _api('/api/metrics/system?period=7d'),
+      _api('/api/metrics/system?period=30d')
+    ]);
+    const fmt = (ts) => new Date(ts*1000).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    const makeChart = (id, data, title) => {
+      const labels = data.map(p=>fmt(p.ts||p.timestamp||0));
+      const cpuD = data.map(p=>p.cpu_pct||p.cpu||0);
+      const memD = data.map(p=>p.mem_pct||p.mem||0);
+      if (_trendCharts[id]) _trendCharts[id].destroy();
+      const ctx = document.getElementById(id);
+      if (!ctx) return;
+      _trendCharts[id] = new Chart(ctx, {
+        type:'line',data:{labels,datasets:[
+          {label:'CPU %',data:cpuD,borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,0.08)',tension:.3,fill:true,pointRadius:0},
+          {label:'RAM %',data:memD,borderColor:'#3fb950',backgroundColor:'rgba(63,185,80,0.08)',tension:.3,fill:true,pointRadius:0}
+        ]},
+        options:{responsive:true,maintainAspectRatio:false,animation:false,
+          plugins:{legend:{labels:{color:'#e6edf3'}},title:{display:true,text:title,color:'#8b949e',font:{size:11}}},
+          scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:8,maxRotation:0,autoSkip:true},grid:{color:'#30363d'}},
+            y:{ticks:{color:'#8b949e'},grid:{color:'#30363d'},min:0,max:100}}}
+      });
+    };
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="card"><div class="card-title">Son 7 Gün</div><div style="height:160px"><canvas id="trend7"></canvas></div></div>
+        <div class="card"><div class="card-title">Son 30 Gün</div><div style="height:160px"><canvas id="trend30"></canvas></div></div>
+      </div>`;
+    setTimeout(() => { makeChart('trend7', d7.data||[], '7 Günlük Trend'); makeChart('trend30', d30.data||[], '30 Günlük Trend'); }, 50);
+  } catch(e) { el.innerHTML = `<p class="text-muted">Trend verisi alınamadı: ${e.message}</p>`; }
 }
 
 async function deleteVM(id, name) {
@@ -3612,6 +4229,186 @@ async function triggerAgent(id) {
   } catch (e) { toast(e.message, "error"); }
 }
 
+/* ══════════════════ OXY AI Chat ══════════════════ */
+let _oxyOpen = false;
+let _oxyAgents = [];
+let _oxyActiveAgent = null;
+let _oxyTyping = false;
+const OXY_STORE = 'oxy-messages-v2';
+const OXY_MAX = 200; // max stored messages
+
+function toggleOxyPanel() {
+  _oxyOpen = !_oxyOpen;
+  const panel = document.getElementById('oxy-panel');
+  const btn   = document.getElementById('oxy-btn');
+  panel.classList.toggle('open', _oxyOpen);
+  btn.classList.toggle('active', _oxyOpen);
+  document.getElementById('oxy-notif').style.display = 'none';
+  if (_oxyOpen) {
+    refreshOxyAgents();
+    renderOxyMessages();
+    setTimeout(() => document.getElementById('oxy-input')?.focus(), 300);
+  }
+}
+
+async function refreshOxyAgents() {
+  try {
+    const d = await api('/ai/agents');
+    _oxyAgents = d.agents || [];
+    const sel = document.getElementById('oxy-agent-select');
+    if (!sel) return;
+    if (!_oxyAgents.length) {
+      sel.innerHTML = '<option value="">— Önce AI Ajan ekleyin —</option>';
+      _oxyActiveAgent = null;
+      return;
+    }
+    sel.innerHTML = _oxyAgents.map(a=>`<option value="${a.id}">${a.name} (${a.provider})</option>`).join('');
+    if (!_oxyActiveAgent || !_oxyAgents.find(a=>a.id===_oxyActiveAgent)) {
+      _oxyActiveAgent = _oxyAgents[0].id;
+    }
+    sel.value = _oxyActiveAgent;
+  } catch {}
+}
+
+function oxyAgentChanged() {
+  _oxyActiveAgent = document.getElementById('oxy-agent-select')?.value;
+}
+
+function getOxyHistory() {
+  try { return JSON.parse(localStorage.getItem(OXY_STORE)||'[]'); } catch { return []; }
+}
+
+function saveOxyHistory(msgs) {
+  const trimmed = msgs.slice(-OXY_MAX);
+  localStorage.setItem(OXY_STORE, JSON.stringify(trimmed));
+}
+
+function renderOxyMessages() {
+  const container = document.getElementById('oxy-messages');
+  if (!container) return;
+  const msgs = getOxyHistory();
+
+  if (!msgs.length) {
+    container.innerHTML = `<div class="oxy-msg ai">
+      <div class="oxy-msg-avatar">🤖</div>
+      <div><div class="oxy-bubble">Merhaba! Ben <strong>OXY</strong>. Sisteminizi izliyor, soruları yanıtlıyor ve günlük rapor tutuyorum. 🚀</div>
+      <div class="oxy-time">OXY</div></div></div>`;
+    return;
+  }
+
+  container.innerHTML = msgs.map(m => {
+    const isUser = m.role === 'user';
+    const text = escHtml(m.content).replace(/\n/g,'<br>').replace(/`([^`]+)`/g,'<code>$1</code>');
+    const time = m.ts ? new Date(m.ts).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}) : '';
+    return `<div class="oxy-msg ${isUser?'user':'ai'}">
+      <div class="oxy-msg-avatar">${isUser?'👤':'🤖'}</div>
+      <div>
+        <div class="oxy-bubble">${text}</div>
+        <div class="oxy-time">${time}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Scroll to bottom
+  container.scrollTop = container.scrollHeight;
+}
+
+function oxyQuickSend(text) {
+  const inp = document.getElementById('oxy-input');
+  if (inp) inp.value = text;
+  sendOxyMessage();
+}
+
+async function sendOxyMessage() {
+  if (_oxyTyping) return;
+  const inp = document.getElementById('oxy-input');
+  const text = inp?.value.trim();
+  if (!text) return;
+  if (!_oxyActiveAgent) { toast('Önce bir AI ajan seçin', 'error'); return; }
+
+  inp.value = '';
+  inp.style.height = 'auto';
+
+  // Save user message
+  const history = getOxyHistory();
+  history.push({role:'user', content:text, ts:Date.now()});
+  saveOxyHistory(history);
+  renderOxyMessages();
+
+  // Show typing indicator
+  _oxyTyping = true;
+  document.getElementById('oxy-send').disabled = true;
+  const container = document.getElementById('oxy-messages');
+  const typingEl = document.createElement('div');
+  typingEl.className = 'oxy-msg ai';
+  typingEl.id = 'oxy-typing-el';
+  typingEl.innerHTML = `<div class="oxy-msg-avatar">🤖</div>
+    <div class="oxy-bubble" style="padding:10px 14px"><div class="oxy-typing"><span></span><span></span><span></span></div></div>`;
+  container.appendChild(typingEl);
+  container.scrollTop = container.scrollHeight;
+
+  try {
+    // Build context-aware system prompt
+    const today = new Date().toLocaleDateString('tr-TR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    let sysCtx = `Sen OXY'sin — OXware Hypervisor için akıllı bir AI asistan. Bugün ${today}. `;
+    sysCtx += 'Kullanıcıya kısa, net ve Türkçe yanıt ver. ';
+
+    // Try to get daily context (system stats)
+    try {
+      const stats = await _api('/api/metrics/system?period=1h');
+      const last = (stats.data||[]).slice(-1)[0];
+      if (last) sysCtx += `Güncel sistem: CPU ${(last.cpu_pct||0).toFixed(1)}%, RAM ${(last.mem_pct||0).toFixed(1)}%. `;
+    } catch {}
+
+    // Try to get recent events for daily log
+    try {
+      const evts = await _api('/api/events/list?limit=10');
+      const eventList = (evts.events||[]).map(e=>`[${e.level||'info'}] ${e.message||''}`).join('; ');
+      if (eventList) sysCtx += `Son olaylar: ${eventList}. `;
+    } catch {}
+
+    // Previous conversation context (last 6 messages)
+    const prevMsgs = getOxyHistory().slice(-7,-1); // exclude the one we just added
+    const contextMsgs = prevMsgs.map(m => `${m.role === 'user' ? 'Kullanıcı' : 'OXY'}: ${m.content}`).join('\n');
+    const fullPrompt = contextMsgs ? `${contextMsgs}\nKullanıcı: ${text}` : text;
+
+    const r = await _api(`/api/ai/agents/${_oxyActiveAgent}/query`, 'POST', {
+      prompt: fullPrompt,
+      system_prompt: sysCtx
+    });
+
+    typingEl.remove();
+    const reply = r.response || r.result || r.answer || r.message || 'Yanıt alınamadı.';
+    history.push({role:'ai', content:reply, ts:Date.now(), agent:_oxyActiveAgent});
+    saveOxyHistory(history);
+    renderOxyMessages();
+
+    // Log to daily log
+    const dayKey = new Date().toISOString().slice(0,10);
+    const log = JSON.parse(localStorage.getItem(`oxy-daily-${dayKey}`)||'[]');
+    log.push({ts:Date.now(), user:text, ai:reply});
+    localStorage.setItem(`oxy-daily-${dayKey}`, JSON.stringify(log));
+
+    // Show notif if panel closed
+    if (!_oxyOpen) document.getElementById('oxy-notif').style.display = 'block';
+  } catch(e) {
+    typingEl.remove();
+    history.push({role:'ai', content:`⚠️ Hata: ${e.message}. Ajan ayarlarını kontrol edin.`, ts:Date.now()});
+    saveOxyHistory(history);
+    renderOxyMessages();
+  } finally {
+    _oxyTyping = false;
+    document.getElementById('oxy-send').disabled = false;
+  }
+}
+
+function clearOxyHistory() {
+  if (!confirm('OXY sohbet geçmişi silinsin mi?')) return;
+  localStorage.removeItem(OXY_STORE);
+  renderOxyMessages();
+  toast('Geçmiş temizlendi', 'info');
+}
+
 /* ══════════════════ Updates ══════════════════ */
 
 async function loadUpdates() {
@@ -3932,7 +4729,7 @@ async function loadTabData(tabId) {
     case 'tab-vpn':          loadVpnStatus(); loadVpnPeers(); break;
     case 'tab-dns':          loadDnsHosts(); loadDhcpLeases(); break;
     case 'tab-proxy':        loadNginxSites(); break;
-    case 'tab-monitoring':   loadPerfHistory('1h'); loadSmartData(); loadUptimes(); loadIdsStatus(); break;
+    case 'tab-monitoring':   loadPerfHistory('1h'); loadSmartData(); loadUptimes(); loadIdsStatus(); loadTrendAnalysis(); loadHAStatus(); break;
     case 'tab-ai':           loadAiRecommendations(); loadAnomalies(); loadAIAgents(); break;
     case 'tab-security':     load2faStatus(); loadAuditLog(); loadApiKeys(); loadLdapConfig(); checkLicenseStatus(); break;
     case 'tab-integrations': loadWebhooks(); loadS3Config(); loadEmailConfig(); loadVlans(); break;
