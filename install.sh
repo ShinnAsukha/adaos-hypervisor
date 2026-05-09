@@ -436,8 +436,8 @@ install_cli_tools() {
     cat > /usr/local/bin/ox << OXCMD
 #!/bin/bash
 VERSION="${OXWARE_VERSION}"
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-CYAN='\033[0;36m'; WHITE='\033[1;37m'; NC='\033[0m'
+RED=\$'\033[0;31m'; GREEN=\$'\033[0;32m'; YELLOW=\$'\033[1;33m'
+CYAN=\$'\033[0;36m'; WHITE=\$'\033[1;37m'; NC=\$'\033[0m'
 
 show_help() {
 cat << HELP
@@ -526,8 +526,8 @@ OXCMD
     # oxupdate
     cat > /usr/local/bin/oxupdate << OXUPDATE
 #!/bin/bash
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-CYAN='\033[0;36m'; NC='\033[0m'
+RED=\$'\033[0;31m'; GREEN=\$'\033[0;32m'; YELLOW=\$'\033[1;33m'
+CYAN=\$'\033[0;36m'; NC=\$'\033[0m'
 
 APP_DIR="${APP_DIR}"
 VENV_DIR="${VENV_DIR}"

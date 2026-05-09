@@ -1513,6 +1513,218 @@ ox --version       # Sürüm bilgisi</code></pre>
       </div>
     </div>
 
+    <!-- ══════ COMING SOON (fallback for missing pages) ══════ -->
+    <div class="doc-page" id="page-coming-soon">
+      <div class="doc-hero">
+        <h1><span id="coming-soon-title">Bu Sayfa</span></h1>
+        <p>Bu bölüm hazırlanıyor. Yakında eklenecek.</p>
+      </div>
+      <div class="doc-body">
+        <div class="alert alert-info" style="margin-top:24px">
+          <span>🚧</span>
+          <div>Bu dokümantasyon sayfası henüz hazır değil. GitHub Issues üzerinden katkıda bulunabilirsiniz ya da şimdilik sol menüden mevcut konulara göz atın.</div>
+        </div>
+        <p>Yardıma ihtiyaç duyuyorsanız:</p>
+        <ul>
+          <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/issues" target="_blank">GitHub Issues</a> üzerinden soru sorun</li>
+          <li>Lisanslıysa WhatsApp destek hattına ulaşın</li>
+          <li>Kurulum sorunu için <code>ox --logs</code> çıktısını paylaşın</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ══════ 2FA ══════ -->
+    <div class="doc-page" id="page-2fa">
+      <div class="doc-hero"><h1>İki Faktörlü <span>Doğrulama (2FA)</span></h1><p>TOTP tabanlı Google Authenticator / Authy desteği.</p></div>
+      <div class="doc-body">
+        <h2>2FA Nasıl Aktif Edilir?</h2>
+        <ol>
+          <li>Güvenlik → 2FA Yönetimi sekmesine gidin</li>
+          <li><strong>2FA Kur</strong> butonuna tıklayın</li>
+          <li>Açılan modal'daki QR kodu Google Authenticator veya Authy ile tarayın</li>
+          <li>Uygulamanın gösterdiği 6 haneli kodu girin</li>
+          <li><strong>Doğrula &amp; Etkinleştir</strong> butonuna basın</li>
+        </ol>
+        <div class="alert alert-info"><span>ℹ️</span><div>QR kod taranamıyorsa <em>otpauth://</em> URI'sini kopyalayıp uygulamanıza manuel ekleyebilirsiniz.</div></div>
+        <h2>2FA Gereksinimleri</h2>
+        <p>Sunucuda <code>pyotp</code> kütüphanesi kurulu olmalıdır. Yoksa: <code>pip install pyotp</code></p>
+        <h2>2FA Devre Dışı Bırakma</h2>
+        <p>Aynı sayfadaki <strong>Devre Dışı Bırak</strong> butonu ile kaldırılabilir.</p>
+      </div>
+    </div>
+
+    <!-- ══════ API KEYS ══════ -->
+    <div class="doc-page" id="page-api-keys">
+      <div class="doc-hero"><h1>API <span>Anahtarları</span></h1><p>Programatik erişim için uzun ömürlü JWT token'ları yönetin.</p></div>
+      <div class="doc-body">
+        <h2>API Anahtarı Oluşturma</h2>
+        <ol><li>Güvenlik → API Anahtarları sekmesine gidin</li><li>Anahtar adı ve isteğe bağlı süre (gün) girin</li><li><strong>Oluştur</strong> butonuna basın</li></ol>
+        <h2>Kullanım</h2>
+        <pre><code>curl -H "Authorization: Bearer &lt;api_key&gt;" https://IP:8006/api/vms</code></pre>
+        <div class="alert alert-info"><span>⚠️</span><div>API anahtarını güvenli saklayın. Kaybolursa yenisi oluşturup eskisini iptal edin.</div></div>
+      </div>
+    </div>
+
+    <!-- ══════ AUDIT LOG ══════ -->
+    <div class="doc-page" id="page-audit">
+      <div class="doc-hero"><h1>Denetim <span>Günlüğü</span></h1><p>Tüm admin işlemlerinin kayıt altına alındığı log sistemi.</p></div>
+      <div class="doc-body">
+        <h2>Neler Kaydedilir?</h2>
+        <ul><li>Giriş/çıkış işlemleri</li><li>VM oluşturma, silme, başlatma, durdurma</li><li>Kullanıcı yönetimi değişiklikleri</li><li>Lisans aktivasyonları</li><li>Konfigürasyon değişiklikleri</li></ul>
+        <h2>Log Dosyası</h2>
+        <pre><code>cat /var/log/oxware/audit.jsonl</code></pre>
+        <p>Her satır JSON formatında: <code>{"ts": 1234567890, "user": "admin", "action": "vm_start", "detail": "vm-1"}</code></p>
+      </div>
+    </div>
+
+    <!-- ══════ LDAP ══════ -->
+    <div class="doc-page" id="page-ldap">
+      <div class="doc-hero"><h1>LDAP / Active <span>Directory</span></h1><p>Kurumsal kimlik doğrulama entegrasyonu.</p></div>
+      <div class="doc-body">
+        <h2>LDAP Yapılandırması</h2>
+        <table><tr><th>Alan</th><th>Açıklama</th></tr>
+          <tr><td>LDAP URL</td><td>ldap://dc.ornek.com veya ldaps://...</td></tr>
+          <tr><td>Base DN</td><td>dc=ornek,dc=com</td></tr>
+          <tr><td>Bind DN</td><td>cn=oxware,ou=servisler,dc=ornek,dc=com</td></tr>
+          <tr><td>Bind Password</td><td>Servis hesabı şifresi</td></tr>
+        </table>
+        <p>Kayıt sonrası LDAP kullanıcıları normal OXware kullanıcısı gibi giriş yapabilir.</p>
+      </div>
+    </div>
+
+    <!-- ══════ TEMPLATES ══════ -->
+    <div class="doc-page" id="page-templates">
+      <div class="doc-hero"><h1>VM <span>Şablonları</span></h1><p>Tekrar kullanılabilir VM konfigürasyonları oluşturun.</p></div>
+      <div class="doc-body">
+        <h2>Şablon Oluşturma</h2>
+        <p>Mevcut bir VM'yi şablon olarak kaydedebilir, ya da sıfırdan şablon tanımlayabilirsiniz.</p>
+        <ol><li>Sanal Makineler → Şablonlar sekmesi</li><li>Şablon adı, CPU, RAM, disk, OS tipi seçin</li><li>Kaydet ve yeni VM oluştururken şablondan başlayın</li></ol>
+      </div>
+    </div>
+
+    <!-- ══════ BACKUP ══════ -->
+    <div class="doc-page" id="page-backup">
+      <div class="doc-hero"><h1><span>Yedekleme</span> Sistemi</h1><p>VM disk imajlarının yedeğini otomatik alın.</p></div>
+      <div class="doc-body">
+        <h2>Yedek Dizini</h2>
+        <pre><code>/var/lib/oxware/backups/</code></pre>
+        <h2>Manuel Yedek</h2>
+        <pre><code>virsh dumpxml vm-adi &gt; /var/lib/oxware/backups/vm-adi.xml</code></pre>
+        <h2>S3 Entegrasyonu</h2>
+        <p>Entegrasyonlar → S3 Depolama sekmesinden S3 bucket yapılandırarak uzak yedekleme etkinleştirin.</p>
+      </div>
+    </div>
+
+    <!-- ══════ FIREWALL ══════ -->
+    <div class="doc-page" id="page-firewall">
+      <div class="doc-hero"><h1>Güvenlik <span>Duvarı</span></h1><p>UFW tabanlı host güvenlik duvarı yönetimi.</p></div>
+      <div class="doc-body">
+        <h2>Varsayılan Kurallar</h2>
+        <table><tr><th>Port</th><th>Protokol</th><th>Amaç</th></tr>
+          <tr><td>22</td><td>TCP</td><td>SSH (önerilir: kısıtlı IP)</td></tr>
+          <tr><td>8006</td><td>TCP</td><td>OXware Web UI</td></tr>
+          <tr><td>5900-5999</td><td>TCP</td><td>VNC</td></tr>
+          <tr><td>6080</td><td>TCP</td><td>noVNC</td></tr>
+        </table>
+        <h2>Kural Ekleme</h2>
+        <pre><code>ufw allow from 192.168.1.0/24 to any port 8006</code></pre>
+        <p>Ağ → Güvenlik Duvarı sekmesinden web arayüzü üzerinden de yönetebilirsiniz.</p>
+      </div>
+    </div>
+
+    <!-- ══════ VPN ══════ -->
+    <div class="doc-page" id="page-vpn">
+      <div class="doc-hero"><h1>VPN <span>Yönetimi</span></h1><p>WireGuard tabanlı güvenli tünel bağlantıları.</p></div>
+      <div class="doc-body">
+        <h2>WireGuard Kurulumu</h2>
+        <pre><code>apt-get install wireguard</code></pre>
+        <p>Ağ → VPN sekmesinden peer ekleyebilir ve bağlantı durumunu izleyebilirsiniz.</p>
+        <h2>Peer Ekleme</h2>
+        <p>Public key, endpoint ve allowed IPs bilgilerini girerek yeni bağlantı noktası oluşturun.</p>
+      </div>
+    </div>
+
+    <!-- ══════ DNS ══════ -->
+    <div class="doc-page" id="page-dns">
+      <div class="doc-hero"><h1>DNS <span>Yönetimi</span></h1><p>Host bazlı DNS kayıtları ve DHCP atamaları.</p></div>
+      <div class="doc-body">
+        <h2>Statik Host Ekle</h2>
+        <p>Ağ → DNS sekmesinden hostname ↔ IP eşleştirmesi yapabilirsiniz.</p>
+        <h2>DHCP Kiraları</h2>
+        <p>libvirt DHCP sunucusunun aktif kiralamalarını görmek için: <code>virsh net-dhcp-leases default</code></p>
+      </div>
+    </div>
+
+    <!-- ══════ PROXY ══════ -->
+    <div class="doc-page" id="page-proxy">
+      <div class="doc-hero"><h1>Proxy <span>&amp; Load Balancer</span></h1><p>Nginx reverse proxy ve HAProxy yük dengeleme.</p></div>
+      <div class="doc-body">
+        <h2>Nginx Site Ekle</h2>
+        <p>Ağ → Proxy sekmesinden domain, upstream ve SSL seçeneği ile site oluşturun.</p>
+        <h2>HAProxy</h2>
+        <p>Yük dengeleme için HAProxy konfigürasyonu <code>/etc/haproxy/haproxy.cfg</code> dosyasından da düzenlenebilir.</p>
+      </div>
+    </div>
+
+    <!-- ══════ ANOMALY ══════ -->
+    <div class="doc-page" id="page-anomaly">
+      <div class="doc-hero"><h1>Anomali <span>Dedektörü</span></h1><p>Z-score tabanlı otomatik anormallik tespiti.</p></div>
+      <div class="doc-body">
+        <h2>Nasıl Çalışır?</h2>
+        <p>Sistem metrikleri (CPU, RAM, disk I/O) sürekli izlenir. Normal eşik değerinden Z-score hesaplanır; &gt;3 olan değerler anomali sayılır.</p>
+        <h2>Uyarı Tetiklemesi</h2>
+        <p>Anomali tespit edildiğinde yapılandırılmış bildirim kanallarına (Telegram, Discord, E-mail) uyarı gönderilir.</p>
+        <p>Sistem → AI Asistan sekmesinden anomalileri görüntüleyin.</p>
+      </div>
+    </div>
+
+    <!-- ══════ AUTOSCALE ══════ -->
+    <div class="doc-page" id="page-autoscale">
+      <div class="doc-hero"><h1>Otomatik <span>Ölçeklendirme</span></h1><p>CPU/RAM eşiğine göre VM'leri otomatik yönetin.</p></div>
+      <div class="doc-body">
+        <h2>Politika Tanımlama</h2>
+        <p>Sistem Ayarları → Otomatik Ölçeklendirme sekmesinden eşik değerleri ve eylem kuralları tanımlayın.</p>
+        <h2>Eylem Türleri</h2>
+        <ul><li><strong>scale_up</strong>: Yük yüksekse yeni VM başlat</li><li><strong>scale_down</strong>: Yük düşükse VM durdur</li><li><strong>alert_only</strong>: Sadece uyarı gönder</li></ul>
+      </div>
+    </div>
+
+    <!-- ══════ WEBHOOKS ══════ -->
+    <div class="doc-page" id="page-webhooks">
+      <div class="doc-hero"><h1><span>Webhook</span> Entegrasyonları</h1><p>Olayları dış sistemlere HTTP POST ile iletin.</p></div>
+      <div class="doc-body">
+        <h2>Webhook Ekleme</h2>
+        <ol><li>Entegrasyonlar → Webhooks sekmesi</li><li>Hedef URL ve event tipi seçin</li><li>Test butonuyla doğrulayın</li></ol>
+        <h2>Payload Formatı</h2>
+        <pre><code>{"event":"vm_start","vm":"vm-1","ts":1234567890,"host":"server-1"}</code></pre>
+      </div>
+    </div>
+
+    <!-- ══════ S3 ══════ -->
+    <div class="doc-page" id="page-s3">
+      <div class="doc-hero"><h1>S3 <span>Bulut Depolama</span></h1><p>Yedekleri AWS S3 veya uyumlu bir nesne deposuna gönderin.</p></div>
+      <div class="doc-body">
+        <h2>Yapılandırma</h2>
+        <table><tr><th>Alan</th><th>Değer</th></tr>
+          <tr><td>Endpoint</td><td>s3.amazonaws.com veya özel</td></tr>
+          <tr><td>Bucket</td><td>oxware-backups</td></tr>
+          <tr><td>Access Key</td><td>AWS IAM Access Key</td></tr>
+          <tr><td>Secret Key</td><td>AWS IAM Secret Key</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════ VLAN ══════ -->
+    <div class="doc-page" id="page-vlan">
+      <div class="doc-hero"><h1>VLAN <span>Yönetimi</span></h1><p>802.1Q VLAN ile ağ segmentasyonu.</p></div>
+      <div class="doc-body">
+        <h2>VLAN Oluşturma</h2>
+        <pre><code>ip link add link eth0 name eth0.100 type vlan id 100
+ip link set eth0.100 up</code></pre>
+        <p>Entegrasyonlar → VLAN sekmesinden arayüz üzerinden de yönetebilirsiniz.</p>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /app -->
 
@@ -1562,7 +1774,14 @@ ox --version       # Sürüm bilgisi</code></pre>
   function showPage(name) {
     document.querySelectorAll(".doc-page").forEach(p => p.classList.remove("active"));
     document.querySelectorAll(".nav-link").forEach(l => l.classList.remove("active"));
-    const pg = document.getElementById("page-" + name);
+    let pg = document.getElementById("page-" + name);
+    if (!pg) {
+      // Fallback: show a "coming soon" placeholder
+      pg = document.getElementById("page-coming-soon");
+      if (pg) {
+        document.getElementById("coming-soon-title").textContent = name.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+      }
+    }
     if (pg) pg.classList.add("active");
     document.querySelectorAll(".nav-link").forEach(l => {
       if (l.getAttribute("onclick") === `showPage('${name}')`) l.classList.add("active");

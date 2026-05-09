@@ -22,7 +22,7 @@
       --red:#c0392b;--red-lt:#ef4444;
       --yellow:#b07d10;--yellow-lt:#eab308;
       --orange:#c2591a;
-      --topbar-h:44px;--tree-w:0px;--nav-w:200px;--taskbar-h:170px;
+      --topbar-h:54px;--tree-w:0px;--nav-w:200px;--taskbar-h:170px;
       /* Tema değişkenleri */
       --bg-primary: #0d1117;
       --bg-secondary: #161b22;
@@ -71,10 +71,10 @@
 
     /* ───── TOPBAR ───── */
     #topbar{height:var(--topbar-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;flex-shrink:0;z-index:200}
-    .tb-logo{width:72px;height:100%;display:flex;align-items:center;justify-content:center;padding:0;border-right:1px solid var(--border);flex-shrink:0}
+    .tb-logo{width:88px;height:100%;display:flex;align-items:center;justify-content:center;padding:0;border-right:1px solid var(--border);flex-shrink:0}
     #tree-panel{display:none!important}
-    .tb-logo-icon{width:52px;height:52px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-    .tb-logo-icon img{width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(0,212,255,0.6))}
+    .tb-logo-icon{width:64px;height:64px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .tb-logo-icon img{width:64px;height:64px;object-fit:contain;filter:drop-shadow(0 0 14px rgba(0,212,255,0.7))}
     .tb-logo-icon .tb-logo-fb{width:40px;height:40px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center}
     .tb-logo-icon .tb-logo-fb svg{width:24px;height:24px;fill:#fff}
     .tb-logo-text{display:none}
@@ -1785,6 +1785,36 @@
       <div class="form-row" id="agent-apikey-row"><label>API Key</label><input id="agent-apikey" type="password" placeholder="sk-..." autocomplete="off"></div>
       <div class="form-row"><label>Model</label><input id="agent-model" placeholder="anthropic/claude-3-haiku"></div>
       <div class="form-row"><label>Kontrol Aralığı (dk)</label><input id="agent-interval" type="number" value="15" min="1" max="1440"></div>
+      <div class="form-row" style="flex-direction:column;align-items:flex-start;gap:8px">
+        <label style="margin-bottom:4px">🔐 Yetki Alanları</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;font-size:12px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
+            <input type="checkbox" id="perm-monitor" checked> 📊 Sistem İzleme
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
+            <input type="checkbox" id="perm-events" checked> 📋 Olay Takibi
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
+            <input type="checkbox" id="perm-alerts" checked> 🔔 Uyarı Oluşturma
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
+            <input type="checkbox" id="perm-vm-read"> 🖥️ VM Durumu Okuma
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
+            <input type="checkbox" id="perm-vm-manage"> ⚙️ VM Başlat/Durdur
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
+            <input type="checkbox" id="perm-vm-delete"> 🗑️ VM Silme
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
+            <input type="checkbox" id="perm-network"> 🌐 Ağ Yönetimi
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
+            <input type="checkbox" id="perm-storage"> 💾 Depolama Erişimi
+          </label>
+        </div>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:2px">⚠️ Yalnızca gerekli yetkileri verin. Ajan sadece verilen yetki alanlarında işlem yapabilir.</p>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-add-agent')">İptal</button>
@@ -1973,89 +2003,174 @@ function t(key) {
 }
 
 /* ── Sayfa içeriği çeviri tablosu ── */
+/* ── Kapsamlı çeviri haritası — TR metni → hedef dil ── */
 const PAGE_STRINGS = {
   en: {
-    /* Topbar */
-    'Create VM':'Create VM','Updates':'Updates','Reboot':'Reboot','Shutdown':'Shutdown','Help':'Help',
-    /* Summary page */
-    'KAYNAKLAR':'RESOURCES','SİSTEM BİLGİSİ':'SYSTEM INFO','CPU usage':'CPU Usage',
-    'Load average':'Load Average','RAM usage':'RAM Usage','/ HD space':'/ Disk Space','SWAP usage':'SWAP Usage',
-    'CPU USAGE':'CPU USAGE','MEMORY USAGE':'MEMORY USAGE','DISK I/O':'DISK I/O','NETWORK I/O':'NETWORK I/O',
-    /* Storage */
-    'YENİ SİTE EKLE':'ADD NEW SITE','Depolama':'Storage','ISO Kütüphanesi':'ISO Library',
-    'Disk birimleri':'Disk Volumes','DOSYA ADI':'FILE NAME','BOYUT':'SIZE','İŞLEMLER':'OPERATIONS',
-    'ISO yok':'No ISO files','ISO Yükle':'Upload ISO','Havuz Ekle':'Add Pool',
-    /* VM */
-    'Sanal Makineler':'Virtual Machines','VM Oluştur':'Create VM','Durum':'Status',
-    'Çalışıyor':'Running','Durduruldu':'Stopped','Bekliyor':'Paused',
-    /* Common */
+    /* ── Topbar ── */
+    'Güncellemeler':'Updates','Yeniden Başlat':'Reboot','Kapat':'Shutdown','Yardım':'Help',
+    /* ── Genel ── */
     'Kaydet':'Save','İptal':'Cancel','Sil':'Delete','Ekle':'Add','Yenile':'Refresh',
-    'Tamam':'OK','Hata':'Error','Başarılı':'Success','Uyarı':'Warning',
-    'Yükleniyor...':'Loading...','Veri yok':'No data',
-    /* Network */
+    'Tamam':'OK','Hata':'Error','Başarılı':'Success','Uyarı':'Warning','Kapat':'Close',
+    'Yükleniyor...':'Loading...','Veri yok':'No data','Oluştur':'Create','Düzenle':'Edit',
+    'Gönder':'Send','Test':'Test','Bağlantı Test':'Test Connection','Detay':'Details',
+    'Açıklama':'Description','Ad':'Name','Tür':'Type','Durum':'Status','İşlem':'Action',
+    'İşlemler':'Actions','Tarih':'Date','Kullanıcı':'User','Boyut':'Size','Yol':'Path',
+    'Başlat':'Start','Durdur':'Stop','Güç':'Power','Klonla':'Clone',
+    /* ── Özet ── */
+    'KAYNAKLAR':'RESOURCES','SİSTEM BİLGİSİ':'SYSTEM INFO',
+    'CPU usage':'CPU Usage','Load average':'Load Average','RAM usage':'RAM Usage',
+    '/ HD space':'/ Disk Space','SWAP usage':'SWAP Usage',
+    'CPU USAGE':'CPU USAGE','MEMORY USAGE':'MEMORY USAGE','DISK I/O':'DISK I/O','NETWORK I/O':'NETWORK I/O',
+    'Kaynak Durumu':'Resource Status','Sistem Bilgisi':'System Info',
+    'Hızlı Komutlar':'Quick Commands','Donanım':'Hardware','Detay':'Details',
+    /* ── Sanal Makineler ── */
+    'Sanal Makineler':'Virtual Machines','VM Oluştur':'Create VM',
+    'Çalışıyor':'Running','Durduruldu':'Stopped','Duraklatıldı':'Paused','Çöktü':'Crashed',
+    'Durdu':'Stopped','Önce VM seçin':'Select a VM first',
+    'Snapshot\'lar':'Snapshots','Snapshot Al':'Take Snapshot','Snapshot Adı':'Snapshot Name',
+    'İsteğe bağlı açıklama':'Optional description',
+    /* ── Ağ ── */
     'Ağ Yönetimi':'Network Management','Host Arayüzleri':'Host Interfaces',
     'Yeni Ağ Oluştur':'Create Network','Ağ Adı':'Network Name',
-    /* Monitor */
-    'Sistem İzleme':'System Monitoring','Süreçler':'Processes','Disk Kullanımı':'Disk Usage',
-    /* Users */
-    'Kullanıcı Yönetimi':'User Management','Kullanıcı Adı':'Username','Şifre':'Password',
-    'Rol':'Role','Yönetici':'Administrator',
-    /* Proxy */
-    'Nginx Reverse Proxy':'Nginx Reverse Proxy','HAProxy Load Balancer':'HAProxy Load Balancer',
-    'AD':'Name','DOMAIN':'Domain','UPSTREAM HOST':'Upstream Host','UPSTREAM PORT':'Upstream Port',
-    'Site Ekle':'Add Site','Site yok':'No sites',
-    /* Firewall */
-    'Güvenlik Duvarı (nftables)':'Firewall (nftables)','Kural Ekle':'Add Rule',
-    /* VPN */
-    'WireGuard VPN':'WireGuard VPN','Peer Listesi':'Peer List','Peer Ekle':'Add Peer',
-    /* DNS */
-    'DNS Yönetimi':'DNS Management','Host Kayıtları':'Host Records','DHCP Kiralamaları':'DHCP Leases',
-    /* AI */
-    'AI Asistan':'AI Assistant','Öneriler':'Recommendations','Doğal Dil Komutları':'Natural Language Commands',
-    'Anomali Dedektörü':'Anomaly Detector','Kapasite Tahmini':'Capacity Forecast',
-    'AI Ajanlar':'AI Agents','Ajan Ekle':'Add Agent',
-    /* Security */
-    'Güvenlik':'Security','2FA Yönetimi':'2FA Management','API Anahtarları':'API Keys',
-    'Audit Log':'Audit Log','LDAP / Active Directory':'LDAP / Active Directory',
-    /* Integrations */
-    'Entegrasyonlar':'Integrations','Webhook Yönetimi':'Webhook Management',
-    'S3 / MinIO Depolama':'S3 / MinIO Storage','VLAN Yönetimi':'VLAN Management',
-    /* Settings */
-    'Sistem Ayarları':'System Settings','SDN Durumu':'SDN Status',
+    'Yönlendirme':'Routing','IP Adresi':'IP Address','Köprü':'Bridge','DHCP':'DHCP',
+    'Arayüz':'Interface','IP Adresleri':'IP Addresses','Zaman Çizelgesi':'Timeline',
+    'Ağ Topoloji Haritası':'Network Topology Map','Ağ Geçidi IP':'Gateway IP',
+    'Ağ Maskesi':'Network Mask','DHCP Başlangıç':'DHCP Start','DHCP Bitiş':'DHCP End',
+    /* ── Depolama ── */
+    'Depolama':'Storage','ISO Kütüphanesi':'ISO Library','Disk Birimleri':'Disk Volumes',
+    'Dosya Adı':'File Name','KULLANIM':'USAGE','ACTION':'Action',
+    'ISO Yükle':'Upload ISO','Havuz Ekle':'Add Pool','Depolama Havuzu Ekle':'Add Storage Pool',
+    'Havuz Adı':'Pool Name','Host üzerindeki blok aygıtları.':'Block devices on host.',
+    'Kullanılan':'Used','Boş':'Free','Kapasite':'Capacity','Aygıt':'Device',
+    /* ── İzleme ── */
+    'Sistem İzleme':'System Monitoring','Sistem Bilgisi':'System Info',
+    'Süreçler (Top 20)':'Processes (Top 20)','Süreçler':'Processes',
+    'Disk Kullanımı':'Disk Usage','RAM %':'RAM %','Bağlama':'Mount',
+    /* ── Kullanıcılar ── */
+    'Kullanıcı Yönetimi':'User Management','Kullanıcı Adı':'Username',
+    'Şifre':'Password','Rol':'Role','Yönetici':'Administrator','Oluşturulma':'Created',
+    'Yeni Kullanıcı':'New User',
+    /* ── Güncellemeler ── */
+    'Güncellemeler':'Updates','GitHub Repo Ayarı':'GitHub Repo Setting',
+    'GitHub Repo URL':'GitHub Repo URL','Branch':'Branch',
+    'Durum bilinmiyor':'Status unknown','Kontrol Et':'Check','Yeni Güncellemeler':'New Updates',
+    'Güncelleme Geçmişi':'Update History',
+    /* ── Şablonlar ── */
+    'VM Şablonları':'VM Templates','VM\'den Şablon Oluştur':'Create Template from VM',
+    'VM Seç':'Select VM','Şablon Adı':'Template Name',
+    /* ── Yedekleme ── */
+    'Yedekleme Zamanlamaları':'Backup Schedules','Yeni Zamanlama':'New Schedule',
+    'Cron İfadesi':'Cron Expression','Hazır Seçenekler':'Presets','Seç':'Select',
+    'Günlük (02:00)':'Daily (02:00)','Haftalık (Pazar 02:00)':'Weekly (Sun 02:00)',
+    'Aylık (1. gün 02:00)':'Monthly (1st 02:00)','Retention (adet)':'Retention (count)',
+    'Sonraki Çalışma':'Next Run','Retention':'Retention','Backup Geçmişi':'Backup History',
+    /* ── Güvenlik Duvarı ── */
+    'Güvenlik Duvarı (nftables)':'Firewall (nftables)','Yeni Kural Ekle':'Add New Rule',
+    'Chain':'Chain','Protocol':'Protocol','Kaynak IP':'Source IP',
+    'Hedef Port':'Destination Port','Aksiyon':'Action',
+    /* ── VPN ── */
+    'WireGuard VPN':'WireGuard VPN','Yeni Peer Ekle':'Add New Peer',
+    'Peer Adı':'Peer Name','Allowed IPs':'Allowed IPs','Peer Listesi':'Peer List',
+    /* ── DNS ── */
+    'DNS Yönetimi':'DNS Management','Yeni Host Kaydı':'New Host Record',
+    'Hostname':'Hostname','Yorum':'Comment',
+    'Host Kayıtları':'Host Records','DHCP Kiralamaları':'DHCP Leases','Süre':'Lease Time',
+    /* ── Proxy ── */
+    'Proxy & Load Balancer':'Proxy & Load Balancer','Yeni Site Ekle':'Add New Site',
+    'Domain':'Domain','Upstream Host':'Upstream Host','Upstream Port':'Upstream Port',
+    'SSL':'SSL','WebSocket':'WebSocket','HAProxy Durumu':'HAProxy Status',
+    /* ── Gelişmiş İzleme ── */
+    'Gelişmiş İzleme':'Advanced Monitoring','Performans Geçmişi':'Performance History',
+    'SMART Disk Sağlığı':'SMART Disk Health','Sıcaklık':'Temperature',
+    'Güç Saati':'Power Hours','Sağlık':'Health','VM Uptime':'VM Uptime',
+    'Toplam Uptime':'Total Uptime','Kullanılabilirlik':'Availability','Boot Sayısı':'Boot Count',
+    'IDS/IPS Uyarıları (Suricata)':'IDS/IPS Alerts (Suricata)',
+    'İmza':'Signature','Severity':'Severity',
+    /* ── AI Asistan ── */
+    'AI Asistan':'AI Assistant','Öneriler':'Recommendations',
+    'Doğal Dil Komutları':'Natural Language Commands',
+    'Anomali Dedektörü':'Anomaly Detector','Metrik':'Metric','Değer':'Value',
+    'Z-Score':'Z-Score','Şiddet':'Severity','Kapasite Tahmini':'Capacity Forecast',
+    'Gün Sayısı':'Days','Tahmin Et':'Forecast',
+    'AI Ajan Cron Sistemi':'AI Agent Cron System','AI Ajanlar':'AI Agents',
+    'Ajan Ekle':'Add Agent','Henüz AI ajan eklenmedi.':'No AI agents added yet.',
+    'AI Ajan Ekle':'Add AI Agent','Ajan ID':'Agent ID','Ajan Adı':'Agent Name',
+    'Sağlayıcı':'Provider','Anthropic Claude':'Anthropic Claude',
+    'OpenAI':'OpenAI','Ollama (Yerel)':'Ollama (Local)','Model':'Model',
+    'Kontrol Aralığı (dk)':'Check Interval (min)',
+    /* ── Güvenlik ── */
+    'Güvenlik':'Security','OXware Lisans':'OXware License','Lisans Aktif':'License Active',
+    'Kod Öneki':'Code Prefix','Aktivasyon':'Activation','Lisans Kodu':'License Key',
+    'Doğrula':'Validate','Lisansı Deaktive Et':'Deactivate License',
+    '2FA Yönetimi':'2FA Management','API Anahtarları':'API Keys',
+    'Anahtar Adı':'Key Name','Süre (gün, boş=sınırsız)':'Duration (days, empty=unlimited)',
+    'Son Kullanım':'Last Used','Kullanım':'Usage','İptal':'Revoke',
+    'Audit Log':'Audit Log','CSV İndir':'Download CSV','Aksiyon':'Action',
+    'LDAP / Active Directory':'LDAP / Active Directory',
+    'Base DN':'Base DN','Bind DN':'Bind DN','Bind Password':'Bind Password',
+    'Admin Group':'Admin Group','Operator Group':'Operator Group',
+    /* ── Entegrasyonlar ── */
+    'Entegrasyonlar':'Integrations','Bildirim Ayarları':'Notification Settings',
+    'Minimum Seviye':'Minimum Level',
+    'MinIO / S3 Depolama':'MinIO / S3 Storage','Endpoint':'Endpoint',
+    'Access Key':'Access Key','Secret Key':'Secret Key','Bucket':'Bucket','Region':'Region',
+    'E-posta Bildirimleri (SMTP)':'Email Notifications (SMTP)',
+    'SMTP Host':'SMTP Host','Gönderen (From)':'Sender (From)','TLS':'TLS',
+    'Test Gönder':'Send Test','Webhook Yönetimi':'Webhook Management',
+    'URL':'URL','Secret':'Secret','Olaylar':'Events','Webhook Ekle':'Add Webhook',
+    'VLAN Yönetimi':'VLAN Management','Parent Interface':'Parent Interface',
+    'VLAN ID':'VLAN ID','VLAN Ekle':'Add VLAN',
+    /* ── Sistem Ayarları ── */
+    'Sistem Ayarları':'System Settings','SDN Durumu (OVS)':'SDN Status (OVS)',
     'SSL Sertifika Yönetimi':'SSL Certificate Management',
-    'Auto-Scaler Politikaları':'Auto-Scaler Policies','Kaynak Kotaları':'Resource Quotas',
-    /* Backup */
-    'Yedekleme Zamanlamaları':'Backup Schedules','Backup Geçmişi':'Backup History',
-    /* Tasks */
+    'Let\'s Encrypt Domain':'Let\'s Encrypt Domain','E-posta':'Email',
+    'Sertifika Al':'Get Certificate',
+    'Auto-Scaler Politikaları':'Auto-Scaler Policies',
+    'CPU Eşiği':'CPU Threshold','vCPU Aralığı':'vCPU Range','RAM Aralığı':'RAM Range',
+    'Kaynak Kotaları':'Resource Quotas','Max vCPU':'Max vCPU','Max RAM':'Max RAM',
+    /* ── VM Oluştur Modal ── */
+    'Yeni Sanal Makine Oluştur':'Create New Virtual Machine',
+    'VM Adı':'VM Name','CPU (vCPU)':'CPU (vCPU)','Bellek (MB)':'Memory (MB)',
+    'Disk (GB)':'Disk (GB)','Disk Formatı':'Disk Format',
+    'Kurulum için ISO seçin veya boş disk ile başlayın':'Select ISO for installation or start with empty disk',
+    'ISO (Opsiyonel)':'ISO (Optional)','ISO seçme':'No ISO','İşletim Sistemi':'OS Type',
+    'Genel':'General','Açılış Sırası':'Boot Order',
+    'CD-ROM → Disk':'CD-ROM → Disk','Disk → CD-ROM':'Disk → CD-ROM',
+    'Yalnızca Disk':'Disk Only','VM Oluştur':'Create VM',
+    /* ── Diğer Modallar ── */
+    'Yeni Ağ Oluştur':'Create Network',
+    'Çıkış yapmak istiyor musunuz?':'Do you want to log out?',
+    /* ── Tasks Paneli ── */
     'Tasks':'Tasks','Event Log':'Event Log',
-    'START TIME':'Start Time','END TIME':'End Time','NODE':'Node','USER':'User',
+    'START TIME':'Start Time','END TIME':'End Time','NODE':'Node',
     'DESCRIPTION':'Description','STATUS':'Status',
+    /* ── Snapshot ── */
+    'Snapshot Yönetimi':'Snapshot Management',
+    /* ── Topoloji ── */
+    'Ağ Topoloji Haritası':'Network Topology Map',
   },
-  tr: {},  // TR zaten default
+  tr: {},  /* TR zaten varsayılan — boş bırak */
   es: {
-    'Create VM':'Crear VM','Updates':'Actualizaciones','Reboot':'Reiniciar','Shutdown':'Apagar',
-    'KAYNAKLAR':'RECURSOS','SİSTEM BİLGİSİ':'INFO DEL SISTEMA',
-    'CPU usage':'Uso de CPU','RAM usage':'Uso de RAM',
-    'Kaydet':'Guardar','İptal':'Cancelar','Sil':'Eliminar','Ekle':'Añadir','Yenile':'Actualizar',
-    'Yükleniyor...':'Cargando...','Veri yok':'Sin datos',
-    'Sanal Makineler':'Máquinas Virtuales','Çalışıyor':'Ejecutando','Durduruldu':'Detenido',
+    'Sanal Makineler':'Máquinas Virtuales','Depolama':'Almacenamiento',
+    'Güvenlik':'Seguridad','Entegrasyonlar':'Integraciones','Sistem Ayarları':'Configuración',
+    'Kaydet':'Guardar','İptal':'Cancelar','Sil':'Eliminar','Yenile':'Actualizar',
+    'Çalışıyor':'Ejecutando','Durduruldu':'Detenido','Durum':'Estado',
+    'Kullanıcı Adı':'Usuario','Şifre':'Contraseña','Yükleniyor...':'Cargando...',
   },
   de: {
-    'Create VM':'VM erstellen','Updates':'Updates','Reboot':'Neustart','Shutdown':'Herunterfahren',
-    'KAYNAKLAR':'RESSOURCEN','SİSTEM BİLGİSİ':'SYSTEMINFO',
-    'CPU usage':'CPU-Auslastung','RAM usage':'RAM-Auslastung',
-    'Kaydet':'Speichern','İptal':'Abbrechen','Sil':'Löschen','Ekle':'Hinzufügen','Yenile':'Aktualisieren',
-    'Yükleniyor...':'Lädt...','Veri yok':'Keine Daten',
-    'Sanal Makineler':'Virtuelle Maschinen','Çalışıyor':'Läuft','Durduruldu':'Gestoppt',
+    'Sanal Makineler':'Virtuelle Maschinen','Depolama':'Speicher',
+    'Güvenlik':'Sicherheit','Entegrasyonlar':'Integrationen','Sistem Ayarları':'Einstellungen',
+    'Kaydet':'Speichern','İptal':'Abbrechen','Sil':'Löschen','Yenile':'Aktualisieren',
+    'Çalışıyor':'Läuft','Durduruldu':'Gestoppt','Durum':'Status',
+    'Kullanıcı Adı':'Benutzername','Şifre':'Passwort','Yükleniyor...':'Lädt...',
   },
   zh: {
-    'Create VM':'创建VM','Updates':'更新','Reboot':'重启','Shutdown':'关机',
-    'KAYNAKLAR':'资源','SİSTEM BİLGİSİ':'系统信息',
-    'CPU usage':'CPU使用率','RAM usage':'内存使用率',
-    'Kaydet':'保存','İptal':'取消','Sil':'删除','Ekle':'添加','Yenile':'刷新',
-    'Yükleniyor...':'加载中...','Veri yok':'无数据',
-    'Sanal Makineler':'虚拟机','Çalışıyor':'运行中','Durduruldu':'已停止',
-  }
+    'Sanal Makineler':'虚拟机','Depolama':'存储',
+    'Güvenlik':'安全','Entegrasyonlar':'集成','Sistem Ayarları':'系统设置',
+    'Kaydet':'保存','İptal':'取消','Sil':'删除','Yenile':'刷新',
+    'Çalışıyor':'运行中','Durduruldu':'已停止','Durum':'状态',
+    'Kullanıcı Adı':'用户名','Şifre':'密码','Yükleniyor...':'加载中...',
+  },
 };
 
 /* i18n originals store — WeakMap so GC can clean up removed nodes */
@@ -2086,30 +2201,49 @@ function _i18nSetText(el, newText) {
 function applyPageTranslations(code) {
   const map = (code && code !== 'tr') ? PAGE_STRINGS[code] : null;
 
-  const selectors = [
-    '.section-header h2',
-    '.card-title',
-    'th',
-    'label',
-    '.tb-action span',
-    '.ctx-section-header > span:first-child',
-  ];
+  /* ── TreeWalker: traverse every text node in the body ── */
+  const SKIP_TAGS = new Set(['SCRIPT','STYLE','INPUT','TEXTAREA','OPTION','CODE','PRE','NOSCRIPT','SVG','MATH']);
+  const walker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode(node) {
+        const p = node.parentElement;
+        if (!p) return NodeFilter.FILTER_REJECT;
+        if (SKIP_TAGS.has(p.tagName)) return NodeFilter.FILTER_REJECT;
+        // skip empty / whitespace-only nodes
+        if (!node.textContent.trim()) return NodeFilter.FILTER_SKIP;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    }
+  );
 
-  document.querySelectorAll(selectors.join(',')).forEach(el => {
-    // Save original Turkish text on first encounter
-    const orig = _i18nOrig.get(el) ?? _i18nGetText(el) ?? el.textContent.trim();
-    if (!_i18nOrig.has(el)) _i18nOrig.set(el, orig);
+  const nodes = [];
+  let n;
+  while ((n = walker.nextNode())) nodes.push(n);
+
+  nodes.forEach(node => {
+    // Store original Turkish text on first encounter
+    if (node._i18nOrig === undefined) {
+      node._i18nOrig = node.textContent.trim();
+    }
+    const orig = node._i18nOrig;
     if (!orig) return;
 
+    // Preserve leading/trailing whitespace
+    const raw   = node.textContent;
+    const lead  = raw.match(/^\s*/)[0];
+    const trail = raw.match(/\s*$/)[0];
+
     if (!map) {
-      // Restore Turkish
-      _i18nSetText(el, orig);
+      // Restore Turkish original
+      node.textContent = lead + orig + trail;
     } else if (map[orig]) {
-      _i18nSetText(el, map[orig]);
+      node.textContent = lead + map[orig] + trail;
     }
   });
 
-  // data-i18n attribute — key IS the Turkish text
+  // data-i18n attribute elements (key IS the Turkish label)
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     if (!map) {
@@ -3393,23 +3527,28 @@ async function loadAIAgents() {
     const agents = data.agents || [];
     const el = document.getElementById("ai-agents-list");
     if (!agents.length) { el.innerHTML = `<div class="empty-state"><div class="icon">🤖</div><h3>AI Ajan yok</h3></div>`; return; }
-    el.innerHTML = agents.map(a => `<div class="agent-card">
-      <div class="agent-status" style="background:${a.running ? "var(--green-lt)" : "var(--border2)"}"></div>
-      <div style="flex:1">
-        <div style="font-weight:600;display:flex;align-items:center;gap:8px">
-          ${escHtml(a.name)}
-          <span class="agent-cron">⏱ ${a.interval}dk</span>
+    const PERM_LABELS = {monitor:'📊 İzleme',events:'📋 Olaylar',alerts:'🔔 Uyarı',vm_read:'🖥️ VM Oku',vm_manage:'⚙️ VM Yönet',vm_delete:'🗑️ VM Sil',network:'🌐 Ağ',storage:'💾 Depolama'};
+    el.innerHTML = agents.map(a => `<div class="agent-card" style="flex-direction:column;align-items:flex-start;gap:8px">
+      <div style="display:flex;align-items:center;gap:10px;width:100%">
+        <div class="agent-status" style="background:${a.running ? "var(--green-lt)" : "var(--border2)"}"></div>
+        <div style="flex:1">
+          <div style="font-weight:600;display:flex;align-items:center;gap:8px">
+            ${escHtml(a.name)}
+            <span class="agent-cron">⏱ ${a.interval}dk</span>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:3px">
+            ${escHtml(a.provider)} · <code style="font-size:10px">${escHtml(a.model)}</code>
+          </div>
         </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:3px">
-          ${escHtml(a.provider)} · <code style="font-size:10px">${escHtml(a.model)}</code>
-          ${(a.tasks||[]).map(t => `<span style="margin-left:4px;font-size:9px;padding:1px 5px;background:rgba(30,45,69,.5);border-radius:2px">${t}</span>`).join("")}
-        </div>
+        <span class="badge ${a.running ? "running" : (a.enabled ? "green" : "gray")}" style="margin-right:4px">
+          <span class="badge-dot"></span>${a.running ? "Çalışıyor" : (a.enabled ? "Aktif" : "Pasif")}
+        </span>
+        <button class="btn sm" onclick="triggerAgent('${escHtml(a.id)}')" title="Şimdi çalıştır">▶</button>
+        <button class="btn sm danger" onclick="deleteAIAgent('${escHtml(a.id)}')">✕</button>
       </div>
-      <span class="badge ${a.running ? "running" : (a.enabled ? "green" : "gray")}" style="margin-right:4px">
-        <span class="badge-dot"></span>${a.running ? "Çalışıyor" : (a.enabled ? "Aktif" : "Pasif")}
-      </span>
-      <button class="btn sm" onclick="triggerAgent('${escHtml(a.id)}')" title="Şimdi çalıştır">▶</button>
-      <button class="btn sm danger" onclick="deleteAIAgent('${escHtml(a.id)}')">✕</button>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;padding-left:18px">
+        ${(a.tasks||[]).map(t => `<span style="font-size:10px;padding:2px 7px;background:rgba(42,109,217,.18);border:1px solid rgba(42,109,217,.3);border-radius:3px;color:var(--accent-lt)">${PERM_LABELS[t]||t}</span>`).join("")}
+      </div>
     </div>`).join("");
   } catch (e) { toast(e.message, "error"); }
 }
@@ -3423,23 +3562,32 @@ async function addAIAgent() {
   const interval = parseInt(document.getElementById("agent-interval").value) || 15;
   if (!agent_id || !name) return toast("ID ve Ad zorunlu", "error");
   if (provider !== "ollama" && !api_key) return toast("API Key zorunlu", "error");
+
+  // Collect permissions
+  const PERM_MAP = {
+    'perm-monitor': 'monitor', 'perm-events': 'events', 'perm-alerts': 'alerts',
+    'perm-vm-read': 'vm_read', 'perm-vm-manage': 'vm_manage', 'perm-vm-delete': 'vm_delete',
+    'perm-network': 'network', 'perm-storage': 'storage'
+  };
+  const tasks = Object.entries(PERM_MAP)
+    .filter(([id]) => document.getElementById(id)?.checked)
+    .map(([, v]) => v);
+  if (!tasks.length) return toast("En az bir yetki seçin", "error");
+
   try {
     await api("/ai/agents", {
       method: "POST",
       body: {
-        agent_id,
-        name,
-        provider,
+        agent_id, name, provider,
         api_key: api_key || "none",
         model: model || undefined,
         interval_minutes: interval,
-        tasks: ["monitor", "events", "alerts"],
+        tasks,
         enabled: true
       }
     });
     toast("Ajan eklendi", "success");
     closeModal("modal-add-agent");
-    // Reset form
     document.getElementById("agent-id").value = "";
     document.getElementById("agent-name").value = "";
     document.getElementById("agent-apikey").value = "";
@@ -4098,7 +4246,18 @@ async function loadPerfHistory(period='1h') {
   const d = await _api(`/api/metrics/system?period=${period}`);
   const data = d.data || [];
   if (!data.length) return;
-  const labels = data.map(p => new Date((p.ts||p.timestamp||0)*1000).toLocaleTimeString('tr-TR'));
+
+  // Format timestamps in LOCAL browser timezone
+  const fmt = (ts) => {
+    const dt = new Date((ts||0)*1000);
+    // For day+ periods show date+time, for shorter periods just time
+    if (period === '7d' || period === '30d') {
+      return dt.toLocaleDateString(undefined, {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    }
+    return dt.toLocaleTimeString(undefined, {hour:'2-digit',minute:'2-digit'});
+  };
+
+  const labels  = data.map(p => fmt(p.ts||p.timestamp||0));
   const cpuData = data.map(p => p.cpu_pct||p.cpu||0);
   const memData = data.map(p => p.mem_pct||p.mem||0);
   const ctx = document.getElementById('perfHistoryChart');
@@ -4109,14 +4268,27 @@ async function loadPerfHistory(period='1h') {
     data: {
       labels,
       datasets: [
-        {label: 'CPU %', data: cpuData, borderColor: '#00d4ff', backgroundColor: 'rgba(0,212,255,0.1)', tension: 0.3, fill: true},
-        {label: 'RAM %', data: memData, borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.1)', tension: 0.3, fill: true}
+        {label: 'CPU %', data: cpuData, borderColor: '#00d4ff', backgroundColor: 'rgba(0,212,255,0.1)', tension: 0.3, fill: true, pointRadius: 0},
+        {label: 'RAM %', data: memData, borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.1)', tension: 0.3, fill: true, pointRadius: 0}
       ]
     },
-    options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {labels: {color: '#e6edf3'}}}, scales: {
-      x: {ticks: {color: '#8b949e'}, grid: {color: '#30363d'}},
-      y: {ticks: {color: '#8b949e'}, grid: {color: '#30363d'}, min: 0, max: 100}
-    }}
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: false,
+      plugins: {legend: {labels: {color: '#e6edf3'}}},
+      scales: {
+        x: {
+          ticks: {
+            color: '#8b949e',
+            maxTicksLimit: 10,      // max 10 label göster
+            maxRotation: 0,         // yatay tut
+            autoSkip: true
+          },
+          grid: {color: '#30363d'}
+        },
+        y: {ticks: {color: '#8b949e'}, grid: {color: '#30363d'}, min: 0, max: 100}
+      }
+    }
   });
 }
 
@@ -4263,9 +4435,45 @@ async function load2faStatus() {
 async function setup2fa() {
   const d = await _api('/api/auth/2fa/setup', 'POST');
   if (!d.available) { toast('pyotp kurulu değil', 'error'); return; }
-  const code = prompt(`2FA URI:\n${d.uri||''}\n\nGoogle Authenticator ile tara, sonra 6 haneli kodu gir:`);
-  if (!code) return;
+  const uri = d.uri || '';
+  // Build a QR code image using qrserver API (works offline fallback = show URI)
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&bgcolor=ffffff&color=000000&data=${encodeURIComponent(uri)}`;
+  // Show in modal
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:24px;max-width:360px;width:90%;text-align:center">
+      <h3 style="margin-bottom:16px;font-size:15px">🔐 2FA Kurulumu</h3>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+        Google Authenticator / Authy ile aşağıdaki QR kodu tarayın:
+      </p>
+      <div style="background:#fff;padding:10px;border-radius:6px;display:inline-block;margin-bottom:12px">
+        <img src="${qrUrl}" width="180" height="180" onerror="this.style.display='none';document.getElementById('uri-fallback').style.display='block'" alt="QR Code">
+        <div id="uri-fallback" style="display:none;font-size:10px;color:#333;word-break:break-all;max-width:180px">${escHtml(uri)}</div>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:14px">Tarama yapamıyorsanız URI'yi kopyalayın:</p>
+      <input readonly value="${escHtml(uri)}" onclick="this.select()" style="width:100%;font-size:10px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);margin-bottom:14px">
+      <div style="margin-bottom:10px;text-align:left">
+        <label style="font-size:12px;color:var(--text-muted)">Uygulamadan 6 haneli kodu girin:</label>
+        <input id="_2fa-code-input" type="text" inputmode="numeric" maxlength="6" placeholder="000000"
+          style="width:100%;padding:8px;margin-top:6px;background:var(--surface);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:18px;letter-spacing:6px;text-align:center">
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn" onclick="this.closest('[style]').remove()">İptal</button>
+        <button class="btn primary" onclick="confirm2faSetup(this)">✓ Doğrula & Etkinleştir</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.querySelector('#_2fa-code-input')?.focus(), 100);
+}
+
+async function confirm2faSetup(btn) {
+  const input = document.getElementById('_2fa-code-input');
+  const code = input ? input.value.trim() : '';
+  if (!code || code.length !== 6) { toast('6 haneli kodu girin', 'error'); return; }
+  btn.disabled = true; btn.textContent = '...';
   const r = await _api('/api/auth/2fa/enable', 'POST', {code});
+  btn.closest('[style]').remove();
   toast(r.status === 'ok' ? '2FA aktif!' : (r.error || 'Hata'), r.status === 'ok' ? 'success' : 'error');
   load2faStatus();
 }
