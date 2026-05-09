@@ -263,17 +263,39 @@ def _send_telegram(token: str, chat_id: str, text: str) -> bool:
 # ── Discord ───────────────────────────────────────────────────────────────────
 
 def _send_discord(webhook_url: str, title: str, description: str, color: int = 0xFF0000) -> bool:
+    import urllib.request, urllib.error
+    payload = json.dumps({
+        "username": "OXware Hypervisor",
+        "avatar_url": "https://raw.githubusercontent.com/ShinnAsukha/oxware-hypervisor/main/oxware/frontend/static/img/sadeceikon.png",
+        "embeds": [{
+            "title": title,
+            "description": description,
+            "color": color,
+            "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+            "footer": {"text": "OXware Hypervisor"},
+        }]
+    }).encode("utf-8")
+
     try:
-        r = requests.post(webhook_url, json={
-            "embeds": [{
-                "title": title,
-                "description": description,
-                "color": color,
-                "timestamp": datetime.utcnow().isoformat(),
-                "footer": {"text": "OXware Hypervisor"},
-            }]
-        }, timeout=10)
-        return r.status_code in (200, 204)
+        # requests ile dene
+        r = requests.post(
+            webhook_url,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=10
+        )
+        if r.status_code in (200, 204):
+            return True
+        log.warning("Discord webhook yanıtı: %s %s", r.status_code, r.text[:200])
+        return False
+    except Exception:
+        pass
+
+    # urllib fallback
+    try:
+        req = urllib.request.Request(webhook_url, data=payload, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.status in (200, 204)
     except Exception as e:
         print(f"[notifications] Discord hatası: {e}")
         return False
@@ -414,14 +436,33 @@ def send_alert(
     }
 
 
-def test_notification() -> dict:
-    """Test bildirimi gönder."""
-    return send_alert(
-        message="Bu bir test bildirimidir. OXware bildirim sistemi çalışıyor.",
-        level="INFO",
-        category="system",
-        details={"test": True, "timestamp": datetime.now().isoformat()},
-    )
+def test_notification(channel: str = None) -> dict:
+    """Test bildirimi gönder — seviye kısıtlamasını bypass eder."""
+    cfg = _load_config()
+    results = {}
+    hostname = cfg.get("hostname_tag") or _get_hostname()
+
+    if channel == "telegram" or channel is None:
+        token = cfg.get("telegram_token")
+        chat = cfg.get("telegram_chat_id")
+        if token and chat:
+            msg = (f"✅ <b>OXware Test Bildirimi</b>\n"
+                   f"🖥️ Host: {hostname}\n"
+                   f"🕐 {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
+                   f"Telegram bildirimleri çalışıyor!")
+            results["telegram"] = _send_telegram(token, chat, msg)
+
+    if channel == "discord" or channel is None:
+        webhook = cfg.get("discord_webhook")
+        if webhook:
+            results["discord"] = _send_discord(
+                webhook,
+                "✅ OXware Test Bildirimi",
+                f"**Host:** `{hostname}`\n**Zaman:** {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\nDiscord bildirimleri çalışıyor!",
+                0x00D4FF
+            )
+
+    return {"sent": bool(results), "results": results}
 
 
 def _get_hostname() -> str:

@@ -795,7 +795,8 @@ def api_save_notif_config():
 @app.route("/api/notifications/test", methods=["POST"])
 @require_auth
 def api_test_notification():
-    result = notifications.test_notification()
+    channel = (request.json or {}).get("channel")  # "telegram", "discord", None=hepsi
+    result = notifications.test_notification(channel=channel)
     return ok(**result)
 
 # ── Güncelleme Sistemi ────────────────────────────────────────────────────────
@@ -1913,6 +1914,141 @@ def api_test_notification_channel():
         notifications.send_alert("OXware test bildirimi", channels=[channel])
         return ok({"sent": True})
     return err("Bildirim modülü hazır değil")
+
+# ── ISO Upload (streaming / chunked) ────────────────────────────────────────────
+@app.route("/api/storage/iso/upload", methods=["POST"])
+@require_auth
+def upload_iso():
+    """ISO dosyası yükle — progress bar için chunked upload."""
+    import shutil, tempfile, re as _re
+
+    if "file" not in request.files:
+        return jsonify({"error": "Dosya bulunamadı"}), 400
+
+    f = request.files["file"]
+    if not f.filename:
+        return jsonify({"error": "Dosya adı boş"}), 400
+
+    # Güvenlik: sadece .iso
+    fname = f.filename
+    if not fname.lower().endswith(".iso"):
+        return jsonify({"error": "Yalnızca .iso dosyaları kabul edilir"}), 400
+
+    # Güvenli dosya adı
+    safe_name = _re.sub(r"[^a-zA-Z0-9_\-\. ]", "_", fname)
+    safe_name = safe_name.replace(" ", "_")
+
+    iso_dir = config.ISO_DIR
+    os.makedirs(iso_dir, exist_ok=True)
+    dest = os.path.join(iso_dir, safe_name)
+
+    tmp_path = None
+    try:
+        # Temp dosyaya yaz, sonra taşı (atomik)
+        with tempfile.NamedTemporaryFile(dir=iso_dir, delete=False, suffix=".tmp") as tmp:
+            chunk_size = 65536  # 64KB chunks
+            while True:
+                chunk = f.stream.read(chunk_size)
+                if not chunk:
+                    break
+                tmp.write(chunk)
+            tmp_path = tmp.name
+
+        shutil.move(tmp_path, dest)
+        size = os.path.getsize(dest)
+
+        log.info("ISO yüklendi: %s (%d bytes)", safe_name, size)
+        if audit_log:
+            audit_log.log("system", "iso_upload", fname, "success")
+        else:
+            log.info("Audit: iso_upload %s success", fname)
+
+        return jsonify({
+            "success": True,
+            "filename": safe_name,
+            "size": size,
+            "path": dest,
+        })
+    except Exception as e:
+        log.error("ISO upload hatası: %s", e)
+        # Temp dosyayı temizle
+        try:
+            if tmp_path and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+        except Exception:
+            pass
+        return jsonify({"error": str(e)}), 500
+
+
+# ── Lisans ──────────────────────────────────────────────────────────────────────
+
+def _license_mgr():
+    return _safe_import("license_manager")
+
+@app.route("/api/license/status", methods=["GET"])
+@require_auth
+def license_status():
+    m = _license_mgr()
+    if m:
+        return jsonify(m.get_license_status())
+    return jsonify({"active": False})
+
+@app.route("/api/license/validate", methods=["POST"])
+@require_auth
+def license_validate():
+    m = _license_mgr()
+    if not m:
+        return jsonify({"valid": False, "error": "Lisans modülü yüklenemedi"}), 500
+    code = (request.json or {}).get("code", "").strip()
+    if not code:
+        return jsonify({"valid": False, "error": "Kod boş"}), 400
+    result = m.validate_license(code)
+    username = get_jwt_identity()
+    if audit_log:
+        audit_log.log(username, "license_validate", code[:14], "success" if result.get("valid") else "fail")
+    else:
+        log.info("Audit: %s license_validate %s %s", username, code[:14], "success" if result.get("valid") else "fail")
+    return jsonify(result)
+
+@app.route("/api/license/deactivate", methods=["POST"])
+@require_auth
+def license_deactivate():
+    m = _license_mgr()
+    if not m:
+        return jsonify({"success": False}), 500
+    result = m.deactivate_license()
+    username = get_jwt_identity()
+    if audit_log:
+        audit_log.log(username, "license_deactivate", "", "success")
+    else:
+        log.info("Audit: %s license_deactivate success", username)
+    return jsonify(result)
+
+
+# ── Dil Tercihi ─────────────────────────────────────────────────────────────────
+
+@app.route("/api/settings/language", methods=["GET", "POST"])
+@require_auth
+def language_setting():
+    lang_file = "/var/lib/oxware/language.json"
+    if request.method == "GET":
+        try:
+            if os.path.exists(lang_file):
+                with open(lang_file) as f:
+                    return jsonify(json.load(f))
+        except Exception:
+            pass
+        return jsonify({"language": "en"})
+
+    lang = (request.json or {}).get("language", "en")
+    supported = ["en", "tr", "es", "de", "zh"]
+    if lang not in supported:
+        return jsonify({"error": "Desteklenmeyen dil"}), 400
+    os.makedirs("/var/lib/oxware", exist_ok=True)
+    with open(lang_file, "w") as f:
+        json.dump({"language": lang}, f)
+    return jsonify({"success": True, "language": lang})
+
 
 # ── Background Servisleri Başlat ───────────────────────────────────────────────
 def _start_background_services():

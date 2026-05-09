@@ -270,19 +270,52 @@
       <div class="nav-link" onclick="showPage('provisioning')"><div class="dot"></div>Otomatik Provisioning</div>
       <div class="nav-link" onclick="showPage('topology')"><div class="dot"></div>Topoloji Haritası</div>
       <div class="nav-link" onclick="showPage('console')"><div class="dot"></div>VM Konsol (noVNC)</div>
+      <div class="nav-link" onclick="showPage('templates')"><div class="dot"></div>VM Şablonları</div>
+      <div class="nav-link" onclick="showPage('backup')"><div class="dot"></div>Yedekleme</div>
+      <div class="nav-link" onclick="showPage('firewall')"><div class="dot"></div>Güvenlik Duvarı</div>
+      <div class="nav-link" onclick="showPage('vpn')"><div class="dot"></div>VPN</div>
+      <div class="nav-link" onclick="showPage('dns')"><div class="dot"></div>DNS</div>
+      <div class="nav-link" onclick="showPage('proxy')"><div class="dot"></div>Proxy &amp; LB</div>
     </div>
 
     <div class="nav-group">
       <div class="nav-group-title">Sistem</div>
       <div class="nav-link" onclick="showPage('monitor')"><div class="dot"></div>Sistem İzleme</div>
       <div class="nav-link" onclick="showPage('events')"><div class="dot"></div>Olay Günlüğü</div>
-      <div class="nav-link" onclick="showPage('ai-agents')"><div class="dot"></div>AI Ajan Sistemi</div>
+      <div class="nav-link" onclick="showPage('ai-agents')"><div class="dot"></div>AI Asistan &amp; Ajanlar</div>
+      <div class="nav-link" onclick="showPage('anomaly')"><div class="dot"></div>Anomali Dedektörü</div>
+      <div class="nav-link" onclick="showPage('autoscale')"><div class="dot"></div>Otomatik Ölçeklendirme</div>
       <div class="nav-link" onclick="showPage('notifications')"><div class="dot"></div>Bildirimler</div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Güvenlik</div>
       <div class="nav-link" onclick="showPage('security')"><div class="dot"></div>Güvenlik</div>
+      <div class="nav-link" onclick="showPage('2fa')"><div class="dot"></div>2FA</div>
+      <div class="nav-link" onclick="showPage('api-keys')"><div class="dot"></div>API Keys</div>
+      <div class="nav-link" onclick="showPage('audit')"><div class="dot"></div>Audit Log</div>
+      <div class="nav-link" onclick="showPage('ldap')"><div class="dot"></div>LDAP</div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Entegrasyonlar</div>
+      <div class="nav-link" onclick="showPage('notifications')"><div class="dot"></div>Telegram / Discord / Email</div>
+      <div class="nav-link" onclick="showPage('webhooks')"><div class="dot"></div>Webhooks</div>
+      <div class="nav-link" onclick="showPage('s3')"><div class="dot"></div>S3 Depolama</div>
+      <div class="nav-link" onclick="showPage('vlan')"><div class="dot"></div>VLAN</div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Sistem Ayarları</div>
+      <div class="nav-link" onclick="showPage('ssl-config')"><div class="dot"></div>SSL</div>
+      <div class="nav-link" onclick="showPage('sdn')"><div class="dot"></div>SDN</div>
+      <div class="nav-link" onclick="showPage('quotas')"><div class="dot"></div>Kaynak Kotaları</div>
     </div>
 
     <div class="nav-group">
       <div class="nav-group-title">Referans</div>
+      <div class="nav-link" onclick="showPage('cli-tools')"><div class="dot"></div>CLI Araçları</div>
+      <div class="nav-link" onclick="showPage('license')"><div class="dot"></div>Lisans Sistemi</div>
       <div class="nav-link" onclick="showPage('api')"><div class="dot"></div>API Referansı</div>
       <div class="nav-link" onclick="showPage('config')"><div class="dot"></div>Yapılandırma Dosyaları</div>
       <div class="nav-link" onclick="showPage('troubleshoot')"><div class="dot"></div>Sorun Giderme</div>
@@ -1375,6 +1408,111 @@ virsh net-list --all</code></pre>
       </div>
     </div>
 
+    <!-- ══════════════════════ CLI TOOLS ══════════════════════ -->
+    <div class="doc-page" id="page-cli-tools">
+      <div class="doc-hero">
+        <h1>CLI <span>Araçları</span></h1>
+        <p>OXware, kurulumla birlikte iki CLI aracı içerir: <code>ox</code> ve <code>oxupdate</code>.</p>
+      </div>
+      <div class="doc-body">
+        <h2><code>ox</code> — OXware Yönetim Aracı</h2>
+        <p><code>ox</code> komutu, OXware servisini terminal üzerinden yönetmek için kullanılan ana CLI aracıdır.</p>
+        <pre><code>ox --help          # Tüm komutları listele
+ox --status        # Servis durumunu göster
+ox --start         # Servisi başlat
+ox --stop          # Servisi durdur
+ox --restart       # Servisi yeniden başlat
+ox --logs          # Son 50 log satırını göster
+ox --logs -f       # Canlı log akışı
+ox --info          # Sistem bilgisi (CPU, RAM, Disk, KVM durumu)
+ox --vms           # VM listesi (virsh list --all)
+ox --url           # Web arayüz URL'sini göster
+ox --config        # Yapılandırma dosyası yolunu göster
+ox --update        # oxupdate çalıştır
+ox --version       # Sürüm bilgisi</code></pre>
+
+        <h3>Komut Tablosu</h3>
+        <table>
+          <tr><th>Komut</th><th>Açıklama</th></tr>
+          <tr><td><code>ox --status</code></td><td>systemctl status oxware çıktısını ve Web UI URL'sini gösterir</td></tr>
+          <tr><td><code>ox --start</code></td><td>OXware servisini başlatır</td></tr>
+          <tr><td><code>ox --stop</code></td><td>OXware servisini durdurur</td></tr>
+          <tr><td><code>ox --restart</code></td><td>OXware servisini yeniden başlatır</td></tr>
+          <tr><td><code>ox --logs</code></td><td>journalctl üzerinden son 50 log satırını gösterir</td></tr>
+          <tr><td><code>ox --logs -f</code></td><td>Canlı log akışı (Ctrl+C ile çık)</td></tr>
+          <tr><td><code>ox --info</code></td><td>CPU, RAM, Disk ve KVM durumunu özetler</td></tr>
+          <tr><td><code>ox --vms</code></td><td>virsh list --all çıktısını gösterir</td></tr>
+          <tr><td><code>ox --url</code></td><td>https://&lt;sunucu-ip&gt;:8006 adresini gösterir</td></tr>
+          <tr><td><code>ox --update</code></td><td>oxupdate aracını çalıştırır</td></tr>
+        </table>
+
+        <h2><code>oxupdate</code> — Güncelleme Aracı</h2>
+        <p><code>oxupdate</code>, OXware'i en son sürüme güncellemek için kullanılır. Root yetkisi gerektirir.</p>
+        <pre><code>sudo oxupdate     # OXware'i en son sürüme güncelle</code></pre>
+        <p><code>oxupdate</code> şu adımları otomatik olarak gerçekleştirir:</p>
+        <ol>
+          <li>OXware servisini durdurur</li>
+          <li>GitHub'dan (<code>origin/main</code>) en son versiyonu çeker</li>
+          <li>Python bağımlılıklarını günceller (<code>pip install -r requirements.txt</code>)</li>
+          <li>Servisi yeniden başlatır ve durumu doğrular</li>
+        </ol>
+        <div class="alert alert-info">
+          <span>ℹ️</span>
+          <div><code>ox --update</code> komutu da <code>oxupdate</code>'i çağırır. İkisi birbirinin eşdeğeridir.</div>
+        </div>
+        <div class="alert alert-warning">
+          <span>⚠️</span>
+          <div>Güncelleme için <code>git</code> paketi kurulu olmalıdır. Kurulu değilse: <code>apt-get install git</code></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ LICENSE ══════════════════════ -->
+    <div class="doc-page" id="page-license">
+      <div class="doc-hero">
+        <h1>Lisans <span>Sistemi</span></h1>
+        <p>OXware temel özellikleriyle ücretsiz kullanılabilir. Lisans sahipleri 7/24 destek hizmetine erişim kazanır.</p>
+      </div>
+      <div class="doc-body">
+        <h2>Lisans Seçenekleri</h2>
+        <table>
+          <tr><th>Plan</th><th>Özellikler</th><th>Destek</th></tr>
+          <tr><td><strong>Ücretsiz</strong></td><td>Tüm temel özellikler — VM, ağ, depolama, AI, izleme</td><td>GitHub Issues</td></tr>
+          <tr><td><strong>Lisanslı</strong></td><td>Tüm özellikler + öncelikli erişim</td><td>7/24 WhatsApp desteği</td></tr>
+        </table>
+
+        <h2>Lisans Aktivasyonu</h2>
+        <p>Lisansı iki farklı yöntemle aktive edebilirsiniz:</p>
+
+        <h3>Yöntem 1: Kurulum Sırasında</h3>
+        <p>Kurulum scripti (<code>install.sh</code>) tamamlanırken lisans kodu sorulur. Lisans kodunuzu girip Enter'a basın, ya da sadece Enter'a basarak geçin.</p>
+
+        <h3>Yöntem 2: Web Arayüzünden</h3>
+        <ol>
+          <li>Web arayüzünde <strong>Güvenlik → Lisans</strong> bölümüne gidin</li>
+          <li><code>OXWARE-XXXX-XXXX-XXXX-XXXX</code> formatındaki lisans kodunuzu girin</li>
+          <li><strong>Doğrula</strong> butonuna tıklayın</li>
+          <li>Aktivasyon başarılıysa destek banner'ı görünür hale gelir</li>
+        </ol>
+
+        <div class="alert alert-info">
+          <span>ℹ️</span>
+          <div><strong>Not:</strong> Lisans aktivasyonu için internet bağlantısı gereklidir. Kod GitHub üzerinden doğrulanır.</div>
+        </div>
+
+        <h2>Lisans Formatı</h2>
+        <pre><code>OXWARE-XXXX-XXXX-XXXX-XXXX</code></pre>
+        <p>Lisans kodu 4 gruptan oluşur ve büyük harf + rakam kombinasyonu içerir. Kodu satın aldıktan sonra e-posta ile teslim edilir.</p>
+
+        <h2>Destek Kanalları</h2>
+        <table>
+          <tr><th>Kanal</th><th>Erişim</th><th>Yanıt Süresi</th></tr>
+          <tr><td>GitHub Issues</td><td>Herkese açık</td><td>Gönüllü bazlı</td></tr>
+          <tr><td>WhatsApp</td><td>Lisanslı kullanıcılar</td><td>7/24, maks. 4 saat</td></tr>
+        </table>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /app -->
 
@@ -1396,6 +1534,26 @@ virsh net-list --all</code></pre>
     { page:"ai-agents",     title:"AI Ajan Sistemi",        keywords:"ai ajan openrouter claude openai ollama izleme anomali" },
     { page:"notifications", title:"Bildirimler",            keywords:"telegram discord webhook bildirim alert" },
     { page:"security",      title:"Güvenlik Katmanı",       keywords:"güvenlik rate limit csp hsts pbkdf2 aes şifreleme" },
+    { page:"2fa",           title:"2FA",                    keywords:"2fa iki faktör doğrulama totp authenticator güvenlik" },
+    { page:"api-keys",      title:"API Keys",               keywords:"api key anahtar token erişim güvenlik" },
+    { page:"audit",         title:"Audit Log",              keywords:"audit denetim log kayıt aktivite güvenlik" },
+    { page:"ldap",          title:"LDAP",                   keywords:"ldap active directory kullanıcı dizin kimlik doğrulama" },
+    { page:"templates",     title:"VM Şablonları",          keywords:"şablon template vm klonlama hızlı oluşturma" },
+    { page:"backup",        title:"Yedekleme",              keywords:"yedek backup geri yükleme restore snapshot" },
+    { page:"firewall",      title:"Güvenlik Duvarı",        keywords:"firewall güvenlik duvarı ufw iptables kural" },
+    { page:"vpn",           title:"VPN",                    keywords:"vpn wireguard tünel şifreli bağlantı" },
+    { page:"dns",           title:"DNS",                    keywords:"dns alan adı çözümleme nameserver" },
+    { page:"proxy",         title:"Proxy & LB",             keywords:"proxy load balancer yük dengeleme nginx reverse proxy" },
+    { page:"anomaly",       title:"Anomali Dedektörü",      keywords:"anomali tespit ai yapay zeka uyarı cpu ram" },
+    { page:"autoscale",     title:"Otomatik Ölçeklendirme", keywords:"autoscale ölçeklendirme dinamik vm kaynak" },
+    { page:"webhooks",      title:"Webhooks",               keywords:"webhook entegrasyon http callback bildirim" },
+    { page:"s3",            title:"S3 Depolama",            keywords:"s3 object storage nesne depolama bulut yedek" },
+    { page:"vlan",          title:"VLAN",                   keywords:"vlan sanal ağ izolasyon 802.1q" },
+    { page:"ssl-config",    title:"SSL Yapılandırması",     keywords:"ssl tls sertifika https şifreleme" },
+    { page:"sdn",           title:"SDN",                    keywords:"sdn software defined network yazılım tanımlı ağ" },
+    { page:"quotas",        title:"Kaynak Kotaları",        keywords:"kota quota kaynak limit cpu ram disk kullanıcı" },
+    { page:"cli-tools",     title:"CLI Araçları",           keywords:"ox oxupdate cli komut satırı terminal yönetim" },
+    { page:"license",       title:"Lisans Sistemi",         keywords:"lisans license aktivasyon destek whatsapp 7/24" },
     { page:"api",           title:"API Referansı",          keywords:"api endpoint rest jwt bearer token" },
     { page:"config",        title:"Yapılandırma Dosyaları", keywords:"conf config oxware.conf ai_agents notifications" },
     { page:"troubleshoot",  title:"Sorun Giderme",          keywords:"hata error sorun debug log libvirt ssl" },
