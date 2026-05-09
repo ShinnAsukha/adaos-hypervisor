@@ -83,6 +83,7 @@ auto_scaler     = _safe_import("auto_scaler")
 sdn_mgr         = _safe_import("sdn_manager")
 ids_mgr         = _safe_import("ids_manager")
 minio_mgr       = _safe_import("minio_manager")
+auto_snap       = _safe_import("auto_snapshot")
 
 # ── Flask ─────────────────────────────────────────────────────────────────────
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend", "templates")
@@ -240,6 +241,77 @@ def api_change_password():
         return err("Mevcut şifre yanlış", 401)
     ev.info("Şifre değiştirildi", category="auth")
     return ok(message="Şifre değiştirildi")
+
+@app.route("/api/auth/password-reset/request", methods=["POST"])
+def api_password_reset_request():
+    """
+    Şifre sıfırlama token'ı üretir.
+    Eğer SMTP yapılandırılmışsa email gönderir,
+    aksi hâlde token'ı response'da döndürür (admin konsoldan uygular).
+    """
+    data = request.get_json() or {}
+    username = data.get("username", "").strip()
+    if not username:
+        return err("Kullanıcı adı gerekli")
+
+    info = cred_mgr.get_credential_info()
+    if info.get("username", "").lower() != username.lower():
+        # Güvenlik: kullanıcı adı yanlışsa da aynı mesajı ver
+        return ok(message="Sıfırlama token'ı oluşturuldu. Yönetici e-postanızı kontrol edin.")
+
+    token = cred_mgr.generate_reset_token(username)
+    ev.warn(f"Şifre sıfırlama isteği: {username} / {request.remote_addr}", category="auth")
+
+    # SMTP gönderimi (opsiyonel)
+    smtp_host = os.environ.get("OXWARE_SMTP_HOST", "")
+    reset_link = f"#reset-token={token}"
+    if smtp_host:
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            smtp_port = int(os.environ.get("OXWARE_SMTP_PORT", 587))
+            smtp_user = os.environ.get("OXWARE_SMTP_USER", "")
+            smtp_pass = os.environ.get("OXWARE_SMTP_PASS", "")
+            smtp_from = os.environ.get("OXWARE_SMTP_FROM", smtp_user)
+            smtp_to   = data.get("email", smtp_user)
+
+            msg = MIMEText(f"""OXware Hypervisor - Şifre Sıfırlama
+
+Kullanıcı adı: {username}
+Sıfırlama kodu: {token}
+
+Bu kod 1 saat geçerlidir. Eğer bu isteği siz yapmadıysanız dikkate almayın.
+""")
+            msg["Subject"] = "OXware - Şifre Sıfırlama"
+            msg["From"]    = smtp_from
+            msg["To"]      = smtp_to
+
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as s:
+                s.starttls()
+                if smtp_user:
+                    s.login(smtp_user, smtp_pass)
+                s.sendmail(smtp_from, [smtp_to], msg.as_string())
+            log.info("Şifre sıfırlama emaili gönderildi: %s → %s", username, smtp_to)
+            return ok(message="Sıfırlama kodu e-postanıza gönderildi.")
+        except Exception as e:
+            log.warning("SMTP hatası: %s — token döndürülüyor", e)
+
+    # SMTP yoksa token'ı döndür (admin konsolda görünür)
+    return ok(message="SMTP yapılandırılmamış. Token aşağıdadır.", token=token, dev_mode=True)
+
+@app.route("/api/auth/password-reset/confirm", methods=["POST"])
+def api_password_reset_confirm():
+    data     = request.get_json() or {}
+    token    = data.get("token", "").strip()
+    new_pass = data.get("new_password", "")
+    if not token:
+        return err("Token gerekli")
+    if len(new_pass) < 8:
+        return err("Yeni şifre en az 8 karakter olmalıdır")
+    if not cred_mgr.reset_password_with_token(token, new_pass):
+        return err("Geçersiz veya süresi dolmuş token", 401)
+    ev.info("Şifre token ile sıfırlandı", category="auth")
+    return ok(message="Şifre başarıyla sıfırlandı. Giriş yapabilirsiniz.")
 
 # ── VM API ────────────────────────────────────────────────────────────────────
 @app.route("/api/vms")
@@ -1287,6 +1359,31 @@ def api_backup_history():
     vm_id = request.args.get("vm_id")
     return ok({"history": backup_sched.get_history(vm_id)})
 
+# ── Auto-Snapshot ─────────────────────────────────────────────────────────────
+@app.route("/api/auto-snapshot/config", methods=["GET"])
+@require_auth
+def api_autosnap_config_get():
+    if not auto_snap: return ok({"available": False})
+    return ok(auto_snap.get_config())
+
+@app.route("/api/auto-snapshot/config", methods=["POST"])
+@require_auth
+def api_autosnap_config_set():
+    if not auto_snap: return err("Auto-snapshot modülü yüklenemedi")
+    d = request.get_json() or {}
+    cfg = auto_snap.update_config(**{k: d[k] for k in d if k in ["enabled","hour","minute","keep_days","vm_filter"]})
+    ev.info("Auto-snapshot konfigürasyonu güncellendi", category="system")
+    return ok(cfg)
+
+@app.route("/api/auto-snapshot/run", methods=["POST"])
+@require_auth
+def api_autosnap_run():
+    if not auto_snap: return err("Auto-snapshot modülü yüklenemedi")
+    import threading as _th
+    _th.Thread(target=auto_snap.run_auto_snapshots, daemon=True).start()
+    ev.info("Auto-snapshot manuel tetiklendi", category="vm")
+    return ok({"triggered": True})
+
 # ── Firewall ──────────────────────────────────────────────────────────────────
 @app.route("/api/firewall/status", methods=["GET"])
 @require_auth
@@ -2093,6 +2190,7 @@ def _start_background_services():
         (anomaly_det,    "start_detector",          {"interval": 300}),
         (auto_scaler,    "start_auto_scaler",       {"interval": 60}),
         (ai_planner,     "start_periodic_analysis", {"interval_hours": 24}),
+        (auto_snap,      "start_scheduler",          {}),
     ]
     for mod, fn, kwargs in services:
         if mod and hasattr(mod, fn):

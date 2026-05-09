@@ -223,3 +223,50 @@ def get_credential_info() -> dict:
         "last_changed": data.get("last_changed"),
         "setup_done": is_setup_done(),
     }
+
+
+# ── Token-based password reset ────────────────────────────────────────────────
+
+_RESET_TOKENS: dict = {}   # {token: {"username": str, "expires": float}}
+_TOKEN_TTL = 3600          # 1 saat
+
+def generate_reset_token(username: str) -> str:
+    """Şifre sıfırlama token'ı üretir ve bellekte saklar."""
+    token = secrets.token_urlsafe(32)
+    _RESET_TOKENS[token] = {
+        "username": username,
+        "expires":  time.time() + _TOKEN_TTL,
+    }
+    # Eski tokenları temizle
+    expired = [t for t, v in _RESET_TOKENS.items() if v["expires"] < time.time()]
+    for t in expired:
+        _RESET_TOKENS.pop(t, None)
+    return token
+
+
+def reset_password_with_token(token: str, new_password: str) -> bool:
+    """
+    Token geçerliyse ve süre dolmamışsa şifreyi sıfırlar.
+    Kullanılan token silinir.
+    """
+    entry = _RESET_TOKENS.get(token)
+    if not entry:
+        return False
+    if entry["expires"] < time.time():
+        _RESET_TOKENS.pop(token, None)
+        return False
+    # Token geçerli — şifreyi değiştir
+    data = _load_auth()
+    data["password_hash"] = _hash_password(new_password)
+    data["last_changed"]  = time.time()
+    _save_auth(data)
+    _RESET_TOKENS.pop(token, None)
+    return True
+
+
+def get_reset_token_username(token: str):
+    """Token için kullanıcı adı döndürür, yoksa None."""
+    entry = _RESET_TOKENS.get(token)
+    if not entry or entry["expires"] < time.time():
+        return None
+    return entry["username"]

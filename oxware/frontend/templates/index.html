@@ -508,14 +508,59 @@
       .page{display:block!important;overflow:visible!important}
       body{background:#fff!important;color:#000!important}
     }
+
+    /* ── Mobile Responsive ── */
+    #mob-menu-btn{display:none;align-items:center;justify-content:center;width:44px;height:100%;background:none;border:none;border-right:1px solid var(--border);color:var(--text-muted);font-size:20px;cursor:pointer;flex-shrink:0}
+    #mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:340}
+    #mob-overlay.visible{display:block}
+
+    @media (max-width:900px){
+      #mob-menu-btn{display:flex}
+      #nav-panel{
+        position:fixed!important;top:var(--topbar-h)!important;left:0!important;bottom:0!important;
+        width:220px!important;z-index:350!important;
+        transform:translateX(-100%)!important;
+        transition:transform .25s cubic-bezier(.4,0,.2,1)!important;
+        box-shadow:4px 0 24px rgba(0,0,0,.6)!important;
+      }
+      #nav-panel.mob-open{transform:translateX(0)!important}
+      .tb-stats{display:none!important}
+      .tb-search{display:none!important}
+      #taskbar{display:none!important}
+    }
+    @media (max-width:768px){
+      #dash-quick-stats{grid-template-columns:1fr 1fr!important}
+      .tb-actions .tb-action:not(.primary){display:none!important}
+      .tb-action.primary span[data-i18n]{display:none}
+      #oxy-btn>span:last-of-type{display:none}
+      #oxy-panel{width:100%!important}
+      .summary-grid{grid-template-columns:1fr!important}
+      .vm-stat-grid{grid-template-columns:1fr 1fr!important}
+      .charts-row{grid-template-columns:1fr!important}
+      .form-grid{grid-template-columns:1fr!important}
+      .modal{width:95vw!important}
+      .page{padding:10px!important}
+      .card-grid{grid-template-columns:1fr!important}
+      .section-header{flex-wrap:wrap;gap:6px}
+      .table-wrap{font-size:11px}
+      thead th,tbody td{padding:6px 8px!important}
+    }
+    @media (max-width:480px){
+      .vm-stat-grid{grid-template-columns:1fr!important}
+      .tb-logo-icon img{width:42px!important;height:42px!important}
+    }
   </style>
 </head>
 <body>
 
 <div id="app">
 
+  <!-- Mobile overlay for nav -->
+  <div id="mob-overlay" onclick="closeMobileNav()"></div>
+
   <!-- ────────── TOPBAR ────────── -->
   <header id="topbar">
+    <button id="mob-menu-btn" onclick="toggleMobileNav()" title="Menü">☰</button>
     <div class="tb-logo">
       <div class="tb-logo-icon">
         <img src="/static/img/oxware2.png" alt="OXware"
@@ -733,6 +778,51 @@
               </div>
             </div>
             <div class="chart-container"><canvas id="loadChart"></canvas></div>
+          </div>
+
+          <!-- Quick Stats Row -->
+          <div id="dash-quick-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+            <div class="vm-stat-card green">
+              <div class="vm-stat-label">Çalışan VM</div>
+              <div class="vm-stat-value" id="dash-vms-running">—</div>
+              <div class="vm-stat-sub">aktif</div>
+            </div>
+            <div class="vm-stat-card">
+              <div class="vm-stat-label">Toplam VM</div>
+              <div class="vm-stat-value" id="dash-vms-total">—</div>
+              <div class="vm-stat-sub">kayıtlı</div>
+            </div>
+            <div class="vm-stat-card yellow">
+              <div class="vm-stat-label">Uyarılar</div>
+              <div class="vm-stat-value" id="dash-alerts">—</div>
+              <div class="vm-stat-sub">son 24s</div>
+            </div>
+            <div class="vm-stat-card">
+              <div class="vm-stat-label">Snapshot</div>
+              <div class="vm-stat-value" id="dash-snaps">—</div>
+              <div class="vm-stat-sub">toplam</div>
+            </div>
+          </div>
+
+          <!-- Top VMs + Recent Events (side by side) -->
+          <div class="charts-row">
+            <!-- Top Resource VMs -->
+            <div class="chart-card">
+              <h3>🔥 En Çok Kaynak Kullanan VM'ler</h3>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>VM Adı</th><th>vCPU</th><th>RAM (MB)</th><th>Durum</th></tr></thead>
+                  <tbody id="dash-top-vms"></tbody>
+                </table>
+              </div>
+            </div>
+            <!-- Recent Events -->
+            <div class="chart-card">
+              <h3>📋 Son Olaylar</h3>
+              <div id="dash-events" style="max-height:200px;overflow-y:auto">
+                <div class="empty-state"><div class="icon">⏳</div><p>Yükleniyor...</p></div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1546,6 +1636,52 @@
             <div style="display:flex;gap:8px;margin-top:12px">
               <button class="btn-primary" onclick="saveLdapConfig()">💾 Kaydet</button>
               <button class="btn sm" onclick="testLdapConnection()">🔌 Bağlantı Test</button>
+            </div>
+          </div>
+
+          <!-- Şifre Sıfırlama -->
+          <div class="card" style="margin-top:14px">
+            <div class="card-title"><i class="fa-solid fa-key" style="color:var(--yellow-lt);margin-right:6px"></i>Şifre Sıfırlama</div>
+            <p style="font-size:11px;color:var(--text-muted);margin-bottom:14px">
+              Şifreyi unuttuysan token oluştur. SMTP yapılandırılmışsa e-posta gönderilir, yoksa token bu ekranda gösterilir.
+            </p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:flex-end">
+              <div class="form-row" style="margin:0"><label>Kullanıcı Adı</label><input id="pwreset-user" type="text" class="form-control" placeholder="admin"></div>
+              <button class="btn-primary" onclick="requestPasswordReset()" style="height:36px">🔑 Token Oluştur</button>
+            </div>
+            <div id="pwreset-token-row" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(234,179,8,.07);border:1px solid rgba(234,179,8,.2);border-radius:6px">
+              <p style="font-size:11px;color:var(--yellow-lt);font-weight:600;margin-bottom:6px">⚠️ Token (1 saat geçerli):</p>
+              <code id="pwreset-token-val" style="font-size:12px;word-break:break-all"></code>
+            </div>
+            <div id="pwreset-confirm-row" style="display:none;margin-top:12px">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:flex-end">
+                <div class="form-row" style="margin:0"><label>Sıfırlama Token</label><input id="pwreset-token-input" type="text" class="form-control" placeholder="Token gir..."></div>
+                <div class="form-row" style="margin:0"><label>Yeni Şifre</label><input id="pwreset-newpass" type="password" class="form-control" placeholder="En az 8 karakter"></div>
+              </div>
+              <button class="btn-primary" onclick="confirmPasswordReset()" style="margin-top:10px">✅ Şifreyi Sıfırla</button>
+            </div>
+          </div>
+
+          <!-- Auto-Snapshot Yönetimi -->
+          <div class="card" style="margin-top:14px">
+            <div class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--green-lt);margin-right:6px"></i>Otomatik Snapshot</div>
+            <p style="font-size:11px;color:var(--text-muted);margin-bottom:14px">
+              Her gün belirtilen saatte tüm VM'lerin snapshot'ını alır. Belirtilen gün sayısından eski snapshot'lar otomatik silinir.
+            </p>
+            <div id="autosnap-form" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;align-items:flex-end">
+              <div class="form-row" style="margin:0"><label>Aktif</label>
+                <select id="autosnap-enabled" class="form-control">
+                  <option value="true">✅ Aktif</option>
+                  <option value="false">❌ Devre dışı</option>
+                </select>
+              </div>
+              <div class="form-row" style="margin:0"><label>Saat (0-23)</label><input id="autosnap-hour" type="number" class="form-control" min="0" max="23" value="2"></div>
+              <div class="form-row" style="margin:0"><label>Dakika (0-59)</label><input id="autosnap-minute" type="number" class="form-control" min="0" max="59" value="0"></div>
+              <div class="form-row" style="margin:0"><label>Saklama (gün)</label><input id="autosnap-keep" type="number" class="form-control" min="1" max="365" value="7"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="btn-primary" onclick="saveAutoSnapConfig()"><i class="fa-solid fa-floppy-disk"></i> Kaydet</button>
+              <button class="btn" onclick="runAutoSnapshotNow()"><i class="fa-solid fa-play"></i> Şimdi Çalıştır</button>
             </div>
           </div>
         </div>
@@ -2813,6 +2949,11 @@ function completeTaskPanel(id, result) {
 
 function buildContextNav(type) {
   const nav = document.getElementById("nav-panel");
+  // Role-based access control
+  const role = (localStorage.getItem("oxware_role") || localStorage.getItem("adaos_role") || "administrator").toLowerCase();
+  const isAdmin = role === "administrator";
+  const isOperator = role === "operator" || isAdmin;
+  // viewer = minimum access
   let html = "";
 
   if (type === "node") {
@@ -2821,90 +2962,98 @@ function buildContextNav(type) {
     <span>${t('general')}</span><span class="ctx-section-arrow" style="transform:rotate(90deg)">▸</span>
   </div>
   <div class="ctx-section-body">
-    <div class="ctx-item active" data-page="summary" onclick="navigate('summary')">
+    <div class="ctx-item active" data-page="summary" onclick="navigate('summary');closeMobileNav()">
       <i class="fa-solid fa-gauge-high fa-fw"></i>${t('summary')}
     </div>
-    <div class="ctx-item" data-page="console" onclick="navigate('console')">
+    ${isAdmin ? `<div class="ctx-item" data-page="console" onclick="navigate('console');closeMobileNav()">
       <i class="fa-solid fa-terminal fa-fw"></i>${t('shell console')}
-    </div>
+    </div>` : ''}
   </div>
 
   <div class="ctx-section-header" onclick="toggleNavSection(this)">
     <span>${t('virtualization')}</span><span class="ctx-section-arrow">▸</span>
   </div>
   <div class="ctx-section-body collapsed">
-    <div class="ctx-item" data-page="vms" onclick="navigate('vms')">
+    <div class="ctx-item" data-page="vms" onclick="navigate('vms');closeMobileNav()">
       <i class="fa-solid fa-server fa-fw"></i>${t('vms')}
       <span class="vm-expand-btn" onclick="toggleVmSubList(event)">▸</span>
     </div>
     <div class="nav-sub-list" id="vm-sub-list" style="display:none"></div>
-    <div class="ctx-item" data-page="snapshots" onclick="navigate('snapshots')">
+    <div class="ctx-item" data-page="snapshots" onclick="navigate('snapshots');closeMobileNav()">
       <i class="fa-solid fa-camera fa-fw"></i>${t('snapshots')}
     </div>
-    <div class="ctx-item" data-page="topology" onclick="navigate('topology')">
+    <div class="ctx-item" data-page="topology" onclick="navigate('topology');closeMobileNav()">
       <i class="fa-solid fa-diagram-project fa-fw"></i>${t('topology')}
     </div>
-    <div class="ctx-item" data-page="tab-templates" onclick="navigate('tab-templates')">
+    ${isOperator ? `<div class="ctx-item" data-page="tab-templates" onclick="navigate('tab-templates');closeMobileNav()">
       <i class="fa-solid fa-clone fa-fw"></i>${t('templates')}
     </div>
-    <div class="ctx-item" data-page="tab-backup" onclick="navigate('tab-backup')">
+    <div class="ctx-item" data-page="tab-backup" onclick="navigate('tab-backup');closeMobileNav()">
       <i class="fa-solid fa-floppy-disk fa-fw"></i>${t('backup')}
-    </div>
+    </div>` : ''}
   </div>
 
   <div class="ctx-section-header" onclick="toggleNavSection(this)">
     <span>${t('system')}</span><span class="ctx-section-arrow" style="transform:rotate(90deg)">▸</span>
   </div>
   <div class="ctx-section-body">
-    <div class="ctx-item" data-page="networks" onclick="navigate('networks')">
+    ${isOperator ? `
+    <div class="ctx-item" data-page="networks" onclick="navigate('networks');closeMobileNav()">
       <i class="fa-solid fa-network-wired fa-fw"></i>${t('networks')}
     </div>
-    <div class="ctx-item" data-page="storage" onclick="navigate('storage')">
+    <div class="ctx-item" data-page="storage" onclick="navigate('storage');closeMobileNav()">
       <i class="fa-solid fa-hard-drive fa-fw"></i>${t('storage')}
-    </div>
-    <div class="ctx-item" data-page="monitor" onclick="navigate('monitor')">
+    </div>` : ''}
+    <div class="ctx-item" data-page="monitor" onclick="navigate('monitor');closeMobileNav()">
       <i class="fa-solid fa-chart-line fa-fw"></i>${t('monitor')}
     </div>
-    <div class="ctx-item" data-page="tab-firewall" onclick="navigate('tab-firewall')">
+    ${isOperator ? `
+    <div class="ctx-item" data-page="tab-firewall" onclick="navigate('tab-firewall');closeMobileNav()">
       <i class="fa-solid fa-shield-halved fa-fw"></i>${t('firewall')}
     </div>
-    <div class="ctx-item" data-page="tab-vpn" onclick="navigate('tab-vpn')">
+    <div class="ctx-item" data-page="tab-vpn" onclick="navigate('tab-vpn');closeMobileNav()">
       <i class="fa-solid fa-lock fa-fw"></i>${t('vpn')}
     </div>
-    <div class="ctx-item" data-page="tab-dns" onclick="navigate('tab-dns')">
+    <div class="ctx-item" data-page="tab-dns" onclick="navigate('tab-dns');closeMobileNav()">
       <i class="fa-solid fa-earth-americas fa-fw"></i>${t('dns')}
     </div>
-    <div class="ctx-item" data-page="tab-proxy" onclick="navigate('tab-proxy')">
+    <div class="ctx-item" data-page="tab-proxy" onclick="navigate('tab-proxy');closeMobileNav()">
       <i class="fa-solid fa-arrows-left-right fa-fw"></i>${t('proxy')}
-    </div>
-    <div class="ctx-item" data-page="tab-monitoring" onclick="navigate('tab-monitoring')">
+    </div>` : ''}
+    <div class="ctx-item" data-page="tab-monitoring" onclick="navigate('tab-monitoring');closeMobileNav()">
       <i class="fa-solid fa-chart-area fa-fw"></i>${t('monitoring')}
     </div>
-    <div class="ctx-item" data-page="tab-ai" onclick="navigate('tab-ai')">
+    ${isOperator ? `<div class="ctx-item" data-page="tab-ai" onclick="navigate('tab-ai');closeMobileNav()">
       <i class="fa-solid fa-robot fa-fw"></i>${t('ai')}
-    </div>
+    </div>` : ''}
   </div>
 
+  ${isAdmin ? `
   <div class="ctx-section-header" onclick="toggleNavSection(this)">
     <span>${t('management')}</span><span class="ctx-section-arrow" style="transform:rotate(90deg)">▸</span>
   </div>
   <div class="ctx-section-body">
-    <div class="ctx-item" data-page="users" onclick="navigate('users')">
+    <div class="ctx-item" data-page="users" onclick="navigate('users');closeMobileNav()">
       <i class="fa-solid fa-users fa-fw"></i>${t('users')}
     </div>
-    <div class="ctx-item" data-page="updates" onclick="navigate('updates')">
+    <div class="ctx-item" data-page="updates" onclick="navigate('updates');closeMobileNav()">
       <i class="fa-solid fa-rotate fa-fw"></i>${t('updates')}
     </div>
-    <div class="ctx-item" data-page="tab-security" onclick="navigate('tab-security')">
+    <div class="ctx-item" data-page="tab-security" onclick="navigate('tab-security');closeMobileNav()">
       <i class="fa-solid fa-user-shield fa-fw"></i>${t('security')}
     </div>
-    <div class="ctx-item" data-page="tab-integrations" onclick="navigate('tab-integrations')">
+    <div class="ctx-item" data-page="tab-integrations" onclick="navigate('tab-integrations');closeMobileNav()">
       <i class="fa-solid fa-plug fa-fw"></i>${t('integrations')}
     </div>
-    <div class="ctx-item" data-page="tab-settings" onclick="navigate('tab-settings')">
+    <div class="ctx-item" data-page="tab-settings" onclick="navigate('tab-settings');closeMobileNav()">
       <i class="fa-solid fa-gear fa-fw"></i>${t('settings')}
     </div>
-  </div>
+  </div>` : ''}
+
+  ${isOperator && !isAdmin ? `
+  <div style="padding:10px 12px;font-size:10px;color:var(--text-dim);border-top:1px solid var(--border);margin-top:6px">
+    <i class="fa-solid fa-shield fa-fw"></i> ${t('operator role — limited access') || 'Operator mode'}
+  </div>` : ''}
     `;
   } else if (type === "vm") {
     html = `
@@ -3180,8 +3329,81 @@ async function loadNodeSummary() {
     document.getElementById("tb-vms").textContent = `${vmSumData.running}/${vmSumData.total}`;
 
     updateCharts(cpuPct, ramPct, load1m);
+
+    // Load extra dashboard sections async (don't block main summary)
+    loadDashboardExtras(vmSumData);
   } catch (e) {
     console.error("Node summary yüklenemedi:", e);
+  }
+}
+
+async function loadDashboardExtras(vmSumData) {
+  try {
+    // Quick stats
+    const runEl = document.getElementById('dash-vms-running');
+    const totEl = document.getElementById('dash-vms-total');
+    if (runEl) runEl.textContent = vmSumData?.running ?? '—';
+    if (totEl) totEl.textContent = vmSumData?.total ?? '—';
+
+    // Top VMs
+    const vmData = await api('/vms').catch(() => ({vms:[]}));
+    const vms = (vmData.vms || []).sort((a,b) => (b.memory_mb||0) - (a.memory_mb||0)).slice(0,5);
+    const tvBody = document.getElementById('dash-top-vms');
+    if (tvBody) {
+      if (!vms.length) {
+        tvBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:14px">Kayıtlı VM yok</td></tr>';
+      } else {
+        tvBody.innerHTML = vms.map(v => `<tr>
+          <td><strong>${escHtml(v.name)}</strong></td>
+          <td>${v.vcpus || '—'}</td>
+          <td>${(v.memory_mb||0).toLocaleString()}</td>
+          <td>${stateBadge(v.state)}</td>
+        </tr>`).join('');
+      }
+    }
+
+    // Snapshot count
+    const snapData = await api('/vms/snapshots/all').catch(() => null);
+    const snapEl = document.getElementById('dash-snaps');
+    if (snapEl) {
+      if (snapData && Array.isArray(snapData.snapshots)) {
+        snapEl.textContent = snapData.snapshots.length;
+      } else {
+        // Try per-VM count
+        let total = 0;
+        for (const v of vms) {
+          const sd = await api(`/vms/${v.id}/snapshots`).catch(() => ({snapshots:[]}));
+          total += (sd.snapshots||[]).length;
+        }
+        snapEl.textContent = total;
+      }
+    }
+
+    // Recent events
+    const evData = await api('/events?limit=20').catch(() => ({events:[]}));
+    const events = evData.events || [];
+    const alertCount = events.filter(e => e.level === 'WARNING' || e.level === 'ERROR').length;
+    const alertEl = document.getElementById('dash-alerts');
+    if (alertEl) alertEl.textContent = alertCount;
+    const evContainer = document.getElementById('dash-events');
+    if (evContainer) {
+      if (!events.length) {
+        evContainer.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>Olay yok</p></div>';
+      } else {
+        const COLOR = {INFO:'var(--accent-lt)',WARNING:'var(--yellow-lt)',ERROR:'var(--red-lt)',DEBUG:'var(--text-dim)'};
+        evContainer.innerHTML = events.slice(0,15).map(e => {
+          const col = COLOR[e.level] || 'var(--text-muted)';
+          const ts = e.timestamp ? new Date(e.timestamp*1000).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}) : '';
+          return `<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid rgba(30,45,69,.4);font-size:11px">
+            <span style="color:${col};font-weight:700;flex-shrink:0;min-width:52px">${e.level||'INFO'}</span>
+            <span style="flex:1;color:var(--text)">${escHtml(e.message||'')}</span>
+            <span style="color:var(--text-dim);flex-shrink:0">${ts}</span>
+          </div>`;
+        }).join('');
+      }
+    }
+  } catch(e) {
+    console.warn('Dashboard extras error:', e);
   }
 }
 
@@ -4702,6 +4924,84 @@ function shellClear() {
   if (_shellTerm) _shellTerm.clear();
 }
 
+/* ══════════════════ Şifre Sıfırlama ══════════════════ */
+async function requestPasswordReset() {
+  const user = document.getElementById('pwreset-user').value.trim();
+  if (!user) { showToast('Kullanıcı adı gerekli', 'error'); return; }
+  try {
+    const d = await api('/auth/password-reset/request', {method:'POST', body:{username:user}});
+    if (d.dev_mode && d.token) {
+      // SMTP yok — token'ı ekranda göster
+      document.getElementById('pwreset-token-val').textContent = d.token;
+      document.getElementById('pwreset-token-row').style.display = 'block';
+      document.getElementById('pwreset-token-input').value = d.token;
+    }
+    document.getElementById('pwreset-confirm-row').style.display = 'block';
+    showToast(d.message || 'Token oluşturuldu', 'success');
+  } catch(e) {
+    showToast('Hata: ' + e, 'error');
+  }
+}
+async function confirmPasswordReset() {
+  const token   = document.getElementById('pwreset-token-input').value.trim();
+  const newpass = document.getElementById('pwreset-newpass').value;
+  if (!token)  { showToast('Token gerekli', 'error'); return; }
+  if (newpass.length < 8) { showToast('Şifre en az 8 karakter olmalı', 'error'); return; }
+  try {
+    const d = await api('/auth/password-reset/confirm', {method:'POST', body:{token, new_password:newpass}});
+    showToast(d.message || 'Şifre sıfırlandı!', 'success');
+    document.getElementById('pwreset-confirm-row').style.display = 'none';
+    document.getElementById('pwreset-token-row').style.display = 'none';
+  } catch(e) {
+    showToast('Token geçersiz veya süresi dolmuş', 'error');
+  }
+}
+
+/* ══════════════════ Auto-Snapshot ══════════════════ */
+async function loadAutoSnapConfig() {
+  try {
+    const d = await api('/auto-snapshot/config');
+    if (d.available === false) return;
+    const sel = document.getElementById('autosnap-enabled');
+    if (sel) sel.value = d.enabled ? 'true' : 'false';
+    const h = document.getElementById('autosnap-hour');
+    if (h) h.value = d.hour ?? 2;
+    const m = document.getElementById('autosnap-minute');
+    if (m) m.value = d.minute ?? 0;
+    const k = document.getElementById('autosnap-keep');
+    if (k) k.value = d.keep_days ?? 7;
+  } catch(e) { console.warn('loadAutoSnapConfig:', e); }
+}
+async function saveAutoSnapConfig() {
+  const enabled    = document.getElementById('autosnap-enabled').value === 'true';
+  const hour       = parseInt(document.getElementById('autosnap-hour').value);
+  const minute     = parseInt(document.getElementById('autosnap-minute').value);
+  const keep_days  = parseInt(document.getElementById('autosnap-keep').value);
+  try {
+    await api('/auto-snapshot/config', {method:'POST', body:{enabled,hour,minute,keep_days}});
+    showToast('Auto-snapshot ayarları kaydedildi', 'success');
+  } catch(e) { showToast('Kayıt hatası: ' + e, 'error'); }
+}
+async function runAutoSnapshotNow() {
+  if (!confirm('Tüm VM\'lerin snapshot\'ı şimdi alınacak. Devam edilsin mi?')) return;
+  try {
+    await api('/auto-snapshot/run', {method:'POST'});
+    showToast('Auto-snapshot başlatıldı (arkaplanda çalışıyor)', 'success');
+  } catch(e) { showToast('Hata: ' + e, 'error'); }
+}
+
+/* ══════════════════ Mobile Nav ══════════════════ */
+function toggleMobileNav() {
+  const nav = document.getElementById('nav-panel');
+  const ov  = document.getElementById('mob-overlay');
+  const open = nav.classList.toggle('mob-open');
+  ov.classList.toggle('visible', open);
+}
+function closeMobileNav() {
+  document.getElementById('nav-panel').classList.remove('mob-open');
+  document.getElementById('mob-overlay').classList.remove('visible');
+}
+
 /* ══════════════════ Tema ══════════════════ */
 function toggleTheme() {
   const body = document.body;
@@ -4731,7 +5031,7 @@ async function loadTabData(tabId) {
     case 'tab-proxy':        loadNginxSites(); break;
     case 'tab-monitoring':   loadPerfHistory('1h'); loadSmartData(); loadUptimes(); loadIdsStatus(); loadTrendAnalysis(); loadHAStatus(); break;
     case 'tab-ai':           loadAiRecommendations(); loadAnomalies(); loadAIAgents(); break;
-    case 'tab-security':     load2faStatus(); loadAuditLog(); loadApiKeys(); loadLdapConfig(); checkLicenseStatus(); break;
+    case 'tab-security':     load2faStatus(); loadAuditLog(); loadApiKeys(); loadLdapConfig(); checkLicenseStatus(); loadAutoSnapConfig(); break;
     case 'tab-integrations': loadWebhooks(); loadS3Config(); loadEmailConfig(); loadVlans(); break;
     case 'tab-settings':     loadSdnStatus(); loadSslStatus(); loadScalerPolicies(); loadQuotas(); break;
   }
