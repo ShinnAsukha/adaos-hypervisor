@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OXware Hypervisor</title>
   <link rel="icon" type="image/png" href="/static/img/sadeceikon.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
   <script src="/static/chart.umd.min.js"></script>
   <script src="/static/socket.io.min.js"></script>
   <link rel="stylesheet" href="/static/xterm.min.css">
@@ -877,68 +878,7 @@
           </div>
         </div>
 
-        <!-- ─────── Settings Page ─────── -->
-        <div class="page" id="page-settings">
-          <div class="section-header"><h2>Ayarlar</h2></div>
-          <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:18px">
-            <button class="settings-tab active" data-tab="notifications" onclick="switchSettingsTab('notifications')">🔔 Bildirimler</button>
-            <button class="settings-tab" data-tab="ai" onclick="switchSettingsTab('ai')">🤖 AI Ajanlar</button>
-          </div>
-          <div id="settings-tab-notifications">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-              <div class="card">
-                <div class="card-title">📱 Telegram</div>
-                <div class="form-row"><label>Bot Token</label><input id="tg-token" type="password" placeholder="123456789:AAFxxxxxx" autocomplete="off"></div>
-                <div class="form-row"><label>Chat ID</label><input id="tg-chat-id" placeholder="123456789"></div>
-                <div style="display:flex;gap:8px;margin-top:10px">
-                  <button class="btn primary" onclick="saveNotifConfig()">💾 Kaydet</button>
-                  <button class="btn" onclick="testNotification('telegram')">🧪 Test</button>
-                </div>
-                <div style="margin-top:10px;font-size:10px;color:var(--text-muted);line-height:1.6">
-                  1. @BotFather'a /newbot yaz → Token al<br>
-                  2. Bota /start gönder<br>
-                  3. Chat ID için: api.telegram.org/bot&lt;TOKEN&gt;/getUpdates
-                </div>
-              </div>
-              <div class="card">
-                <div class="card-title">🎮 Discord</div>
-                <div class="form-row"><label>Webhook URL</label><input id="discord-webhook" type="password" placeholder="https://discord.com/api/webhooks/..." autocomplete="off"></div>
-                <div style="display:flex;gap:8px;margin-top:10px">
-                  <button class="btn primary" onclick="saveNotifConfig()">💾 Kaydet</button>
-                  <button class="btn" onclick="testNotification('discord')">🧪 Test</button>
-                </div>
-              </div>
-            </div>
-            <div class="card" style="margin-top:14px">
-              <div class="card-title">⚙️ Bildirim Ayarları</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-                <div class="form-row"><label>Minimum Seviye</label>
-                  <select id="notif-min-level">
-                    <option value="DEBUG">DEBUG</option>
-                    <option value="INFO">INFO</option>
-                    <option value="WARNING" selected>WARNING</option>
-                    <option value="ERROR">ERROR</option>
-                    <option value="CRITICAL">CRITICAL</option>
-                  </select>
-                </div>
-              </div>
-              <button class="btn primary" style="margin-top:10px" onclick="saveNotifConfig()">💾 Kaydet</button>
-            </div>
-          </div>
-          <div id="settings-tab-ai" style="display:none">
-            <div class="card" style="margin-bottom:14px;background:rgba(42,109,217,.05);border-color:rgba(42,109,217,.2)">
-              <div style="font-size:11px;color:var(--text-muted);line-height:1.7">
-                <strong style="color:var(--accent-lt)">AI Ajan Cron Sistemi</strong> — Ajanlar belirlenen aralıklarla otomatik olarak sistemin sağlığını kontrol eder.<br>
-                Eşikler aşıldığında (CPU, RAM) Telegram/Discord üzerinden otomatik uyarı gönderilir.<br>
-                <span style="color:var(--text-dim)">Ajanlar arka planda çalışır; servisi yeniden başlatırsanız otomatik devam eder.</span>
-              </div>
-            </div>
-            <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
-              <button class="btn primary" onclick="openModal('modal-add-agent')">+ Ajan Ekle</button>
-            </div>
-            <div id="ai-agents-list"><div class="empty-state"><div class="icon">🤖</div><h3>AI Ajan yok</h3><p style="font-size:11px">Ajan ekleyerek sistem izlemeye başlayın</p></div></div>
-          </div>
-        </div>
+        <!-- Settings page removed — content moved to Integrations and AI Asistan -->
 
         <!-- ─────── Updates Page ─────── -->
         <div class="page" id="page-updates">
@@ -1049,7 +989,7 @@
         <!-- ─────── tab-firewall ─────── -->
         <div class="page" id="page-tab-firewall">
           <div class="section-header">
-            <h2>🛡️ Güvenlik Duvarı (nftables)</h2>
+            <h2><i class="fa-solid fa-shield-halved" style="margin-right:8px;color:var(--accent-lt)"></i>Güvenlik Duvarı (nftables)</h2>
             <div class="spacer"></div>
             <span id="firewallStatus"></span>
           </div>
@@ -1110,7 +1050,7 @@
 
         <!-- ─────── tab-vpn ─────── -->
         <div class="page" id="page-tab-vpn">
-          <div class="section-header"><h2>🔒 WireGuard VPN</h2></div>
+          <div class="section-header"><h2><i class="fa-solid fa-lock" style="margin-right:8px;color:var(--accent-lt)"></i>WireGuard VPN</h2></div>
           <div id="vpnStatusCard" class="card" style="margin-bottom:14px"></div>
           <div class="card" style="margin-bottom:14px">
             <div class="card-title">Yeni Peer Ekle</div>
@@ -1137,7 +1077,7 @@
 
         <!-- ─────── tab-dns ─────── -->
         <div class="page" id="page-tab-dns">
-          <div class="section-header"><h2>🌐 DNS Yönetimi</h2></div>
+          <div class="section-header"><h2><i class="fa-solid fa-earth-americas" style="margin-right:8px;color:var(--accent-lt)"></i>DNS Yönetimi</h2></div>
           <div class="card" style="margin-bottom:14px">
             <div class="card-title">Yeni Host Kaydı</div>
             <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
@@ -1174,7 +1114,7 @@
 
         <!-- ─────── tab-proxy ─────── -->
         <div class="page" id="page-tab-proxy">
-          <div class="section-header"><h2>↔️ Proxy & Load Balancer</h2></div>
+          <div class="section-header"><h2><i class="fa-solid fa-arrows-left-right" style="margin-right:8px;color:var(--accent-lt)"></i>Proxy &amp; Load Balancer</h2></div>
           <div class="sub-tabs">
             <button class="sub-tab active" onclick="switchProxyTab('nginx',this)">Nginx Reverse Proxy</button>
             <button class="sub-tab" onclick="switchProxyTab('haproxy',this)">HAProxy Load Balancer</button>
@@ -1210,7 +1150,7 @@
 
         <!-- ─────── tab-monitoring ─────── -->
         <div class="page" id="page-tab-monitoring">
-          <div class="section-header"><h2>📊 Gelişmiş İzleme</h2></div>
+          <div class="section-header"><h2><i class="fa-solid fa-chart-area" style="margin-right:8px;color:var(--accent-lt)"></i>Gelişmiş İzleme</h2></div>
 
           <div class="section-header"><h2>Performans Geçmişi</h2></div>
           <div class="card" style="margin-bottom:14px">
@@ -1253,7 +1193,7 @@
         <!-- ─────── tab-ai ─────── -->
         <div class="page" id="page-tab-ai">
           <div class="section-header">
-            <h2>🤖 AI Asistan</h2>
+            <h2><i class="fa-solid fa-robot" style="margin-right:8px;color:var(--accent-lt)"></i>AI Asistan</h2>
             <div class="spacer"></div>
             <button class="btn-primary" id="aiAnalyzeBtn" onclick="runAiAnalysis()">🔍 Analiz Et</button>
           </div>
@@ -1273,7 +1213,7 @@
             </div>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
             <div class="card">
               <div class="card-title">Anomali Dedektörü</div>
               <div style="margin-bottom:10px;display:flex;gap:8px">
@@ -1298,11 +1238,34 @@
               <div id="forecastResult" class="text-muted">Tahmin için yukarıdaki butona tıklayın.</div>
             </div>
           </div>
+
+          <!-- ── AI Ajan Yönetimi ── -->
+          <div class="card" style="margin-bottom:14px;background:rgba(42,109,217,.05);border:1px solid rgba(42,109,217,.25);border-radius:8px;padding:14px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <i class="fa-solid fa-robot" style="color:var(--accent-lt);font-size:18px"></i>
+              <strong style="font-size:14px">AI Ajan Cron Sistemi</strong>
+            </div>
+            <p class="text-muted" style="font-size:12px;margin:0">Ajanlar belirlenen aralıklarla otomatik olarak sistemin sağlığını kontrol eder, kaynak kullanımını analiz eder ve anormallikleri raporlar. Her ajan bağımsız çalışır ve kendi Anthropic API anahtarını kullanır.</p>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 style="font-size:14px;font-weight:600"><i class="fa-solid fa-robot" style="margin-right:6px;color:var(--accent-lt)"></i>AI Ajanlar</h3>
+            <div style="display:flex;gap:8px">
+              <button class="btn-primary btn-sm" onclick="loadAIAgents()"><i class="fa-solid fa-arrows-rotate" style="margin-right:4px"></i>Yenile</button>
+              <button class="btn-primary" onclick="openModal('modal-add-agent')"><i class="fa-solid fa-plus" style="margin-right:4px"></i>Ajan Ekle</button>
+            </div>
+          </div>
+          <div id="ai-agents-list" style="display:grid;gap:10px">
+            <div class="empty-state" style="padding:30px;text-align:center;color:var(--text-muted)">
+              <i class="fa-solid fa-robot" style="font-size:32px;margin-bottom:10px;opacity:.4"></i>
+              <p>Henüz AI ajan eklenmedi.</p>
+            </div>
+          </div>
         </div>
 
         <!-- ─────── tab-security ─────── -->
         <div class="page" id="page-tab-security">
-          <div class="section-header"><h2>🔐 Güvenlik</h2></div>
+          <div class="section-header"><h2><i class="fa-solid fa-user-shield" style="margin-right:8px;color:var(--accent-lt)"></i>Güvenlik</h2></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
             <div class="card">
               <div class="card-title">2FA Yönetimi</div>
@@ -1354,7 +1317,48 @@
 
         <!-- ─────── tab-integrations ─────── -->
         <div class="page" id="page-tab-integrations">
-          <div class="section-header"><h2>🔗 Entegrasyonlar</h2></div>
+          <div class="section-header"><h2><i class="fa-solid fa-plug"></i> Entegrasyonlar</h2></div>
+
+          <!-- Telegram & Discord -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div class="card">
+              <div class="card-title"><i class="fa-brands fa-telegram" style="color:#26a5e4"></i> Telegram Bot</div>
+              <div class="form-row"><label>Bot Token</label><input id="tg-token" type="password" placeholder="123456789:AAFxxxxxx" autocomplete="off"></div>
+              <div class="form-row"><label>Chat ID</label><input id="tg-chat-id" placeholder="123456789"></div>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button class="btn primary" onclick="saveNotifConfig()"><i class="fa-solid fa-floppy-disk"></i> Kaydet</button>
+                <button class="btn" onclick="testNotification('telegram')"><i class="fa-solid fa-flask"></i> Test</button>
+              </div>
+              <div style="margin-top:10px;font-size:10px;color:var(--text-muted);line-height:1.6">
+                1. @BotFather'a /newbot yaz → Token al<br>
+                2. Bota /start gönder<br>
+                3. Chat ID: api.telegram.org/bot&lt;TOKEN&gt;/getUpdates
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title"><i class="fa-brands fa-discord" style="color:#5865f2"></i> Discord</div>
+              <div class="form-row"><label>Webhook URL</label><input id="discord-webhook" type="password" placeholder="https://discord.com/api/webhooks/..." autocomplete="off"></div>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button class="btn primary" onclick="saveNotifConfig()"><i class="fa-solid fa-floppy-disk"></i> Kaydet</button>
+                <button class="btn" onclick="testNotification('discord')"><i class="fa-solid fa-flask"></i> Test</button>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-title"><i class="fa-solid fa-sliders"></i> Bildirim Ayarları</div>
+            <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
+              <div class="form-row"><label>Minimum Seviye</label>
+                <select id="notif-min-level">
+                  <option value="DEBUG">DEBUG</option>
+                  <option value="INFO">INFO</option>
+                  <option value="WARNING" selected>WARNING</option>
+                  <option value="ERROR">ERROR</option>
+                  <option value="CRITICAL">CRITICAL</option>
+                </select>
+              </div>
+              <button class="btn primary" onclick="saveNotifConfig()"><i class="fa-solid fa-floppy-disk"></i> Kaydet</button>
+            </div>
+          </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
             <div class="card">
@@ -1431,7 +1435,7 @@
 
         <!-- ─────── tab-settings ─────── -->
         <div class="page" id="page-tab-settings">
-          <div class="section-header"><h2>⚙️ Sistem Ayarları</h2></div>
+          <div class="section-header"><h2><i class="fa-solid fa-gear" style="margin-right:8px;color:var(--accent-lt)"></i>Sistem Ayarları</h2></div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
             <div class="card">
@@ -1643,7 +1647,7 @@
 <div class="modal-overlay" id="modal-create-snap">
   <div class="modal">
     <div class="modal-header">
-      <h2>📷 Snapshot Al</h2>
+      <h2><i class="fa-solid fa-camera" style="margin-right:8px;color:var(--accent-lt)"></i>Snapshot Al</h2>
       <button class="modal-close" onclick="closeModal('modal-create-snap')">✕</button>
     </div>
     <div class="modal-body">
@@ -1661,7 +1665,7 @@
 <div class="modal-overlay" id="modal-add-agent">
   <div class="modal">
     <div class="modal-header">
-      <h2>🤖 AI Ajan Ekle</h2>
+      <h2><i class="fa-solid fa-robot" style="margin-right:8px;color:var(--accent-lt)"></i>AI Ajan Ekle</h2>
       <button class="modal-close" onclick="closeModal('modal-add-agent')">✕</button>
     </div>
     <div class="modal-body">
@@ -1812,68 +1816,97 @@ function buildContextNav(type) {
     html = `
       <div class="ctx-section">Genel Bakış</div>
       <div class="ctx-item active" data-page="summary" onclick="navigate('summary')">
-        <svg viewBox="0 0 16 16"><path d="M0 1.5A1.5 1.5 0 011.5 0h3A1.5 1.5 0 016 1.5v3A1.5 1.5 0 014.5 6h-3A1.5 1.5 0 010 4.5v-3zm8 0A1.5 1.5 0 019.5 0h3A1.5 1.5 0 0114 1.5v3A1.5 1.5 0 0112.5 6h-3A1.5 1.5 0 018 4.5v-3zm-8 8A1.5 1.5 0 011.5 8h3A1.5 1.5 0 016 9.5v3A1.5 1.5 0 014.5 14h-3A1.5 1.5 0 010 12.5v-3zm8 0A1.5 1.5 0 019.5 8h3A1.5 1.5 0 0114 9.5v3A1.5 1.5 0 0112.5 14h-3A1.5 1.5 0 018 12.5v-3z"/></svg>
+        <i class="fa-solid fa-gauge-high fa-fw"></i>
         Summary
       </div>
       <div class="ctx-item" data-page="console" onclick="navigate('console')">
-        <svg viewBox="0 0 16 16"><path d="M6 9a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3A.5.5 0 016 9zM3.854 4.146a.5.5 0 100 .708L4.793 5.5 3.854 6.396a.5.5 0 100 .708l1.5-1.5a.5.5 0 000-.708l-1.5-1.5z"/><path d="M2 1a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V3a2 2 0 00-2-2H2zm12 1a1 1 0 011 1v10a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1h12z"/></svg>
+        <i class="fa-solid fa-terminal fa-fw"></i>
         Shell Console
       </div>
 
       <div class="ctx-section">Sanallaştırma</div>
       <div class="ctx-item" data-page="vms" onclick="navigate('vms')">
-        <svg viewBox="0 0 16 16"><path d="M5.5 2A3.5 3.5 0 002 5.5v5A3.5 3.5 0 005.5 14h5a3.5 3.5 0 003.5-3.5v-5A3.5 3.5 0 0010.5 2h-5zm0 1h5A2.5 2.5 0 0113 5.5v5A2.5 2.5 0 0110.5 13h-5A2.5 2.5 0 013 10.5v-5A2.5 2.5 0 015.5 3z"/></svg>
+        <i class="fa-solid fa-server fa-fw"></i>
         Sanal Makineler
       </div>
       <div class="ctx-item" data-page="snapshots" onclick="navigate('snapshots')">
-        <svg viewBox="0 0 16 16"><path d="M8 3a5 5 0 110 10A5 5 0 018 3zm0 1a4 4 0 100 8A4 4 0 008 4z"/></svg>
+        <i class="fa-solid fa-camera fa-fw"></i>
         Snapshot
       </div>
       <div class="ctx-item" data-page="topology" onclick="navigate('topology')">
-        <svg viewBox="0 0 16 16"><path d="M8 0a1 1 0 011 1v.5h2.5a.5.5 0 010 1H9V3a1 1 0 01-2 0v-.5H4.5a.5.5 0 010-1H7V1a1 1 0 011-1zM1 8a1 1 0 011-1h.5V4.5a.5.5 0 011 0V7H4a1 1 0 110 2h-.5v2.5a.5.5 0 01-1 0V9H2a1 1 0 01-1-1zm9 0a1 1 0 011-1h.5V4.5a.5.5 0 011 0V7H13a1 1 0 110 2h-.5v2.5a.5.5 0 01-1 0V9H11a1 1 0 01-1-1z"/></svg>
+        <i class="fa-solid fa-diagram-project fa-fw"></i>
         Topoloji
       </div>
 
       <div class="ctx-section">Sistem</div>
       <div class="ctx-item" data-page="networks" onclick="navigate('networks')">
-        <svg viewBox="0 0 16 16"><path d="M14 1a1 1 0 011 1v12a1 1 0 01-1 1H2a1 1 0 01-1-1V2a1 1 0 011-1h12zm-1 1H3a.5.5 0 00-.5.5v11a.5.5 0 00.5.5h10a.5.5 0 00.5-.5v-11A.5.5 0 0013 2z"/></svg>
+        <i class="fa-solid fa-network-wired fa-fw"></i>
         Ağ
       </div>
       <div class="ctx-item" data-page="storage" onclick="navigate('storage')">
-        <svg viewBox="0 0 16 16"><path d="M0 7a2 2 0 012-2h12a2 2 0 012 2v1a2 2 0 01-2 2H2a2 2 0 01-2-2V7zm.5 1a.5.5 0 00.5.5h12a.5.5 0 00.5-.5V7a.5.5 0 00-.5-.5H1a.5.5 0 00-.5.5v1z"/><path d="M2 11.5a.5.5 0 00.5.5h11a.5.5 0 000-1h-11a.5.5 0 00-.5.5zm0-3a.5.5 0 00.5.5h11a.5.5 0 000-1h-11a.5.5 0 00-.5.5z"/></svg>
+        <i class="fa-solid fa-hard-drive fa-fw"></i>
         Depolama
       </div>
       <div class="ctx-item" data-page="monitor" onclick="navigate('monitor')">
-        <svg viewBox="0 0 16 16"><path d="M0 4s0-2 2-2h12s2 0 2 2v6s0 2-2 2h-4c0 .667.083 1.167.25 1.5H11a.5.5 0 010 1H5a.5.5 0 010-1h.75c.167-.333.25-.833.25-1.5H2s-2 0-2-2V4zm1.398 0A1 1 0 002 3h12a1 1 0 001-1V4a1 1 0 00-1 1H2a1 1 0 00-1-1V4z"/></svg>
+        <i class="fa-solid fa-chart-line fa-fw"></i>
         İzleme
       </div>
 
       <div class="ctx-section">Yönetim</div>
       <div class="ctx-item" data-page="users" onclick="navigate('users')">
-        <svg viewBox="0 0 16 16"><path d="M11 6a3 3 0 11-6 0 3 3 0 016 0zM0 13.5a7 7 0 0114 0H0z"/></svg>
+        <i class="fa-solid fa-users fa-fw"></i>
         Kullanıcılar
       </div>
       <div class="ctx-item" data-page="updates" onclick="navigate('updates')">
-        <svg viewBox="0 0 16 16"><path d="M8 1a7 7 0 110 14A7 7 0 018 1zm0 1a6 6 0 100 12A6 6 0 008 2zm.5 9H8a.5.5 0 01-.5-.5v-5a.5.5 0 011 0V11h.5a.5.5 0 010 1z"/></svg>
+        <i class="fa-solid fa-rotate fa-fw"></i>
         Güncellemeler
-      </div>
-      <div class="ctx-item" data-page="settings" onclick="navigate('settings')">
-        <svg viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 100 6.492 3.246 3.246 0 000-6.492zM5.754 8a2.246 2.246 0 114.492 0 2.246 2.246 0 01-4.492 0z"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 01-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 01-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 01.52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 011.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 011.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 01.52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 01-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 01-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 002.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 001.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 00-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 00-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 00-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 003.06 8.377l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 004.175 3.92l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 002.692-1.115l.094-.319z"/></svg>
-        Ayarlar
       </div>
 
       <div class="ctx-section">Gelişmiş</div>
-      <div class="ctx-item" data-page="tab-templates" onclick="navigate('tab-templates')">📋 Şablonlar</div>
-      <div class="ctx-item" data-page="tab-backup" onclick="navigate('tab-backup')">💾 Yedekleme</div>
-      <div class="ctx-item" data-page="tab-firewall" onclick="navigate('tab-firewall')">🛡️ Güvenlik Duvarı</div>
-      <div class="ctx-item" data-page="tab-vpn" onclick="navigate('tab-vpn')">🔒 VPN</div>
-      <div class="ctx-item" data-page="tab-dns" onclick="navigate('tab-dns')">🌐 DNS</div>
-      <div class="ctx-item" data-page="tab-proxy" onclick="navigate('tab-proxy')">↔️ Proxy & LB</div>
-      <div class="ctx-item" data-page="tab-monitoring" onclick="navigate('tab-monitoring')">📊 İzleme+</div>
-      <div class="ctx-item" data-page="tab-ai" onclick="navigate('tab-ai')">🤖 AI Asistan</div>
-      <div class="ctx-item" data-page="tab-security" onclick="navigate('tab-security')">🔐 Güvenlik</div>
-      <div class="ctx-item" data-page="tab-integrations" onclick="navigate('tab-integrations')">🔗 Entegrasyonlar</div>
-      <div class="ctx-item" data-page="tab-settings" onclick="navigate('tab-settings')">⚙️ Sistem Ayarları</div>
+      <div class="ctx-item" data-page="tab-templates" onclick="navigate('tab-templates')">
+        <i class="fa-solid fa-clone fa-fw"></i>
+        Şablonlar
+      </div>
+      <div class="ctx-item" data-page="tab-backup" onclick="navigate('tab-backup')">
+        <i class="fa-solid fa-floppy-disk fa-fw"></i>
+        Yedekleme
+      </div>
+      <div class="ctx-item" data-page="tab-firewall" onclick="navigate('tab-firewall')">
+        <i class="fa-solid fa-shield-halved fa-fw"></i>
+        Güvenlik Duvarı
+      </div>
+      <div class="ctx-item" data-page="tab-vpn" onclick="navigate('tab-vpn')">
+        <i class="fa-solid fa-lock fa-fw"></i>
+        VPN
+      </div>
+      <div class="ctx-item" data-page="tab-dns" onclick="navigate('tab-dns')">
+        <i class="fa-solid fa-earth-americas fa-fw"></i>
+        DNS
+      </div>
+      <div class="ctx-item" data-page="tab-proxy" onclick="navigate('tab-proxy')">
+        <i class="fa-solid fa-arrows-left-right fa-fw"></i>
+        Proxy &amp; LB
+      </div>
+      <div class="ctx-item" data-page="tab-monitoring" onclick="navigate('tab-monitoring')">
+        <i class="fa-solid fa-chart-area fa-fw"></i>
+        İzleme+
+      </div>
+      <div class="ctx-item" data-page="tab-ai" onclick="navigate('tab-ai')">
+        <i class="fa-solid fa-robot fa-fw"></i>
+        AI Asistan
+      </div>
+      <div class="ctx-item" data-page="tab-security" onclick="navigate('tab-security')">
+        <i class="fa-solid fa-user-shield fa-fw"></i>
+        Güvenlik
+      </div>
+      <div class="ctx-item" data-page="tab-integrations" onclick="navigate('tab-integrations')">
+        <i class="fa-solid fa-plug fa-fw"></i>
+        Entegrasyonlar
+      </div>
+      <div class="ctx-item" data-page="tab-settings" onclick="navigate('tab-settings')">
+        <i class="fa-solid fa-gear fa-fw"></i>
+        Sistem Ayarları
+      </div>
     `;
   } else if (type === "vm") {
     html = `
@@ -3193,7 +3226,7 @@ async function loadTabData(tabId) {
     case 'tab-dns':          loadDnsHosts(); loadDhcpLeases(); break;
     case 'tab-proxy':        loadNginxSites(); break;
     case 'tab-monitoring':   loadPerfHistory('1h'); loadSmartData(); loadUptimes(); loadIdsStatus(); break;
-    case 'tab-ai':           loadAiRecommendations(); loadAnomalies(); break;
+    case 'tab-ai':           loadAiRecommendations(); loadAnomalies(); loadAIAgents(); break;
     case 'tab-security':     load2faStatus(); loadAuditLog(); loadApiKeys(); loadLdapConfig(); break;
     case 'tab-integrations': loadWebhooks(); loadS3Config(); loadEmailConfig(); loadVlans(); break;
     case 'tab-settings':     loadSdnStatus(); loadSslStatus(); loadScalerPolicies(); loadQuotas(); break;
