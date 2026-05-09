@@ -13,48 +13,62 @@ from pathlib import Path
 
 log = logging.getLogger("oxware.license")
 
-LICENSE_FILE = "/var/lib/oxware/license.json"
-LICENSE_REPO = "ShinnAsukha/oxware-license"
-LICENSE_FILE_PATH = ".licensecodes"
-# Bu key license repo'sundaki .licensecodes dosyasını şifrelemek için kullanılır.
-# Ayrı bir araçla üretilmiş Fernet anahtarı (base64 URL-safe):
-_FERNET_KEY = b"YWRhb3N3YXJlbGljZW5zZWtleS0zMmJ5dGVzLTIwMjQ="  # placeholder - gerçek projede değiştirilecek
+LICENSE_FILE    = "/var/lib/oxware/license.json"
+LICENSE_REPO    = "ShinnAsukha/oxware-license"
+LICENSE_RAW_URL = f"https://raw.githubusercontent.com/{LICENSE_REPO}/main/.licensecodes"
 
-_license_cache = None
-_cache_ts = 0
+# Şifreleme anahtarı — paroladan SHA-256 ile türetilmiş, Fernet için base64
+_PASSPHRASE = b"OXware-License-Secret-2024-ShinnAsukha"
+
+_codes_cache: list = []
+_cache_ts: float = 0.0
 CACHE_TTL = 3600  # 1 saat
 
 def _get_fernet():
     try:
         from cryptography.fernet import Fernet
         import base64
-        # 32 byte key oluştur
-        raw = b"oxware-license-secret-key-2024!!"  # 32 bytes
-        key = base64.urlsafe_b64encode(raw)
+        key_bytes = hashlib.sha256(_PASSPHRASE).digest()  # 32 bytes
+        key = base64.urlsafe_b64encode(key_bytes)
         return Fernet(key)
     except Exception as e:
         log.warning("Fernet yüklenemedi: %s", e)
         return None
 
 def _fetch_license_codes() -> list:
-    """GitHub'dan şifreli lisans dosyasını çek, çöz, kodları döndür."""
+    """GitHub'dan şifreli .licensecodes dosyasını çek, Fernet ile çöz."""
+    global _codes_cache, _cache_ts
+
+    # Cache geçerliyse tekrar çekme
+    if _codes_cache and (time.time() - _cache_ts) < CACHE_TTL:
+        return _codes_cache
+
     try:
         import urllib.request
-        url = f"https://raw.githubusercontent.com/{LICENSE_REPO}/main/{LICENSE_FILE_PATH}"
-        req = urllib.request.Request(url, headers={"User-Agent": "OXware/2.0"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            encrypted_data = resp.read()
+        req = urllib.request.Request(
+            LICENSE_RAW_URL,
+            headers={"User-Agent": "OXware/2.1", "Cache-Control": "no-cache"}
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            encrypted_data = resp.read().strip()
 
-        f = _get_fernet()
-        if not f:
+        fernet = _get_fernet()
+        if not fernet:
+            log.error("Fernet başlatılamadı")
             return []
 
-        decrypted = f.decrypt(encrypted_data)
-        codes = [line.strip() for line in decrypted.decode("utf-8").splitlines() if line.strip()]
+        decrypted = fernet.decrypt(encrypted_data)
+        codes = [line.strip() for line in decrypted.decode("utf-8").splitlines()
+                 if line.strip() and line.strip().startswith("OXWARE-")]
+
+        _codes_cache = codes
+        _cache_ts = time.time()
+        log.info("Lisans listesi güncellendi: %d kod", len(codes))
         return codes
+
     except Exception as e:
-        log.warning("Lisans dosyası alınamadı: %s", e)
-        return []
+        log.warning("Lisans dosyası alınamadı (%s): %s", LICENSE_RAW_URL, e)
+        return _codes_cache  # cache varsa eski listeyi döndür
 
 def validate_license(code: str) -> dict:
     """Lisans kodunu doğrula."""
