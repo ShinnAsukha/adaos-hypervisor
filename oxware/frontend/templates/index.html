@@ -5231,47 +5231,74 @@ async function load2faStatus() {
 
 async function setup2fa() {
   const d = await _api('/api/auth/2fa/setup', 'POST');
-  if (!d.available) { toast('pyotp kurulu değil', 'error'); return; }
-  const uri = d.uri || '';
-  // Build a QR code image using qrserver API (works offline fallback = show URI)
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&bgcolor=ffffff&color=000000&data=${encodeURIComponent(uri)}`;
-  // Show in modal
+  if (!d.available) { toast('pyotp kurulu değil. Sunucuda: pip install pyotp qrcode[pil]', 'error'); return; }
+  const uri      = d.uri || '';
+  const qrImage  = d.qr_image || '';   // backend'den gelen data:image/png;base64,...
+
+  // QR gösterim alanı: backend'den geldiyse img, gelmediyse URI metni
+  const qrSection = qrImage
+    ? `<div style="background:#fff;padding:10px;border-radius:8px;display:inline-block;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.15)">
+         <img src="${qrImage}" width="180" height="180" alt="QR Code" style="display:block">
+       </div>`
+    : `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:12px;margin-bottom:12px;font-size:10px;color:var(--text-muted);word-break:break-all;max-width:280px;text-align:left">
+         <strong style="display:block;margin-bottom:4px;color:var(--yellow-lt)">⚠️ QR üretilemedi</strong>
+         ${escHtml(uri)}
+       </div>`;
+
+  // Overlay — sabit ID ile, closest('[style]') bug'ı olmaz
+  const old = document.getElementById('_2fa-overlay');
+  if (old) old.remove();
+
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center';
+  overlay.id = '_2fa-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9999;display:flex;align-items:center;justify-content:center';
   overlay.innerHTML = `
-    <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:24px;max-width:360px;width:90%;text-align:center">
-      <h3 style="margin-bottom:16px;font-size:15px">🔐 2FA Kurulumu</h3>
-      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+    <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:26px;max-width:380px;width:92%;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,.5)">
+      <h3 style="margin-bottom:6px;font-size:16px">🔐 2FA Kurulumu</h3>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">
         Google Authenticator / Authy ile aşağıdaki QR kodu tarayın:
       </p>
-      <div style="background:#fff;padding:10px;border-radius:6px;display:inline-block;margin-bottom:12px">
-        <img src="${qrUrl}" width="180" height="180" onerror="this.style.display='none';document.getElementById('uri-fallback').style.display='block'" alt="QR Code">
-        <div id="uri-fallback" style="display:none;font-size:10px;color:#333;word-break:break-all;max-width:180px">${escHtml(uri)}</div>
-      </div>
-      <p style="font-size:11px;color:var(--text-muted);margin-bottom:14px">Tarama yapamıyorsanız URI'yi kopyalayın:</p>
-      <input readonly value="${escHtml(uri)}" onclick="this.select()" style="width:100%;font-size:10px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);margin-bottom:14px">
-      <div style="margin-bottom:10px;text-align:left">
-        <label style="font-size:12px;color:var(--text-muted)">Uygulamadan 6 haneli kodu girin:</label>
-        <input id="_2fa-code-input" type="text" inputmode="numeric" maxlength="6" placeholder="000000"
-          style="width:100%;padding:8px;margin-top:6px;background:var(--surface);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:18px;letter-spacing:6px;text-align:center">
+      ${qrSection}
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Tarama yapamıyorsanız URI'yi kopyalayın:</p>
+      <input readonly value="${escHtml(uri)}" onclick="this.select()"
+        style="width:100%;font-size:10px;padding:7px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);margin-bottom:16px;cursor:copy">
+      <div style="margin-bottom:14px;text-align:left">
+        <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Uygulamadan 6 haneli kodu girin:</label>
+        <input id="_2fa-code-input" type="text" inputmode="numeric" maxlength="6" placeholder="0  0  0  0  0  0"
+          style="width:100%;padding:10px;background:var(--surface);border:2px solid var(--border2);border-radius:6px;color:var(--text);font-size:22px;letter-spacing:8px;text-align:center;font-variant-numeric:tabular-nums"
+          oninput="if(this.value.length===6)document.getElementById('_2fa-confirm-btn').focus()">
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end">
-        <button class="btn" onclick="this.closest('[style]').remove()">İptal</button>
-        <button class="btn primary" onclick="confirm2faSetup(this)">✓ Doğrula & Etkinleştir</button>
+        <button class="btn" onclick="document.getElementById('_2fa-overlay').remove()">İptal</button>
+        <button class="btn primary" id="_2fa-confirm-btn" onclick="confirm2faSetup(this)">✓ Doğrula &amp; Etkinleştir</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
-  setTimeout(() => overlay.querySelector('#_2fa-code-input')?.focus(), 100);
+  // Dışına tıklayınca kapat
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  setTimeout(() => document.getElementById('_2fa-code-input')?.focus(), 150);
 }
 
 async function confirm2faSetup(btn) {
   const input = document.getElementById('_2fa-code-input');
-  const code = input ? input.value.trim() : '';
-  if (!code || code.length !== 6) { toast('6 haneli kodu girin', 'error'); return; }
+  const code = input ? input.value.trim().replace(/\s/g,'') : '';
+  if (!code || code.length !== 6) { toast('6 haneli kodu eksiksiz girin', 'error'); return; }
+  const origText = btn.textContent;
   btn.disabled = true; btn.textContent = '...';
-  const r = await _api('/api/auth/2fa/enable', 'POST', {code});
-  btn.closest('[style]').remove();
-  toast(r.status === 'ok' ? '2FA aktif!' : (r.error || 'Hata'), r.status === 'ok' ? 'success' : 'error');
+  try {
+    const r = await _api('/api/auth/2fa/enable', 'POST', {code});
+    if (r.status === 'ok' || r.success) {
+      document.getElementById('_2fa-overlay')?.remove();
+      toast('2FA başarıyla aktif edildi! ✅', 'success');
+    } else {
+      toast(r.error || 'Kod hatalı, tekrar deneyin', 'error');
+      btn.disabled = false; btn.textContent = origText;
+      input.value = ''; input.focus();
+    }
+  } catch(e) {
+    toast(e.message, 'error');
+    btn.disabled = false; btn.textContent = origText;
+  }
   load2faStatus();
 }
 

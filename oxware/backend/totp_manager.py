@@ -10,6 +10,13 @@ try:
 except ImportError:
     PYOTP_AVAILABLE = False
 
+try:
+    import qrcode
+    import io, base64
+    QRCODE_AVAILABLE = True
+except ImportError:
+    QRCODE_AVAILABLE = False
+
 import json
 import os
 import time
@@ -78,7 +85,28 @@ def setup_totp(username):
             _save(data)
 
         log.info("setup_totp: %s için yeni secret oluşturuldu.", username)
-        return {"secret": secret, "uri": uri, "available": True}
+
+        # QR kod PNG → base64 data URI
+        qr_image = None
+        if QRCODE_AVAILABLE:
+            try:
+                qr = qrcode.QRCode(
+                    version=1,
+                    error_correction=qrcode.constants.ERROR_CORRECT_M,
+                    box_size=6,
+                    border=3,
+                )
+                qr.add_data(uri)
+                qr.make(fit=True)
+                img = qr.make_image(fill_color="black", back_color="white")
+                buf = io.BytesIO()
+                img.save(buf, format="PNG")
+                buf.seek(0)
+                qr_image = "data:image/png;base64," + base64.b64encode(buf.read()).decode()
+            except Exception as qr_err:
+                log.warning("QR kod oluşturulamadı: %s", qr_err)
+
+        return {"secret": secret, "uri": uri, "available": True, "qr_image": qr_image}
     except Exception as e:
         log.error("setup_totp hatası (username=%s): %s", username, e)
         return {"available": False, "error": str(e)}

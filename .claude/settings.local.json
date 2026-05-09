@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\adaly\\\\Desktop\\\\ada\\\\proje\\\\AdaOS\\\\adaos\\\\frontend\\\\templates\\\\index.html\" | Measure-Object -Line\\).Lines)",
+      "Bash(dir \"C:\\\\Users\\\\adaly\\\\Desktop\\\\ada\\\\proje\\\\AdaOS\" /b)",
+      "Bash(ls \"C:\\\\Users\\\\adaly\\\\Desktop\\\\ada\\\\proje\\\\AdaOS\" && ls \"C:\\\\Users\\\\adaly\\\\Desktop\\\\ada\\\\proje\")",
+      "Bash(git fetch *)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git config *)",
+      "Bash(git push *)",
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/xterm@5.5.0/lib/xterm.min.js\" -o xterm.min.js)",
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/xterm@5.5.0/css/xterm.min.css\" -o xterm.min.css)",
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js\" -o addon-fit.min.js)",
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js\" -o chart.umd.min.js)",
+      "Bash(curl -sL -A \"Mozilla/5.0\" \"https://cdn.jsdelivr.net/npm/xterm@5.5.0/lib/xterm.min.js\" -o xterm.min.js)",
+      "Bash(curl -sL -A \"Mozilla/5.0\" \"https://cdn.jsdelivr.net/npm/xterm@5.5.0/css/xterm.min.css\" -o xterm.min.css)",
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js\" -o xterm.min.js)",
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css\" -o xterm.min.css)",
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.8.0/lib/addon-fit.min.js\" -o addon-fit.min.js)",
+      "Bash(curl -sL \"https://unpkg.com/xterm-addon-fit@0.7.0/lib/xterm-addon-fit.js\" -o addon-fit.min.js)",
+      "Bash(git remote *)",
+      "Bash(git commit -m 'fix: index.html no-cache header ekle — tarayıcı cache sorununu önle *)",
+      "Bash(git commit -m 'fix: collapsible nav toggle düzeltildi, sayfa çevirisi eklendi *)",
+      "Bash(pip install *)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -m pip install cryptography -q)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\adaly\\\\Desktop\\\\ada\\\\proje\\\\oxware-license\" && echo \"done\")",
+      "Bash(git branch *)",
+      "Bash(git commit *)",
+      "Bash(git merge *)",
+      "Bash(git pull *)",
+      "Bash(git stash *)",
+      "Bash(git rm *)"
+    ]
+  }
+}
