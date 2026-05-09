@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OXware Hypervisor</title>
   <link rel="icon" type="image/png" href="/static/img/sadeceikon.png">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="/static/fontawesome.css">
   <script src="/static/chart.umd.min.js"></script>
   <script src="/static/socket.io.min.js"></script>
   <link rel="stylesheet" href="/static/xterm.min.css">
@@ -131,7 +131,13 @@
     .vm-id{font-family:'Consolas',monospace;color:var(--text-dim);font-size:10px;margin-right:2px}
 
     /* ── Context Nav ── */
-    #nav-panel{width:var(--nav-w);background:var(--surface2);border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0;padding:4px 0}
+    #nav-panel{width:var(--nav-w);min-width:160px;max-width:400px;background:var(--surface2);border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0;padding:4px 0;position:relative;transition:none}
+    #nav-resize-handle{position:absolute;right:0;top:0;bottom:0;width:4px;cursor:col-resize;background:transparent;z-index:10;transition:background .15s}
+    #nav-resize-handle:hover,#nav-resize-handle.dragging{background:var(--accent)}
+
+    /* ── Taskbar resize ── */
+    #taskbar-resize-handle{height:4px;background:transparent;cursor:row-resize;flex-shrink:0;border-top:1px solid var(--border);transition:background .15s}
+    #taskbar-resize-handle:hover,#taskbar-resize-handle.dragging{background:var(--accent)}
     .ctx-section{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);padding:9px 12px 3px}
     .ctx-item{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:12px;color:var(--text-muted);transition:background .1s,color .1s;position:relative}
     .ctx-item:hover{background:rgba(255,255,255,.04);color:var(--text)}
@@ -311,7 +317,7 @@
     .modal-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
 
     /* ── Toast ── */
-    #toast-container{position:fixed;bottom:calc(var(--taskbar-h) + 18px);right:18px;z-index:2000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+    #toast-container{position:fixed;bottom:calc(var(--taskbar-h) + 18px);right:18px;transition:bottom .1s;z-index:2000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
     .toast{display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--surface2);border:1px solid var(--border2);border-left:3px solid var(--accent);border-radius:4px;font-size:12px;color:var(--text);min-width:240px;max-width:380px;animation:slideIn .2s ease;box-shadow:0 4px 16px rgba(0,0,0,.4)}
     @keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
     .toast.success{border-left-color:var(--green-lt)}
@@ -382,6 +388,36 @@
     .tree-item svg{display:inline-block;vertical-align:middle}
     .tb-action svg{display:inline-block;vertical-align:middle}
     .btn svg{display:inline-block;vertical-align:middle}
+
+    /* ctx-item flex düzeltme */
+    .ctx-item{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:12px;color:var(--text-muted);cursor:pointer;border-radius:3px;transition:background .12s,color .12s;position:relative}
+    .ctx-item:hover{background:var(--surface2);color:var(--text)}
+    .ctx-item.active{background:rgba(42,109,217,.12);color:var(--accent-lt)}
+    .ctx-item i.fa-fw{width:16px;flex-shrink:0;text-align:center}
+
+    /* page scroll fix */
+    .page{flex:1;overflow-y:auto;padding:16px;display:none}
+    .page.active{display:block}
+
+    /* card başlık düzeltme */
+    .card-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+
+    /* Collapsible nav sections */
+    .ctx-section-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:6px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);margin-top:6px}
+    .ctx-section-header:hover{color:var(--text-muted)}
+    .ctx-section-arrow{font-size:10px;transition:transform .2s}
+    .ctx-section-body{overflow:hidden;transition:max-height .25s ease}
+    .ctx-section-body.collapsed{display:none}
+    .nav-sub-list{padding-left:20px;border-left:1px solid var(--border);margin:4px 0 4px 18px}
+    .nav-sub-item{padding:4px 8px;font-size:11px;color:var(--text-muted);cursor:pointer;border-radius:3px;display:flex;align-items:center;gap:6px}
+    .nav-sub-item:hover{background:var(--surface2);color:var(--text)}
+    .nav-sub-item .sub-dot{width:5px;height:5px;border-radius:50%;background:var(--border2);flex-shrink:0}
+    .nav-sub-item.running .sub-dot{background:var(--green-lt)}
+    .vm-expand-btn{margin-left:auto;font-size:9px;padding:2px 5px;cursor:pointer;color:var(--text-dim);transition:transform .2s}
+
+    /* Lang selector */
+    .lang-opt{padding:7px 14px;cursor:pointer;font-size:12px;color:var(--text);white-space:nowrap}
+    .lang-opt:hover{background:var(--surface3)}
   </style>
 </head>
 <body>
@@ -402,6 +438,12 @@
 
     <div class="tb-search">
       <input type="text" placeholder="🔍 Ara..." id="topbarSearch" oninput="filterTree(this.value)">
+    </div>
+
+    <div id="license-banner" style="display:none;padding:0 14px;font-size:11px;height:100%;align-items:center;gap:8px;background:linear-gradient(90deg,rgba(42,109,217,.1),rgba(42,109,217,.05));border-right:1px solid rgba(42,109,217,.2)">
+      <i class="fa-solid fa-star" style="color:#f5c842"></i>
+      <span style="color:var(--text-muted)">Bizi desteklediğiniz için teşekkür ederiz. 7/24 Danışmanlık Hizmetimizi Kullanmak İçin
+      <a href="https://wa.me/+905439769301" target="_blank" style="color:var(--accent-lt);text-decoration:underline;font-weight:600">Tıklayın</a></span>
     </div>
 
     <div class="tb-spacer"></div>
@@ -441,6 +483,18 @@
       </button>
     </div>
 
+    <div class="tb-action" style="position:relative" id="lang-btn" onclick="toggleLangMenu()">
+      <i class="fa-solid fa-globe"></i>
+      <span id="current-lang-label">EN</span>
+      <div id="lang-menu" style="display:none;position:absolute;top:100%;right:0;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;min-width:140px;z-index:300;box-shadow:0 4px 16px rgba(0,0,0,.4)">
+        <div class="lang-opt" onclick="setLang('en')">🇬🇧 English</div>
+        <div class="lang-opt" onclick="setLang('tr')">🇹🇷 Türkçe</div>
+        <div class="lang-opt" onclick="setLang('es')">🇪🇸 Español</div>
+        <div class="lang-opt" onclick="setLang('de')">🇩🇪 Deutsch</div>
+        <div class="lang-opt" onclick="setLang('zh')">🇨🇳 中文</div>
+      </div>
+    </div>
+
     <div class="tb-user" onclick="logout()">
       <div class="tb-avatar" id="tbAvatar">A</div>
       <div>
@@ -474,7 +528,9 @@
     </div>
 
     <!-- ── Context Nav (middle) ── -->
-    <div id="nav-panel"></div>
+    <div id="nav-panel">
+      <div id="nav-resize-handle" title="Genişliği ayarla"></div>
+    </div>
 
     <!-- ── Content Area ── -->
     <div id="content-area">
@@ -736,7 +792,20 @@
             <div class="section-header" style="margin-bottom:10px">
               <span style="font-size:11px;color:var(--text-muted)">Kurulum için kullanılacak ISO imaj dosyaları.</span>
               <div class="spacer"></div>
-              <label class="btn primary" style="cursor:pointer">↑ ISO Yükle <input type="file" accept=".iso" style="display:none" onchange="uploadISO(this)"></label>
+              <input type="file" id="iso-file-input" accept=".iso" style="display:none" onchange="uploadIsoFile(this)">
+              <button class="btn primary" onclick="document.getElementById('iso-file-input').click()">
+                <i class="fa-solid fa-arrow-up-from-bracket"></i> ISO Yükle
+              </button>
+            </div>
+            <div id="iso-upload-progress" style="display:none;margin-top:12px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                <span id="iso-upload-filename" style="font-size:12px;color:var(--text-muted)"></span>
+                <span id="iso-upload-pct" style="font-size:12px;font-weight:600">0%</span>
+              </div>
+              <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden">
+                <div id="iso-upload-bar" style="background:var(--accent);height:100%;width:0%;transition:width .3s;border-radius:4px"></div>
+              </div>
+              <div id="iso-upload-status" style="font-size:11px;color:var(--text-muted);margin-top:4px">Yükleniyor...</div>
             </div>
             <div class="table-wrap">
               <table>
@@ -1482,6 +1551,7 @@
 
   <!-- ────────── TASKBAR ────────── -->
   <div id="taskbar">
+    <div id="taskbar-resize-handle" title="Yüksekliği ayarla"></div>
     <div class="tb-tabs">
       <div class="tb-tab active" data-ttab="tasks" onclick="switchTaskTab('tasks')">Tasks</div>
       <div class="tb-tab" data-ttab="events" onclick="switchTaskTab('events')">Event Log</div>
@@ -1808,105 +1878,334 @@ function selectTreeItem(type, vmId, vmName) {
   }
 }
 
+/* ══════════════════ Language / i18n ══════════════════ */
+
+const LANGS = {
+  en: { label:'EN', strings:{
+    summary:'Summary', vms:'Virtual Machines', networks:'Networks', storage:'Storage',
+    monitor:'Monitor', users:'Users', updates:'Updates', snapshots:'Snapshots',
+    topology:'Topology', templates:'Templates', backup:'Backup',
+    firewall:'Firewall', vpn:'VPN', dns:'DNS', proxy:'Proxy & LB',
+    monitoring:'Monitoring+', ai:'AI Assistant', security:'Security',
+    integrations:'Integrations', settings:'System Settings',
+    'shell console':'Shell Console','general':'General','virtualization':'Virtualization',
+    'system':'System','management':'Management'
+  }},
+  tr: { label:'TR', strings:{
+    summary:'Özet', vms:'Sanal Makineler', networks:'Ağ', storage:'Depolama',
+    monitor:'İzleme', users:'Kullanıcılar', updates:'Güncellemeler', snapshots:'Snapshot',
+    topology:'Topoloji', templates:'Şablonlar', backup:'Yedekleme',
+    firewall:'Güvenlik Duvarı', vpn:'VPN', dns:'DNS', proxy:'Proxy & LB',
+    monitoring:'İzleme+', ai:'AI Asistan', security:'Güvenlik',
+    integrations:'Entegrasyonlar', settings:'Sistem Ayarları',
+    'shell console':'Shell Console','general':'Genel Bakış','virtualization':'Sanallaştırma',
+    'system':'Sistem','management':'Yönetim'
+  }},
+  es: { label:'ES', strings:{
+    summary:'Resumen', vms:'Máquinas Virtuales', networks:'Redes', storage:'Almacenamiento',
+    monitor:'Monitor', users:'Usuarios', updates:'Actualizaciones', snapshots:'Snapshots',
+    topology:'Topología', templates:'Plantillas', backup:'Copia de seguridad',
+    firewall:'Firewall', vpn:'VPN', dns:'DNS', proxy:'Proxy & LB',
+    monitoring:'Monitoreo+', ai:'Asistente IA', security:'Seguridad',
+    integrations:'Integraciones', settings:'Config. Sistema',
+    'shell console':'Consola Shell','general':'General','virtualization':'Virtualización',
+    'system':'Sistema','management':'Gestión'
+  }},
+  de: { label:'DE', strings:{
+    summary:'Übersicht', vms:'Virtuelle Maschinen', networks:'Netzwerke', storage:'Speicher',
+    monitor:'Monitor', users:'Benutzer', updates:'Updates', snapshots:'Snapshots',
+    topology:'Topologie', templates:'Vorlagen', backup:'Backup',
+    firewall:'Firewall', vpn:'VPN', dns:'DNS', proxy:'Proxy & LB',
+    monitoring:'Überwachung+', ai:'KI-Assistent', security:'Sicherheit',
+    integrations:'Integrationen', settings:'Systemeinstellungen',
+    'shell console':'Shell-Konsole','general':'Überblick','virtualization':'Virtualisierung',
+    'system':'System','management':'Verwaltung'
+  }},
+  zh: { label:'ZH', strings:{
+    summary:'概览', vms:'虚拟机', networks:'网络', storage:'存储',
+    monitor:'监控', users:'用户', updates:'更新', snapshots:'快照',
+    topology:'拓扑', templates:'模板', backup:'备份',
+    firewall:'防火墙', vpn:'VPN', dns:'DNS', proxy:'代理 & 负载均衡',
+    monitoring:'高级监控', ai:'AI助手', security:'安全',
+    integrations:'集成', settings:'系统设置',
+    'shell console':'Shell控制台','general':'总览','virtualization':'虚拟化',
+    'system':'系统','management':'管理'
+  }}
+};
+
+let currentLang = localStorage.getItem('ox-lang') || 'en';
+
+function t(key) {
+  return (LANGS[currentLang]?.strings?.[key.toLowerCase()] || key);
+}
+
+function setLang(code) {
+  currentLang = code;
+  localStorage.setItem('ox-lang', code);
+  const lbl = document.getElementById('current-lang-label');
+  if (lbl) lbl.textContent = LANGS[code]?.label || code.toUpperCase();
+  const m = document.getElementById('lang-menu');
+  if (m) m.style.display = 'none';
+  buildContextNav('node');
+  toast('Dil değiştirildi', 'info');
+}
+
+function toggleLangMenu() {
+  const m = document.getElementById('lang-menu');
+  if (m) m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#lang-btn')) {
+    const m = document.getElementById('lang-menu');
+    if (m) m.style.display = 'none';
+  }
+});
+
+/* ══════════════════ Collapsible Nav Sections ══════════════════ */
+
+function toggleNavSection(btn) {
+  const body = btn.parentElement.nextElementSibling;
+  const arrow = btn.querySelector('.ctx-section-arrow');
+  const collapsed = body.classList.toggle('collapsed');
+  arrow.style.transform = collapsed ? '' : 'rotate(90deg)';
+}
+
+function toggleVmSubList(e) {
+  e.stopPropagation();
+  const btn = e.currentTarget;
+  const subList = document.getElementById('vm-sub-list');
+  if (!subList) return;
+  const open = subList.style.display === 'none';
+  subList.style.display = open ? 'block' : 'none';
+  btn.textContent = open ? '▾' : '▸';
+  if (open) loadVmSubList();
+}
+
+async function loadVmSubList() {
+  const el = document.getElementById('vm-sub-list');
+  if (!el) return;
+  el.innerHTML = '<div class="nav-sub-item" style="opacity:.5">Yükleniyor...</div>';
+  try {
+    const r = await fetch('/api/vms', {headers:{'Authorization':'Bearer '+TOKEN()}});
+    const data = await r.json();
+    const vms = data.vms || [];
+    if (!vms.length) { el.innerHTML = '<div class="nav-sub-item"><span class="sub-dot"></span>VM yok</div>'; return; }
+    el.innerHTML = vms.map(v => `
+      <div class="nav-sub-item ${v.state==='running'?'running':''}" onclick="selectVm('${escHtml(v.id)}','${escHtml(v.name)}')">
+        <span class="sub-dot"></span>${escHtml(v.name)}
+        <span style="margin-left:auto;font-size:9px;opacity:.6">${v.state||''}</span>
+      </div>`).join('');
+  } catch { el.innerHTML = '<div class="nav-sub-item" style="color:var(--red-lt)">Hata</div>'; }
+}
+
+/* ══════════════════ License Banner ══════════════════ */
+
+async function checkLicenseStatus() {
+  try {
+    const r = await fetch('/api/license/status', {headers:{'Authorization':'Bearer '+TOKEN()}});
+    const d = await r.json();
+    const banner = document.getElementById('license-banner');
+    if (banner) banner.style.display = d.active ? 'flex' : 'none';
+  } catch {}
+}
+
+/* ══════════════════ ISO Upload ══════════════════ */
+
+async function uploadIsoFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (!file.name.endsWith('.iso')) return toast('Yalnızca .iso dosyaları kabul edilir', 'error');
+
+  const progressEl = document.getElementById('iso-upload-progress');
+  const barEl = document.getElementById('iso-upload-bar');
+  const pctEl = document.getElementById('iso-upload-pct');
+  const nameEl = document.getElementById('iso-upload-filename');
+  const statusEl = document.getElementById('iso-upload-status');
+
+  progressEl.style.display = 'block';
+  nameEl.textContent = file.name;
+  pctEl.textContent = '0%';
+  barEl.style.width = '0%';
+  statusEl.textContent = 'Yükleniyor...';
+  statusEl.style.color = 'var(--text-muted)';
+
+  const taskId = 'iso-' + Date.now();
+  addTaskToPanel(taskId, `ISO Yükleme: ${file.name}`, 'running');
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const xhr = new XMLHttpRequest();
+  xhr.upload.onprogress = (e) => {
+    if (e.lengthComputable) {
+      const pct = Math.round((e.loaded / e.total) * 100);
+      barEl.style.width = pct + '%';
+      pctEl.textContent = pct + '%';
+      statusEl.textContent = `${formatBytes(e.loaded)} / ${formatBytes(e.total)}`;
+      updateTaskPanel(taskId, pct);
+    }
+  };
+  xhr.onload = () => {
+    if (xhr.status === 200) {
+      barEl.style.width = '100%';
+      pctEl.textContent = '100%';
+      statusEl.textContent = 'Yükleme tamamlandı!';
+      statusEl.style.color = 'var(--green-lt)';
+      toast(`${file.name} başarıyla yüklendi`, 'success');
+      completeTaskPanel(taskId, 'success');
+      setTimeout(() => { progressEl.style.display = 'none'; if (typeof loadIsoLibrary === 'function') loadIsoLibrary(); }, 2000);
+    } else {
+      statusEl.textContent = 'Yükleme başarısız!';
+      statusEl.style.color = 'var(--red-lt)';
+      toast('ISO yükleme başarısız', 'error');
+      completeTaskPanel(taskId, 'error');
+    }
+    input.value = '';
+  };
+  xhr.onerror = () => {
+    statusEl.textContent = 'Bağlantı hatası!';
+    toast('Bağlantı hatası', 'error');
+    completeTaskPanel(taskId, 'error');
+    input.value = '';
+  };
+  xhr.open('POST', '/api/storage/iso/upload');
+  xhr.setRequestHeader('Authorization', 'Bearer ' + TOKEN());
+  xhr.send(formData);
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
+  if (bytes < 1073741824) return (bytes/1048576).toFixed(1) + ' MB';
+  return (bytes/1073741824).toFixed(2) + ' GB';
+}
+
+function addTaskToPanel(id, desc, status) {
+  const tbody = document.getElementById('tasklog-tbody');
+  if (!tbody) return;
+  const now = new Date().toLocaleString('tr-TR');
+  const tr = document.createElement('tr');
+  tr.id = 'task-row-' + id;
+  tr.innerHTML = `<td>${now}</td><td>—</td><td>${escHtml(window.location.hostname)}</td><td>system</td><td>${escHtml(desc)} <span id="task-pct-${id}"></span></td><td><span class="badge" id="task-status-${id}" style="background:var(--yellow-lt);color:#000;padding:2px 8px;border-radius:3px;font-size:10px">Çalışıyor</span></td>`;
+  tbody.prepend(tr);
+}
+
+function updateTaskPanel(id, pct) {
+  const el = document.getElementById('task-pct-' + id);
+  if (el) el.textContent = `${pct}%`;
+}
+
+function completeTaskPanel(id, result) {
+  const statusEl = document.getElementById('task-status-' + id);
+  const row = document.getElementById('task-row-' + id);
+  if (statusEl) {
+    statusEl.textContent = result === 'success' ? 'OK' : 'HATA';
+    statusEl.style.background = result === 'success' ? 'var(--green-lt)' : 'var(--red-lt)';
+    statusEl.style.color = '#fff';
+  }
+  const pctEl = document.getElementById('task-pct-' + id);
+  if (pctEl) pctEl.textContent = '';
+  if (row) {
+    const cells = row.querySelectorAll('td');
+    if (cells[1]) cells[1].textContent = new Date().toLocaleString('tr-TR');
+  }
+}
+
 function buildContextNav(type) {
   const nav = document.getElementById("nav-panel");
   let html = "";
 
   if (type === "node") {
     html = `
-      <div class="ctx-section">Genel Bakış</div>
-      <div class="ctx-item active" data-page="summary" onclick="navigate('summary')">
-        <i class="fa-solid fa-gauge-high fa-fw"></i>
-        Summary
-      </div>
-      <div class="ctx-item" data-page="console" onclick="navigate('console')">
-        <i class="fa-solid fa-terminal fa-fw"></i>
-        Shell Console
-      </div>
+  <div class="ctx-section-header" onclick="toggleNavSection(this)">
+    <span>${t('general')}</span><span class="ctx-section-arrow" style="transform:rotate(90deg)">▸</span>
+  </div>
+  <div class="ctx-section-body">
+    <div class="ctx-item active" data-page="summary" onclick="navigate('summary')">
+      <i class="fa-solid fa-gauge-high fa-fw"></i>${t('summary')}
+    </div>
+    <div class="ctx-item" data-page="console" onclick="navigate('console')">
+      <i class="fa-solid fa-terminal fa-fw"></i>${t('shell console')}
+    </div>
+  </div>
 
-      <div class="ctx-section">Sanallaştırma</div>
-      <div class="ctx-item" data-page="vms" onclick="navigate('vms')">
-        <i class="fa-solid fa-server fa-fw"></i>
-        Sanal Makineler
-      </div>
-      <div class="ctx-item" data-page="snapshots" onclick="navigate('snapshots')">
-        <i class="fa-solid fa-camera fa-fw"></i>
-        Snapshot
-      </div>
-      <div class="ctx-item" data-page="topology" onclick="navigate('topology')">
-        <i class="fa-solid fa-diagram-project fa-fw"></i>
-        Topoloji
-      </div>
+  <div class="ctx-section-header" onclick="toggleNavSection(this)">
+    <span>${t('virtualization')}</span><span class="ctx-section-arrow">▸</span>
+  </div>
+  <div class="ctx-section-body collapsed">
+    <div class="ctx-item" data-page="vms" onclick="navigate('vms')">
+      <i class="fa-solid fa-server fa-fw"></i>${t('vms')}
+      <span class="vm-expand-btn" onclick="toggleVmSubList(event)">▸</span>
+    </div>
+    <div class="nav-sub-list" id="vm-sub-list" style="display:none"></div>
+    <div class="ctx-item" data-page="snapshots" onclick="navigate('snapshots')">
+      <i class="fa-solid fa-camera fa-fw"></i>${t('snapshots')}
+    </div>
+    <div class="ctx-item" data-page="topology" onclick="navigate('topology')">
+      <i class="fa-solid fa-diagram-project fa-fw"></i>${t('topology')}
+    </div>
+    <div class="ctx-item" data-page="tab-templates" onclick="navigate('tab-templates')">
+      <i class="fa-solid fa-clone fa-fw"></i>${t('templates')}
+    </div>
+    <div class="ctx-item" data-page="tab-backup" onclick="navigate('tab-backup')">
+      <i class="fa-solid fa-floppy-disk fa-fw"></i>${t('backup')}
+    </div>
+  </div>
 
-      <div class="ctx-section">Sistem</div>
-      <div class="ctx-item" data-page="networks" onclick="navigate('networks')">
-        <i class="fa-solid fa-network-wired fa-fw"></i>
-        Ağ
-      </div>
-      <div class="ctx-item" data-page="storage" onclick="navigate('storage')">
-        <i class="fa-solid fa-hard-drive fa-fw"></i>
-        Depolama
-      </div>
-      <div class="ctx-item" data-page="monitor" onclick="navigate('monitor')">
-        <i class="fa-solid fa-chart-line fa-fw"></i>
-        İzleme
-      </div>
+  <div class="ctx-section-header" onclick="toggleNavSection(this)">
+    <span>${t('system')}</span><span class="ctx-section-arrow" style="transform:rotate(90deg)">▸</span>
+  </div>
+  <div class="ctx-section-body">
+    <div class="ctx-item" data-page="networks" onclick="navigate('networks')">
+      <i class="fa-solid fa-network-wired fa-fw"></i>${t('networks')}
+    </div>
+    <div class="ctx-item" data-page="storage" onclick="navigate('storage')">
+      <i class="fa-solid fa-hard-drive fa-fw"></i>${t('storage')}
+    </div>
+    <div class="ctx-item" data-page="monitor" onclick="navigate('monitor')">
+      <i class="fa-solid fa-chart-line fa-fw"></i>${t('monitor')}
+    </div>
+    <div class="ctx-item" data-page="tab-firewall" onclick="navigate('tab-firewall')">
+      <i class="fa-solid fa-shield-halved fa-fw"></i>${t('firewall')}
+    </div>
+    <div class="ctx-item" data-page="tab-vpn" onclick="navigate('tab-vpn')">
+      <i class="fa-solid fa-lock fa-fw"></i>${t('vpn')}
+    </div>
+    <div class="ctx-item" data-page="tab-dns" onclick="navigate('tab-dns')">
+      <i class="fa-solid fa-earth-americas fa-fw"></i>${t('dns')}
+    </div>
+    <div class="ctx-item" data-page="tab-proxy" onclick="navigate('tab-proxy')">
+      <i class="fa-solid fa-arrows-left-right fa-fw"></i>${t('proxy')}
+    </div>
+    <div class="ctx-item" data-page="tab-monitoring" onclick="navigate('tab-monitoring')">
+      <i class="fa-solid fa-chart-area fa-fw"></i>${t('monitoring')}
+    </div>
+    <div class="ctx-item" data-page="tab-ai" onclick="navigate('tab-ai')">
+      <i class="fa-solid fa-robot fa-fw"></i>${t('ai')}
+    </div>
+  </div>
 
-      <div class="ctx-section">Yönetim</div>
-      <div class="ctx-item" data-page="users" onclick="navigate('users')">
-        <i class="fa-solid fa-users fa-fw"></i>
-        Kullanıcılar
-      </div>
-      <div class="ctx-item" data-page="updates" onclick="navigate('updates')">
-        <i class="fa-solid fa-rotate fa-fw"></i>
-        Güncellemeler
-      </div>
-
-      <div class="ctx-section">Gelişmiş</div>
-      <div class="ctx-item" data-page="tab-templates" onclick="navigate('tab-templates')">
-        <i class="fa-solid fa-clone fa-fw"></i>
-        Şablonlar
-      </div>
-      <div class="ctx-item" data-page="tab-backup" onclick="navigate('tab-backup')">
-        <i class="fa-solid fa-floppy-disk fa-fw"></i>
-        Yedekleme
-      </div>
-      <div class="ctx-item" data-page="tab-firewall" onclick="navigate('tab-firewall')">
-        <i class="fa-solid fa-shield-halved fa-fw"></i>
-        Güvenlik Duvarı
-      </div>
-      <div class="ctx-item" data-page="tab-vpn" onclick="navigate('tab-vpn')">
-        <i class="fa-solid fa-lock fa-fw"></i>
-        VPN
-      </div>
-      <div class="ctx-item" data-page="tab-dns" onclick="navigate('tab-dns')">
-        <i class="fa-solid fa-earth-americas fa-fw"></i>
-        DNS
-      </div>
-      <div class="ctx-item" data-page="tab-proxy" onclick="navigate('tab-proxy')">
-        <i class="fa-solid fa-arrows-left-right fa-fw"></i>
-        Proxy &amp; LB
-      </div>
-      <div class="ctx-item" data-page="tab-monitoring" onclick="navigate('tab-monitoring')">
-        <i class="fa-solid fa-chart-area fa-fw"></i>
-        İzleme+
-      </div>
-      <div class="ctx-item" data-page="tab-ai" onclick="navigate('tab-ai')">
-        <i class="fa-solid fa-robot fa-fw"></i>
-        AI Asistan
-      </div>
-      <div class="ctx-item" data-page="tab-security" onclick="navigate('tab-security')">
-        <i class="fa-solid fa-user-shield fa-fw"></i>
-        Güvenlik
-      </div>
-      <div class="ctx-item" data-page="tab-integrations" onclick="navigate('tab-integrations')">
-        <i class="fa-solid fa-plug fa-fw"></i>
-        Entegrasyonlar
-      </div>
-      <div class="ctx-item" data-page="tab-settings" onclick="navigate('tab-settings')">
-        <i class="fa-solid fa-gear fa-fw"></i>
-        Sistem Ayarları
-      </div>
+  <div class="ctx-section-header" onclick="toggleNavSection(this)">
+    <span>${t('management')}</span><span class="ctx-section-arrow" style="transform:rotate(90deg)">▸</span>
+  </div>
+  <div class="ctx-section-body">
+    <div class="ctx-item" data-page="users" onclick="navigate('users')">
+      <i class="fa-solid fa-users fa-fw"></i>${t('users')}
+    </div>
+    <div class="ctx-item" data-page="updates" onclick="navigate('updates')">
+      <i class="fa-solid fa-rotate fa-fw"></i>${t('updates')}
+    </div>
+    <div class="ctx-item" data-page="tab-security" onclick="navigate('tab-security')">
+      <i class="fa-solid fa-user-shield fa-fw"></i>${t('security')}
+    </div>
+    <div class="ctx-item" data-page="tab-integrations" onclick="navigate('tab-integrations')">
+      <i class="fa-solid fa-plug fa-fw"></i>${t('integrations')}
+    </div>
+    <div class="ctx-item" data-page="tab-settings" onclick="navigate('tab-settings')">
+      <i class="fa-solid fa-gear fa-fw"></i>${t('settings')}
+    </div>
+  </div>
     `;
   } else if (type === "vm") {
     html = `
@@ -4004,6 +4303,102 @@ async function deleteQuota(vmId) {
   loadQuotas();
 }
 
+/* ══════════════════ Resize Handles ══════════════════ */
+
+function initResizeHandles() {
+  // ── Sidebar (yatay) ─────────────────────────────────
+  const navHandle = document.getElementById('nav-resize-handle');
+  const navPanel  = document.getElementById('nav-panel');
+  const NAV_MIN = 160, NAV_MAX = 400;
+
+  if (navHandle && navPanel) {
+    let dragging = false, startX = 0, startW = 0;
+
+    navHandle.addEventListener('mousedown', e => {
+      dragging = true;
+      startX = e.clientX;
+      startW = navPanel.offsetWidth;
+      navHandle.classList.add('dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const dx   = e.clientX - startX;
+      const newW = Math.max(NAV_MIN, Math.min(NAV_MAX, startW + dx));
+      navPanel.style.width = newW + 'px';
+      document.documentElement.style.setProperty('--nav-w', newW + 'px');
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      navHandle.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      localStorage.setItem('ox-nav-w', navPanel.offsetWidth);
+    });
+
+    // Kayıtlı genişliği geri yükle
+    const savedNavW = localStorage.getItem('ox-nav-w');
+    if (savedNavW) {
+      const w = Math.max(NAV_MIN, Math.min(NAV_MAX, parseInt(savedNavW)));
+      navPanel.style.width = w + 'px';
+      document.documentElement.style.setProperty('--nav-w', w + 'px');
+    }
+  }
+
+  // ── Taskbar (dikey) ─────────────────────────────────
+  const tbHandle  = document.getElementById('taskbar-resize-handle');
+  const taskbar   = document.getElementById('taskbar');
+  const TB_MIN = 80, TB_MAX = 400;
+
+  if (tbHandle && taskbar) {
+    let dragging = false, startY = 0, startH = 0;
+
+    tbHandle.addEventListener('mousedown', e => {
+      dragging = true;
+      startY = e.clientY;
+      startH = taskbar.offsetHeight;
+      tbHandle.classList.add('dragging');
+      document.body.style.cursor = 'row-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const dy   = startY - e.clientY;          // yukarı sürükle = büyüt
+      const newH = Math.max(TB_MIN, Math.min(TB_MAX, startH + dy));
+      taskbar.style.height = newH + 'px';
+      document.documentElement.style.setProperty('--taskbar-h', newH + 'px');
+      // toast pozisyonunu güncelle
+      document.documentElement.style.setProperty(
+        '--toast-bottom', (newH + 18) + 'px'
+      );
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      tbHandle.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      localStorage.setItem('ox-taskbar-h', taskbar.offsetHeight);
+    });
+
+    // Kayıtlı yüksekliği geri yükle
+    const savedTbH = localStorage.getItem('ox-taskbar-h');
+    if (savedTbH) {
+      const h = Math.max(TB_MIN, Math.min(TB_MAX, parseInt(savedTbH)));
+      taskbar.style.height = h + 'px';
+      document.documentElement.style.setProperty('--taskbar-h', h + 'px');
+    }
+  }
+}
+
 /* ══════════════════ Init ══════════════════ */
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -4015,11 +4410,14 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   initCharts();
+  initResizeHandles();
+  setLang(currentLang);
   buildContextNav("node");
   selectTreeItem("node");
   loadNodeSummary();
   refreshTreeVMs();
   loadTaskLog();
+  checkLicenseStatus();
 
   statsInterval = setInterval(() => {
     if (currentPage === "summary") loadNodeSummary();
