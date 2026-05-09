@@ -79,10 +79,6 @@
     .tb-logo-icon .tb-logo-fb svg{width:24px;height:24px;fill:#fff}
     .tb-logo-text{display:none}
     .tb-logo-ver{display:none}
-    .tb-search{padding:0 12px;border-right:1px solid var(--border);height:100%;display:flex;align-items:center}
-    .tb-search input{background:var(--surface2);border:1px solid var(--border2);border-radius:3px;color:var(--text);font-size:12px;padding:5px 10px;width:200px;outline:none}
-    .tb-search input:focus{border-color:var(--accent)}
-    .tb-search input::placeholder{color:var(--text-dim)}
     .tb-spacer{flex:1}
     .tb-stats{height:100%;display:flex;align-items:center;border-left:1px solid var(--border);font-size:11px}
     .tb-stat{display:flex;align-items:center;gap:5px;padding:0 12px;border-right:1px solid var(--border);height:100%;color:var(--text-muted)}
@@ -432,16 +428,6 @@
     #vm-batch-bar.visible{display:flex}
     .batch-count{font-size:12px;font-weight:600;color:var(--accent-lt);flex:1}
 
-    /* Global Search Dropdown */
-    #global-search-wrap{position:relative}
-    #global-search-results{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:500;max-height:360px;overflow-y:auto;min-width:300px}
-    .gsr-item{padding:8px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
-    .gsr-item:last-child{border-bottom:none}
-    .gsr-item:hover{background:var(--surface3)}
-    .gsr-icon{width:26px;height:26px;border-radius:4px;background:rgba(42,109,217,.15);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
-    .gsr-title{font-size:12px;font-weight:600;color:var(--text)}
-    .gsr-sub{font-size:10px;color:var(--text-muted);margin-top:1px}
-    .gsr-section{padding:6px 14px;font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;background:var(--surface);border-bottom:1px solid var(--border)}
 
     /* ── OXY Chat Widget ── */
     #oxy-btn{position:relative;height:100%;padding:0 14px;background:none;border:none;border-right:1px solid var(--border);color:var(--text-muted);font-size:12px;display:flex;align-items:center;gap:7px;cursor:pointer;transition:background .12s,color .12s;white-space:nowrap}
@@ -504,7 +490,7 @@
 
     /* PDF print */
     @media print{
-      #topbar,#ctx-nav,#oxy-panel,#oxy-btn,.tb-actions,.tb-search,#themeToggle,#lang-btn,.section-header button,.action-btns{display:none!important}
+      #topbar,#ctx-nav,#oxy-panel,#oxy-btn,.tb-actions,#themeToggle,#lang-btn,.section-header button,.action-btns{display:none!important}
       .page{display:block!important;overflow:visible!important}
       body{background:#fff!important;color:#000!important}
     }
@@ -525,7 +511,6 @@
       }
       #nav-panel.mob-open{transform:translateX(0)!important}
       .tb-stats{display:none!important}
-      .tb-search{display:none!important}
       #taskbar{display:none!important}
     }
     @media (max-width:768px){
@@ -571,13 +556,6 @@
       </div>
     </div>
 
-    <div class="tb-search" id="global-search-wrap">
-      <input type="text" placeholder="🔍 Ara... (VM, ağ, sayfa)" id="topbarSearch"
-        oninput="globalSearch(this.value)" onblur="setTimeout(()=>closeGlobalSearch(),200)"
-        onfocus="if(this.value.trim())globalSearch(this.value)"
-        autocomplete="off">
-      <div id="global-search-results"></div>
-    </div>
 
     <div id="license-banner" style="display:none;padding:0 14px;font-size:11px;height:100%;align-items:center;gap:8px;background:linear-gradient(90deg,rgba(42,109,217,.1),rgba(42,109,217,.05));border-right:1px solid rgba(42,109,217,.2)">
       <i class="fa-solid fa-star" style="color:#f5c842"></i>
