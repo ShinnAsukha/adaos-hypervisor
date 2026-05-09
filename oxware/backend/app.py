@@ -131,7 +131,11 @@ def require_auth(fn):
 def index():
     if not cred_mgr.is_setup_done():
         return render_template("setup.html")
-    return render_template("index.html")
+    resp = app.make_response(render_template("index.html"))
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 @app.route("/docs")
 def docs_page():
