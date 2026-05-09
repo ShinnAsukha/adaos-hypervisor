@@ -5597,11 +5597,15 @@ async function setup2fa() {
       <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Tarama yapamıyorsanız URI'yi kopyalayın:</p>
       <input readonly value="${escHtml(uri)}" onclick="this.select()"
         style="width:100%;font-size:10px;padding:7px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);margin-bottom:16px;cursor:copy">
+      <div id="_2fa-clock-warn" style="display:none;margin-bottom:10px;padding:8px 10px;background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.3);border-radius:6px;font-size:11px;color:var(--yellow-lt);text-align:left">
+        ⚠️ <strong>Saat farkı tespit edildi!</strong> Sunucu saati ile telefon saati arasında fark var.<br>
+        <span id="_2fa-clock-detail" style="color:var(--text-muted)"></span>
+      </div>
       <div style="margin-bottom:14px;text-align:left">
         <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Uygulamadan 6 haneli kodu girin:</label>
-        <input id="_2fa-code-input" type="text" inputmode="numeric" maxlength="6" placeholder="0  0  0  0  0  0"
-          style="width:100%;padding:10px;background:var(--surface);border:2px solid var(--border2);border-radius:6px;color:var(--text);font-size:22px;letter-spacing:8px;text-align:center;font-variant-numeric:tabular-nums"
-          oninput="if(this.value.length===6)document.getElementById('_2fa-confirm-btn').focus()">
+        <input id="_2fa-code-input" type="text" inputmode="numeric" maxlength="6" placeholder="000000"
+          style="width:100%;padding:10px;background:var(--surface);border:2px solid var(--border2);border-radius:6px;color:var(--text);font-size:28px;letter-spacing:10px;text-align:center;font-variant-numeric:tabular-nums"
+          oninput="this.value=this.value.replace(/\\D/g,'');if(this.value.length===6)document.getElementById('_2fa-confirm-btn').focus()">
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end">
         <button class="btn" onclick="document.getElementById('_2fa-overlay').remove()">İptal</button>
@@ -5609,9 +5613,22 @@ async function setup2fa() {
       </div>
     </div>`;
   document.body.appendChild(overlay);
-  // Dışına tıklayınca kapat
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   setTimeout(() => document.getElementById('_2fa-code-input')?.focus(), 150);
+
+  // Sunucu saatini kontrol et — clock skew uyarısı
+  try {
+    const dbg = await _api('/api/auth/2fa/debug');
+    if (dbg.server_timestamp) {
+      const diff = Math.abs(Math.floor(Date.now()/1000) - dbg.server_timestamp);
+      if (diff > 30) {
+        const w = document.getElementById('_2fa-clock-warn');
+        const d = document.getElementById('_2fa-clock-detail');
+        if (w) w.style.display = 'block';
+        if (d) d.textContent = `Fark: ${diff} saniye. Sunucuda "ntpdate -u pool.ntp.org" çalıştırın.`;
+      }
+    }
+  } catch {}
 }
 
 async function confirm2faSetup(btn) {

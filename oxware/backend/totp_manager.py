@@ -63,7 +63,9 @@ def _save(data):
 
 def setup_totp(username):
     """
-    Kullanıcı için yeni TOTP secret üretir (henüz etkin değil).
+    Kullanıcı için TOTP secret üretir (henüz etkin değil).
+    Zaten bekleyen (enabled=False) bir secret varsa YENİDEN KULLANIR —
+    böylece QR iki kez tarandığında geçersizleşmez.
     Döner: {"secret": str, "uri": str, "available": True}
     pyotp yoksa: {"available": False, "error": "pyotp not installed"}
     """
@@ -71,18 +73,25 @@ def setup_totp(username):
         log.warning("setup_totp: pyotp yok.")
         return {"available": False, "error": "pyotp not installed"}
     try:
-        secret = pyotp.random_base32()
-        totp   = pyotp.TOTP(secret)
-        uri    = totp.provisioning_uri(name=username, issuer_name=_ISSUER)
-
         with _lock:
-            data = _load()
-            data[username] = {
-                "secret":     secret,
-                "enabled":    False,
-                "created_at": time.time(),
-            }
-            _save(data)
+            data   = _load()
+            entry  = data.get(username, {})
+            # Bekleyen (onaylanmamış) secret varsa yeniden kullan
+            if entry.get("secret") and not entry.get("enabled", False):
+                secret = entry["secret"]
+                log.info("setup_totp: %s için mevcut pending secret kullanılıyor.", username)
+            else:
+                secret = pyotp.random_base32()
+                data[username] = {
+                    "secret":     secret,
+                    "enabled":    False,
+                    "created_at": time.time(),
+                }
+                _save(data)
+                log.info("setup_totp: %s için yeni secret oluşturuldu.", username)
+
+        totp = pyotp.TOTP(secret)
+        uri  = totp.provisioning_uri(name=username, issuer_name=_ISSUER)
 
         log.info("setup_totp: %s için yeni secret oluşturuldu.", username)
 
@@ -127,7 +136,8 @@ def verify_totp(username, code):
         if not entry or not entry.get("secret"):
             return False
         totp = pyotp.TOTP(entry["secret"])
-        return totp.verify(str(code), valid_window=1)
+        # valid_window=3 → mevcut ±3 periyot = ±90 sn clock skew tolere eder
+        return totp.verify(str(code).strip(), valid_window=3)
     except Exception as e:
         log.error("verify_totp hatası (username=%s): %s", username, e)
         return False

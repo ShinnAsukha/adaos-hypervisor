@@ -214,6 +214,32 @@ def api_2fa_enable():
     ok_ = totp_mgr.enable_totp(username, code)
     return ok({"success": ok_}) if ok_ else err("Geçersiz kod")
 
+@app.route("/api/auth/2fa/debug")
+@require_auth
+def api_2fa_debug():
+    """Sunucu saati + anlık beklenen kodu döndür (geliştirme/teşhis)."""
+    import datetime
+    username = get_jwt_identity()
+    if not totp_mgr: return err("2FA modülü yüklenemedi")
+    data  = totp_mgr._load()
+    entry = data.get(username, {})
+    secret = entry.get("secret", "")
+    current_code = ""
+    if secret:
+        try:
+            import pyotp
+            current_code = pyotp.TOTP(secret).now()
+        except Exception:
+            pass
+    return ok(
+        server_time      = datetime.datetime.utcnow().isoformat() + "Z",
+        server_timestamp = int(time.time()),
+        time_window      = int(time.time()) // 30,
+        current_totp     = current_code,   # sunucunun beklediği kod
+        has_secret       = bool(secret),
+        enabled          = entry.get("enabled", False),
+    )
+
 @app.route("/api/auth/2fa/disable", methods=["DELETE"])
 @require_auth
 def api_2fa_disable():
