@@ -169,7 +169,7 @@ update_mode() {
     if [ -d "${INSTALL_DIR}/.git" ]; then
         cd "$INSTALL_DIR"
         git fetch origin master 2>/dev/null
-        git reset --hard origin/master 2>/dev/null
+        git reset --hard origin/main 2>/dev/null
         log "Kod güncellendi"
     else
         warn "Git repo bulunamadı — dosya güncelleme atlanıyor"
@@ -241,7 +241,7 @@ clone_repo() {
     mkdir -p "$INSTALL_DIR"
 
     # Git clone — en son master
-    git clone "$REPO_URL" "$INSTALL_DIR" --branch master --depth=1 -q 2>/dev/null \
+    git clone "$REPO_URL" "$INSTALL_DIR" --branch main --depth=1 -q 2>/dev/null \
         || git clone "$REPO_URL" "$INSTALL_DIR" --depth=1 -q
 
     log "Repo klonlandı → $INSTALL_DIR"
@@ -543,7 +543,7 @@ if [ -d "\${INSTALL_DIR}/.git" ]; then
     echo -e "\${CYAN}[i]\${NC} GitHub'dan güncelleniyor..."
     cd "\${INSTALL_DIR}"
     git fetch origin master
-    git reset --hard origin/master
+    git reset --hard origin/main
     echo -e "\${GREEN}[✓]\${NC} Kod güncellendi"
 else
     echo -e "\${YELLOW}[!]\${NC} Git repo bulunamadı — atlanıyor"
