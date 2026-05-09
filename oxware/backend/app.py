@@ -50,6 +50,40 @@ logging.basicConfig(
 )
 log = logging.getLogger("oxware")
 
+# ── Yeni Modül İmportları ─────────────────────────────────────────────────────
+def _safe_import(name):
+    try:
+        import importlib
+        return importlib.import_module(name)
+    except Exception as e:
+        log.warning("Modül yüklenemedi: %s — %s", name, e)
+        return None
+
+perf_history    = _safe_import("perf_history")
+audit_log       = _safe_import("audit_log")
+totp_mgr        = _safe_import("totp_manager")
+api_key_mgr     = _safe_import("api_key_manager")
+backup_sched    = _safe_import("backup_scheduler")
+firewall_mgr    = _safe_import("firewall_manager")
+wireguard_mgr   = _safe_import("wireguard_manager")
+dns_mgr         = _safe_import("dns_manager")
+vlan_mgr        = _safe_import("vlan_manager")
+resource_quota  = _safe_import("resource_quota")
+template_mgr    = _safe_import("template_manager")
+smart_mon       = _safe_import("smart_monitor")
+ssl_mgr         = _safe_import("ssl_manager")
+nginx_mgr       = _safe_import("nginx_manager")
+haproxy_mgr     = _safe_import("haproxy_manager")
+webhook_mgr     = _safe_import("webhook_manager")
+uptime_tracker  = _safe_import("uptime_tracker")
+ldap_mgr        = _safe_import("ldap_manager")
+ai_planner      = _safe_import("ai_planner")
+anomaly_det     = _safe_import("anomaly_detector")
+auto_scaler     = _safe_import("auto_scaler")
+sdn_mgr         = _safe_import("sdn_manager")
+ids_mgr         = _safe_import("ids_manager")
+minio_mgr       = _safe_import("minio_manager")
+
 # ── Flask ─────────────────────────────────────────────────────────────────────
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend", "templates")
 STATIC_DIR   = os.path.join(os.path.dirname(__file__), "..", "frontend", "static")
@@ -152,6 +186,37 @@ def api_login():
     ev.info(f"Giriş başarılı: {username}", category="auth")
     return ok(token=token, username=username)
 
+@app.route("/api/auth/2fa/status", methods=["GET"])
+@require_auth
+def api_2fa_status():
+    username = get_jwt_identity()
+    if not totp_mgr: return ok({"enabled": False, "available": False})
+    return ok(totp_mgr.get_status(username))
+
+@app.route("/api/auth/2fa/setup", methods=["POST"])
+@require_auth
+def api_2fa_setup():
+    username = get_jwt_identity()
+    if not totp_mgr: return err("2FA modülü yüklenemedi")
+    return ok(totp_mgr.setup_totp(username))
+
+@app.route("/api/auth/2fa/enable", methods=["POST"])
+@require_auth
+def api_2fa_enable():
+    username = get_jwt_identity()
+    code = request.json.get("code", "")
+    if not totp_mgr: return err("2FA modülü yüklenemedi")
+    ok_ = totp_mgr.enable_totp(username, code)
+    return ok({"success": ok_}) if ok_ else err("Geçersiz kod")
+
+@app.route("/api/auth/2fa/disable", methods=["DELETE"])
+@require_auth
+def api_2fa_disable():
+    username = get_jwt_identity()
+    if not totp_mgr: return err("2FA modülü yüklenemedi")
+    totp_mgr.disable_totp(username)
+    return ok({"disabled": True})
+
 @app.route("/api/auth/me")
 @require_auth
 def api_me():
@@ -221,6 +286,8 @@ def api_create_vm():
             os_variant=os_variant, boot_order=boot_order,
         )
         ev.vm_event(f"VM oluşturuldu: {name}", result["id"], level="INFO")
+        if webhook_mgr: webhook_mgr.trigger("vm.created", {"vm_id": result.get("id"), "vm_name": name})
+        if resource_quota: resource_quota.check_quota(get_jwt_identity(), vcpus, memory_mb)
         return ok(**result), 201
     except Exception as e:
         return err(e, 500)
@@ -244,6 +311,8 @@ def api_start_vm(vm_id):
     try:
         r = vm_manager.start_vm(vm_id)
         ev.vm_event("VM başlatıldı", vm_id)
+        if webhook_mgr: webhook_mgr.trigger("vm.started", {"vm_id": vm_id})
+        if uptime_tracker: uptime_tracker.record_start(vm_id, "")
         return ok(**r)
     except Exception as e:
         return err(e, 500)
@@ -255,6 +324,8 @@ def api_stop_vm(vm_id):
     try:
         r = vm_manager.stop_vm(vm_id, force=force)
         ev.vm_event("VM durduruldu", vm_id, level="WARNING")
+        if webhook_mgr: webhook_mgr.trigger("vm.stopped", {"vm_id": vm_id})
+        if uptime_tracker: uptime_tracker.record_stop(vm_id)
         return ok(**r)
     except Exception as e:
         return err(e, 500)
@@ -1101,6 +1172,770 @@ def ws_disconnect():
             os.close(sess["master_fd"])
         except Exception:
             pass
+
+# ── API Key Yönetimi ──────────────────────────────────────────────────────────
+@app.route("/api/apikeys", methods=["GET"])
+@require_auth
+def api_list_keys():
+    username = get_jwt_identity()
+    if not api_key_mgr: return ok({"keys": []})
+    return ok({"keys": api_key_mgr.list_keys(username)})
+
+@app.route("/api/apikeys", methods=["POST"])
+@require_auth
+def api_create_key():
+    username = get_jwt_identity()
+    data = request.json or {}
+    if not api_key_mgr: return err("API key modülü yüklenemedi")
+    result = api_key_mgr.create_key(username, data.get("name","key"), data.get("permissions"), data.get("expires_days"))
+    return ok(result)
+
+@app.route("/api/apikeys/<key_id>", methods=["DELETE"])
+@require_auth
+def api_delete_key(key_id):
+    username = get_jwt_identity()
+    if not api_key_mgr: return err("API key modülü yüklenemedi")
+    return ok({"deleted": api_key_mgr.delete_key(key_id)})
+
+@app.route("/api/apikeys/<key_id>/revoke", methods=["POST"])
+@require_auth
+def api_revoke_key(key_id):
+    username = get_jwt_identity()
+    if not api_key_mgr: return err("API key modülü yüklenemedi")
+    return ok({"revoked": api_key_mgr.revoke_key(key_id, username)})
+
+# ── Audit Log ─────────────────────────────────────────────────────────────────
+@app.route("/api/audit", methods=["GET"])
+@require_auth
+def api_audit_logs():
+    if not audit_log: return ok({"logs": []})
+    limit = int(request.args.get("limit", 100))
+    offset = int(request.args.get("offset", 0))
+    username = request.args.get("username")
+    action = request.args.get("action")
+    logs = audit_log.get_logs(username=username, action=action, limit=limit, offset=offset)
+    return ok({"logs": logs})
+
+@app.route("/api/audit/stats", methods=["GET"])
+@require_auth
+def api_audit_stats():
+    if not audit_log: return ok({})
+    return ok(audit_log.get_stats())
+
+@app.route("/api/audit/export", methods=["GET"])
+@require_auth
+def api_audit_export():
+    if not audit_log: return err("Audit log modülü yüklenemedi")
+    csv_data = audit_log.export_csv()
+    from flask import Response
+    return Response(csv_data, mimetype="text/csv",
+                    headers={"Content-Disposition": "attachment;filename=audit_log.csv"})
+
+# ── Performance History ───────────────────────────────────────────────────────
+@app.route("/api/metrics/system", methods=["GET"])
+@require_auth
+def api_metrics_system():
+    if not perf_history: return ok({"data": []})
+    period = request.args.get("period", "1h")
+    return ok({"data": perf_history.get_system_history(period)})
+
+@app.route("/api/metrics/vm/<vm_id>", methods=["GET"])
+@require_auth
+def api_metrics_vm(vm_id):
+    if not perf_history: return ok({"data": []})
+    period = request.args.get("period", "1h")
+    return ok({"data": perf_history.get_vm_history(vm_id, period)})
+
+# ── Backup Scheduler ──────────────────────────────────────────────────────────
+@app.route("/api/backup/schedules", methods=["GET"])
+@require_auth
+def api_backup_list():
+    if not backup_sched: return ok({"schedules": []})
+    return ok({"schedules": backup_sched.list_schedules()})
+
+@app.route("/api/backup/schedules", methods=["POST"])
+@require_auth
+def api_backup_create():
+    if not backup_sched: return err("Backup modülü yüklenemedi")
+    d = request.json or {}
+    s = backup_sched.create_schedule(d["vm_id"], d.get("vm_name",""), d["cron_expr"],
+                                      d.get("retention_count", 7), d.get("description",""),
+                                      d.get("remote_type"), d.get("remote_config"))
+    return ok({"schedule": s})
+
+@app.route("/api/backup/schedules/<sid>", methods=["DELETE"])
+@require_auth
+def api_backup_delete(sid):
+    if not backup_sched: return err("Backup modülü yüklenemedi")
+    return ok({"deleted": backup_sched.delete_schedule(sid)})
+
+@app.route("/api/backup/schedules/<sid>/run", methods=["POST"])
+@require_auth
+def api_backup_trigger(sid):
+    if not backup_sched: return err("Backup modülü yüklenemedi")
+    return ok(backup_sched.trigger_now(sid))
+
+@app.route("/api/backup/history", methods=["GET"])
+@require_auth
+def api_backup_history():
+    if not backup_sched: return ok({"history": []})
+    vm_id = request.args.get("vm_id")
+    return ok({"history": backup_sched.get_history(vm_id)})
+
+# ── Firewall ──────────────────────────────────────────────────────────────────
+@app.route("/api/firewall/status", methods=["GET"])
+@require_auth
+def api_fw_status():
+    if not firewall_mgr: return ok({"available": False})
+    return ok(firewall_mgr.get_status())
+
+@app.route("/api/firewall/rules", methods=["GET"])
+@require_auth
+def api_fw_rules():
+    if not firewall_mgr: return ok({"rules": []})
+    return ok({"rules": firewall_mgr.list_rules()})
+
+@app.route("/api/firewall/rules", methods=["POST"])
+@require_auth
+def api_fw_add_rule():
+    if not firewall_mgr: return err("Firewall modülü yüklenemedi")
+    d = request.json or {}
+    return ok(firewall_mgr.add_rule(d.get("table","inet filter"), d.get("chain","input"),
+              d.get("protocol"), d.get("src_ip"), d.get("dst_ip"), d.get("dst_port"),
+              d.get("action","accept"), d.get("comment","")))
+
+@app.route("/api/firewall/rules/<handle>", methods=["DELETE"])
+@require_auth
+def api_fw_del_rule(handle):
+    if not firewall_mgr: return err("Firewall modülü yüklenemedi")
+    d = request.json or {}
+    return ok(firewall_mgr.delete_rule(d.get("table","inet filter"), d.get("chain","input"), handle))
+
+@app.route("/api/firewall/save", methods=["POST"])
+@require_auth
+def api_fw_save():
+    if not firewall_mgr: return err("Firewall modülü yüklenemedi")
+    return ok(firewall_mgr.save_ruleset())
+
+# ── WireGuard VPN ─────────────────────────────────────────────────────────────
+@app.route("/api/vpn/status", methods=["GET"])
+@require_auth
+def api_vpn_status():
+    if not wireguard_mgr: return ok({"available": False})
+    return ok(wireguard_mgr.get_status())
+
+@app.route("/api/vpn/init", methods=["POST"])
+@require_auth
+def api_vpn_init():
+    if not wireguard_mgr: return err("WireGuard modülü yüklenemedi")
+    d = request.json or {}
+    return ok(wireguard_mgr.init_server(d.get("interface","wg0"), d.get("address","10.8.0.1/24"), d.get("listen_port",51820)))
+
+@app.route("/api/vpn/peers", methods=["GET"])
+@require_auth
+def api_vpn_peers():
+    if not wireguard_mgr: return ok({"peers": []})
+    return ok({"peers": wireguard_mgr.list_peers()})
+
+@app.route("/api/vpn/peers", methods=["POST"])
+@require_auth
+def api_vpn_add_peer():
+    if not wireguard_mgr: return err("WireGuard modülü yüklenemedi")
+    d = request.json or {}
+    return ok(wireguard_mgr.add_peer(d["peer_name"], d.get("allowed_ips"), d.get("endpoint")))
+
+@app.route("/api/vpn/peers/<peer_name>", methods=["DELETE"])
+@require_auth
+def api_vpn_del_peer(peer_name):
+    if not wireguard_mgr: return err("WireGuard modülü yüklenemedi")
+    return ok(wireguard_mgr.remove_peer(peer_name))
+
+@app.route("/api/vpn/peers/<peer_name>/config", methods=["GET"])
+@require_auth
+def api_vpn_peer_config(peer_name):
+    if not wireguard_mgr: return err("WireGuard modülü yüklenemedi")
+    cfg = wireguard_mgr.get_peer_config(peer_name)
+    from flask import Response
+    return Response(cfg, mimetype="text/plain",
+                    headers={"Content-Disposition": f"attachment;filename={peer_name}.conf"})
+
+@app.route("/api/vpn/start", methods=["POST"])
+@require_auth
+def api_vpn_start():
+    if not wireguard_mgr: return err("WireGuard modülü yüklenemedi")
+    return ok(wireguard_mgr.start())
+
+@app.route("/api/vpn/stop", methods=["POST"])
+@require_auth
+def api_vpn_stop():
+    if not wireguard_mgr: return err("WireGuard modülü yüklenemedi")
+    return ok(wireguard_mgr.stop())
+
+# ── DNS ───────────────────────────────────────────────────────────────────────
+@app.route("/api/dns/status", methods=["GET"])
+@require_auth
+def api_dns_status():
+    if not dns_mgr: return ok({"available": False})
+    return ok(dns_mgr.get_status())
+
+@app.route("/api/dns/hosts", methods=["GET"])
+@require_auth
+def api_dns_hosts():
+    if not dns_mgr: return ok({"hosts": []})
+    return ok({"hosts": dns_mgr.list_hosts()})
+
+@app.route("/api/dns/hosts", methods=["POST"])
+@require_auth
+def api_dns_add_host():
+    if not dns_mgr: return err("DNS modülü yüklenemedi")
+    d = request.json or {}
+    return ok(dns_mgr.add_host(d["ip"], d["hostname"], d.get("comment","")))
+
+@app.route("/api/dns/hosts/<hostname>", methods=["DELETE"])
+@require_auth
+def api_dns_del_host(hostname):
+    if not dns_mgr: return err("DNS modülü yüklenemedi")
+    return ok(dns_mgr.delete_host(hostname))
+
+@app.route("/api/dns/leases", methods=["GET"])
+@require_auth
+def api_dns_leases():
+    if not dns_mgr: return ok({"leases": []})
+    return ok({"leases": dns_mgr.list_leases()})
+
+@app.route("/api/dns/config", methods=["GET", "PUT"])
+@require_auth
+def api_dns_config():
+    if not dns_mgr: return ok({})
+    if request.method == "GET":
+        return ok(dns_mgr.get_config())
+    d = request.json or {}
+    return ok(dns_mgr.update_config(**d))
+
+# ── VLAN ──────────────────────────────────────────────────────────────────────
+@app.route("/api/vlan", methods=["GET"])
+@require_auth
+def api_vlan_list():
+    if not vlan_mgr: return ok({"vlans": []})
+    return ok({"vlans": vlan_mgr.list_vlans()})
+
+@app.route("/api/vlan", methods=["POST"])
+@require_auth
+def api_vlan_create():
+    if not vlan_mgr: return err("VLAN modülü yüklenemedi")
+    d = request.json or {}
+    return ok(vlan_mgr.create_vlan(d["parent_iface"], d["vlan_id"], d["name"],
+                                    d.get("ip_address"), d.get("gateway")))
+
+@app.route("/api/vlan/<int:vlan_id>", methods=["DELETE"])
+@require_auth
+def api_vlan_delete(vlan_id):
+    if not vlan_mgr: return err("VLAN modülü yüklenemedi")
+    return ok(vlan_mgr.delete_vlan(vlan_id))
+
+# ── Resource Quotas ───────────────────────────────────────────────────────────
+@app.route("/api/quotas", methods=["GET"])
+@require_auth
+def api_quota_list():
+    if not resource_quota: return ok({"quotas": []})
+    return ok({"quotas": resource_quota.list_quotas()})
+
+@app.route("/api/quotas/<vm_id>", methods=["GET", "PUT", "DELETE"])
+@require_auth
+def api_quota_vm(vm_id):
+    if not resource_quota: return ok({})
+    if request.method == "GET":
+        return ok(resource_quota.get_quota(vm_id))
+    elif request.method == "PUT":
+        d = request.json or {}
+        return ok(resource_quota.set_quota(vm_id, **d))
+    else:
+        return ok(resource_quota.delete_quota(vm_id))
+
+@app.route("/api/quotas/global", methods=["GET", "PUT"])
+@require_auth
+def api_quota_global():
+    if not resource_quota: return ok({})
+    if request.method == "GET":
+        return ok(resource_quota.get_global_quota())
+    return ok(resource_quota.set_global_quota(**(request.json or {})))
+
+# ── Templates ─────────────────────────────────────────────────────────────────
+@app.route("/api/templates", methods=["GET"])
+@require_auth
+def api_templates_list():
+    if not template_mgr: return ok({"templates": []})
+    return ok({"templates": template_mgr.list_templates()})
+
+@app.route("/api/templates", methods=["POST"])
+@require_auth
+def api_template_create():
+    if not template_mgr: return err("Template modülü yüklenemedi")
+    d = request.json or {}
+    return ok(template_mgr.create_from_vm(d["vm_id"], d["name"], d.get("description",""), d.get("tags")))
+
+@app.route("/api/templates/<tid>", methods=["GET", "DELETE"])
+@require_auth
+def api_template(tid):
+    if not template_mgr: return ok({})
+    if request.method == "DELETE":
+        return ok(template_mgr.delete_template(tid))
+    return ok(template_mgr.get_template(tid))
+
+@app.route("/api/templates/<tid>/deploy", methods=["POST"])
+@require_auth
+def api_template_deploy(tid):
+    if not template_mgr: return err("Template modülü yüklenemedi")
+    d = request.json or {}
+    return ok(template_mgr.deploy(tid, d["vm_name"], d.get("vcpus"), d.get("memory_mb")))
+
+# ── SMART Disk ────────────────────────────────────────────────────────────────
+@app.route("/api/smart/summary", methods=["GET"])
+@require_auth
+def api_smart_summary():
+    if not smart_mon: return ok({"available": False})
+    return ok(smart_mon.get_summary())
+
+@app.route("/api/smart/devices", methods=["GET"])
+@require_auth
+def api_smart_devices():
+    if not smart_mon: return ok({"devices": []})
+    return ok({"devices": smart_mon.get_all_devices_health()})
+
+@app.route("/api/smart/devices/<path:device>/data", methods=["GET"])
+@require_auth
+def api_smart_device(device):
+    if not smart_mon: return ok({})
+    return ok(smart_mon.get_smart_data("/" + device))
+
+# ── SSL ───────────────────────────────────────────────────────────────────────
+@app.route("/api/ssl/status", methods=["GET"])
+@require_auth
+def api_ssl_status():
+    if not ssl_mgr: return ok({})
+    return ok(ssl_mgr.get_status())
+
+@app.route("/api/ssl/letsencrypt", methods=["POST"])
+@require_auth
+def api_ssl_letsencrypt():
+    if not ssl_mgr: return err("SSL modülü yüklenemedi")
+    d = request.json or {}
+    return ok(ssl_mgr.request_letsencrypt(d["domain"], d["email"]))
+
+@app.route("/api/ssl/renew", methods=["POST"])
+@require_auth
+def api_ssl_renew():
+    if not ssl_mgr: return err("SSL modülü yüklenemedi")
+    return ok(ssl_mgr.renew_cert())
+
+@app.route("/api/ssl/upload", methods=["POST"])
+@require_auth
+def api_ssl_upload():
+    if not ssl_mgr: return err("SSL modülü yüklenemedi")
+    d = request.json or {}
+    return ok(ssl_mgr.upload_custom_cert(d["cert_pem"], d["key_pem"]))
+
+# ── Nginx Reverse Proxy ───────────────────────────────────────────────────────
+@app.route("/api/nginx/status", methods=["GET"])
+@require_auth
+def api_nginx_status():
+    if not nginx_mgr: return ok({"available": False})
+    return ok(nginx_mgr.get_status())
+
+@app.route("/api/nginx/sites", methods=["GET"])
+@require_auth
+def api_nginx_sites():
+    if not nginx_mgr: return ok({"sites": []})
+    return ok({"sites": nginx_mgr.list_sites()})
+
+@app.route("/api/nginx/sites", methods=["POST"])
+@require_auth
+def api_nginx_create_site():
+    if not nginx_mgr: return err("Nginx modülü yüklenemedi")
+    d = request.json or {}
+    return ok(nginx_mgr.create_site(d["name"], d["server_name"], d["upstream_host"],
+              d["upstream_port"], d.get("ssl", False), d.get("ssl_cert"), d.get("ssl_key"),
+              d.get("websocket", False)))
+
+@app.route("/api/nginx/sites/<name>/enable", methods=["POST"])
+@require_auth
+def api_nginx_enable(name):
+    if not nginx_mgr: return err("Nginx modülü yüklenemedi")
+    return ok(nginx_mgr.enable_site(name))
+
+@app.route("/api/nginx/sites/<name>/disable", methods=["POST"])
+@require_auth
+def api_nginx_disable(name):
+    if not nginx_mgr: return err("Nginx modülü yüklenemedi")
+    return ok(nginx_mgr.disable_site(name))
+
+@app.route("/api/nginx/sites/<name>", methods=["DELETE"])
+@require_auth
+def api_nginx_delete_site(name):
+    if not nginx_mgr: return err("Nginx modülü yüklenemedi")
+    return ok(nginx_mgr.delete_site(name))
+
+@app.route("/api/nginx/reload", methods=["POST"])
+@require_auth
+def api_nginx_reload():
+    if not nginx_mgr: return err("Nginx modülü yüklenemedi")
+    return ok(nginx_mgr.reload())
+
+# ── HAProxy Load Balancer ─────────────────────────────────────────────────────
+@app.route("/api/haproxy/status", methods=["GET"])
+@require_auth
+def api_haproxy_status():
+    if not haproxy_mgr: return ok({"available": False})
+    return ok(haproxy_mgr.get_status())
+
+@app.route("/api/haproxy/stats", methods=["GET"])
+@require_auth
+def api_haproxy_stats():
+    if not haproxy_mgr: return ok({"stats": []})
+    return ok({"stats": haproxy_mgr.get_stats()})
+
+@app.route("/api/haproxy/frontends", methods=["GET", "POST"])
+@require_auth
+def api_haproxy_frontends():
+    if not haproxy_mgr: return ok({"frontends": []})
+    if request.method == "GET":
+        return ok({"frontends": haproxy_mgr.list_frontends()})
+    d = request.json or {}
+    return ok(haproxy_mgr.create_frontend(d["name"], d["bind_port"], d["default_backend"],
+              d.get("bind_ssl", False), d.get("ssl_cert")))
+
+@app.route("/api/haproxy/backends", methods=["GET", "POST"])
+@require_auth
+def api_haproxy_backends():
+    if not haproxy_mgr: return ok({"backends": []})
+    if request.method == "GET":
+        return ok({"backends": haproxy_mgr.list_backends()})
+    d = request.json or {}
+    return ok(haproxy_mgr.create_backend(d["name"], d.get("algorithm","roundrobin")))
+
+@app.route("/api/haproxy/backends/<bname>/servers", methods=["POST"])
+@require_auth
+def api_haproxy_add_server(bname):
+    if not haproxy_mgr: return err("HAProxy modülü yüklenemedi")
+    d = request.json or {}
+    return ok(haproxy_mgr.add_server(bname, d["server_name"], d["host"], d["port"], d.get("weight",1)))
+
+@app.route("/api/haproxy/backends/<bname>/servers/<sname>", methods=["DELETE"])
+@require_auth
+def api_haproxy_del_server(bname, sname):
+    if not haproxy_mgr: return err("HAProxy modülü yüklenemedi")
+    return ok(haproxy_mgr.remove_server(bname, sname))
+
+@app.route("/api/haproxy/reload", methods=["POST"])
+@require_auth
+def api_haproxy_reload():
+    if not haproxy_mgr: return err("HAProxy modülü yüklenemedi")
+    return ok(haproxy_mgr.reload())
+
+# ── Webhook ───────────────────────────────────────────────────────────────────
+@app.route("/api/webhooks", methods=["GET"])
+@require_auth
+def api_webhooks_list():
+    if not webhook_mgr: return ok({"webhooks": []})
+    return ok({"webhooks": webhook_mgr.list_webhooks()})
+
+@app.route("/api/webhooks", methods=["POST"])
+@require_auth
+def api_webhook_create():
+    if not webhook_mgr: return err("Webhook modülü yüklenemedi")
+    d = request.json or {}
+    return ok(webhook_mgr.register(d["name"], d["url"], d.get("events",[]), d.get("secret","")))
+
+@app.route("/api/webhooks/<wid>", methods=["PUT", "DELETE"])
+@require_auth
+def api_webhook(wid):
+    if not webhook_mgr: return err("Webhook modülü yüklenemedi")
+    if request.method == "DELETE":
+        return ok(webhook_mgr.delete_webhook(wid))
+    return ok(webhook_mgr.update_webhook(wid, **(request.json or {})))
+
+@app.route("/api/webhooks/<wid>/test", methods=["POST"])
+@require_auth
+def api_webhook_test(wid):
+    if not webhook_mgr: return err("Webhook modülü yüklenemedi")
+    return ok(webhook_mgr.test_webhook(wid))
+
+@app.route("/api/webhooks/<wid>/deliveries", methods=["GET"])
+@require_auth
+def api_webhook_deliveries(wid):
+    if not webhook_mgr: return ok({"deliveries": []})
+    return ok({"deliveries": webhook_mgr.get_deliveries(wid)})
+
+# ── AI Planner ────────────────────────────────────────────────────────────────
+@app.route("/api/ai/recommendations", methods=["GET"])
+@require_auth
+def api_ai_recs():
+    if not ai_planner: return ok({"recommendations": []})
+    return ok(ai_planner.get_recommendations())
+
+@app.route("/api/ai/analyze", methods=["POST"])
+@require_auth
+def api_ai_analyze():
+    if not ai_planner: return err("AI modülü yüklenemedi")
+    return ok(ai_planner.analyze_resources())
+
+@app.route("/api/ai/predict/capacity", methods=["GET"])
+@require_auth
+def api_ai_predict():
+    if not ai_planner: return ok({})
+    days = int(request.args.get("days", 30))
+    return ok(ai_planner.predict_capacity(days))
+
+@app.route("/api/ai/suggest/vm/<vm_id>", methods=["POST"])
+@require_auth
+def api_ai_suggest_vm(vm_id):
+    if not ai_planner: return ok({})
+    return ok(ai_planner.suggest_vm_sizing(vm_id))
+
+@app.route("/api/ai/nl", methods=["POST"])
+@require_auth
+def api_ai_nl():
+    if not ai_planner: return err("AI modülü yüklenemedi")
+    username = get_jwt_identity()
+    cmd = (request.json or {}).get("command", "")
+    return ok(ai_planner.process_natural_language(cmd, username))
+
+# ── Anomaly Detector ──────────────────────────────────────────────────────────
+@app.route("/api/anomalies", methods=["GET"])
+@require_auth
+def api_anomalies():
+    if not anomaly_det: return ok({"anomalies": []})
+    vm_id = request.args.get("vm_id")
+    limit = int(request.args.get("limit", 50))
+    return ok({"anomalies": anomaly_det.get_anomalies(limit, vm_id)})
+
+@app.route("/api/anomalies/summary", methods=["GET"])
+@require_auth
+def api_anomaly_summary():
+    if not anomaly_det: return ok({})
+    return ok(anomaly_det.get_summary())
+
+@app.route("/api/anomalies/config", methods=["GET", "PUT"])
+@require_auth
+def api_anomaly_config():
+    if not anomaly_det: return ok({})
+    if request.method == "GET":
+        return ok(anomaly_det.get_config())
+    return ok(anomaly_det.update_config(**(request.json or {})))
+
+# ── Auto Scaler ───────────────────────────────────────────────────────────────
+@app.route("/api/autoscaler/policies", methods=["GET"])
+@require_auth
+def api_scaler_list():
+    if not auto_scaler: return ok({"policies": []})
+    return ok({"policies": auto_scaler.list_policies()})
+
+@app.route("/api/autoscaler/policies", methods=["POST"])
+@require_auth
+def api_scaler_create():
+    if not auto_scaler: return err("Auto-scaler modülü yüklenemedi")
+    d = request.json or {}
+    return ok(auto_scaler.create_policy(d["vm_id"], d.get("vm_name",""), **{k:v for k,v in d.items() if k not in ["vm_id","vm_name"]}))
+
+@app.route("/api/autoscaler/policies/<pid>", methods=["PUT", "DELETE"])
+@require_auth
+def api_scaler_policy(pid):
+    if not auto_scaler: return err("Auto-scaler modülü yüklenemedi")
+    if request.method == "DELETE":
+        return ok(auto_scaler.delete_policy(pid))
+    return ok(auto_scaler.update_policy(pid, **(request.json or {})))
+
+@app.route("/api/autoscaler/events", methods=["GET"])
+@require_auth
+def api_scaler_events():
+    if not auto_scaler: return ok({"events": []})
+    return ok({"events": auto_scaler.get_scaling_events(request.args.get("vm_id"))})
+
+# ── SDN ───────────────────────────────────────────────────────────────────────
+@app.route("/api/sdn/status", methods=["GET"])
+@require_auth
+def api_sdn_status():
+    if not sdn_mgr: return ok({"available": False})
+    return ok(sdn_mgr.get_status())
+
+@app.route("/api/sdn/networks", methods=["GET", "POST"])
+@require_auth
+def api_sdn_networks():
+    if not sdn_mgr: return ok({"networks": []})
+    if request.method == "GET":
+        return ok({"networks": sdn_mgr.list_sdn_networks()})
+    d = request.json or {}
+    return ok(sdn_mgr.create_sdn_network(d["name"], d["subnet"], d["gateway"], d.get("vlan_id")))
+
+@app.route("/api/sdn/networks/<nid>", methods=["DELETE"])
+@require_auth
+def api_sdn_delete(nid):
+    if not sdn_mgr: return err("SDN modülü yüklenemedi")
+    return ok(sdn_mgr.delete_sdn_network(nid))
+
+@app.route("/api/sdn/bridges", methods=["GET", "POST"])
+@require_auth
+def api_sdn_bridges():
+    if not sdn_mgr: return ok({"bridges": []})
+    if request.method == "GET":
+        return ok({"bridges": sdn_mgr.list_bridges()})
+    d = request.json or {}
+    return ok(sdn_mgr.create_bridge(d["name"], d.get("fail_mode","standalone")))
+
+# ── IDS/IPS ───────────────────────────────────────────────────────────────────
+@app.route("/api/ids/status", methods=["GET"])
+@require_auth
+def api_ids_status():
+    if not ids_mgr: return ok({"available": False})
+    return ok(ids_mgr.get_status())
+
+@app.route("/api/ids/alerts", methods=["GET"])
+@require_auth
+def api_ids_alerts():
+    if not ids_mgr: return ok({"alerts": []})
+    limit = int(request.args.get("limit", 100))
+    hours = int(request.args.get("hours", 24))
+    return ok({"alerts": ids_mgr.get_alerts(limit, since_hours=hours)})
+
+@app.route("/api/ids/summary", methods=["GET"])
+@require_auth
+def api_ids_summary():
+    if not ids_mgr: return ok({})
+    return ok(ids_mgr.get_alert_summary())
+
+@app.route("/api/ids/start", methods=["POST"])
+@require_auth
+def api_ids_start():
+    if not ids_mgr: return err("IDS modülü yüklenemedi")
+    return ok(ids_mgr.start())
+
+@app.route("/api/ids/stop", methods=["POST"])
+@require_auth
+def api_ids_stop():
+    if not ids_mgr: return err("IDS modülü yüklenemedi")
+    return ok(ids_mgr.stop())
+
+@app.route("/api/ids/rules", methods=["GET", "POST"])
+@require_auth
+def api_ids_rules():
+    if not ids_mgr: return ok({"rules": []})
+    if request.method == "GET":
+        return ok({"rules": ids_mgr.list_custom_rules()})
+    return ok(ids_mgr.add_custom_rule((request.json or {}).get("rule","")))
+
+# ── MinIO / S3 ────────────────────────────────────────────────────────────────
+@app.route("/api/s3/config", methods=["GET", "POST"])
+@require_auth
+def api_s3_config():
+    if not minio_mgr: return ok({"available": False})
+    if request.method == "GET":
+        return ok(minio_mgr.get_config())
+    d = request.json or {}
+    return ok(minio_mgr.save_config(d["endpoint"], d["access_key"], d["secret_key"], d["bucket"], d.get("region","us-east-1")))
+
+@app.route("/api/s3/test", methods=["POST"])
+@require_auth
+def api_s3_test():
+    if not minio_mgr: return err("MinIO modülü yüklenemedi")
+    return ok(minio_mgr.test_connection())
+
+@app.route("/api/s3/objects", methods=["GET"])
+@require_auth
+def api_s3_objects():
+    if not minio_mgr: return ok({"objects": []})
+    return ok({"objects": minio_mgr.list_objects(prefix=request.args.get("prefix",""))})
+
+@app.route("/api/s3/stats", methods=["GET"])
+@require_auth
+def api_s3_stats():
+    if not minio_mgr: return ok({})
+    return ok(minio_mgr.get_storage_stats())
+
+# ── Uptime Tracker ────────────────────────────────────────────────────────────
+@app.route("/api/uptime", methods=["GET"])
+@require_auth
+def api_uptime_all():
+    if not uptime_tracker: return ok({"uptimes": []})
+    return ok({"uptimes": uptime_tracker.get_all_uptimes()})
+
+@app.route("/api/uptime/<vm_id>", methods=["GET"])
+@require_auth
+def api_uptime_vm(vm_id):
+    if not uptime_tracker: return ok({})
+    return ok(uptime_tracker.get_uptime(vm_id))
+
+# ── LDAP ──────────────────────────────────────────────────────────────────────
+@app.route("/api/ldap/config", methods=["GET", "POST"])
+@require_auth
+def api_ldap_config():
+    if not ldap_mgr: return ok({"available": False, "enabled": False})
+    if request.method == "GET":
+        return ok(ldap_mgr.get_config())
+    d = request.json or {}
+    return ok(ldap_mgr.save_config(**d))
+
+@app.route("/api/ldap/test", methods=["POST"])
+@require_auth
+def api_ldap_test():
+    if not ldap_mgr: return err("LDAP modülü yüklenemedi")
+    return ok(ldap_mgr.test_connection())
+
+@app.route("/api/ldap/sync", methods=["POST"])
+@require_auth
+def api_ldap_sync():
+    if not ldap_mgr: return err("LDAP modülü yüklenemedi")
+    return ok(ldap_mgr.sync_users())
+
+# ── Notifications / Alerts ────────────────────────────────────────────────────
+@app.route("/api/notifications/email-config", methods=["GET", "POST"])
+@require_auth
+def api_email_config():
+    if request.method == "GET":
+        return ok(notifications.get_email_config() if hasattr(notifications, "get_email_config") else {})
+    d = request.json or {}
+    if hasattr(notifications, "save_email_config"):
+        return ok(notifications.save_email_config(**d))
+    return err("Email config fonksiyonu bulunamadı")
+
+@app.route("/api/notifications/test-email", methods=["POST"])
+@require_auth
+def api_test_email():
+    to = (request.json or {}).get("to","")
+    if hasattr(notifications, "test_email"):
+        return ok(notifications.test_email(to))
+    return err("Email test fonksiyonu bulunamadı")
+
+@app.route("/api/notifications/test-channel", methods=["POST"])
+@require_auth
+def api_test_notification_channel():
+    channel = (request.json or {}).get("channel", "telegram")
+    if hasattr(notifications, "send_alert"):
+        notifications.send_alert("OXware test bildirimi", channels=[channel])
+        return ok({"sent": True})
+    return err("Bildirim modülü hazır değil")
+
+# ── Background Servisleri Başlat ───────────────────────────────────────────────
+def _start_background_services():
+    services = [
+        (perf_history,   "start_collector",         {"interval": 60}),
+        (audit_log,      "init_db",                 {}),
+        (backup_sched,   "start_scheduler",         {}),
+        (smart_mon,      "start_monitoring",        {"interval": 3600}),
+        (ssl_mgr,        "start_monitor",           {"interval": 86400}),
+        (uptime_tracker, "start_tracker",           {"interval": 60}),
+        (anomaly_det,    "start_detector",          {"interval": 300}),
+        (auto_scaler,    "start_auto_scaler",       {"interval": 60}),
+        (ai_planner,     "start_periodic_analysis", {"interval_hours": 24}),
+    ]
+    for mod, fn, kwargs in services:
+        if mod and hasattr(mod, fn):
+            try:
+                getattr(mod, fn)(**kwargs)
+                log.info("✓ %s.%s başlatıldı", mod.__name__, fn)
+            except Exception as e:
+                log.warning("✗ %s.%s başlatılamadı: %s", mod.__name__, fn, e)
+
+_start_background_services()
 
 # ── Error handlers ────────────────────────────────────────────────────────────
 @app.errorhandler(404)

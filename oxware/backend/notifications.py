@@ -1,20 +1,30 @@
 """
 AdaOS Bildirim Sistemi
 ─────────────────────
-Telegram Bot ve Discord Webhook üzerinden uyarı gönderir.
-Yapılandırma: /etc/adaos/notifications.conf
+Telegram Bot, Discord Webhook ve E-posta üzerinden uyarı gönderir.
+Yapılandırma: /etc/oxware/notifications.conf
 """
 
 import os
 import json
 import time
 import threading
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import requests
 from datetime import datetime
 from pathlib import Path
 
-NOTIF_CONFIG = os.environ.get("OXWARE_NOTIF_CONFIG", os.environ.get("ADAOS_NOTIF_CONFIG", "/etc/oxware/notifications.conf"))
+try:
+    import logging as _logging
+    log = _logging.getLogger("oxware.notifications")
+except Exception:
+    log = None
+
+NOTIF_CONFIG     = os.environ.get("OXWARE_NOTIF_CONFIG", os.environ.get("ADAOS_NOTIF_CONFIG", "/etc/oxware/notifications.conf"))
 NOTIF_QUEUE_FILE = "/var/lib/oxware/notif_queue.json"
+EMAIL_CONFIG     = "/etc/oxware/email_config.json"
 
 _queue_lock = threading.Lock()
 _config_cache = {}
@@ -80,13 +90,156 @@ def save_notif_config(
 
 def get_notif_config() -> dict:
     cfg = _load_config()
+    email_cfg = get_email_config()
     return {
-        "telegram_enabled":   bool(cfg.get("telegram_token") and cfg.get("telegram_chat_id")),
-        "discord_enabled":    bool(cfg.get("discord_webhook")),
-        "min_level":          cfg.get("min_level", "WARNING"),
-        "hostname_tag":       cfg.get("hostname_tag", ""),
-        "telegram_chat_id":   cfg.get("telegram_chat_id", ""),
+        "telegram_enabled":    bool(cfg.get("telegram_token") and cfg.get("telegram_chat_id")),
+        "discord_enabled":     bool(cfg.get("discord_webhook")),
+        "email_enabled":       email_cfg.get("enabled", False),
+        "min_level":           cfg.get("min_level", "WARNING"),
+        "hostname_tag":        cfg.get("hostname_tag", ""),
+        "telegram_chat_id":    cfg.get("telegram_chat_id", ""),
         "discord_webhook_set": bool(cfg.get("discord_webhook")),
+    }
+
+
+# ── Email ─────────────────────────────────────────────────────────────────────
+
+def get_email_config() -> dict:
+    """Email yapılandırmasını oku."""
+    try:
+        if os.path.exists(EMAIL_CONFIG):
+            with open(EMAIL_CONFIG) as f:
+                cfg = json.load(f)
+            return {
+                "smtp_host":  cfg.get("smtp_host", ""),
+                "smtp_port":  cfg.get("smtp_port", 587),
+                "username":   cfg.get("username", ""),
+                "password":   "***" if cfg.get("password") else "",
+                "from_addr":  cfg.get("from_addr", ""),
+                "use_tls":    cfg.get("use_tls", True),
+                "enabled":    cfg.get("enabled", False),
+            }
+    except Exception as e:
+        if log:
+            log.warning("Email config yükleme hatası: %s", e)
+    return {"smtp_host": "", "smtp_port": 587, "username": "", "password": "",
+            "from_addr": "", "use_tls": True, "enabled": False}
+
+
+def _load_full_email_config() -> dict:
+    """Şifre dahil tam email config."""
+    try:
+        if os.path.exists(EMAIL_CONFIG):
+            with open(EMAIL_CONFIG) as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+
+def save_email_config(
+    smtp_host: str,
+    smtp_port: int,
+    username: str,
+    password: str,
+    from_addr: str,
+    use_tls: bool = True,
+) -> dict:
+    """Email SMTP yapılandırmasını kaydet."""
+    try:
+        cfg = {
+            "smtp_host":  smtp_host,
+            "smtp_port":  int(smtp_port),
+            "username":   username,
+            "password":   password,
+            "from_addr":  from_addr,
+            "use_tls":    bool(use_tls),
+            "enabled":    True,
+            "updated_at": datetime.now().isoformat(),
+        }
+        os.makedirs(os.path.dirname(EMAIL_CONFIG), exist_ok=True)
+        with open(EMAIL_CONFIG, "w") as f:
+            json.dump(cfg, f, ensure_ascii=False, indent=2)
+        try:
+            os.chmod(EMAIL_CONFIG, 0o600)
+        except Exception:
+            pass
+        return {"success": True, "smtp_host": smtp_host, "from_addr": from_addr}
+    except Exception as e:
+        if log:
+            log.error("save_email_config hatası: %s", e)
+        return {"success": False, "error": str(e)}
+
+
+def send_email(
+    to: str,
+    subject: str,
+    body: str,
+    html: bool = False,
+) -> bool:
+    """E-posta gönder. Başarı durumunda True döndürür."""
+    try:
+        cfg = _load_full_email_config()
+        if not cfg:
+            if log:
+                log.warning("Email yapılandırması bulunamadı.")
+            return False
+
+        smtp_host = cfg.get("smtp_host", "")
+        smtp_port = int(cfg.get("smtp_port", 587))
+        username  = cfg.get("username", "")
+        password  = cfg.get("password", "")
+        from_addr = cfg.get("from_addr", username)
+        use_tls   = cfg.get("use_tls", True)
+
+        if not smtp_host:
+            if log:
+                log.warning("SMTP host tanımlı değil.")
+            return False
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"]    = from_addr
+        msg["To"]      = to
+
+        content_type = "html" if html else "plain"
+        msg.attach(MIMEText(body, content_type, "utf-8"))
+
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
+            server.ehlo()
+            if use_tls:
+                server.starttls()
+                server.ehlo()
+            if username and password:
+                server.login(username, password)
+            server.sendmail(from_addr, [to], msg.as_string())
+
+        if log:
+            log.info("Email gönderildi: %s → %s", subject, to)
+        return True
+
+    except Exception as e:
+        if log:
+            log.error("send_email hatası: %s", e)
+        print(f"[notifications] Email hatası: {e}")
+        return False
+
+
+def test_email(to: str) -> dict:
+    """Test e-postası gönder."""
+    hostname = _get_hostname()
+    subject = f"OXware Test E-postası — {hostname}"
+    body = (
+        f"Bu bir OXware Hypervisor test e-postasıdır.\n\n"
+        f"Host: {hostname}\n"
+        f"Tarih: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n\n"
+        "Email bildirimleri başarıyla yapılandırılmıştır."
+    )
+    success = send_email(to=to, subject=subject, body=body)
+    return {
+        "success": success,
+        "to": to,
+        "message": "Test e-postası gönderildi." if success else "Gönderim başarısız.",
     }
 
 
@@ -153,8 +306,12 @@ def send_alert(
     category: str = "system",
     details: dict = None,
     vm_id: str = None,
+    channels: list = None,
 ) -> dict:
-    """Tüm aktif kanallara uyarı gönder."""
+    """Aktif kanallara uyarı gönder.
+
+    channels: ["telegram", "discord", "email"] — None ise tüm aktif kanallara gönderir.
+    """
     cfg = _load_config()
     if not cfg:
         return {"sent": False, "reason": "Bildirim yapılandırması yok"}
@@ -162,6 +319,12 @@ def send_alert(
     min_level = cfg.get("min_level", "WARNING").upper()
     if LEVEL_ORDER.index(level.upper()) < LEVEL_ORDER.index(min_level):
         return {"sent": False, "reason": f"Seviye {level} < minimum {min_level}"}
+
+    # Hangi kanallar aktif olacak
+    use_all = channels is None
+    use_telegram = use_all or "telegram" in channels
+    use_discord  = use_all or "discord" in channels
+    use_email    = use_all or "email" in channels
 
     hostname = cfg.get("hostname_tag") or _get_hostname()
     emoji = LEVEL_EMOJI.get(level.upper(), "⚡")
@@ -186,31 +349,62 @@ def send_alert(
     results = {}
 
     # Telegram
-    tg_token = cfg.get("telegram_token")
-    tg_chat  = cfg.get("telegram_chat_id")
-    if tg_token and tg_chat:
-        results["telegram"] = _send_telegram(tg_token, tg_chat, tg_text)
+    if use_telegram:
+        tg_token = cfg.get("telegram_token")
+        tg_chat  = cfg.get("telegram_chat_id")
+        if tg_token and tg_chat:
+            results["telegram"] = _send_telegram(tg_token, tg_chat, tg_text)
 
     # Discord
-    dc_webhook = cfg.get("discord_webhook")
-    if dc_webhook:
-        dc_desc = (
-            f"**Host:** `{hostname}`\n"
-            f"**Kategori:** {category}\n"
-            f"**Mesaj:** {message}\n"
-        )
-        if vm_id:
-            dc_desc += f"**VM:** `{vm_id[:12]}`\n"
-        if details:
-            for k, v in list(details.items())[:5]:
-                dc_desc += f"**{k}:** {v}\n"
-        dc_desc += f"\n{ts}"
-        results["discord"] = _send_discord(
-            dc_webhook,
-            f"{emoji} OXware: {level.upper()} — {category}",
-            dc_desc,
-            LEVEL_COLORS.get(level.upper(), 0xFF0000),
-        )
+    if use_discord:
+        dc_webhook = cfg.get("discord_webhook")
+        if dc_webhook:
+            dc_desc = (
+                f"**Host:** `{hostname}`\n"
+                f"**Kategori:** {category}\n"
+                f"**Mesaj:** {message}\n"
+            )
+            if vm_id:
+                dc_desc += f"**VM:** `{vm_id[:12]}`\n"
+            if details:
+                for k, v in list(details.items())[:5]:
+                    dc_desc += f"**{k}:** {v}\n"
+            dc_desc += f"\n{ts}"
+            results["discord"] = _send_discord(
+                dc_webhook,
+                f"{emoji} OXware: {level.upper()} — {category}",
+                dc_desc,
+                LEVEL_COLORS.get(level.upper(), 0xFF0000),
+            )
+
+    # Email
+    if use_email:
+        email_cfg = _load_full_email_config()
+        if email_cfg and email_cfg.get("enabled") and email_cfg.get("smtp_host"):
+            to_addr = email_cfg.get("username") or email_cfg.get("from_addr", "")
+            if to_addr:
+                subject = f"[OXware] {emoji} {level.upper()} — {category}"
+                # Düz metin gövde
+                body_lines = [
+                    f"OXware Hypervisor Uyarısı",
+                    f"",
+                    f"Host:      {hostname}",
+                    f"Kategori:  {category}",
+                    f"Seviye:    {level.upper()}",
+                    f"Mesaj:     {message}",
+                ]
+                if vm_id:
+                    body_lines.append(f"VM:        {vm_id}")
+                if details:
+                    body_lines.append("")
+                    for k, v in list(details.items())[:5]:
+                        body_lines.append(f"  {k}: {v}")
+                body_lines += ["", f"Tarih: {ts}"]
+                results["email"] = send_email(
+                    to=to_addr,
+                    subject=subject,
+                    body="\n".join(body_lines),
+                )
 
     sent_count = sum(1 for v in results.values() if v)
     return {

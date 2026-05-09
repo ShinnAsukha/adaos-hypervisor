@@ -22,6 +22,40 @@
       --yellow:#b07d10;--yellow-lt:#eab308;
       --orange:#c2591a;
       --topbar-h:44px;--tree-w:0px;--nav-w:200px;--taskbar-h:170px;
+      /* Tema değişkenleri */
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-card: #21262d;
+      --border-color: #30363d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --accent2: #0066ff;
+      --success: #3fb950;
+      --warning: #d29922;
+      --danger: #f85149;
+    }
+    .light-theme {
+      --bg-primary: #f6f8fa;
+      --bg-secondary: #ffffff;
+      --bg-card: #f0f2f5;
+      --border-color: #d0d7de;
+      --text-primary: #1f2328;
+      --text-secondary: #656d76;
+      --accent: #0969da;
+      --accent-lt: #0969da;
+      --accent2: #0550ae;
+      --success: #1a7f37;
+      --warning: #9a6700;
+      --danger: #cf222e;
+      --bg: #f6f8fa;
+      --surface: #ffffff;
+      --surface2: #f0f2f5;
+      --surface3: #e8eaed;
+      --border: #d0d7de;
+      --border2: #c8cdd4;
+      --text: #1f2328;
+      --text-muted: #656d76;
+      --text-dim: #8c949e;
     }
     html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5}
     a{color:inherit;text-decoration:none}
@@ -204,6 +238,41 @@
     .badge.inactive{color:var(--text-dim);border-color:rgba(61,84,112,.3);background:rgba(61,84,112,.1)}
     .badge.green{color:var(--green-lt);border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.1)}
     .badge.gray{color:var(--text-dim);border-color:rgba(61,84,112,.3);background:rgba(61,84,112,.1)}
+    /* Yeni badge türleri */
+    .badge-success{color:#3fb950;border-color:rgba(63,185,80,.3);background:rgba(63,185,80,.1);display:inline-flex;align-items:center;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;border:1px solid}
+    .badge-danger{color:#f85149;border-color:rgba(248,81,73,.3);background:rgba(248,81,73,.1);display:inline-flex;align-items:center;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;border:1px solid}
+    .badge-warning{color:#d29922;border-color:rgba(210,153,34,.3);background:rgba(210,153,34,.1);display:inline-flex;align-items:center;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;border:1px solid}
+    .badge-muted{color:var(--text-muted);border-color:rgba(139,148,158,.2);background:rgba(139,148,158,.1);display:inline-flex;align-items:center;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;border:1px solid}
+    /* Yeni sekme içerikleri için yardımcı sınıflar */
+    .btn-primary{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:var(--accent);border:1px solid var(--accent);border-radius:4px;color:#fff;font-size:12px;font-weight:500;cursor:pointer;transition:background .12s;white-space:nowrap}
+    .btn-primary:hover{background:var(--accent-lt)}
+    .btn-sm{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:11px;cursor:pointer;transition:background .12s}
+    .btn-sm:hover{background:var(--surface2);border-color:var(--accent)}
+    .btn-danger{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);border-radius:4px;color:#f85149;font-size:11px;cursor:pointer}
+    .btn-danger:hover{background:rgba(248,81,73,.2)}
+    .btn-icon{background:none;border:1px solid var(--border2);border-radius:4px;padding:5px 8px;color:var(--text-muted);cursor:pointer;font-size:14px;transition:background .12s}
+    .btn-icon:hover{background:var(--surface2);color:var(--text)}
+    .form-control{width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:12px;outline:none;font-family:inherit}
+    .form-control:focus{border-color:var(--accent)}
+    .form-group{display:flex;flex-direction:column;gap:4px;min-width:140px}
+    .form-group label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px}
+    .stat-item{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(30,45,69,.3);font-size:12px}
+    .stat-item:last-child{border-bottom:none}
+    .stat-label{color:var(--text-muted);min-width:100px}
+    .text-muted{color:var(--text-muted)}
+    .text-danger{color:#f85149}
+    .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+    .template-card{display:flex;flex-direction:column;gap:8px}
+    .template-icon{font-size:28px}
+    .template-card h3{font-size:13px;font-weight:700;color:var(--text)}
+    .tags{display:flex;flex-wrap:wrap;gap:4px}
+    /* Sub-tabs */
+    .sub-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:14px}
+    .sub-tab{padding:6px 14px;font-size:12px;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .12s,border-color .12s;background:none;border-top:none;border-left:none;border-right:none}
+    .sub-tab.active{color:var(--accent-lt);border-bottom-color:var(--accent)}
+    .sub-tab:hover{color:var(--text)}
+    /* Tab içerikleri için ortak */
+    .tab-content{padding:0}
 
     /* ── Progress ── */
     .progress-bar{height:4px;background:var(--surface3);border-radius:2px;overflow:hidden}
@@ -363,6 +432,12 @@
         <svg viewBox="0 0 16 16"><path d="M8 16A8 8 0 118 0a8 8 0 010 16zM8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13z"/><path d="M5.255 5.786a.237.237 0 00.241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 00.25.246h.811a.25.25 0 00.25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/></svg>
         Help
       </a>
+    </div>
+
+    <div style="height:100%;display:flex;align-items:center;padding:0 10px;border-left:1px solid var(--border)">
+      <button class="btn-icon" id="themeToggle" onclick="toggleTheme()" title="Tema Değiştir">
+        <span id="themeIcon">🌙</span>
+      </button>
     </div>
 
     <div class="tb-user" onclick="logout()">
@@ -892,6 +967,510 @@
           </div>
         </div>
 
+        <!-- ─────── tab-templates ─────── -->
+        <div class="page" id="page-tab-templates">
+          <div class="section-header">
+            <h2>VM Şablonları</h2>
+            <div class="spacer"></div>
+          </div>
+          <div class="card-grid" id="templateList"></div>
+
+          <div class="section-header" style="margin-top:24px">
+            <h2>VM'den Şablon Oluştur</h2>
+          </div>
+          <div class="card">
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+              <div class="form-group">
+                <label>VM Seç</label>
+                <select id="templateSourceVm" class="form-control" style="min-width:180px"></select>
+              </div>
+              <div class="form-group">
+                <label>Şablon Adı</label>
+                <input id="templateName" type="text" class="form-control" placeholder="my-template" style="min-width:160px">
+              </div>
+              <div class="form-group">
+                <label>Açıklama</label>
+                <input id="templateDesc" type="text" class="form-control" placeholder="Şablon açıklaması" style="min-width:200px">
+              </div>
+              <button class="btn-primary" onclick="createTemplateFromVm()">Şablon Oluştur</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─────── tab-backup ─────── -->
+        <div class="page" id="page-tab-backup">
+          <div class="section-header">
+            <h2>Yedekleme Zamanlamaları</h2>
+            <div class="spacer"></div>
+            <button class="btn-primary" onclick="loadBackupSchedules()">↻ Yenile</button>
+          </div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-title">Yeni Zamanlama</div>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+              <div class="form-group">
+                <label>VM</label>
+                <select id="bsVmId" class="form-control" style="min-width:160px"></select>
+              </div>
+              <div class="form-group">
+                <label>Cron İfadesi</label>
+                <input id="bsCron" type="text" class="form-control" placeholder="0 2 * * *" style="min-width:140px">
+              </div>
+              <div class="form-group">
+                <label>Hazır Seçenekler</label>
+                <select class="form-control" onchange="document.getElementById('bsCron').value=this.value;this.value=''">
+                  <option value="">— Seç —</option>
+                  <option value="0 2 * * *">Günlük (02:00)</option>
+                  <option value="0 2 * * 0">Haftalık (Pazar 02:00)</option>
+                  <option value="0 2 1 * *">Aylık (1. gün 02:00)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Retention (adet)</label>
+                <input id="bsRetention" type="number" class="form-control" value="7" min="1" style="min-width:100px">
+              </div>
+              <button class="btn-primary" onclick="createBackupSchedule()">Zamanlama Ekle</button>
+            </div>
+          </div>
+          <div class="table-wrap" style="margin-bottom:18px">
+            <table>
+              <thead><tr><th>VM</th><th>Cron</th><th>Sonraki Çalışma</th><th>Retention</th><th>Durum</th><th>İşlemler</th></tr></thead>
+              <tbody id="backupSchedulesTbody"><tr><td colspan="6" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody>
+            </table>
+          </div>
+          <div class="section-header"><h2>Backup Geçmişi</h2></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>VM</th><th>Snapshot</th><th>Zaman</th><th>Durum</th><th>Hata</th></tr></thead>
+              <tbody id="backupHistoryTbody"><tr><td colspan="5" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ─────── tab-firewall ─────── -->
+        <div class="page" id="page-tab-firewall">
+          <div class="section-header">
+            <h2>🛡️ Güvenlik Duvarı (nftables)</h2>
+            <div class="spacer"></div>
+            <span id="firewallStatus"></span>
+          </div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-title">Yeni Kural Ekle</div>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+              <div class="form-group">
+                <label>Chain</label>
+                <select id="fwChain" class="form-control">
+                  <option value="input">INPUT</option>
+                  <option value="forward">FORWARD</option>
+                  <option value="output">OUTPUT</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Protocol</label>
+                <select id="fwProto" class="form-control">
+                  <option value="">Any</option>
+                  <option value="tcp">TCP</option>
+                  <option value="udp">UDP</option>
+                  <option value="icmp">ICMP</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Kaynak IP</label>
+                <input id="fwSrcIp" type="text" class="form-control" placeholder="192.168.1.0/24" style="min-width:160px">
+              </div>
+              <div class="form-group">
+                <label>Hedef Port</label>
+                <input id="fwDstPort" type="text" class="form-control" placeholder="80" style="min-width:80px">
+              </div>
+              <div class="form-group">
+                <label>Aksiyon</label>
+                <select id="fwAction" class="form-control">
+                  <option value="accept">ACCEPT</option>
+                  <option value="drop">DROP</option>
+                  <option value="reject">REJECT</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Yorum</label>
+                <input id="fwComment" type="text" class="form-control" placeholder="Açıklama" style="min-width:140px">
+              </div>
+              <button class="btn-primary" onclick="addFirewallRule()">Kural Ekle</button>
+            </div>
+          </div>
+          <div class="table-wrap" style="margin-bottom:14px">
+            <table>
+              <thead><tr><th>Handle</th><th>Chain</th><th>Protocol</th><th>Kaynak IP</th><th>Hedef Port</th><th>Aksiyon</th><th>Sil</th></tr></thead>
+              <tbody id="firewallRulesTbody"><tr><td colspan="7" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody>
+            </table>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-primary" onclick="saveFirewall()">💾 Kaydet</button>
+            <button class="btn sm" onclick="loadFirewallRules()">↻ Yenile</button>
+          </div>
+        </div>
+
+        <!-- ─────── tab-vpn ─────── -->
+        <div class="page" id="page-tab-vpn">
+          <div class="section-header"><h2>🔒 WireGuard VPN</h2></div>
+          <div id="vpnStatusCard" class="card" style="margin-bottom:14px"></div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-title">Yeni Peer Ekle</div>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+              <div class="form-group">
+                <label>Peer Adı</label>
+                <input id="vpnPeerName" type="text" class="form-control" placeholder="client1" style="min-width:140px">
+              </div>
+              <div class="form-group">
+                <label>Allowed IPs</label>
+                <input id="vpnPeerIps" type="text" class="form-control" placeholder="10.0.0.2/32" style="min-width:160px">
+              </div>
+              <button class="btn-primary" onclick="addVpnPeer()">Peer Ekle</button>
+            </div>
+          </div>
+          <div class="section-header"><h2>Peer Listesi</h2></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Ad</th><th>Allowed IPs</th><th>Durum</th><th>İşlemler</th></tr></thead>
+              <tbody id="vpnPeersTbody"><tr><td colspan="4" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ─────── tab-dns ─────── -->
+        <div class="page" id="page-tab-dns">
+          <div class="section-header"><h2>🌐 DNS Yönetimi</h2></div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-title">Yeni Host Kaydı</div>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+              <div class="form-group">
+                <label>IP</label>
+                <input id="dnsIp" type="text" class="form-control" placeholder="192.168.1.10" style="min-width:140px">
+              </div>
+              <div class="form-group">
+                <label>Hostname</label>
+                <input id="dnsHostname" type="text" class="form-control" placeholder="myserver.local" style="min-width:180px">
+              </div>
+              <div class="form-group">
+                <label>Yorum</label>
+                <input id="dnsComment" type="text" class="form-control" placeholder="İsteğe bağlı" style="min-width:160px">
+              </div>
+              <button class="btn-primary" onclick="addDnsHost()">Kayıt Ekle</button>
+            </div>
+          </div>
+          <div class="section-header"><h2>Host Kayıtları</h2></div>
+          <div class="table-wrap" style="margin-bottom:14px">
+            <table>
+              <thead><tr><th>IP</th><th>Hostname</th><th>Yorum</th><th>Sil</th></tr></thead>
+              <tbody id="dnsHostsTbody"><tr><td colspan="4" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody>
+            </table>
+          </div>
+          <div class="section-header"><h2>DHCP Kiralamaları</h2></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>MAC</th><th>IP</th><th>Hostname</th><th>Süre</th></tr></thead>
+              <tbody id="dhcpLeasesTbody"><tr><td colspan="4" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ─────── tab-proxy ─────── -->
+        <div class="page" id="page-tab-proxy">
+          <div class="section-header"><h2>↔️ Proxy & Load Balancer</h2></div>
+          <div class="sub-tabs">
+            <button class="sub-tab active" onclick="switchProxyTab('nginx',this)">Nginx Reverse Proxy</button>
+            <button class="sub-tab" onclick="switchProxyTab('haproxy',this)">HAProxy Load Balancer</button>
+          </div>
+          <div id="proxy-tab-nginx">
+            <div class="card" style="margin-bottom:14px">
+              <div class="card-title">Yeni Site Ekle</div>
+              <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+                <div class="form-group"><label>Ad</label><input id="ngName" type="text" class="form-control" placeholder="mysite" style="min-width:120px"></div>
+                <div class="form-group"><label>Domain</label><input id="ngDomain" type="text" class="form-control" placeholder="example.com" style="min-width:160px"></div>
+                <div class="form-group"><label>Upstream Host</label><input id="ngUpstreamHost" type="text" class="form-control" placeholder="192.168.1.10" style="min-width:140px"></div>
+                <div class="form-group"><label>Upstream Port</label><input id="ngUpstreamPort" type="number" class="form-control" value="80" style="min-width:80px"></div>
+                <div class="form-group"><label>SSL</label><input id="ngSsl" type="checkbox"></div>
+                <div class="form-group"><label>WebSocket</label><input id="ngWs" type="checkbox"></div>
+                <button class="btn-primary" onclick="createNginxSite()">Site Ekle</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Ad</th><th>Domain</th><th>Durum</th><th>İşlemler</th></tr></thead>
+                <tbody id="nginxSitesTbody"><tr><td colspan="4" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="proxy-tab-haproxy" style="display:none">
+            <div class="card" style="margin-bottom:14px">
+              <div class="card-title">HAProxy Durumu</div>
+              <div id="haproxyStatus" style="padding:8px 0"></div>
+            </div>
+            <div class="empty-state"><p class="text-muted">HAProxy frontend/backend yönetimi API üzerinden yapılır.</p></div>
+          </div>
+        </div>
+
+        <!-- ─────── tab-monitoring ─────── -->
+        <div class="page" id="page-tab-monitoring">
+          <div class="section-header"><h2>📊 Gelişmiş İzleme</h2></div>
+
+          <div class="section-header"><h2>Performans Geçmişi</h2></div>
+          <div class="card" style="margin-bottom:14px">
+            <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+              <button class="btn sm" onclick="loadPerfHistory('1h')">1s</button>
+              <button class="btn sm" onclick="loadPerfHistory('6h')">6s</button>
+              <button class="btn sm" onclick="loadPerfHistory('24h')">24s</button>
+              <button class="btn sm" onclick="loadPerfHistory('7d')">7g</button>
+              <button class="btn sm" onclick="loadPerfHistory('30d')">30g</button>
+            </div>
+            <div style="height:200px;position:relative"><canvas id="perfHistoryChart"></canvas></div>
+          </div>
+
+          <div class="section-header"><h2>SMART Disk Sağlığı</h2></div>
+          <div class="table-wrap" style="margin-bottom:14px">
+            <table>
+              <thead><tr><th>Aygıt</th><th>Model</th><th>Sıcaklık</th><th>Güç Saati</th><th>Sağlık</th></tr></thead>
+              <tbody id="smartDevicesTbody"><tr><td colspan="5" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody>
+            </table>
+          </div>
+
+          <div class="section-header"><h2>VM Uptime</h2></div>
+          <div class="table-wrap" style="margin-bottom:14px">
+            <table>
+              <thead><tr><th>VM</th><th>Toplam Uptime</th><th>Kullanılabilirlik</th><th>Boot Sayısı</th><th>Durum</th></tr></thead>
+              <tbody id="uptimeTbody"><tr><td colspan="5" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody>
+            </table>
+          </div>
+
+          <div class="section-header"><h2>IDS/IPS Uyarıları (Suricata)</h2></div>
+          <div id="idsStatusCard" class="card" style="margin-bottom:14px"></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Zaman</th><th>Kaynak IP</th><th>Hedef</th><th>İmza</th><th>Severity</th></tr></thead>
+              <tbody id="idsAlertsTbody"><tr><td colspan="5" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ─────── tab-ai ─────── -->
+        <div class="page" id="page-tab-ai">
+          <div class="section-header">
+            <h2>🤖 AI Asistan</h2>
+            <div class="spacer"></div>
+            <button class="btn-primary" id="aiAnalyzeBtn" onclick="runAiAnalysis()">🔍 Analiz Et</button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div class="card">
+              <div class="card-title">Öneriler</div>
+              <div id="aiRecsContainer"><p class="text-muted">Henüz analiz yapılmadı.</p></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Doğal Dil Komutları</div>
+              <div style="display:flex;gap:8px;margin-bottom:8px">
+                <input id="nlCommandInput" type="text" class="form-control" placeholder="VM oluştur, servisi durdur..." onkeydown="if(event.key==='Enter')sendNlCommand()">
+                <button class="btn-primary" onclick="sendNlCommand()">Gönder</button>
+              </div>
+              <div id="nlResult"></div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="card">
+              <div class="card-title">Anomali Dedektörü</div>
+              <div style="margin-bottom:10px;display:flex;gap:8px">
+                <button class="btn-primary btn-sm" onclick="loadAnomalies()">↻ Yenile</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Zaman</th><th>Metrik</th><th>Değer</th><th>Z-Score</th><th>Şiddet</th></tr></thead>
+                  <tbody id="anomaliesTbody"><tr><td colspan="5" class="text-center text-muted" style="padding:10px">Yükleniyor...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">Kapasite Tahmini</div>
+              <div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-end">
+                <div class="form-group">
+                  <label>Gün Sayısı</label>
+                  <input id="forecastDays" type="number" class="form-control" value="30" min="1" max="365" style="min-width:80px">
+                </div>
+                <button class="btn-primary" onclick="loadForecast()">Tahmin Et</button>
+              </div>
+              <div id="forecastResult" class="text-muted">Tahmin için yukarıdaki butona tıklayın.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─────── tab-security ─────── -->
+        <div class="page" id="page-tab-security">
+          <div class="section-header"><h2>🔐 Güvenlik</h2></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div class="card">
+              <div class="card-title">2FA Yönetimi</div>
+              <div id="twoFaStatus" style="margin-bottom:10px"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">API Anahtarları</div>
+              <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:flex-end">
+                <div class="form-group"><label>Anahtar Adı</label><input id="apiKeyName" type="text" class="form-control" placeholder="my-key" style="min-width:140px"></div>
+                <div class="form-group"><label>Süre (gün, boş=sınırsız)</label><input id="apiKeyExpiry" type="number" class="form-control" placeholder="30" style="min-width:100px"></div>
+                <button class="btn-primary" onclick="createApiKey()">Oluştur</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Ad</th><th>Oluşturma</th><th>Son Kullanım</th><th>Kullanım</th><th>Durum</th><th>İptal</th></tr></thead>
+                  <tbody id="apiKeysTbody"><tr><td colspan="6" class="text-center text-muted" style="padding:10px">Yükleniyor...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-title">Audit Log <button class="btn sm" onclick="exportAuditCsv()" style="margin-left:10px">⬇ CSV İndir</button></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Zaman</th><th>Kullanıcı</th><th>Aksiyon</th><th>Kaynak</th><th>IP</th><th>Sonuç</th></tr></thead>
+                <tbody id="auditLogTbody"><tr><td colspan="6" class="text-center text-muted" style="padding:10px">Yükleniyor...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">LDAP / Active Directory</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-row"><label>Server</label><input id="ldapServer" type="text" class="form-control" placeholder="ldap.example.com"></div>
+              <div class="form-row"><label>Port</label><input id="ldapPort" type="number" class="form-control" value="389"></div>
+              <div class="form-row"><label>Base DN</label><input id="ldapBaseDn" type="text" class="form-control" placeholder="dc=example,dc=com"></div>
+              <div class="form-row"><label>Bind DN</label><input id="ldapBindDn" type="text" class="form-control" placeholder="cn=admin,dc=example,dc=com"></div>
+              <div class="form-row"><label>Bind Password</label><input id="ldapBindPw" type="password" class="form-control" placeholder="•••••"></div>
+              <div class="form-row"><label>Admin Group</label><input id="ldapAdminGroup" type="text" class="form-control" placeholder="CN=Admins"></div>
+              <div class="form-row"><label>Operator Group</label><input id="ldapOpGroup" type="text" class="form-control" placeholder="CN=Operators"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="btn-primary" onclick="saveLdapConfig()">💾 Kaydet</button>
+              <button class="btn sm" onclick="testLdapConnection()">🔌 Bağlantı Test</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─────── tab-integrations ─────── -->
+        <div class="page" id="page-tab-integrations">
+          <div class="section-header"><h2>🔗 Entegrasyonlar</h2></div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div class="card">
+              <div class="card-title">MinIO / S3 Depolama</div>
+              <div class="form-row"><label>Endpoint</label><input id="s3Endpoint" type="text" class="form-control" placeholder="http://minio:9000"></div>
+              <div class="form-row"><label>Access Key</label><input id="s3AccessKey" type="text" class="form-control" placeholder="minioadmin"></div>
+              <div class="form-row"><label>Secret Key</label><input id="s3SecretKey" type="password" class="form-control" placeholder="•••••"></div>
+              <div class="form-row"><label>Bucket</label><input id="s3Bucket" type="text" class="form-control" placeholder="oxware-backups"></div>
+              <div class="form-row"><label>Region</label><input id="s3Region" type="text" class="form-control" placeholder="us-east-1"></div>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button class="btn-primary" onclick="saveS3Config()">💾 Kaydet</button>
+                <button class="btn sm" onclick="testS3()">🔌 Test</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">E-posta Bildirimleri (SMTP)</div>
+              <div class="form-row"><label>SMTP Host</label><input id="smtpHost" type="text" class="form-control" placeholder="smtp.example.com"></div>
+              <div class="form-row"><label>Port</label><input id="smtpPort" type="number" class="form-control" value="587"></div>
+              <div class="form-row"><label>Kullanıcı</label><input id="smtpUser" type="text" class="form-control" placeholder="user@example.com"></div>
+              <div class="form-row"><label>Şifre</label><input id="smtpPass" type="password" class="form-control" placeholder="•••••"></div>
+              <div class="form-row"><label>Gönderen (From)</label><input id="smtpFrom" type="text" class="form-control" placeholder="oxware@example.com"></div>
+              <div class="form-row" style="display:flex;align-items:center;gap:8px"><label>TLS</label><input id="smtpTls" type="checkbox" checked></div>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button class="btn-primary" onclick="saveEmailConfig()">💾 Kaydet</button>
+                <button class="btn sm" onclick="testEmail()">📧 Test Gönder</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="card">
+              <div class="card-title">Webhook Yönetimi</div>
+              <div style="margin-bottom:12px">
+                <div class="form-row"><label>Ad</label><input id="whName" type="text" class="form-control" placeholder="webhook-1"></div>
+                <div class="form-row"><label>URL</label><input id="whUrl" type="text" class="form-control" placeholder="https://example.com/hook"></div>
+                <div class="form-row"><label>Secret</label><input id="whSecret" type="text" class="form-control" placeholder="opsiyonel"></div>
+                <div class="form-row">
+                  <label>Olaylar</label>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+                    <label><input type="checkbox" class="webhook-event" value="vm.created"> vm.created</label>
+                    <label><input type="checkbox" class="webhook-event" value="vm.deleted"> vm.deleted</label>
+                    <label><input type="checkbox" class="webhook-event" value="vm.started"> vm.started</label>
+                    <label><input type="checkbox" class="webhook-event" value="vm.stopped"> vm.stopped</label>
+                    <label><input type="checkbox" class="webhook-event" value="alert.triggered"> alert</label>
+                  </div>
+                </div>
+                <button class="btn-primary" onclick="createWebhook()">Webhook Ekle</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Ad</th><th>URL</th><th>Olaylar</th><th>İşlemler</th></tr></thead>
+                  <tbody id="webhooksTbody"><tr><td colspan="4" class="text-center text-muted" style="padding:10px">Yükleniyor...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">VLAN Yönetimi</div>
+              <div style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+                <div class="form-group"><label>Parent Interface</label><input id="vlanParent" type="text" class="form-control" placeholder="eth0" style="min-width:100px"></div>
+                <div class="form-group"><label>VLAN ID</label><input id="vlanId" type="number" class="form-control" placeholder="100" style="min-width:80px"></div>
+                <div class="form-group"><label>Ad</label><input id="vlanName" type="text" class="form-control" placeholder="vlan100" style="min-width:100px"></div>
+                <div class="form-group"><label>IP Adresi</label><input id="vlanIp" type="text" class="form-control" placeholder="192.168.100.1/24" style="min-width:160px"></div>
+                <button class="btn-primary" onclick="createVlan()">VLAN Ekle</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>VLAN ID</th><th>Ad</th><th>Interface</th><th>IP</th><th>Sil</th></tr></thead>
+                  <tbody id="vlanTbody"><tr><td colspan="5" class="text-center text-muted" style="padding:10px">Yükleniyor...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─────── tab-settings ─────── -->
+        <div class="page" id="page-tab-settings">
+          <div class="section-header"><h2>⚙️ Sistem Ayarları</h2></div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div class="card">
+              <div class="card-title">SDN Durumu (OVS)</div>
+              <div id="sdnStatusCard" style="padding:8px 0"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">SSL Sertifika Yönetimi</div>
+              <div id="sslStatusCard" style="margin-bottom:12px"></div>
+              <div style="border-top:1px solid var(--border);padding-top:12px">
+                <div class="form-row"><label>Let's Encrypt Domain</label><input id="leDomain" type="text" class="form-control" placeholder="oxware.example.com"></div>
+                <div class="form-row"><label>E-posta</label><input id="leEmail" type="text" class="form-control" placeholder="admin@example.com"></div>
+                <button class="btn-primary" onclick="requestLetsEncrypt()">🔒 Sertifika Al</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="card">
+              <div class="card-title">Auto-Scaler Politikaları</div>
+              <div class="table-wrap" style="margin-bottom:10px">
+                <table>
+                  <thead><tr><th>VM</th><th>CPU Eşiği</th><th>vCPU Aralığı</th><th>RAM Aralığı</th><th>Durum</th><th>Sil</th></tr></thead>
+                  <tbody id="scalerPoliciesTbody"><tr><td colspan="6" class="text-center text-muted" style="padding:10px">Yükleniyor...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">Kaynak Kotaları</div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>VM</th><th>Max vCPU</th><th>Max RAM</th><th>Sil</th></tr></thead>
+                  <tbody id="quotasTbody"><tr><td colspan="4" class="text-center text-muted" style="padding:10px">Yükleniyor...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div><!-- /content -->
     </div><!-- /content-area -->
 
@@ -1282,6 +1861,19 @@ function buildContextNav(type) {
         <svg viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 100 6.492 3.246 3.246 0 000-6.492zM5.754 8a2.246 2.246 0 114.492 0 2.246 2.246 0 01-4.492 0z"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 01-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 01-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 01.52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 011.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 011.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 01.52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 01-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 01-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 002.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 001.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 00-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 00-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 00-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 003.06 8.377l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 004.175 3.92l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 002.692-1.115l.094-.319z"/></svg>
         Ayarlar
       </div>
+
+      <div class="ctx-section">Gelişmiş</div>
+      <div class="ctx-item" data-page="tab-templates" onclick="navigate('tab-templates')">📋 Şablonlar</div>
+      <div class="ctx-item" data-page="tab-backup" onclick="navigate('tab-backup')">💾 Yedekleme</div>
+      <div class="ctx-item" data-page="tab-firewall" onclick="navigate('tab-firewall')">🛡️ Güvenlik Duvarı</div>
+      <div class="ctx-item" data-page="tab-vpn" onclick="navigate('tab-vpn')">🔒 VPN</div>
+      <div class="ctx-item" data-page="tab-dns" onclick="navigate('tab-dns')">🌐 DNS</div>
+      <div class="ctx-item" data-page="tab-proxy" onclick="navigate('tab-proxy')">↔️ Proxy & LB</div>
+      <div class="ctx-item" data-page="tab-monitoring" onclick="navigate('tab-monitoring')">📊 İzleme+</div>
+      <div class="ctx-item" data-page="tab-ai" onclick="navigate('tab-ai')">🤖 AI Asistan</div>
+      <div class="ctx-item" data-page="tab-security" onclick="navigate('tab-security')">🔐 Güvenlik</div>
+      <div class="ctx-item" data-page="tab-integrations" onclick="navigate('tab-integrations')">🔗 Entegrasyonlar</div>
+      <div class="ctx-item" data-page="tab-settings" onclick="navigate('tab-settings')">⚙️ Sistem Ayarları</div>
     `;
   } else if (type === "vm") {
     html = `
@@ -1335,7 +1927,11 @@ function navigate(page) {
     settings: loadSettings,
     updates: loadUpdates,
   };
-  loaders[page] && loaders[page]();
+  if (loaders[page]) {
+    loaders[page]();
+  } else if (page.startsWith('tab-')) {
+    loadTabData(page);
+  }
 }
 
 /* ══ Tree filter ══ */
@@ -2569,9 +3165,822 @@ function shellClear() {
   if (_shellTerm) _shellTerm.clear();
 }
 
+/* ══════════════════ Tema ══════════════════ */
+function toggleTheme() {
+  const body = document.body;
+  const isLight = body.classList.toggle('light-theme');
+  document.getElementById('themeIcon').textContent = isLight ? '☀️' : '🌙';
+  localStorage.setItem('oxware_theme', isLight ? 'light' : 'dark');
+}
+
+/* ══════════════════ Proxy sub-tab ══════════════════ */
+function switchProxyTab(tab, btn) {
+  document.querySelectorAll('#page-tab-proxy .sub-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('proxy-tab-nginx').style.display = tab === 'nginx' ? '' : 'none';
+  document.getElementById('proxy-tab-haproxy').style.display = tab === 'haproxy' ? '' : 'none';
+  if (tab === 'nginx') loadNginxSites();
+  if (tab === 'haproxy') loadHaproxyStatus();
+}
+
+/* ══════════════════ Tab veri yükleme ══════════════════ */
+async function loadTabData(tabId) {
+  switch(tabId) {
+    case 'tab-templates':    loadTemplates(); break;
+    case 'tab-backup':       loadBackupSchedules(); loadBackupHistory(); loadBackupVmOptions(); break;
+    case 'tab-firewall':     loadFirewallStatus(); loadFirewallRules(); break;
+    case 'tab-vpn':          loadVpnStatus(); loadVpnPeers(); break;
+    case 'tab-dns':          loadDnsHosts(); loadDhcpLeases(); break;
+    case 'tab-proxy':        loadNginxSites(); break;
+    case 'tab-monitoring':   loadPerfHistory('1h'); loadSmartData(); loadUptimes(); loadIdsStatus(); break;
+    case 'tab-ai':           loadAiRecommendations(); loadAnomalies(); break;
+    case 'tab-security':     load2faStatus(); loadAuditLog(); loadApiKeys(); loadLdapConfig(); break;
+    case 'tab-integrations': loadWebhooks(); loadS3Config(); loadEmailConfig(); loadVlans(); break;
+    case 'tab-settings':     loadSdnStatus(); loadSslStatus(); loadScalerPolicies(); loadQuotas(); break;
+  }
+}
+
+/* ══════════════════ API helper (yeni sekmeler için) ══════════════════ */
+async function _api(url, method='GET', body=null) {
+  const opts = {
+    method,
+    headers: { 'Authorization': `Bearer ${TOKEN()}`, 'Content-Type': 'application/json' }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  return r.json().catch(() => ({}));
+}
+
+/* ══════════════════ Templates ══════════════════ */
+async function loadTemplates() {
+  const d = await _api('/api/templates');
+  const list = document.getElementById('templateList');
+  if (!list) return;
+  list.innerHTML = (d.templates || []).map(t => `
+    <div class="card template-card">
+      <div class="template-icon">${t.os_type === 'windows' ? '🪟' : '🐧'}</div>
+      <h3>${escHtml(t.name)}</h3>
+      <p class="text-muted">${escHtml(t.description || '')}</p>
+      <div class="tags">${(t.tags||[]).map(tag => `<span class="badge-muted">${escHtml(tag)}</span>`).join('')}</div>
+      ${t.download_required ? '<span class="badge-warning">İndirme Gerekli</span>' :
+        `<button class="btn-primary btn-sm" onclick="deployTemplate('${escHtml(t.id)}')">VM Oluştur</button>`}
+    </div>
+  `).join('') || '<div class="empty-state"><p>Şablon yok</p></div>';
+
+  // Template kaynak VM seçimi için VM listesi
+  try {
+    const vmData = await api('/vms');
+    const sel = document.getElementById('templateSourceVm');
+    if (sel) {
+      sel.innerHTML = '<option value="">— VM seçin —</option>';
+      (vmData.vms || []).forEach(v => {
+        sel.innerHTML += `<option value="${v.id}">${escHtml(v.name)} (${v.state})</option>`;
+      });
+    }
+  } catch(e) {}
+}
+
+async function createTemplateFromVm() {
+  const vm_id = document.getElementById('templateSourceVm').value;
+  const name = document.getElementById('templateName').value;
+  const description = document.getElementById('templateDesc').value;
+  if (!vm_id || !name) { toast('VM ve şablon adı gerekli', 'error'); return; }
+  const d = await _api('/api/templates', 'POST', {vm_id, name, description});
+  toast(d.status === 'ok' ? 'Şablon oluşturuluyor...' : (d.error || 'Hata'), d.status === 'ok' ? 'success' : 'error');
+}
+
+async function deployTemplate(tid) {
+  const vmName = prompt('Yeni VM adı:');
+  if (!vmName) return;
+  const d = await _api(`/api/templates/${tid}/deploy`, 'POST', {vm_name: vmName});
+  toast(d.status === 'ok' ? `VM oluşturuldu: ${vmName}` : (d.error || 'Hata'), d.status === 'ok' ? 'success' : 'error');
+}
+
+/* ══════════════════ Backup ══════════════════ */
+async function loadBackupVmOptions() {
+  try {
+    const vmData = await api('/vms');
+    const sel = document.getElementById('bsVmId');
+    if (sel) {
+      sel.innerHTML = '<option value="">— VM seçin —</option>';
+      (vmData.vms || []).forEach(v => {
+        sel.innerHTML += `<option value="${v.id}">${escHtml(v.name)}</option>`;
+      });
+    }
+  } catch(e) {}
+}
+
+async function loadBackupSchedules() {
+  const d = await _api('/api/backup/schedules');
+  const tbody = document.getElementById('backupSchedulesTbody');
+  if (!tbody) return;
+  tbody.innerHTML = (d.schedules || []).map(s => `
+    <tr>
+      <td>${escHtml(s.vm_name || s.vm_id)}</td>
+      <td><code>${escHtml(s.cron_expr)}</code></td>
+      <td>${s.next_run ? new Date(s.next_run*1000).toLocaleString('tr-TR') : '—'}</td>
+      <td>${s.retention_count} backup</td>
+      <td><span class="badge-${s.enabled ? 'success':'muted'}">${s.enabled?'Aktif':'Pasif'}</span></td>
+      <td style="display:flex;gap:4px">
+        <button class="btn-sm btn-primary" onclick="triggerBackup('${escHtml(s.id)}')">▶ Çalıştır</button>
+        <button class="btn-sm btn-danger" onclick="deleteBackupSchedule('${escHtml(s.id)}')">✕</button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" class="text-center text-muted" style="padding:12px">Zamanlama yok</td></tr>';
+}
+
+async function createBackupSchedule() {
+  const vm_id = document.getElementById('bsVmId').value;
+  const cron_expr = document.getElementById('bsCron').value;
+  const retention_count = parseInt(document.getElementById('bsRetention').value) || 7;
+  if (!vm_id || !cron_expr) { toast('VM ve cron ifadesi gerekli', 'error'); return; }
+  const d = await _api('/api/backup/schedules', 'POST', {vm_id, cron_expr, retention_count});
+  if (d.status === 'ok') { toast('Zamanlama oluşturuldu', 'success'); loadBackupSchedules(); }
+  else toast(d.error || 'Hata', 'error');
+}
+
+async function triggerBackup(id) {
+  const d = await _api(`/api/backup/schedules/${id}/run`, 'POST');
+  toast(d.status === 'ok' ? 'Backup başlatıldı' : (d.error || 'Hata'), d.status === 'ok' ? 'success' : 'error');
+}
+
+async function deleteBackupSchedule(id) {
+  if (!confirm('Zamanlamayı sil?')) return;
+  await _api(`/api/backup/schedules/${id}`, 'DELETE');
+  loadBackupSchedules();
+}
+
+async function loadBackupHistory() {
+  const d = await _api('/api/backup/history');
+  const tbody = document.getElementById('backupHistoryTbody');
+  if (!tbody) return;
+  tbody.innerHTML = (d.history || []).map(h => `
+    <tr>
+      <td>${escHtml(h.vm_name || h.vm_id)}</td>
+      <td>${escHtml(h.snapshot_name || '—')}</td>
+      <td>${new Date((h.ts||h.timestamp||0)*1000).toLocaleString('tr-TR')}</td>
+      <td><span class="badge-${h.success ? 'success':'danger'}">${h.success ? 'Başarılı':'Hata'}</span></td>
+      <td style="font-size:11px">${escHtml(h.error || '')}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" class="text-center text-muted" style="padding:12px">Geçmiş yok</td></tr>';
+}
+
+/* ══════════════════ Firewall ══════════════════ */
+async function loadFirewallStatus() {
+  const d = await _api('/api/firewall/status');
+  const el = document.getElementById('firewallStatus');
+  if (el) el.innerHTML = `<span class="badge-${d.available ? 'success':'danger'}">${d.available ? 'nftables Aktif':'Pasif'}</span>`;
+}
+
+async function loadFirewallRules() {
+  const d = await _api('/api/firewall/rules');
+  const tbody = document.getElementById('firewallRulesTbody');
+  if (!tbody) return;
+  tbody.innerHTML = (d.rules || []).map(r => `
+    <tr>
+      <td>${r.handle||'—'}</td>
+      <td>${r.chain||'—'}</td>
+      <td>${r.protocol||'any'}</td>
+      <td>${r.src_ip||'any'}</td>
+      <td>${r.dst_port||'any'}</td>
+      <td><span class="badge-${r.action==='accept'?'success':r.action==='drop'?'danger':'warning'}">${(r.action||'—').toUpperCase()}</span></td>
+      <td><button class="btn-danger" onclick="deleteFirewallRule('${r.handle}','${r.chain}')">✕</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="7" class="text-center text-muted" style="padding:12px">Kural yok</td></tr>';
+}
+
+async function addFirewallRule() {
+  const d = await _api('/api/firewall/rules', 'POST', {
+    chain: document.getElementById('fwChain').value || 'input',
+    protocol: document.getElementById('fwProto').value || null,
+    src_ip: document.getElementById('fwSrcIp').value || null,
+    dst_port: document.getElementById('fwDstPort').value || null,
+    action: document.getElementById('fwAction').value || 'accept',
+    comment: document.getElementById('fwComment').value || ''
+  });
+  if (d.status === 'ok') { toast('Kural eklendi', 'success'); loadFirewallRules(); }
+  else toast(d.error || 'Hata', 'error');
+}
+
+async function deleteFirewallRule(handle, chain) {
+  if (!confirm('Kuralı sil?')) return;
+  await _api(`/api/firewall/rules/${handle}`, 'DELETE', {chain, table: 'inet filter'});
+  loadFirewallRules();
+}
+
+async function saveFirewall() {
+  const d = await _api('/api/firewall/save', 'POST');
+  toast(d.status === 'ok' ? 'Kurallar kaydedildi' : (d.error || 'Hata'), d.status === 'ok' ? 'success' : 'error');
+}
+
+/* ══════════════════ VPN ══════════════════ */
+async function loadVpnStatus() {
+  const d = await _api('/api/vpn/status');
+  const el = document.getElementById('vpnStatusCard');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="stat-item"><span class="stat-label">Durum</span><span class="badge-${d.active ? 'success':'muted'}">${d.active?'Aktif':'Pasif'}</span></div>
+    <div class="stat-item"><span class="stat-label">Port</span><span>${d.listen_port||'—'}</span></div>
+    <div class="stat-item"><span class="stat-label">Public Key</span><code style="font-size:10px">${escHtml((d.public_key||'—').slice(0,28))}...</code></div>
+  `;
+}
+
+async function loadVpnPeers() {
+  const d = await _api('/api/vpn/peers');
+  const tbody = document.getElementById('vpnPeersTbody');
+  if (!tbody) return;
+  tbody.innerHTML = (d.peers || []).map(p => `
+    <tr>
+      <td>${escHtml(p.name||p.peer_name)}</td>
+      <td>${escHtml(p.allowed_ips||'—')}</td>
+      <td><span class="badge-${p.active?'success':'muted'}">${p.active?'Bağlı':'Bağlı Değil'}</span></td>
+      <td style="display:flex;gap:4px">
+        <button class="btn-sm" onclick="downloadPeerConfig('${escHtml(p.name||p.peer_name)}')">⬇ Config</button>
+        <button class="btn-danger" onclick="deleteVpnPeer('${escHtml(p.name||p.peer_name)}')">✕</button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="4" class="text-center text-muted" style="padding:12px">Peer yok</td></tr>';
+}
+
+async function addVpnPeer() {
+  const name = document.getElementById('vpnPeerName').value;
+  const allowed_ips = document.getElementById('vpnPeerIps').value;
+  if (!name) { toast('Peer adı gerekli', 'error'); return; }
+  const d = await _api('/api/vpn/peers', 'POST', {peer_name: name, allowed_ips});
+  if (d.status === 'ok') { toast('Peer eklendi', 'success'); loadVpnPeers(); }
+  else toast(d.error || 'Hata', 'error');
+}
+
+async function deleteVpnPeer(name) {
+  if (!confirm(`${name} peer'ını sil?`)) return;
+  await _api(`/api/vpn/peers/${name}`, 'DELETE');
+  loadVpnPeers();
+}
+
+function downloadPeerConfig(name) {
+  window.open(`/api/vpn/peers/${name}/config?token=${TOKEN()}`, '_blank');
+}
+
+/* ══════════════════ DNS ══════════════════ */
+async function loadDnsHosts() {
+  const d = await _api('/api/dns/hosts');
+  const tbody = document.getElementById('dnsHostsTbody');
+  if (!tbody) return;
+  tbody.innerHTML = (d.hosts || []).map(h => `
+    <tr>
+      <td>${escHtml(h.ip)}</td><td>${escHtml(h.hostname)}</td><td>${escHtml(h.comment||'')}</td>
+      <td><button class="btn-danger" onclick="deleteDnsHost('${escHtml(h.hostname)}')">✕</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="4" class="text-center text-muted" style="padding:12px">Kayıt yok</td></tr>';
+}
+
+async function addDnsHost() {
+  const ip = document.getElementById('dnsIp').value;
+  const hostname = document.getElementById('dnsHostname').value;
+  const comment = document.getElementById('dnsComment').value;
+  if (!ip || !hostname) { toast('IP ve hostname gerekli', 'error'); return; }
+  const d = await _api('/api/dns/hosts', 'POST', {ip, hostname, comment});
+  if (d.status === 'ok') { toast('Host eklendi', 'success'); loadDnsHosts(); }
+  else toast(d.error || 'Hata', 'error');
+}
+
+async function deleteDnsHost(hostname) {
+  await _api(`/api/dns/hosts/${hostname}`, 'DELETE');
+  loadDnsHosts();
+}
+
+async function loadDhcpLeases() {
+  const d = await _api('/api/dns/leases');
+  const tbody = document.getElementById('dhcpLeasesTbody');
+  if (!tbody) return;
+  tbody.innerHTML = (d.leases || []).map(l => `
+    <tr><td>${escHtml(l.mac)}</td><td>${escHtml(l.ip)}</td><td>${escHtml(l.hostname||'—')}</td>
+    <td>${l.expires ? new Date(l.expires*1000).toLocaleString('tr-TR') : '∞'}</td></tr>
+  `).join('') || '<tr><td colspan="4" class="text-center text-muted" style="padding:12px">Kiralama yok</td></tr>';
+}
+
+/* ══════════════════ Nginx ══════════════════ */
+async function loadNginxSites() {
+  const d = await _api('/api/nginx/sites');
+  const tbody = document.getElementById('nginxSitesTbody');
+  if (!tbody) return;
+  tbody.innerHTML = (d.sites || []).map(s => `
+    <tr>
+      <td>${escHtml(s.name)}</td>
+      <td>${escHtml(s.server_name||'—')}</td>
+      <td><span class="badge-${s.enabled?'success':'muted'}">${s.enabled?'Aktif':'Pasif'}</span></td>
+      <td style="display:flex;gap:4px">
+        <button class="btn-sm" onclick="${s.enabled?'disableNginxSite':'enableNginxSite'}('${escHtml(s.name)}')">${s.enabled?'Pasifleştir':'Aktifleştir'}</button>
+        <button class="btn-danger" onclick="deleteNginxSite('${escHtml(s.name)}')">✕</button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="4" class="text-center text-muted" style="padding:12px">Site yok</td></tr>';
+}
+
+async function createNginxSite() {
+  const d = await _api('/api/nginx/sites', 'POST', {
+    name: document.getElementById('ngName').value,
+    server_name: document.getElementById('ngDomain').value,
+    upstream_host: document.getElementById('ngUpstreamHost').value,
+    upstream_port: parseInt(document.getElementById('ngUpstreamPort').value),
+    ssl: document.getElementById('ngSsl').checked,
+    websocket: document.getElementById('ngWs').checked
+  });
+  if (d.status === 'ok') { toast('Site oluşturuldu', 'success'); loadNginxSites(); }
+  else toast(d.error || 'Hata', 'error');
+}
+
+async function enableNginxSite(name) { await _api(`/api/nginx/sites/${name}/enable`, 'POST'); loadNginxSites(); }
+async function disableNginxSite(name) { await _api(`/api/nginx/sites/${name}/disable`, 'POST'); loadNginxSites(); }
+async function deleteNginxSite(name) { if (!confirm('Sil?')) return; await _api(`/api/nginx/sites/${name}`, 'DELETE'); loadNginxSites(); }
+
+async function loadHaproxyStatus() {
+  const d = await _api('/api/haproxy/status');
+  const el = document.getElementById('haproxyStatus');
+  if (el) el.innerHTML = `<span class="badge-${d.active?'success':'danger'}">${d.active?'Aktif':'Pasif'}</span> <span class="text-muted">${escHtml(d.version||'')}</span>`;
+}
+
+/* ══════════════════ Monitoring ══════════════════ */
+let _perfChart = null;
+async function loadPerfHistory(period='1h') {
+  const d = await _api(`/api/metrics/system?period=${period}`);
+  const data = d.data || [];
+  if (!data.length) return;
+  const labels = data.map(p => new Date((p.ts||p.timestamp||0)*1000).toLocaleTimeString('tr-TR'));
+  const cpuData = data.map(p => p.cpu_pct||p.cpu||0);
+  const memData = data.map(p => p.mem_pct||p.mem||0);
+  const ctx = document.getElementById('perfHistoryChart');
+  if (!ctx) return;
+  if (_perfChart) _perfChart.destroy();
+  _perfChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {label: 'CPU %', data: cpuData, borderColor: '#00d4ff', backgroundColor: 'rgba(0,212,255,0.1)', tension: 0.3, fill: true},
+        {label: 'RAM %', data: memData, borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.1)', tension: 0.3, fill: true}
+      ]
+    },
+    options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {labels: {color: '#e6edf3'}}}, scales: {
+      x: {ticks: {color: '#8b949e'}, grid: {color: '#30363d'}},
+      y: {ticks: {color: '#8b949e'}, grid: {color: '#30363d'}, min: 0, max: 100}
+    }}
+  });
+}
+
+async function loadSmartData() {
+  const d = await _api('/api/smart/devices');
+  const tbody = document.getElementById('smartDevicesTbody');
+  if (!tbody) return;
+  tbody.innerHTML = (d.devices || []).map(dev => `
+    <tr>
+      <td><code>${escHtml(dev.device)}</code></td>
+      <td>${escHtml(dev.model||'—')}</td>
+      <td>${dev.temperature != null ? dev.temperature + '°C' : '—'}</td>
+      <td>${dev.power_on_hours != null ? Math.round(dev.power_on_hours/24) + ' gün' : '—'}</td>
+      <td><span class="badge-${dev.status==='ok'?'success':dev.status==='warning'?'warning':'danger'}">${escHtml(dev.health||dev.status)}</span></td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" class="text-center text-muted" style="padding:12px">Disk bulunamadı</td></tr>';
+}
+
+async function loadUptimes() {
+  const d = await _api('/api/uptime');
+  const tbody = document.getElementById('uptimeTbody');
+  if (!tbody) return;
+  tbody.innerHTML = (d.uptimes || []).map(u => `
+    <tr>
+      <td>${escHtml(u.name||u.vm_id)}</td>
+      <td>${escHtml(u.formatted||'—')}</td>
+      <td>${u.availability_pct != null ? u.availability_pct.toFixed(1)+'%' : '—'}</td>
+      <td>${u.boot_count||0}</td>
+      <td><span class="badge-${u.state==='running'?'success':'muted'}">${escHtml(u.state)}</span></td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" class="text-center text-muted" style="padding:12px">Veri yok</td></tr>';
+}
+
+async function loadIdsStatus() {
+  const d = await _api('/api/ids/status');
+  const el = document.getElementById('idsStatusCard');
+  if (el) el.innerHTML = `
+    <span class="badge-${d.available?'success':'danger'}">${d.available?'Suricata Kurulu':'Kurulu Değil'}</span>
+    ${d.available ? `<span class="badge-${d.active?'success':'muted'}" style="margin-left:8px">${d.active?'Çalışıyor':'Durdu'}</span>` : ''}
+    ${d.alerts_today != null ? `<span class="text-muted" style="margin-left:8px">${d.alerts_today} bugün alert</span>` : ''}
+  `;
+  if (d.available) {
+    const da = await _api('/api/ids/alerts?limit=20');
+    const tbody = document.getElementById('idsAlertsTbody');
+    if (tbody) tbody.innerHTML = (da.alerts || []).map(a => `
+      <tr>
+        <td>${new Date(a.timestamp||a.ts||0).toLocaleString('tr-TR')}</td>
+        <td>${escHtml(a.src_ip||'—')}</td>
+        <td>${escHtml(a.dest_ip||'—')}:${escHtml(String(a.dest_port||''))}</td>
+        <td style="font-size:11px">${escHtml(a.alert?.signature||'—')}</td>
+        <td><span class="badge-${a.alert?.severity===1?'danger':a.alert?.severity===2?'warning':'muted'}">${a.alert?.severity||'—'}</span></td>
+      </tr>
+    `).join('') || '<tr><td colspan="5" class="text-center text-muted" style="padding:12px">Alert yok</td></tr>';
+  }
+}
+
+/* ══════════════════ AI ══════════════════ */
+async function loadAiRecommendations() {
+  const d = await _api('/api/ai/recommendations');
+  const el = document.getElementById('aiRecsContainer');
+  if (!el) return;
+  const recs = d.recommendations || [];
+  el.innerHTML = recs.length ? recs.map(r => `
+    <div class="card" style="margin-bottom:10px;border-left:3px solid ${r.type==='critical'?'#f85149':r.type==='warning'?'#d29922':'#3fb950'}">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong>${escHtml(r.title)}</strong>
+        <span class="badge-${r.type==='critical'?'danger':r.type==='warning'?'warning':'success'}">${escHtml(r.type)}</span>
+      </div>
+      <p class="text-muted" style="margin-top:6px;font-size:11px">${escHtml(r.description)}</p>
+      ${r.action ? `<code style="font-size:11px">${escHtml(r.action)}</code>` : ''}
+    </div>
+  `).join('') : '<p class="text-muted">Henüz analiz yapılmadı. "Analiz Et" butonuna tıklayın.</p>';
+}
+
+async function runAiAnalysis() {
+  const btn = document.getElementById('aiAnalyzeBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Analiz ediliyor...'; }
+  await _api('/api/ai/analyze', 'POST');
+  if (btn) { btn.disabled = false; btn.textContent = '🔍 Analiz Et'; }
+  loadAiRecommendations();
+  toast('AI analizi tamamlandı', 'success');
+}
+
+async function sendNlCommand() {
+  const input = document.getElementById('nlCommandInput');
+  const cmd = input?.value?.trim();
+  if (!cmd) return;
+  const d = await _api('/api/ai/nl', 'POST', {command: cmd});
+  const result = document.getElementById('nlResult');
+  if (result) result.innerHTML = `
+    <div class="card" style="margin-top:10px">
+      <div><strong>Aksiyon:</strong> <code>${escHtml(d.action||'—')}</code></div>
+      <div style="margin-top:6px;font-size:12px">${escHtml(d.human_response||d.message||'')}</div>
+      ${d.confirmation_required ? '<button class="btn-primary" style="margin-top:10px" onclick="confirmNlAction()">✓ Onayla ve Çalıştır</button>' : ''}
+    </div>
+  `;
+  if (input) input.value = '';
+}
+
+async function loadAnomalies() {
+  const d = await _api('/api/anomalies?limit=20');
+  const tbody = document.getElementById('anomaliesTbody');
+  if (!tbody) return;
+  tbody.innerHTML = (d.anomalies || []).map(a => `
+    <tr>
+      <td>${new Date((a.ts||0)*1000).toLocaleString('tr-TR')}</td>
+      <td><code>${escHtml(a.metric)}</code></td>
+      <td>${a.current?.toFixed(1)||'—'}</td>
+      <td>${a.z_score?.toFixed(2)||'—'}</td>
+      <td><span class="badge-${(a.z_score||0)>4?'danger':(a.z_score||0)>3?'warning':'muted'}">${a.z_score?.toFixed(1)||'—'}</span></td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" class="text-center text-muted" style="padding:10px">Anomali yok</td></tr>';
+}
+
+async function loadForecast() {
+  const days = parseInt(document.getElementById('forecastDays')?.value) || 30;
+  const d = await _api(`/api/ai/forecast?days=${days}`, 'POST', {days});
+  const el = document.getElementById('forecastResult');
+  if (!el) return;
+  if (d.forecast) {
+    el.innerHTML = `
+      <div class="stat-item"><span class="stat-label">Tahmini CPU</span><span>${d.forecast.cpu_pct?.toFixed(1)||'—'}%</span></div>
+      <div class="stat-item"><span class="stat-label">Tahmini RAM</span><span>${d.forecast.mem_pct?.toFixed(1)||'—'}%</span></div>
+      ${d.forecast.days_until_full ? `<div class="stat-item"><span class="stat-label">Dolum Süresi</span><span>${d.forecast.days_until_full} gün</span></div>` : ''}
+      ${d.forecast.recommendation ? `<p class="text-muted" style="margin-top:8px;font-size:11px">${escHtml(d.forecast.recommendation)}</p>` : ''}
+    `;
+  } else {
+    el.innerHTML = `<p class="text-muted">${escHtml(d.message || d.error || 'Tahmin verisi yok')}</p>`;
+  }
+}
+
+/* ══════════════════ 2FA ══════════════════ */
+async function load2faStatus() {
+  const d = await _api('/api/auth/2fa/status');
+  const el = document.getElementById('twoFaStatus');
+  if (el) el.innerHTML = `
+    <span class="badge-${d.enabled?'success':'muted'}">${d.enabled?'2FA Aktif':'2FA Pasif'}</span>
+    ${!d.available ? '<span class="text-muted" style="margin-left:6px">(pyotp kurulu değil)</span>' : ''}
+    ${d.available && !d.enabled ? '<button class="btn-sm btn-primary" style="margin-left:8px" onclick="setup2fa()">2FA Kur</button>' : ''}
+    ${d.enabled ? '<button class="btn-danger" style="margin-left:8px" onclick="disable2fa()">Devre Dışı Bırak</button>' : ''}
+  `;
+}
+
+async function setup2fa() {
+  const d = await _api('/api/auth/2fa/setup', 'POST');
+  if (!d.available) { toast('pyotp kurulu değil', 'error'); return; }
+  const code = prompt(`2FA URI:\n${d.uri||''}\n\nGoogle Authenticator ile tara, sonra 6 haneli kodu gir:`);
+  if (!code) return;
+  const r = await _api('/api/auth/2fa/enable', 'POST', {code});
+  toast(r.status === 'ok' ? '2FA aktif!' : (r.error || 'Hata'), r.status === 'ok' ? 'success' : 'error');
+  load2faStatus();
+}
+
+async function disable2fa() {
+  if (!confirm('2FA devre dışı bırakılsın mı?')) return;
+  await _api('/api/auth/2fa/disable', 'DELETE');
+  toast('2FA devre dışı', 'success');
+  load2faStatus();
+}
+
+/* ══════════════════ Audit Log ══════════════════ */
+async function loadAuditLog() {
+  const d = await _api('/api/audit?limit=50');
+  const tbody = document.getElementById('auditLogTbody');
+  if (!tbody) return;
+  tbody.innerHTML = (d.logs || []).map(l => `
+    <tr>
+      <td>${new Date((l.ts||0)*1000).toLocaleString('tr-TR')}</td>
+      <td>${escHtml(l.username)}</td>
+      <td>${escHtml(l.action)}</td>
+      <td style="font-size:11px">${escHtml(l.resource_type)} ${escHtml(l.resource_id||'')}</td>
+      <td>${escHtml(l.ip_address||'—')}</td>
+      <td><span class="badge-${l.result==='success'?'success':'danger'}">${escHtml(l.result)}</span></td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" class="text-center text-muted" style="padding:10px">Kayıt yok</td></tr>';
+}
+
+function exportAuditCsv() { window.open('/api/audit/export', '_blank'); }
+
+/* ══════════════════ API Keys ══════════════════ */
+async function loadApiKeys() {
+  const d = await _api('/api/apikeys');
+  const tbody = document.getElementById('apiKeysTbody');
+  if (!tbody) return;
+  tbody.innerHTML = (d.keys || []).map(k => `
+    <tr>
+      <td>${escHtml(k.name)}</td>
+      <td>${new Date((k.created_at||0)*1000).toLocaleDateString('tr-TR')}</td>
+      <td>${k.last_used ? new Date(k.last_used*1000).toLocaleDateString('tr-TR') : 'Hiç'}</td>
+      <td>${k.use_count||0}</td>
+      <td><span class="badge-${k.active?'success':'muted'}">${k.active?'Aktif':'İptal'}</span></td>
+      <td><button class="btn-danger" onclick="revokeApiKey('${escHtml(k.id)}')">İptal</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" class="text-center text-muted" style="padding:10px">Anahtar yok</td></tr>';
+}
+
+async function createApiKey() {
+  const name = document.getElementById('apiKeyName').value;
+  const days = document.getElementById('apiKeyExpiry').value;
+  if (!name) { toast('İsim gerekli', 'error'); return; }
+  const d = await _api('/api/apikeys', 'POST', {name, expires_days: days ? parseInt(days) : null});
+  if (d.key) {
+    alert(`API Anahtarı (bir daha gösterilmeyecek!):\n\n${d.key}`);
+    loadApiKeys();
+  } else toast(d.error || 'Hata', 'error');
+}
+
+async function revokeApiKey(id) {
+  if (!confirm('Anahtarı iptal et?')) return;
+  await _api(`/api/apikeys/${id}/revoke`, 'POST');
+  loadApiKeys();
+}
+
+/* ══════════════════ LDAP ══════════════════ */
+async function loadLdapConfig() {
+  const d = await _api('/api/ldap/config');
+  if (document.getElementById('ldapServer')) document.getElementById('ldapServer').value = d.server||'';
+  if (document.getElementById('ldapPort')) document.getElementById('ldapPort').value = d.port||389;
+  if (document.getElementById('ldapBaseDn')) document.getElementById('ldapBaseDn').value = d.base_dn||'';
+  if (document.getElementById('ldapBindDn')) document.getElementById('ldapBindDn').value = d.bind_dn||'';
+  if (document.getElementById('ldapAdminGroup')) document.getElementById('ldapAdminGroup').value = d.admin_group||'';
+  if (document.getElementById('ldapOpGroup')) document.getElementById('ldapOpGroup').value = d.operator_group||'';
+}
+
+async function saveLdapConfig() {
+  const d = await _api('/api/ldap/config', 'POST', {
+    server: document.getElementById('ldapServer').value,
+    port: parseInt(document.getElementById('ldapPort').value)||389,
+    use_ssl: document.getElementById('ldapSsl')?.checked||false,
+    base_dn: document.getElementById('ldapBaseDn').value,
+    bind_dn: document.getElementById('ldapBindDn').value,
+    bind_password: document.getElementById('ldapBindPw').value,
+    user_filter: '(objectClass=person)',
+    group_filter: '(objectClass=group)',
+    admin_group: document.getElementById('ldapAdminGroup').value,
+    operator_group: document.getElementById('ldapOpGroup').value
+  });
+  toast(d.status==='ok' ? 'Kaydedildi' : (d.error||'Hata'), d.status==='ok' ? 'success' : 'error');
+}
+
+async function testLdapConnection() {
+  const d = await _api('/api/ldap/test', 'POST');
+  toast(d.success ? 'Bağlantı başarılı!' : (d.message||'Bağlantı hatası'), d.success ? 'success' : 'error');
+}
+
+/* ══════════════════ Webhooks ══════════════════ */
+async function loadWebhooks() {
+  const d = await _api('/api/webhooks');
+  const tbody = document.getElementById('webhooksTbody');
+  if (!tbody) return;
+  tbody.innerHTML = (d.webhooks || []).map(w => `
+    <tr>
+      <td>${escHtml(w.name)}</td>
+      <td><code style="font-size:10px">${escHtml(w.url)}</code></td>
+      <td>${(w.events||[]).length} olay</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn-sm" onclick="testWebhook('${escHtml(w.id)}')">Test</button>
+        <button class="btn-danger" onclick="deleteWebhook('${escHtml(w.id)}')">✕</button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="4" class="text-center text-muted" style="padding:10px">Webhook yok</td></tr>';
+}
+
+async function createWebhook() {
+  const events = [...document.querySelectorAll('.webhook-event:checked')].map(e => e.value);
+  const d = await _api('/api/webhooks', 'POST', {
+    name: document.getElementById('whName').value,
+    url: document.getElementById('whUrl').value,
+    events: events,
+    secret: document.getElementById('whSecret').value
+  });
+  if (d.status === 'ok') { toast('Webhook oluşturuldu', 'success'); loadWebhooks(); }
+  else toast(d.error || 'Hata', 'error');
+}
+
+async function testWebhook(id) {
+  const d = await _api(`/api/webhooks/${id}/test`, 'POST');
+  toast(d.status === 'ok' ? 'Test gönderildi' : (d.error||'Hata'), d.status === 'ok' ? 'success' : 'error');
+}
+
+async function deleteWebhook(id) {
+  if (!confirm('Sil?')) return;
+  await _api(`/api/webhooks/${id}`, 'DELETE');
+  loadWebhooks();
+}
+
+/* ══════════════════ S3/MinIO ══════════════════ */
+async function loadS3Config() {
+  const d = await _api('/api/s3/config');
+  if (document.getElementById('s3Endpoint')) document.getElementById('s3Endpoint').value = d.endpoint||'';
+  if (document.getElementById('s3Bucket')) document.getElementById('s3Bucket').value = d.bucket||'';
+  if (document.getElementById('s3Region')) document.getElementById('s3Region').value = d.region||'';
+}
+
+async function saveS3Config() {
+  const d = await _api('/api/s3/config', 'POST', {
+    endpoint: document.getElementById('s3Endpoint').value,
+    access_key: document.getElementById('s3AccessKey').value,
+    secret_key: document.getElementById('s3SecretKey').value,
+    bucket: document.getElementById('s3Bucket').value,
+    region: document.getElementById('s3Region').value || 'us-east-1'
+  });
+  toast(d.status==='ok' ? 'Kaydedildi' : (d.error||'Hata'), d.status==='ok' ? 'success' : 'error');
+}
+
+async function testS3() {
+  const d = await _api('/api/s3/test', 'POST');
+  toast(d.success ? 'Bağlantı başarılı!' : (d.message||'Hata'), d.success ? 'success' : 'error');
+}
+
+/* ══════════════════ Email ══════════════════ */
+async function loadEmailConfig() {
+  const d = await _api('/api/notifications/email-config');
+  if (document.getElementById('smtpHost')) document.getElementById('smtpHost').value = d.smtp_host||'';
+  if (document.getElementById('smtpPort')) document.getElementById('smtpPort').value = d.smtp_port||587;
+  if (document.getElementById('smtpUser')) document.getElementById('smtpUser').value = d.username||'';
+  if (document.getElementById('smtpFrom')) document.getElementById('smtpFrom').value = d.from_addr||'';
+}
+
+async function saveEmailConfig() {
+  const d = await _api('/api/notifications/email-config', 'POST', {
+    smtp_host: document.getElementById('smtpHost').value,
+    smtp_port: parseInt(document.getElementById('smtpPort').value)||587,
+    username: document.getElementById('smtpUser').value,
+    password: document.getElementById('smtpPass').value,
+    from_addr: document.getElementById('smtpFrom').value,
+    use_tls: document.getElementById('smtpTls')?.checked !== false
+  });
+  toast(d.status==='ok' ? 'Email ayarları kaydedildi' : (d.error||'Hata'), d.status==='ok' ? 'success' : 'error');
+}
+
+async function testEmail() {
+  const to = prompt('Test email adresi:');
+  if (!to) return;
+  const d = await _api('/api/notifications/test-email', 'POST', {to});
+  toast(d.status==='ok' ? 'Test emaili gönderildi' : (d.error||'Hata'), d.status==='ok' ? 'success' : 'error');
+}
+
+/* ══════════════════ VLAN ══════════════════ */
+async function loadVlans() {
+  const d = await _api('/api/vlan');
+  const tbody = document.getElementById('vlanTbody');
+  if (!tbody) return;
+  tbody.innerHTML = (d.vlans || []).map(v => `
+    <tr>
+      <td>${v.vlan_id}</td><td>${escHtml(v.name)}</td>
+      <td>${escHtml(v.parent_iface||'—')}</td><td>${escHtml(v.ip_address||'—')}</td>
+      <td><button class="btn-danger" onclick="deleteVlan(${v.vlan_id})">✕</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" class="text-center text-muted" style="padding:10px">VLAN yok</td></tr>';
+}
+
+async function createVlan() {
+  const d = await _api('/api/vlan', 'POST', {
+    parent_iface: document.getElementById('vlanParent').value,
+    vlan_id: parseInt(document.getElementById('vlanId').value),
+    name: document.getElementById('vlanName').value,
+    ip_address: document.getElementById('vlanIp').value || null
+  });
+  if (d.status === 'ok') { toast('VLAN oluşturuldu', 'success'); loadVlans(); }
+  else toast(d.error || 'Hata', 'error');
+}
+
+async function deleteVlan(id) {
+  if (!confirm('Sil?')) return;
+  await _api(`/api/vlan/${id}`, 'DELETE');
+  loadVlans();
+}
+
+/* ══════════════════ SSL ══════════════════ */
+async function loadSslStatus() {
+  const d = await _api('/api/ssl/status');
+  const el = document.getElementById('sslStatusCard');
+  if (!el) return;
+  const info = d.cert_info || {};
+  el.innerHTML = `
+    <div class="stat-item"><span class="stat-label">Sertifika</span><span class="badge-${d.cert_exists?'success':'danger'}">${d.cert_exists?'Mevcut':'Yok'}</span></div>
+    ${info.not_after ? `<div class="stat-item"><span class="stat-label">Son Kullanım</span><span>${escHtml(info.not_after)}</span></div>` : ''}
+    ${info.days_remaining != null ? `<div class="stat-item"><span class="stat-label">Kalan Gün</span><span class="${info.days_remaining<30?'text-danger':''}">${info.days_remaining} gün</span></div>` : ''}
+  `;
+}
+
+async function requestLetsEncrypt() {
+  const domain = document.getElementById('leDomain').value;
+  const email = document.getElementById('leEmail').value;
+  if (!domain || !email) { toast('Domain ve email gerekli', 'error'); return; }
+  toast("Let's Encrypt sertifikası isteniyor...", 'info');
+  const d = await _api('/api/ssl/letsencrypt', 'POST', {domain, email});
+  toast(d.success ? 'Sertifika alındı!' : (d.message||d.error||'Hata'), d.success ? 'success' : 'error');
+  loadSslStatus();
+}
+
+/* ══════════════════ SDN ══════════════════ */
+async function loadSdnStatus() {
+  const d = await _api('/api/sdn/status');
+  const el = document.getElementById('sdnStatusCard');
+  if (el) el.innerHTML = `
+    <span class="badge-${d.ovs_available?'success':'danger'}">${d.ovs_available?'OVS Aktif':'OVS Kurulu Değil'}</span>
+    ${d.version ? `<span class="text-muted" style="margin-left:6px">${escHtml(d.version)}</span>` : ''}
+    ${d.bridges?.length ? `<span class="text-muted" style="margin-left:6px">${d.bridges.length} bridge</span>` : ''}
+  `;
+}
+
+/* ══════════════════ Auto Scaler ══════════════════ */
+async function loadScalerPolicies() {
+  const d = await _api('/api/autoscaler/policies');
+  const tbody = document.getElementById('scalerPoliciesTbody');
+  if (!tbody) return;
+  tbody.innerHTML = (d.policies || []).map(p => `
+    <tr>
+      <td>${escHtml(p.vm_name||p.vm_id)}</td>
+      <td>${p.cpu_scale_up_threshold||'—'}% / ${p.cpu_scale_down_threshold||'—'}%</td>
+      <td>${p.min_vcpus||'—'}–${p.max_vcpus||'—'} vCPU</td>
+      <td>${p.min_memory_mb||'—'}–${p.max_memory_mb||'—'} MB</td>
+      <td><span class="badge-${p.enabled?'success':'muted'}">${p.enabled?'Aktif':'Pasif'}</span></td>
+      <td><button class="btn-danger" onclick="deleteScalerPolicy('${escHtml(p.id)}')">✕</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" class="text-center text-muted" style="padding:10px">Politika yok</td></tr>';
+}
+
+async function deleteScalerPolicy(id) {
+  if (!confirm('Sil?')) return;
+  await _api(`/api/autoscaler/policies/${id}`, 'DELETE');
+  loadScalerPolicies();
+}
+
+/* ══════════════════ Quotas ══════════════════ */
+async function loadQuotas() {
+  const d = await _api('/api/quotas');
+  const tbody = document.getElementById('quotasTbody');
+  if (!tbody) return;
+  tbody.innerHTML = (d.quotas || []).filter(q => q.vm_id !== '__global__').map(q => `
+    <tr>
+      <td>${escHtml(q.vm_id)}</td>
+      <td>${q.max_vcpus||'—'} vCPU</td>
+      <td>${q.max_memory_mb ? q.max_memory_mb+' MB' : '—'}</td>
+      <td><button class="btn-danger" onclick="deleteQuota('${escHtml(q.vm_id)}')">✕</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="4" class="text-center text-muted" style="padding:10px">Kota yok</td></tr>';
+}
+
+async function deleteQuota(vmId) {
+  await _api(`/api/quotas/${vmId}`, 'DELETE');
+  loadQuotas();
+}
+
 /* ══════════════════ Init ══════════════════ */
 
 window.addEventListener("DOMContentLoaded", () => {
+  // Tema yükle
+  if (localStorage.getItem('oxware_theme') === 'light') {
+    document.body.classList.add('light-theme');
+    const ti = document.getElementById('themeIcon');
+    if (ti) ti.textContent = '☀️';
+  }
+
   initCharts();
   buildContextNav("node");
   selectTreeItem("node");
