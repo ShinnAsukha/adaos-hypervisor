@@ -1138,8 +1138,10 @@
           <div class="section-header">
             <h2>Güncellemeler</h2>
             <div class="spacer"></div>
-            <button class="btn" onclick="checkUpdates()" id="btn-check-update">🔍 Kontrol Et</button>
+            <span id="upd-auto-badge" style="display:none;font-size:10px;color:var(--text-muted);margin-right:8px">🕐 Otomatik kontrol aktif</span>
+            <button class="btn" onclick="checkUpdates()" id="btn-check-update">🔍 Şimdi Kontrol Et</button>
           </div>
+
           <div class="card" style="margin-bottom:14px">
             <div class="card-title">⚙️ GitHub Repo Ayarı</div>
             <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:flex-end">
@@ -1148,7 +1150,15 @@
               <button class="btn primary" onclick="saveUpdateConfig()">💾 Kaydet</button>
             </div>
           </div>
-          <div id="update-status-area"><div class="empty-state"><div class="icon">🔄</div><h3>Durum bilinmiyor</h3><p>"Kontrol Et" butonuna tıklayın</p></div></div>
+
+          <!-- AI Analiz Kartı -->
+          <div id="upd-ai-card" style="display:none;margin-bottom:14px" class="card">
+            <div class="card-title">🤖 AI Commit Analizi</div>
+            <div id="upd-ai-text" style="font-size:12px;line-height:1.7;white-space:pre-wrap;color:var(--text)"></div>
+            <div id="upd-ai-time" style="font-size:10px;color:var(--text-dim);margin-top:8px"></div>
+          </div>
+
+          <div id="update-status-area"><div class="empty-state"><div class="icon">🔄</div><h3>Durum bilinmiyor</h3><p>"Şimdi Kontrol Et" butonuna tıklayın veya otomatik kontrol bekleniyor</p></div></div>
           <div id="update-commits-area" style="display:none;margin-top:14px">
             <div class="section-header"><h2>Yeni Güncellemeler</h2></div>
             <div id="update-commits-list"></div>
@@ -4615,9 +4625,72 @@ async function loadUpdates() {
   try {
     const cfg = await api("/update/config");
     if (cfg.repo_url) document.getElementById("upd-repo-url").value = cfg.repo_url;
-    if (cfg.branch) document.getElementById("upd-branch").value = cfg.branch;
+    if (cfg.branch)   document.getElementById("upd-branch").value   = cfg.branch;
   } catch {}
+  // Otomatik kontrol aktif badge göster
+  document.getElementById('upd-auto-badge').style.display = 'inline';
+  // Son otomatik kontrol sonucunu yükle
+  loadLastUpdateCheck();
   loadUpdateHistory();
+}
+
+async function loadLastUpdateCheck() {
+  try {
+    const data = await api("/update/last");
+    if (!data || !data.checked_at) return;
+    _renderUpdateResult(data);
+  } catch {}
+}
+
+function _renderUpdateResult(data) {
+  if (data.error) {
+    document.getElementById("update-status-area").innerHTML =
+      `<div class="card" style="border-color:var(--red)"><div style="color:var(--red-lt)">✗ ${escHtml(data.error)}</div></div>`;
+    return;
+  }
+  document.getElementById("update-badge").style.display = data.up_to_date ? "none" : "inline";
+  const checkedAt = data.checked_at ? new Date(data.checked_at).toLocaleString("tr-TR") : "";
+  document.getElementById("update-status-area").innerHTML = `
+    <div class="card" style="border-left:3px solid ${data.up_to_date ? "var(--green-lt)" : "var(--orange)"}">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="font-size:28px">${data.up_to_date ? "✅" : "🔔"}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:${data.up_to_date ? "var(--green-lt)" : "var(--orange)"}">
+            ${data.up_to_date ? "Sistem güncel" : `${data.new_count} yeni güncelleme`}
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:3px">
+            Yerel: <code>${data.current_sha||'?'}</code> → Uzak: <code>${data.remote_sha||'?'}</code> · Branch: <code>${data.branch||'main'}</code>
+          </div>
+          ${checkedAt ? `<div style="font-size:10px;color:var(--text-dim);margin-top:2px">Son kontrol: ${checkedAt}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+
+  // AI analiz kartı
+  const aiCard = document.getElementById('upd-ai-card');
+  const aiText = document.getElementById('upd-ai-text');
+  const aiTime = document.getElementById('upd-ai-time');
+  if (data.ai_analysis) {
+    aiCard.style.display = 'block';
+    aiText.textContent   = data.ai_analysis;
+    aiTime.textContent   = checkedAt ? `Analiz: ${checkedAt}` : '';
+  } else {
+    aiCard.style.display = 'none';
+  }
+
+  // Commit listesi
+  const commitsArea = document.getElementById("update-commits-area");
+  if (!data.up_to_date && data.new_commits?.length) {
+    commitsArea.style.display = "block";
+    document.getElementById("update-commits-list").innerHTML = data.new_commits.map(c => `
+      <div style="display:flex;gap:10px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;margin-bottom:5px">
+        <code style="flex-shrink:0;color:var(--accent-lt)">${c.sha}</code>
+        <div style="flex:1">
+          <div style="font-size:12px">${escHtml(c.message)}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${escHtml(c.author)} · ${new Date(c.date).toLocaleString("tr-TR")}</div>
+        </div>
+      </div>`).join("");
+  } else commitsArea.style.display = "none";
 }
 
 async function saveUpdateConfig() {
@@ -4630,35 +4703,19 @@ async function saveUpdateConfig() {
 
 async function checkUpdates() {
   const btn = document.getElementById("btn-check-update");
-  btn.disabled = true; btn.textContent = "⏳ Kontrol...";
-  const area = document.getElementById("update-status-area");
-  area.innerHTML = `<div class="empty-state"><div class="icon">⏳</div><h3>GitHub kontrol ediliyor...</h3></div>`;
+  btn.disabled = true; btn.textContent = "⏳ Kontrol + AI...";
+  document.getElementById("update-status-area").innerHTML =
+    `<div class="empty-state"><div class="icon">⏳</div><h3>GitHub kontrol ediliyor, AI analiz hazırlanıyor...</h3></div>`;
+  document.getElementById('upd-ai-card').style.display = 'none';
   try {
     const data = await api("/update/check");
-    if (data.error) { area.innerHTML = `<div class="card" style="border-color:var(--red)"><div style="color:var(--red-lt)">✗ ${escHtml(data.error)}</div></div>`; return; }
-    document.getElementById("update-badge").style.display = data.up_to_date ? "none" : "inline";
-    area.innerHTML = `<div class="card" style="border-left:3px solid ${data.up_to_date ? "var(--green-lt)" : "var(--orange)"}">
-      <div style="display:flex;align-items:center;gap:14px">
-        <div style="font-size:28px">${data.up_to_date ? "✅" : "🔔"}</div>
-        <div style="flex:1">
-          <div style="font-size:14px;font-weight:700;color:${data.up_to_date ? "var(--green-lt)" : "var(--orange)"}">${data.up_to_date ? "Sistem güncel" : `${data.new_count} yeni güncelleme`}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:3px">Yerel: <code>${data.current_sha}</code> → Uzak: <code>${data.remote_sha}</code> · Branch: <code>${data.branch}</code></div>
-        </div>
-      </div>
-    </div>`;
-    const commitsArea = document.getElementById("update-commits-area");
-    if (!data.up_to_date && data.new_commits?.length) {
-      commitsArea.style.display = "block";
-      document.getElementById("update-commits-list").innerHTML = data.new_commits.map(c => `<div style="display:flex;gap:10px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;margin-bottom:5px">
-        <code style="flex-shrink:0">${c.sha}</code>
-        <div style="flex:1">
-          <div style="font-size:12px">${escHtml(c.message)}</div>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${escHtml(c.author)} · ${new Date(c.date).toLocaleString("tr-TR")}</div>
-        </div>
-      </div>`).join("");
-    } else commitsArea.style.display = "none";
-  } catch (e) { area.innerHTML = `<div class="card" style="border-color:var(--red)"><div style="color:var(--red-lt)">${escHtml(e.message)}</div></div>`; }
-  finally { btn.disabled = false; btn.textContent = "🔍 Kontrol Et"; }
+    _renderUpdateResult(data);
+  } catch (e) {
+    document.getElementById("update-status-area").innerHTML =
+      `<div class="card" style="border-color:var(--red)"><div style="color:var(--red-lt)">${escHtml(e.message)}</div></div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = "🔍 Şimdi Kontrol Et";
+  }
 }
 
 async function applyUpdate() {

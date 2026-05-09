@@ -13,6 +13,7 @@ import subprocess
 import requests
 import logging
 import time
+import threading
 from datetime import datetime
 
 log = logging.getLogger("oxware.updater")
@@ -304,6 +305,120 @@ def get_config() -> dict:
         "is_git_repo": _is_git_repo(cfg.get("project_dir", _detect_project_dir())),
         "local_sha":  _local_commit(cfg.get("project_dir", _detect_project_dir()))[:8],
     }
+
+
+# ── AI Analiz ─────────────────────────────────────────────────────────────────
+
+# Son kontrol sonucu — frontend polling için bellekte tutulur
+_last_check_result: dict = {}
+_last_ai_analysis: str   = ""
+_check_lock = threading.Lock()
+
+def _ai_analyze_commits(commits: list) -> str:
+    """
+    Yeni commit listesini yapılandırılmış AI ajanına gönderir,
+    Türkçe kısa özet döndürür.
+    Hiçbir AI ajanı yoksa basit metin özeti döner.
+    """
+    if not commits:
+        return ""
+    commit_text = "\n".join(
+        f"- [{c['sha']}] {c['message']} ({c['author']}, {c['date'][:10]})"
+        for c in commits[:15]
+    )
+    prompt = (
+        f"Aşağıdaki {len(commits)} yeni GitHub commit'ini analiz et. "
+        "Her commit'in ne değiştirdiğini, potansiyel riskleri ve "
+        "sistem yöneticisinin dikkat etmesi gerekenleri Türkçe, "
+        "kısa madde madde özetle:\n\n" + commit_text
+    )
+    try:
+        import ai_agent
+        cfg = ai_agent._load_ai_config()
+        agents = cfg.get("agents", {})
+        # Aktif ilk ajanı bul
+        active_id = next(
+            (aid for aid, a in agents.items() if a.get("enabled", True) and a.get("api_key")),
+            None
+        )
+        if active_id:
+            return ai_agent.query_agent(active_id, prompt,
+                system_prompt="Sen bir Linux sistem yöneticisi asistanısın. Teknik ve kısa cevap ver.")
+    except Exception as e:
+        log.warning("AI analiz hatası: %s", e)
+
+    # Fallback: basit metin özeti
+    lines = [f"• [{c['sha']}] {c['message']}" for c in commits[:10]]
+    return f"{len(commits)} yeni commit bulundu:\n" + "\n".join(lines)
+
+
+def check_updates_with_ai() -> dict:
+    """
+    Güncelleme kontrolü yap + AI ile commit özetini üret.
+    Sonucu _last_check_result'a yaz.
+    """
+    result = check_updates()
+    result["ai_analysis"] = ""
+    if result.get("new_commits"):
+        result["ai_analysis"] = _ai_analyze_commits(result["new_commits"])
+    with _check_lock:
+        global _last_check_result, _last_ai_analysis
+        _last_check_result = result
+        _last_ai_analysis  = result.get("ai_analysis", "")
+    log.info("Güncelleme kontrolü tamamlandı. Yeni: %d", result.get("new_count", 0))
+    return result
+
+
+def get_last_check() -> dict:
+    """Son kontrol sonucunu döndür (bellekten, API polling için)."""
+    with _check_lock:
+        return dict(_last_check_result)
+
+
+# ── Saatlik Scheduler ──────────────────────────────────────────────────────────
+
+_scheduler_started = False
+
+def start_auto_check(interval_seconds: int = 3600):
+    """
+    Daemon thread başlatır. Her `interval_seconds`'da bir
+    check_updates_with_ai() çağırır ve badge için event yazar.
+    """
+    global _scheduler_started
+    if _scheduler_started:
+        return
+    _scheduler_started = True
+
+    def _loop():
+        log.info("Güncelleme otomatik kontrol başladı (her %ds).", interval_seconds)
+        # İlk kontrol başlamadan önce 30 sn bekle (sistem startup'ını tamamlasın)
+        time.sleep(30)
+        while True:
+            try:
+                cfg = _load_config()
+                if cfg.get("repo_url"):
+                    result = check_updates_with_ai()
+                    count  = result.get("new_count", 0)
+                    if count > 0:
+                        try:
+                            import event_logger as ev
+                            ev.warn(
+                                f"Güncelleme mevcut: {count} yeni commit. "
+                                f"AI Özeti: {result.get('ai_analysis','')[:200]}",
+                                category="update"
+                            )
+                        except Exception:
+                            pass
+                else:
+                    log.debug("Repo URL ayarlanmamış, güncelleme kontrolü atlanıyor.")
+            except Exception as e:
+                log.error("Otomatik güncelleme kontrolü hatası: %s", e)
+            time.sleep(interval_seconds)
+
+    t = threading.Thread(target=_loop, name="update-auto-check", daemon=True)
+    t.start()
+    log.info("Güncelleme otomatik kontrol thread'i başlatıldı.")
+    return t
 
 
 def _log_update(old_sha: str, new_sha: str, repo_url: str, branch: str, steps: list):

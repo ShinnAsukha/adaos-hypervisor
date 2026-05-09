@@ -897,8 +897,14 @@ def api_update_config_save():
 @app.route("/api/update/check")
 @require_auth
 def api_update_check():
-    result = updater.check_updates()
+    result = updater.check_updates_with_ai()
     return ok(**result)
+
+@app.route("/api/update/last")
+@require_auth
+def api_update_last():
+    """Son otomatik kontrol sonucunu döndür (AI analizi dahil)."""
+    return ok(**updater.get_last_check())
 
 @app.route("/api/update/apply", methods=["POST"])
 @require_auth
@@ -2191,6 +2197,7 @@ def _start_background_services():
         (auto_scaler,    "start_auto_scaler",       {"interval": 60}),
         (ai_planner,     "start_periodic_analysis", {"interval_hours": 24}),
         (auto_snap,      "start_scheduler",          {}),
+        (updater,        "start_auto_check",         {"interval_seconds": 3600}),
     ]
     for mod, fn, kwargs in services:
         if mod and hasattr(mod, fn):
