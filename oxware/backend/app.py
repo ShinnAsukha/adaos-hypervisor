@@ -2007,7 +2007,10 @@ def license_validate():
         code = (request.json or {}).get("code", "").strip()
         if not code:
             return jsonify({"valid": False, "error": "Kod boş"}), 400
-        result = m.validate_license(code)
+        # Gerçek client IP'yi al (proxy arkasındaysa X-Forwarded-For)
+        client_ip = (request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+                     or request.remote_addr or "unknown")
+        result = m.validate_license(code, ip=client_ip)
         try:
             username = get_jwt_identity() or "unknown"
             if audit_log:
@@ -2019,6 +2022,19 @@ def license_validate():
     except Exception as e:
         log.error("license_validate hata: %s", e, exc_info=True)
         return jsonify({"valid": False, "error": "Doğrulama sırasında hata oluştu"})
+
+@app.route("/api/license/activations", methods=["GET"])
+@require_auth
+def license_activations():
+    """Tüm aktivasyon kayıtlarını listele (yönetici)."""
+    try:
+        m = _license_mgr()
+        if not m:
+            return jsonify({"activations": []})
+        return jsonify({"activations": m.get_activations()})
+    except Exception as e:
+        log.error("license_activations hata: %s", e, exc_info=True)
+        return jsonify({"activations": [], "error": str(e)})
 
 @app.route("/api/license/deactivate", methods=["POST"])
 @require_auth
