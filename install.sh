@@ -5,7 +5,7 @@
 #  https://github.com/ShinnAsukha/oxware-hypervisor
 # ============================================================
 
-set -euo pipefail
+# set -e kaldırıldı — &&-guard kalıplarıyla çakışıyor, hatalar açıkça yönetiliyor
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; CYAN='\033[0;36m'; WHITE='\033[1;37m'; NC='\033[0m'
@@ -58,13 +58,15 @@ info() { echo -e "${BLUE}[i]${NC} $1"; }
 
 # ── Kontroller ────────────────────────────────────────────────
 check_root() {
-    [[ $EUID -ne 0 ]] && err "Root yetkisi gerekli: sudo bash install.sh"
+    if [[ $EUID -ne 0 ]]; then
+        err "Root yetkisi gerekli: sudo bash install.sh"
+    fi
 }
 
 check_os() {
-    if grep -qi "ubuntu\|debian" /etc/os-release 2>/dev/null; then
-        OS_NAME=$(grep ^NAME= /etc/os-release | cut -d'"' -f2)
-        OS_VER=$(grep ^VERSION_ID= /etc/os-release | cut -d'"' -f2)
+    if grep -qiE "ubuntu|debian" /etc/os-release 2>/dev/null; then
+        OS_NAME=$(grep ^NAME= /etc/os-release | cut -d'"' -f2 || echo "Linux")
+        OS_VER=$(grep ^VERSION_ID= /etc/os-release | cut -d'"' -f2 || echo "")
         log "İşletim sistemi: $OS_NAME $OS_VER"
     else
         err "Sadece Ubuntu 20.04+ ve Debian 11+ desteklenmektedir"
@@ -75,31 +77,40 @@ check_bios_virtualization() {
     step "CPU Sanallaştırma Kontrolü"
     if grep -qE "vmx|svm" /proc/cpuinfo 2>/dev/null; then
         VIRT_TYPE=$(grep -oE "vmx|svm" /proc/cpuinfo | head -1 | tr 'a-z' 'A-Z')
-        log "CPU sanallaştırma aktif: $VIRT_TYPE ($([ "$VIRT_TYPE" = "VMX" ] && echo "Intel VT-x" || echo "AMD-V"))"
+        if [ "$VIRT_TYPE" = "VMX" ]; then
+            log "CPU sanallaştırma aktif: VMX (Intel VT-x)"
+        else
+            log "CPU sanallaştırma aktif: SVM (AMD-V)"
+        fi
     else
         warn "CPU sanallaştırma (VT-x/AMD-V) tespit edilemedi — test modunda devam ediliyor"
     fi
     modprobe kvm 2>/dev/null || true
     modprobe kvm_intel 2>/dev/null || modprobe kvm_amd 2>/dev/null || true
-    [ -e /dev/kvm ] && log "/dev/kvm hazır" || warn "/dev/kvm bulunamadı"
+    if [ -e /dev/kvm ]; then log "/dev/kvm hazır"; else warn "/dev/kvm bulunamadı"; fi
 }
 
 check_hardware() {
     step "Donanım Gereksinimleri"
     CPU_CORES=$(nproc)
     CPU_MODEL=$(grep -m1 "model name" /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs || echo "Bilinmiyor")
-    [[ $CPU_CORES -lt $MIN_CPU_CORES ]] && err "Minimum $MIN_CPU_CORES CPU çekirdeği gerekli (bulunan: $CPU_CORES)"
+    if [[ $CPU_CORES -lt $MIN_CPU_CORES ]]; then
+        err "Minimum $MIN_CPU_CORES CPU çekirdeği gerekli (bulunan: $CPU_CORES)"
+    fi
     log "CPU: $CPU_MODEL ($CPU_CORES çekirdek)"
 
     RAM_MB=$(grep MemTotal /proc/meminfo | awk '{print int($2/1024)}')
     if [[ $RAM_MB -lt $MIN_RAM_MB ]]; then
         warn "Düşük RAM: ${RAM_MB}MB (önerilen 2048MB+)"
-        read -p "Yine de devam et? [e/H]: " -r; [[ ! $REPLY =~ ^[Ee]$ ]] && exit 1
+        read -p "Yine de devam et? [e/H]: " -r
+        if [[ ! $REPLY =~ ^[Ee]$ ]]; then exit 1; fi
     fi
     log "RAM: ${RAM_MB}MB"
 
     DISK_GB=$(df / | awk 'NR==2{print int($4/1024/1024)}')
-    [[ $DISK_GB -lt $MIN_DISK_GB ]] && err "Minimum ${MIN_DISK_GB}GB boş disk gerekli (bulunan: ${DISK_GB}GB)"
+    if [[ $DISK_GB -lt $MIN_DISK_GB ]]; then
+        err "Minimum ${MIN_DISK_GB}GB boş disk gerekli (bulunan: ${DISK_GB}GB)"
+    fi
     log "Disk: ${DISK_GB}GB boş"
 }
 
@@ -108,8 +119,8 @@ check_existing_installation() {
     step "Mevcut Kurulum Kontrolü"
 
     FOUND=false
-    [ -d "$INSTALL_DIR" ] && FOUND=true
-    [ -f /etc/systemd/system/oxware.service ] && FOUND=true
+    if [ -d "$INSTALL_DIR" ]; then FOUND=true; fi
+    if [ -f /etc/systemd/system/oxware.service ]; then FOUND=true; fi
 
     if $FOUND; then
         warn "Mevcut OXware kurulumu tespit edildi!"
