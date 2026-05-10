@@ -545,37 +545,25 @@ def api_start_console(vm_id):
         return err(e, 500)
 
 # ── Snapshot ──────────────────────────────────────────────────────────────────
-@app.route("/api/vms/<vm_id>/snapshots")
-@require_auth
-def api_list_snapshots(vm_id):
-    try:
-        return ok(snapshots=vm_manager.list_snapshots(vm_id))
-    except Exception as e:
-        return err(e, 500)
+# Snapshot v1 routes kaldırıldı — v2 (security validated) kullanılıyor (aşağıda)
 
-@app.route("/api/vms/<vm_id>/snapshots", methods=["POST"])
+@app.route("/api/vms/snapshots/all", methods=["GET"])
 @require_auth
-def api_take_snapshot(vm_id):
-    data = request.get_json() or {}
-    name = data.get("name", f"snap-{int(time.time())}")
+def api_all_snapshots():
+    """Tüm VM'lerin snapshot'larını tek seferde döndür."""
     try:
-        return ok(**vm_manager.take_snapshot(vm_id, name, data.get("description", ""))), 201
-    except Exception as e:
-        return err(e, 500)
-
-@app.route("/api/vms/<vm_id>/snapshots/<snap_name>/revert", methods=["POST"])
-@require_auth
-def api_revert_snapshot(vm_id, snap_name):
-    try:
-        return ok(**vm_manager.revert_snapshot(vm_id, snap_name))
-    except Exception as e:
-        return err(e, 500)
-
-@app.route("/api/vms/<vm_id>/snapshots/<snap_name>", methods=["DELETE"])
-@require_auth
-def api_delete_snapshot(vm_id, snap_name):
-    try:
-        return ok(**vm_manager.delete_snapshot(vm_id, snap_name))
+        vms = vm_manager.list_vms()
+        all_snaps = []
+        for v in vms:
+            try:
+                snaps = vm_manager.list_snapshots(v["id"])
+                for s in snaps:
+                    s["vm_id"]   = v["id"]
+                    s["vm_name"] = v.get("name", v["id"])
+                all_snaps.extend(snaps)
+            except Exception:
+                pass
+        return ok(snapshots=all_snaps)
     except Exception as e:
         return err(e, 500)
 
@@ -2329,6 +2317,118 @@ def api_vms_bulk():
             results[vid] = str(e)
     ev.info(f"Toplu VM işlemi: {action} × {len(vm_ids)}", category="vm")
     return ok({"results": results, "action": action})
+
+# ── VM Disk Genişletme ────────────────────────────────────────────────────────
+@app.route("/api/vms/<vm_id>/disk/resize", methods=["POST"])
+@require_auth
+def api_vm_disk_resize(vm_id):
+    """
+    VM diskini genişlet.
+    Body: { "disk_path": "/var/lib/oxware/disks/vm.qcow2", "new_size_gb": 50 }
+    veya: { "disk_index": 0, "new_size_gb": 50 }
+    """
+    data = request.get_json() or {}
+    new_size_gb = data.get("new_size_gb")
+    if not new_size_gb or int(new_size_gb) < 1:
+        return err("new_size_gb gerekli")
+    new_size_gb = int(new_size_gb)
+
+    # Disk yolunu bul
+    disk_path = data.get("disk_path")
+    if not disk_path:
+        try:
+            info = vm_manager.get_vm_info(vm_id)
+            disks = info.get("disks", [])
+            idx = int(data.get("disk_index", 0))
+            if not disks:
+                return err("VM'de disk bulunamadı")
+            disk_path = disks[idx].get("source") or disks[idx].get("path")
+        except Exception as e:
+            return err(f"Disk bilgisi alınamadı: {e}")
+
+    if not disk_path:
+        return err("disk_path belirlenemiyor")
+
+    import subprocess, shutil
+    if not shutil.which("qemu-img"):
+        return err("qemu-img bulunamadı")
+
+    try:
+        # Mevcut boyutu kontrol et
+        info_r = subprocess.run(
+            ["qemu-img", "info", "--output=json", disk_path],
+            capture_output=True, text=True, timeout=30
+        )
+        import json as _json
+        img_info = _json.loads(info_r.stdout)
+        current_bytes = img_info.get("virtual-size", 0)
+        current_gb = current_bytes / (1024**3)
+
+        if new_size_gb <= current_gb:
+            return err(f"Yeni boyut ({new_size_gb}GB) mevcut boyuttan ({current_gb:.1f}GB) büyük olmalı")
+
+        # VM çalışıyorsa virsh blockresize kullan (online), yoksa qemu-img resize
+        vm_info = vm_manager.get_vm_info(vm_id)
+        is_running = vm_info.get("state") == "running"
+
+        if is_running:
+            # Online resize — disk adını bul
+            disk_name = data.get("disk_name", "vda")
+            r = subprocess.run(
+                ["virsh", "blockresize", vm_id, disk_name, f"{new_size_gb}G"],
+                capture_output=True, text=True, timeout=60
+            )
+            if r.returncode != 0:
+                return err(f"virsh blockresize başarısız: {r.stderr}")
+        else:
+            # Offline resize
+            r = subprocess.run(
+                ["qemu-img", "resize", disk_path, f"{new_size_gb}G"],
+                capture_output=True, text=True, timeout=120
+            )
+            if r.returncode != 0:
+                return err(f"qemu-img resize başarısız: {r.stderr}")
+
+        ev.info(f"Disk genişletildi: {vm_id} {current_gb:.1f}GB → {new_size_gb}GB", category="vm")
+        return ok({
+            "vm_id": vm_id,
+            "disk_path": disk_path,
+            "old_size_gb": round(current_gb, 1),
+            "new_size_gb": new_size_gb,
+            "online": is_running,
+            "guest_steps": _disk_guest_steps(new_size_gb),
+        })
+    except subprocess.TimeoutExpired:
+        return err("Disk genişletme zaman aşımına uğradı", 504)
+    except Exception as e:
+        return err(e, 500)
+
+
+def _disk_guest_steps(new_size_gb: int) -> dict:
+    """VM içinde partition ve filesystem büyütme adımları."""
+    return {
+        "linux_ext4": [
+            "sudo growpart /dev/vda 1",
+            "sudo resize2fs /dev/vda1",
+            f"# Disk artık {new_size_gb}GB görünmeli: df -h",
+        ],
+        "linux_xfs": [
+            "sudo growpart /dev/vda 1",
+            "sudo xfs_growfs /",
+            f"# Disk artık {new_size_gb}GB görünmeli: df -h",
+        ],
+        "linux_lvm": [
+            "sudo pvresize /dev/vda",
+            "sudo lvextend -l +100%FREE /dev/ubuntu-vg/ubuntu-lv",
+            "sudo resize2fs /dev/ubuntu-vg/ubuntu-lv",
+        ],
+        "windows": [
+            "Disk Yönetimi (diskmgmt.msc) aç",
+            "Genişletilmiş bölümü sağ tıkla → Birimi Genişlet",
+        ],
+        "note": "Host tarafında disk büyütüldü. VM içinde yukarıdaki komutları çalıştır.",
+    }
+
 
 # ── VM Zamanlama ──────────────────────────────────────────────────────────────
 @app.route("/api/vm-schedules", methods=["GET"])

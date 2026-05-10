@@ -2403,6 +2403,50 @@
   </div>
 </div>
 
+<!-- ── Disk Resize Modal ── -->
+<div class="modal-overlay" id="modal-disk-resize">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2><i class="fa-solid fa-expand"></i> Disk Genişlet</h2>
+      <button class="modal-close" onclick="closeModal('modal-disk-resize')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="disk-resize-vm-name" style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--accent-lt)"></div>
+      <div class="form-row">
+        <label>Disk İndeksi</label>
+        <select id="disk-resize-index">
+          <option value="0">Disk 0 (vda / sda)</option>
+          <option value="1">Disk 1 (vdb / sdb)</option>
+          <option value="2">Disk 2 (vdc / sdc)</option>
+        </select>
+        <div class="form-hint">Birden fazla diskiniz varsa seçin</div>
+      </div>
+      <div class="form-row">
+        <label>Yeni Boyut (GB)</label>
+        <input id="disk-resize-size" type="number" min="1" max="10000" placeholder="50">
+        <div class="form-hint">Mevcut boyuttan büyük olmalı. Küçültemezsiniz!</div>
+      </div>
+      <div id="disk-resize-steps" style="display:none;margin-top:14px;background:rgba(0,0,0,.3);border-radius:6px;padding:12px">
+        <div style="font-size:11px;font-weight:700;color:var(--accent-lt);margin-bottom:8px">
+          ✓ Disk genişletildi! VM içinde çalıştırın:
+        </div>
+        <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px">Linux (ext4):</div>
+        <pre id="disk-steps-ext4" style="font-size:11px;background:rgba(0,0,0,.4);padding:8px;border-radius:4px;margin:0 0 8px 0;overflow-x:auto"></pre>
+        <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px">Linux (LVM):</div>
+        <pre id="disk-steps-lvm" style="font-size:11px;background:rgba(0,0,0,.4);padding:8px;border-radius:4px;margin:0 0 8px 0;overflow-x:auto"></pre>
+        <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px">Windows:</div>
+        <pre id="disk-steps-win" style="font-size:11px;background:rgba(0,0,0,.4);padding:8px;border-radius:4px;margin:0"></pre>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-disk-resize')">Kapat</button>
+      <button class="btn primary" id="disk-resize-btn" onclick="doResizeDisk()" style="background:#f59e0b;border-color:#f59e0b">
+        <i class="fa-solid fa-expand"></i> Genişlet
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ══════════════════ Globals ══════════════════ */
 let currentPage = "summary";
@@ -3768,6 +3812,7 @@ async function loadVMs() {
             ${v.state === "running" ? `<button class="btn sm" onclick="openConsole('${v.id}')" title="Konsol">▣</button>` : ""}
             <button class="btn sm" onclick="openLiveMigrate('${v.id}','${escHtml(v.name)}')" title="Canlı Geçiş">🚀</button>
             <button class="btn sm" onclick="cloneVM('${v.id}','${escHtml(v.name)}')" title="Klonla" style="color:var(--accent-lt)">⧉</button>
+            <button class="btn sm" onclick="openDiskResize('${v.id}','${escHtml(v.name)}')" title="Disk Genişlet" style="color:#f59e0b">⊞</button>
             <button class="btn sm danger" onclick="deleteVM('${v.id}','${escHtml(v.name)}')" title="Sil">✕</button>
           </div>
         </td>
@@ -3791,6 +3836,55 @@ async function cloneVM(vmId, vmName) {
   } catch(e) {
     completeTaskPanel(taskId, 'error');
     toast('Klonlama başarısız: ' + e.message, 'error');
+  }
+}
+
+/* ══════════════════ Disk Resize ══════════════════ */
+
+let _diskResizeVmId = null;
+
+function openDiskResize(vmId, vmName) {
+  _diskResizeVmId = vmId;
+  document.getElementById('disk-resize-vm-name').textContent = `VM: ${vmName}`;
+  document.getElementById('disk-resize-size').value = '';
+  document.getElementById('disk-resize-steps').style.display = 'none';
+  document.getElementById('disk-resize-btn').style.display = '';
+  openModal('modal-disk-resize');
+}
+
+async function doResizeDisk() {
+  if (!_diskResizeVmId) return;
+  const newSize = parseInt(document.getElementById('disk-resize-size').value);
+  const diskIdx = parseInt(document.getElementById('disk-resize-index').value);
+  if (!newSize || newSize < 1) { toast('Geçerli boyut girin', 'error'); return; }
+
+  const btn = document.getElementById('disk-resize-btn');
+  btn.disabled = true;
+  btn.textContent = 'Genişletiliyor...';
+
+  try {
+    const d = await api(`/vms/${_diskResizeVmId}/disk/resize`, {
+      method: 'POST',
+      body: { new_size_gb: newSize, disk_index: diskIdx }
+    });
+    if (d.error) throw new Error(d.error);
+
+    toast(`Disk ${d.old_size_gb}GB → ${d.new_size_gb}GB genişletildi`, 'success');
+    btn.style.display = 'none';
+
+    // VM içi adımları göster
+    const steps = d.guest_steps || {};
+    document.getElementById('disk-steps-ext4').textContent =
+      (steps.linux_ext4 || []).join('\n');
+    document.getElementById('disk-steps-lvm').textContent =
+      (steps.linux_lvm || []).join('\n');
+    document.getElementById('disk-steps-win').textContent =
+      (steps.windows || []).join('\n');
+    document.getElementById('disk-resize-steps').style.display = 'block';
+  } catch(e) {
+    toast('Hata: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Genişlet';
   }
 }
 
