@@ -30,8 +30,9 @@
 22. [Prometheus Metrikleri](#22-prometheus-metrikleri)
 23. [PWA (Masaüstü / Mobil Uygulama)](#23-pwa-masaüstü--mobil-uygulama)
 24. [Domain Bağlama (Nginx + Let's Encrypt)](#24-domain-bağlama-nginx--lets-encrypt)
-25. [Sorun Giderme](#25-sorun-giderme)
-26. [AdaOS → OXware Canlı Sunucu Geçişi](#26-adaos--oxware-canlı-sunucu-geçişi)
+25. [İnternet Bağlantısı Gereksinimleri](#25-i̇nternet-bağlantısı-gereksinimleri)
+26. [Sorun Giderme](#26-sorun-giderme)
+27. [AdaOS → OXware Canlı Sunucu Geçişi](#27-adaos--oxware-canlı-sunucu-geçişi)
 
 ---
 
@@ -1030,7 +1031,64 @@ Erişim: `https://oxware.domain.com:8006`
 
 ---
 
-## 25. Sorun Giderme
+## 25. İnternet Bağlantısı Gereksinimleri
+
+OXware'in temel işlevleri tamamen **lokal ağda** çalışır. İnternet yalnızca belirli ek özellikler için gerekir.
+
+### İnternet gerektirmeyen özellikler
+
+| Özellik | Açıklama |
+|---------|---------|
+| VM oluştur / başlat / durdur / sil | Tüm libvirt işlemleri lokal |
+| noVNC konsol | Tarayıcı → sunucu, dış bağlantı yok |
+| Ağ yönetimi | libvirt ağları, bridge, NAT |
+| Depolama yönetimi | Lokal disk/havuz işlemleri |
+| ISO yükleme | Sunucuya direkt yükleme |
+| Güvenlik denetimi (lokal kontroller) | sysctl, SSH, UFW, KSM vb. |
+| 2FA (TOTP) | Lokal hesaplama, dış sunucu yok |
+| Web arayüzü | Sunucu ↔ tarayıcı, lokal |
+| Prometheus metrikleri | Lokal `/metrics` endpoint |
+| Oturum yönetimi / IP allowlist | Lokal bellek |
+| VM zamanlama / klonlama | Lokal libvirt |
+
+### İnternet gerektiren özellikler
+
+| Özellik | Neden | Devre dışı kalırsa |
+|---------|-------|-------------------|
+| **AI analiz (OXY)** | OpenRouter / Anthropic / Ollama API | Chat yanıt vermez |
+| **Telegram / Discord bildirimleri** | Dış webhook/API | Bildirim gönderilmez |
+| **CVE taraması** | NVD API (`services.nvd.nist.gov`) | Güvenlik puanından düşmez, uyarı çıkar |
+| **GitHub güncelleme kontrolü** | GitHub API | "Kontrol edilemedi" gösterir |
+| **Let's Encrypt sertifikası** | Certbot ACME doğrulaması | Self-signed sertifika kullanılır |
+| **`apt install` / `pip install`** | Paket sunucuları | Kurulum/güncelleme yapılamaz |
+
+### Kapalı ağ (air-gap) kurulum
+
+Ofis içi LAN veya internetsiz ortamda OXware çalışır. Kurulum öncesi paketleri indirip aktarmak gerekir:
+
+```bash
+# İnternete erişimi olan makinede paketleri indir
+apt-get download qemu-kvm libvirt-daemon-system python3-pip ...
+pip download -r requirements.txt -d /tmp/pip-packages/
+
+# Sunucuya kopyala (USB veya SCP)
+scp -r /tmp/pip-packages/ oxware@<sunucu>:~/
+
+# Sunucuda offline kur
+pip install --no-index --find-links=~/pip-packages/ -r requirements.txt
+```
+
+Ollama ile lokal AI modeli kurulursa OXY da internetsiz çalışır:
+```bash
+# Ollama kur (kurulum sırasında internet gerekir, sonra offline çalışır)
+curl -fsSL https://ollama.ai/install.sh | sh
+ollama pull llama3
+# AI Ajanlar sayfasında provider: ollama seç
+```
+
+---
+
+## 26. Sorun Giderme
 
 ### Servis çalışmıyor
 
@@ -1141,7 +1199,7 @@ Veya web arayüzünden: **Güncellemeler → Şimdi Kontrol Et**
 
 ---
 
-## 26. AdaOS → OXware Canlı Sunucu Geçişi
+## 27. AdaOS → OXware Canlı Sunucu Geçişi
 
 > Bu bölüm, halihazırda **AdaOS** kurulu çalışan bir üretim sunucusunu  
 > **OXware**'e geçirmek için adım adım kılavuzdur.  
