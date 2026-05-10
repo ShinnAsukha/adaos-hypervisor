@@ -2629,11 +2629,37 @@ def _start_background_services():
 
 _start_background_services()
 
+# ── Hassas dosya/dizin bloğu ──────────────────────────────────────────────────
+_BLOCKED_PATHS = {
+    "/.env", "/.env.local", "/.env.production", "/.env.backup",
+    "/config.py", "/config.ini", "/config.yml", "/config.yaml", "/config.json",
+    "/backup.sql", "/dump.sql", "/database.sql", "/db.sql",
+    "/.git/HEAD", "/.git/config", "/.gitignore",
+    "/requirements.txt", "/Makefile", "/docker-compose.yml",
+    "/.htaccess", "/wp-config.php", "/web.config",
+    "/id_rsa", "/id_ecdsa", "/.ssh/id_rsa",
+}
+_BLOCKED_PREFIXES = ("/.git/", "/.svn/", "/__pycache__/", "/node_modules/")
+
+@app.before_request
+def _block_sensitive_paths():
+    p = request.path
+    if p in _BLOCKED_PATHS:
+        return jsonify({"error": "Not found"}), 404
+    for prefix in _BLOCKED_PREFIXES:
+        if p.startswith(prefix):
+            return jsonify({"error": "Not found"}), 404
+
 # ── Error handlers ────────────────────────────────────────────────────────────
 @app.errorhandler(404)
 def not_found(e):
     if request.path.startswith("/api/"):
         return jsonify({"error": "Kaynak bulunamadı"}), 404
+    # SPA: sadece gerçek frontend rotaları için index.html dön
+    # Dosya uzantısı olan istekler (*.py, *.sql, *.env vb.) 404 döner
+    path = request.path
+    if "." in path.split("/")[-1]:  # uzantılı istek → gerçek 404
+        return jsonify({"error": "Not found"}), 404
     return render_template("index.html")
 
 @app.errorhandler(500)
