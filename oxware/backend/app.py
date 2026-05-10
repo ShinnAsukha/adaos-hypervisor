@@ -85,6 +85,8 @@ ids_mgr         = _safe_import("ids_manager")
 minio_mgr       = _safe_import("minio_manager")
 auto_snap       = _safe_import("auto_snapshot")
 sec_hard        = _safe_import("security_hardening")
+vm_sched        = _safe_import("vm_scheduler")
+sess_mgr        = _safe_import("session_manager")
 
 # ── Flask ─────────────────────────────────────────────────────────────────────
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend", "templates")
@@ -199,6 +201,19 @@ def api_login():
     if sec_hard:
         sec_hard.record_successful_login(username)
     token = create_access_token(identity=username)
+    # Session kayıt
+    if sess_mgr:
+        try:
+            from flask_jwt_extended import decode_token
+            decoded = decode_token(token)
+            jti = decoded.get("jti", token[:16])
+            sess_mgr.register_session(
+                jti=jti, username=username,
+                ip=request.headers.get("X-Forwarded-For", request.remote_addr or ""),
+                user_agent=request.headers.get("User-Agent", "")[:120],
+            )
+        except Exception:
+            pass
     ev.info(f"Giriş başarılı: {username}", category="auth")
     return ok(token=token, username=username)
 
@@ -2257,6 +2272,248 @@ def language_setting():
     return jsonify({"success": True, "language": lang})
 
 
+# ── Prometheus Metrics ────────────────────────────────────────────────────────
+@app.route("/metrics")
+@require_auth
+def prometheus_metrics():
+    """Prometheus text format metrics endpoint."""
+    lines = []
+    def gauge(name, value, labels=""):
+        tag = f"{{{labels}}}" if labels else ""
+        lines.append(f"oxware_{name}{tag} {value}")
+    try:
+        stats = system_monitor.get_stats() if hasattr(system_monitor, "get_stats") else {}
+        gauge("cpu_usage_percent", stats.get("cpu_percent", 0))
+        gauge("memory_usage_percent", stats.get("memory_percent", 0))
+        gauge("disk_usage_percent", stats.get("disk_percent", 0))
+        vms = vm_manager.list_vms()
+        running = sum(1 for v in vms if v.get("state") == "running")
+        gauge("vms_total", len(vms))
+        gauge("vms_running", running)
+        for vm in vms[:50]:
+            lbl = f'vm_id="{vm["id"]}",vm_name="{vm.get("name","")}"'
+            gauge("vm_cpu_percent", vm.get("cpu_percent", 0), lbl)
+            gauge("vm_memory_mb", vm.get("memory_mb", 0), lbl)
+            gauge("vm_state", 1 if vm.get("state") == "running" else 0, lbl)
+    except Exception as e:
+        lines.append(f"# ERROR {e}")
+    from flask import Response
+    return Response("\n".join(lines) + "\n", mimetype="text/plain; version=0.0.4")
+
+# ── VM Clone ──────────────────────────────────────────────────────────────────
+@app.route("/api/vms/<vm_id>/clone", methods=["POST"])
+@require_auth
+def api_vm_clone(vm_id):
+    data     = request.get_json() or {}
+    new_name = data.get("new_name", "").strip()
+    if not new_name:
+        return err("Yeni VM adı gerekli")
+    try:
+        result = vm_manager.clone_vm(vm_id, new_name)
+        ev.info(f"VM klonlandı: {vm_id} → {new_name}", category="vm")
+        return ok(result)
+    except Exception as e:
+        return err(str(e))
+
+# ── Bulk VM İşlemleri ─────────────────────────────────────────────────────────
+@app.route("/api/vms/bulk", methods=["POST"])
+@require_auth
+def api_vms_bulk():
+    data    = request.get_json() or {}
+    vm_ids  = data.get("vm_ids", [])
+    action  = data.get("action", "")
+    results = {}
+    if not vm_ids or action not in ("start", "stop", "reboot", "snapshot"):
+        return err("vm_ids ve geçerli action gerekli")
+    for vid in vm_ids[:20]:
+        try:
+            if action == "start":
+                vm_manager.start_vm(vid)
+            elif action == "stop":
+                vm_manager.stop_vm(vid)
+            elif action == "reboot":
+                vm_manager.reboot_vm(vid)
+            elif action == "snapshot":
+                import datetime as _dt
+                ts = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+                vm_manager.take_snapshot(vid, f"bulk-{ts}")
+            results[vid] = "ok"
+        except Exception as e:
+            results[vid] = str(e)
+    ev.info(f"Toplu VM işlemi: {action} × {len(vm_ids)}", category="vm")
+    return ok({"results": results, "action": action})
+
+# ── VM Zamanlama ──────────────────────────────────────────────────────────────
+@app.route("/api/vm-schedules", methods=["GET"])
+@require_auth
+def api_vm_sched_list():
+    if not vm_sched: return ok({"schedules": []})
+    return ok({"schedules": vm_sched.get_schedules()})
+
+@app.route("/api/vm-schedules", methods=["POST"])
+@require_auth
+def api_vm_sched_add():
+    if not vm_sched: return err("vm_scheduler modülü yüklenemedi")
+    d = request.get_json() or {}
+    try:
+        s = vm_sched.add_schedule(
+            vm_id=d["vm_id"], vm_name=d.get("vm_name",""),
+            action=d["action"], hour=int(d["hour"]), minute=int(d.get("minute",0)),
+            days=d.get("days"), enabled=d.get("enabled", True)
+        )
+        ev.info(f"VM zamanlaması eklendi: {d.get('vm_name')} {d.get('action')} {d.get('hour')}:00", category="vm")
+        return ok(s)
+    except Exception as e:
+        return err(str(e))
+
+@app.route("/api/vm-schedules/<sched_id>", methods=["PUT"])
+@require_auth
+def api_vm_sched_update(sched_id):
+    if not vm_sched: return err("vm_scheduler modülü yüklenemedi")
+    d = request.get_json() or {}
+    ok_flag = vm_sched.update_schedule(sched_id, **d)
+    return ok({"updated": ok_flag}) if ok_flag else err("Zamanlama bulunamadı", 404)
+
+@app.route("/api/vm-schedules/<sched_id>", methods=["DELETE"])
+@require_auth
+def api_vm_sched_delete(sched_id):
+    if not vm_sched: return err("vm_scheduler modülü yüklenemedi")
+    ok_flag = vm_sched.delete_schedule(sched_id)
+    return ok({"deleted": ok_flag}) if ok_flag else err("Zamanlama bulunamadı", 404)
+
+# ── Aktif Oturum Yönetimi ─────────────────────────────────────────────────────
+@app.route("/api/sessions", methods=["GET"])
+@require_auth
+def api_sessions_list():
+    username = get_jwt_identity()
+    if not sess_mgr: return ok({"sessions": []})
+    is_admin = cred_mgr.get_role(username) == "admin" if hasattr(cred_mgr, "get_role") else True
+    sessions = sess_mgr.get_all_sessions() if is_admin else sess_mgr.get_active_sessions(username)
+    return ok({"sessions": sessions})
+
+@app.route("/api/sessions/<session_id>", methods=["DELETE"])
+@require_auth
+def api_session_revoke(session_id):
+    if not sess_mgr: return err("session_manager modülü yüklenemedi")
+    ok_flag = sess_mgr.revoke_by_short_id(session_id)
+    if ok_flag:
+        ev.info(f"Oturum iptal edildi: {session_id}", category="auth")
+        return ok({"revoked": True})
+    return err("Oturum bulunamadı", 404)
+
+# ── Let's Encrypt ─────────────────────────────────────────────────────────────
+@app.route("/api/ssl/letsencrypt", methods=["POST"])
+@require_auth
+def api_letsencrypt():
+    d      = request.get_json() or {}
+    domain = d.get("domain", "").strip()
+    email  = d.get("email", "").strip()
+    if not domain:
+        return err("Domain gerekli")
+    import subprocess as _sp
+    try:
+        result = _sp.run(
+            ["certbot", "certonly", "--standalone", "--non-interactive",
+             "--agree-tos", "-m", email or "admin@" + domain,
+             "-d", domain],
+            capture_output=True, text=True, timeout=120
+        )
+        if result.returncode == 0:
+            import shutil
+            cert_dir = f"/etc/letsencrypt/live/{domain}"
+            if os.path.exists(cert_dir):
+                os.makedirs("/etc/oxware/ssl", exist_ok=True)
+                shutil.copy2(f"{cert_dir}/fullchain.pem", "/etc/oxware/ssl/oxware.crt")
+                shutil.copy2(f"{cert_dir}/privkey.pem",   "/etc/oxware/ssl/oxware.key")
+                os.chmod("/etc/oxware/ssl/oxware.key", 0o600)
+            ev.info(f"Let's Encrypt sertifikası alındı: {domain}", category="system")
+            return ok({"success": True, "domain": domain, "output": result.stdout[-500:]})
+        return err(f"certbot hatası: {result.stderr[-400:]}")
+    except FileNotFoundError:
+        return err("certbot kurulu değil: apt install certbot")
+    except Exception as e:
+        return err(str(e))
+
+# ── VM Ağ Trafiği ─────────────────────────────────────────────────────────────
+@app.route("/api/vms/<vm_id>/network-stats")
+@require_auth
+def api_vm_network_stats(vm_id):
+    """VM'nin sanal ağ arayüzü trafik istatistikleri."""
+    try:
+        vm  = vm_manager.get_vm(vm_id)
+        iface = None
+        for net in vm.get("networks", []):
+            if net.get("target"):
+                iface = net["target"]
+                break
+        if not iface:
+            return ok({"rx_bytes": 0, "tx_bytes": 0, "available": False})
+        stats_file = f"/sys/class/net/{iface}/statistics"
+        def _read(fname):
+            try:
+                with open(f"{stats_file}/{fname}") as f:
+                    return int(f.read().strip())
+            except Exception:
+                return 0
+        return ok({
+            "interface": iface,
+            "rx_bytes":   _read("rx_bytes"),
+            "tx_bytes":   _read("tx_bytes"),
+            "rx_packets": _read("rx_packets"),
+            "tx_packets": _read("tx_packets"),
+            "rx_errors":  _read("rx_errors"),
+            "tx_errors":  _read("tx_errors"),
+            "available":  True,
+        })
+    except Exception as e:
+        return err(str(e))
+
+# ── IP Allowlist Middleware ───────────────────────────────────────────────────
+_IP_ALLOWLIST_FILE = "/var/lib/oxware/ip_allowlist.json"
+
+def _load_ip_allowlist():
+    try:
+        if os.path.exists(_IP_ALLOWLIST_FILE):
+            with open(_IP_ALLOWLIST_FILE) as f:
+                d = json.load(f)
+                return d.get("enabled", False), d.get("ips", [])
+    except Exception:
+        pass
+    return False, []
+
+@app.before_request
+def _check_ip_allowlist():
+    if not request.path.startswith("/api/"):
+        return
+    enabled, allowed_ips = _load_ip_allowlist()
+    if not enabled or not allowed_ips:
+        return
+    # Login ve setup her zaman geçsin
+    if request.path in ("/api/auth/login", "/api/setup/init", "/api/setup/status"):
+        return
+    remote = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+    if remote not in allowed_ips and "127.0.0.1" not in remote:
+        log.warning("IP allowlist engelledi: %s → %s", remote, request.path)
+        return jsonify({"error": "IP adresi izin listesinde değil"}), 403
+
+@app.route("/api/settings/ip-allowlist", methods=["GET"])
+@require_auth
+def api_ip_allowlist_get():
+    enabled, ips = _load_ip_allowlist()
+    return ok({"enabled": enabled, "ips": ips})
+
+@app.route("/api/settings/ip-allowlist", methods=["POST"])
+@require_auth
+def api_ip_allowlist_set():
+    d       = request.get_json() or {}
+    enabled = bool(d.get("enabled", False))
+    ips     = [str(ip).strip() for ip in d.get("ips", []) if str(ip).strip()]
+    os.makedirs(os.path.dirname(_IP_ALLOWLIST_FILE), exist_ok=True)
+    with open(_IP_ALLOWLIST_FILE, "w") as f:
+        json.dump({"enabled": enabled, "ips": ips}, f, indent=2)
+    ev.info(f"IP allowlist güncellendi: enabled={enabled}, {len(ips)} IP", category="security")
+    return ok({"enabled": enabled, "ips": ips})
+
 # ── Background Servisleri Başlat ───────────────────────────────────────────────
 def _start_background_services():
     services = [
@@ -2272,6 +2529,8 @@ def _start_background_services():
         (auto_snap,      "start_scheduler",          {}),
         (updater,        "start_auto_check",         {"interval_seconds": 3600}),
         (sec_hard,       "start_audit_scheduler",    {"interval_hours": 24}),
+        (vm_sched,       "start_scheduler",          {}),
+        (sess_mgr,       "start_cleanup_thread",     {}),
     ]
     for mod, fn, kwargs in services:
         if mod and hasattr(mod, fn):

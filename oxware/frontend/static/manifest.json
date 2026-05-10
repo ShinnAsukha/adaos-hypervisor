@@ -1,0 +1,26 @@
+{
+  "name": "OXware Hypervisor",
+  "short_name": "OXware",
+  "description": "KVM tabanlı açık kaynak sanallaştırma yönetim platformu",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#2a6dd9",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/static/img/sadeceikon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/img/sadeceikon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "tr"
+}

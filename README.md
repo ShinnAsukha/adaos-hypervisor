@@ -1,6 +1,6 @@
 # OXware Hypervisor — Kurulum Kılavuzu
 
-> Sürüm: 2.1 · Hazırlayan: Ada Gürsoy
+> Sürüm: 2.2 · Hazırlayan: Ada Gürsoy
 
 ---
 
@@ -9,7 +9,7 @@
 1. [Donanım Gereksinimleri](#1-donanım-gereksinimleri)
 2. [BIOS/UEFI Ayarları](#2-biosuefi-ayarları)
 3. [Ubuntu Sunucu Hazırlığı](#3-ubuntu-sunucu-hazırlığı)
-4. [OXware ISO ile Kurulum](#4-oxware-iso-ile-kurulum)
+4. [OXware ISO ile Kurulum (build-iso.sh)](#4-oxware-iso-ile-kurulum-build-isosh)
 5. [Script ile Kurulum (Mevcut Ubuntu)](#5-script-ile-kurulum-mevcut-ubuntu)
 6. [İlk Giriş ve Parola Belirleme](#6-ilk-giriş-ve-parola-belirleme)
 7. [Web Arayüzüne Erişim](#7-web-arayüzüne-erişim)
@@ -23,8 +23,14 @@
 15. [Otomatik Güncelleme Kontrolü](#15-otomatik-güncelleme-kontrolü)
 16. [Parola Sıfırlama](#16-parola-sıfırlama)
 17. [Güvenlik Duvarı ve Portlar](#17-güvenlik-duvarı-ve-portlar)
-18. [Sorun Giderme](#18-sorun-giderme)
-19. [AdaOS → OXware Canlı Sunucu Geçişi](#19-adaos--oxware-canlı-sunucu-geçişi)
+18. [Aktif Oturum Yönetimi (JWT Sessions)](#18-aktif-oturum-yönetimi-jwt-sessions)
+19. [IP Erişim Kısıtlaması (Allowlist)](#19-ip-erişim-kısıtlaması-allowlist)
+20. [VM Zamanlaması](#20-vm-zamanlaması)
+21. [VM Klonlama ve Toplu İşlemler](#21-vm-klonlama-ve-toplu-işlemler)
+22. [Prometheus Metrikleri](#22-prometheus-metrikleri)
+23. [PWA (Masaüstü / Mobil Uygulama)](#23-pwa-masaüstü--mobil-uygulama)
+24. [Sorun Giderme](#24-sorun-giderme)
+25. [AdaOS → OXware Canlı Sunucu Geçişi](#25-adaos--oxware-canlı-sunucu-geçişi)
 
 ---
 
@@ -123,45 +129,89 @@ FallbackNTP=ntp.ubuntu.com
 
 ---
 
-## 4. OXware ISO ile Kurulum
+## 4. OXware ISO ile Kurulum (build-iso.sh)
 
-Sıfırdan tam otomatik kurulum için OXware özel ISO'sunu kullanın.
+`build-iso.sh` — Ubuntu Server 22.04 tabanlı, OXware gömülü, tam otomatik kurulum ISO'su oluşturur.
 
-### ISO oluşturma
+### Ne yapar?
+
+| Adım | İşlem |
+|------|-------|
+| 1 | Ubuntu Server 22.04.4 ISO'yu indirir (`/tmp`'ye önbelleğe alır) |
+| 2 | ISO içeriğini geçici dizine ayıklar |
+| 3 | OXware kaynak dosyalarını ISO'ya gömer (`/oxware/`) |
+| 4 | **cloud-init / autoinstall** yapılandırması oluşturur — dil, klavye, disk, kullanıcı, SSH, paket listesi |
+| 5 | Kurulum sonrası komutlar: venv, pip, SSL sertifikası, systemd servisi, UFW |
+| 6 | BIOS sanallaştırma kontrol scripti ekler (`check-virt.sh`) |
+| 7 | GRUB (UEFI) ve isolinux (BIOS) boot menülerini yapılandırır |
+| 8 | `xorriso` ile ISO oluşturur, `isohybrid` ile USB-bootable yapar |
+| 9 | SHA256 checksum dosyası üretir |
+
+Çıktı: `OXware-Hypervisor-2.0.0-amd64.iso` — USB'ye yazıp sunucuya takarsanız **~15 dakikada** kurulum tamamlanır, OXware çalışır hâlde gelir.
+
+### ISO oluşturma (Linux — Ubuntu 22.04)
 
 ```bash
-# Gereksinimler: Ubuntu 22.04, xorriso, syslinux
-sudo apt update && sudo apt install -y xorriso syslinux-utils genisoimage
+# Gereksinimler
+sudo apt update && sudo apt install -y xorriso squashfs-tools syslinux-utils genisoimage p7zip-full wget
 
 # OXware repo klasörüne geçin
 cd /path/to/OXware
 
-# ISO oluşturma scriptini çalıştırın
+# Script root yetkisiyle çalışır
 sudo bash build-iso.sh
 ```
 
-Script çıktıda ISO dosyasının yolu görünür:
+Script tamamlandığında:
 ```
-✓ OXware ISO oluşturuldu: OXware-Hypervisor-2.1.0-amd64.iso
-  SHA256: OXware-Hypervisor-2.1.0-amd64.iso.sha256
+╔══════════════════════════════════════════════════════════════╗
+║           OXware Hypervisor ISO Hazır!                       ║
+║  Dosya  : OXware-Hypervisor-2.0.0-amd64.iso                 ║
+║  Boyut  : ~1.3 GB                                            ║
+╚══════════════════════════════════════════════════════════════╝
 ```
+
+### Windows'ta ISO oluşturabilir miyim?
+
+`build-iso.sh` doğrudan Windows'ta çalışmaz — `xorriso`, `genisoimage`, `squashfs-tools` gibi Linux araçlarına ihtiyaç duyar. Ancak şu yöntemlerle Windows'ta da yapılabilir:
+
+| Yöntem | Kurulum | Zorluk |
+|--------|---------|--------|
+| **WSL2 (önerilen)** | Microsoft Store → Ubuntu 22.04 → `sudo bash build-iso.sh` | Kolay |
+| **VirtualBox / VMware** | Ubuntu 22.04 VM kur, repo'yu paylaşımlı klasörle aktar | Orta |
+| **Docker (Linux container)** | `docker run --privileged -v $(pwd):/oxware ubuntu:22.04 bash build-iso.sh` | Orta |
+
+**WSL2 kurulumu (hızlı başlangıç):**
+```powershell
+# PowerShell (yönetici)
+wsl --install -d Ubuntu-22.04
+```
+```bash
+# WSL Ubuntu terminalinde
+cd /mnt/c/Users/<kullanici>/Desktop/ada/proje/AdaOS
+sudo bash build-iso.sh
+```
+
+> **Not:** WSL2'de `xorriso` bazı durumlarda kısıtlıdır. Çalışmazsa VirtualBox VM tercih edin.
 
 ### ISO'yu USB'ye yazma
 
 ```bash
-# Linux
-sudo dd if=OXware-Hypervisor-2.1.0-amd64.iso of=/dev/sdX bs=4M status=progress sync
+# Linux / WSL2
+sudo dd if=OXware-Hypervisor-2.0.0-amd64.iso of=/dev/sdX bs=4M status=progress conv=fsync
 
-# Windows — Rufus ile:
-# Device: USB bellek | Boot selection: OXware-Hypervisor-2.1.0-amd64.iso | Partition scheme: GPT
+# Windows — Rufus ile (grafik arayüz):
+# Device: USB bellek
+# Boot selection: OXware-Hypervisor-2.0.0-amd64.iso
+# Partition scheme: GPT (UEFI) veya MBR (BIOS)
 ```
 
 ### Önyükleme
 
 1. Sunucuyu USB'den başlatın.
-2. GRUB menüsünde **"Install OXware Hypervisor"** seçeneğini seçin.
-3. Kurulum otomatik olarak gerçekleşir (~10-20 dakika).
-4. Sistem yeniden başladığında OXware hazır olacaktır.
+2. GRUB menüsünde **"OXware Hypervisor — Otomatik Kur"** seçeneğini seçin.
+3. Kurulum tamamen otomatik (~10-20 dakika). Dokunmanız gerekmez.
+4. Sistem yeniden başladığında `https://<IP>:8006` üzerinden erişilebilir.
 
 ---
 
@@ -491,11 +541,17 @@ timedatectl set-ntp true
 | **br_netfilter** | VM güvenlik duvarı kuralları için kernel modülü |
 | **IOMMU / VT-d** | PCI passthrough izolasyonu |
 | **Kernel Sysctl** | rp_filter, tcp_syncookies, redirect engelleme vb. |
-| **SSH Sertleştirme** | PermitRootLogin, MaxAuthTries, X11Forwarding vb. |
+| **SSH Sertleştirme** | MaxAuthTries, X11Forwarding, LoginGraceTime vb. |
 | **QEMU Seccomp** | VM sandbox izolasyonu |
 | **Güvenlik Duvarı** | UFW / iptables aktifliği |
 | **Açık Portlar** | VNC (5900-5999), Docker (2375) riski |
 | **Varsayılan Şifre** | Şifrenin değiştirilip değiştirilmediği |
+| **KSM (Kernel Samepage Merging)** | VM bellek yalıtımı — KSM kapalı olmalı |
+| **L2 İzolasyon** | VM'ler arası bridge trafiği filtreleme |
+| **İç içe sanallaştırma** | Üretimde gereksizse kapalı tutulmalı |
+| **VM aygıtları** | Tehlikeli cihaz atamaları (tablet, balloon vb.) |
+| **SSL sertifika** | Sertifika süresi kontrolü (30 gün uyarı) |
+| **CVE taraması** | NVD API üzerinden QEMU/KVM son 90 gün CVE'leri |
 
 ### Puan sistemi
 
@@ -659,7 +715,202 @@ sudo fail2ban-client status sshd
 
 ---
 
-## 18. Sorun Giderme
+## 18. Aktif Oturum Yönetimi (JWT Sessions)
+
+OXware her girişte JWT token oluşturur ve sunucu tarafında takip eder.
+
+### Web arayüzünden
+
+**Güvenlik** sekmesi → **"Aktif Oturumlar"** kartı:
+- Oturum sahibi, IP adresi, User-Agent ve ne kadar önce oluşturulduğu görünür
+- **✕ İptal** butonu ile şüpheli oturumu anında sonlandırın
+
+### API ile
+
+```bash
+# Tüm aktif oturumları listele
+curl -k -H "Authorization: Bearer <TOKEN>" \
+  https://localhost:8006/api/sessions
+
+# Belirli oturumu iptal et (session_id = jti'nin ilk 8 karakteri)
+curl -k -X DELETE -H "Authorization: Bearer <TOKEN>" \
+  https://localhost:8006/api/sessions/<session_id>
+```
+
+- Token süresi **12 saattir**; süresi dolmuş oturumlar 13 saatte bellekten temizlenir.
+- `revoked: true` oturumun tokenı geçersiz sayılır, yeniden giriş gerekir.
+
+---
+
+## 19. IP Erişim Kısıtlaması (Allowlist)
+
+API ve web arayüzüne yalnızca belirli IP adreslerinden erişimi kısıtlayabilirsiniz.
+
+### Web arayüzünden
+
+**Güvenlik** sekmesi → **"IP Erişim Kısıtlaması"** kartı:
+
+1. **Aktif** kutucuğunu işaretleyin
+2. İzin verilecek IP'leri ekleyin (kendi IP'nizi mutlaka ekleyin!)
+3. **Kaydet** butonuna tıklayın
+
+> ⚠️ **Dikkat:** Kendi IP'nizi eklemeden kaydetirseniz kendinizi de kilitlersiniz. Çözmek için SSH ile bağlanıp `/var/lib/oxware/ip_allowlist.json` dosyasını silin veya `"enabled": false` yapın.
+
+### API ile
+
+```bash
+# Mevcut listeyi görüntüle
+curl -k -H "Authorization: Bearer <TOKEN>" \
+  https://localhost:8006/api/settings/ip-allowlist
+
+# Güncelle
+curl -k -X POST -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  https://localhost:8006/api/settings/ip-allowlist \
+  -d '{"enabled": true, "allowed_ips": ["203.0.113.10", "192.168.1.0/24"]}'
+```
+
+### Kilitlenme durumunda kurtarma
+
+```bash
+# SSH ile sunucuya bağlanın
+sudo rm /var/lib/oxware/ip_allowlist.json
+sudo systemctl restart oxware
+```
+
+---
+
+## 20. VM Zamanlaması
+
+VM'leri belirli saat ve günlerde otomatik olarak başlatın, durdurun veya yeniden başlatın.
+
+### Web arayüzünden
+
+**Ayarlar** sekmesi → **"VM Zamanlaması"** kartı → **"Yeni"** butonu:
+
+| Alan | Açıklama |
+|------|---------|
+| VM | Zamanlanacak sanal makine |
+| İşlem | Başlat / Kapat / Yeniden Başlat / Snapshot |
+| Saat / Dakika | Çalışma saati (24 saat formatı) |
+| Günler | Boş bırakılırsa her gün; seçilirse yalnızca o günler |
+
+### API ile
+
+```bash
+# Zamanlamaları listele
+curl -k -H "Authorization: Bearer <TOKEN>" \
+  https://localhost:8006/api/vm-schedules
+
+# Yeni zamanlama ekle (her gün 02:00'da vm-01'i kapat)
+curl -k -X POST -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  https://localhost:8006/api/vm-schedules \
+  -d '{"vm_id": "vm-01", "vm_name": "web-server", "action": "shutdown", "hour": 2, "minute": 0}'
+
+# Zamanlama sil
+curl -k -X DELETE -H "Authorization: Bearer <TOKEN>" \
+  https://localhost:8006/api/vm-schedules/<sched_id>
+```
+
+Zamanlama kayıtları `/var/lib/oxware/vm_schedules.json` dosyasında saklanır.
+
+---
+
+## 21. VM Klonlama ve Toplu İşlemler
+
+### VM Klonlama
+
+Mevcut bir VM'in tam kopyasını oluşturun:
+
+```bash
+curl -k -X POST -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  https://localhost:8006/api/vms/<vm_id>/clone \
+  -d '{"new_name": "web-server-clone"}'
+```
+
+Veya **Sanal Makineler** sayfasından VM detayına gidin → **"Klonla"** butonu.
+
+### Toplu İşlemler
+
+Birden fazla VM'i tek seferde yönetin:
+
+```bash
+# Birden fazla VM'i başlat
+curl -k -X POST -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  https://localhost:8006/api/vms/bulk \
+  -d '{"vm_ids": ["vm-01", "vm-02", "vm-03"], "action": "start"}'
+
+# Desteklenen işlemler: start | stop | reboot | snapshot
+```
+
+---
+
+## 22. Prometheus Metrikleri
+
+OXware `/metrics` endpoint'i üzerinden Prometheus formatında metrik sunar.
+
+### Endpoint
+
+```
+GET https://<sunucu>:8006/metrics
+Authorization: Bearer <TOKEN>
+```
+
+### Örnek çıktı
+
+```
+# HELP oxware_vms_total Toplam VM sayısı
+oxware_vms_total 5
+oxware_vms_running 3
+oxware_vms_stopped 2
+
+# HELP oxware_host_cpu_percent CPU kullanımı (%)
+oxware_host_cpu_percent 34.2
+oxware_host_ram_total_mb 32768
+oxware_host_ram_used_mb 12420
+
+# HELP oxware_vm_cpu_percent VM başına CPU kullanımı
+oxware_vm_cpu_percent{vm_id="vm-01",vm_name="web-server"} 12.4
+```
+
+### Prometheus scrape config
+
+```yaml
+scrape_configs:
+  - job_name: 'oxware'
+    scheme: https
+    tls_config:
+      insecure_skip_verify: true
+    bearer_token: '<TOKEN>'
+    static_configs:
+      - targets: ['<sunucu-ip>:8006']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+```
+
+---
+
+## 23. PWA (Masaüstü / Mobil Uygulama)
+
+OXware, Progressive Web App (PWA) olarak masaüstüne veya telefona eklenebilir.
+
+### Chrome / Edge (Masaüstü)
+
+1. `https://<sunucu-ip>:8006` adresini açın
+2. Adres çubuğundaki **⊞ (Yükle)** simgesine tıklayın
+3. **"OXware Hypervisor Yükle"** → uygulama gibi çalışır
+
+### Android / iOS (Mobil)
+
+- **Android Chrome:** ⋮ menüsü → "Ana ekrana ekle"
+- **iOS Safari:** Paylaş → "Ana Ekrana Ekle"
+
+---
+
+## 24. Sorun Giderme
 
 ### Servis çalışmıyor
 
@@ -770,7 +1021,7 @@ Veya web arayüzünden: **Güncellemeler → Şimdi Kontrol Et**
 
 ---
 
-## 19. AdaOS → OXware Canlı Sunucu Geçişi
+## 25. AdaOS → OXware Canlı Sunucu Geçişi
 
 > Bu bölüm, halihazırda **AdaOS** kurulu çalışan bir üretim sunucusunu  
 > **OXware**'e geçirmek için adım adım kılavuzdur.  

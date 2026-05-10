@@ -575,6 +575,21 @@ def apply_fix(check_id: str) -> dict:
             ["sysctl", "-w", "net.bridge.bridge-nf-call-ip6tables=1"],
             ["sh", "-c", "echo 'net.bridge.bridge-nf-call-iptables=1' >> /etc/sysctl.d/99-oxware-bridge.conf"],
         ],
+        # SSH: Sadece güvenli değişiklikler — PasswordAuthentication/PermitRootLogin dokunulmaz
+        "ssh_hardening": [
+            ["sh", "-c", "grep -q '^X11Forwarding' /etc/ssh/sshd_config && sed -i 's/^X11Forwarding.*/X11Forwarding no/' /etc/ssh/sshd_config || echo 'X11Forwarding no' >> /etc/ssh/sshd_config"],
+            ["sh", "-c", "grep -q '^MaxAuthTries' /etc/ssh/sshd_config && sed -i 's/^MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config || echo 'MaxAuthTries 3' >> /etc/ssh/sshd_config"],
+            ["sh", "-c", "grep -q '^PermitEmptyPasswords' /etc/ssh/sshd_config && sed -i 's/^PermitEmptyPasswords.*/PermitEmptyPasswords no/' /etc/ssh/sshd_config || echo 'PermitEmptyPasswords no' >> /etc/ssh/sshd_config"],
+            ["sh", "-c", "grep -q '^LoginGraceTime' /etc/ssh/sshd_config && sed -i 's/^LoginGraceTime.*/LoginGraceTime 30/' /etc/ssh/sshd_config || echo 'LoginGraceTime 30' >> /etc/ssh/sshd_config"],
+            ["sh", "-c", "systemctl reload ssh 2>/dev/null || systemctl reload sshd 2>/dev/null || true"],
+        ],
+        # Docker 2375: TCP socket kapat, UNIX socket güvenli kıl
+        "docker_2375": [
+            ["sh", "-c", "[ -S /var/run/docker.sock ] && chmod 660 /var/run/docker.sock 2>/dev/null || true"],
+            ["sh", "-c", "mkdir -p /etc/systemd/system/docker.service.d && printf '[Service]\\nExecStart=\\nExecStart=/usr/bin/dockerd' > /etc/systemd/system/docker.service.d/no-tcp.conf 2>/dev/null || true"],
+            ["systemctl", "daemon-reload"],
+            ["sh", "-c", "systemctl restart docker 2>/dev/null || true"],
+        ],
     }
     cmds = SAFE_FIXES.get(check_id)
     if not cmds:

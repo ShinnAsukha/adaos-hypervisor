@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OXware Hypervisor</title>
   <link rel="icon" type="image/png" href="/static/img/sadeceikon.png">
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#2a6dd9">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="OXware">
   <link rel="stylesheet" href="/static/fontawesome.css">
   <script src="/static/chart.umd.min.js"></script>
   <script src="/static/socket.io.min.js"></script>
@@ -982,9 +986,10 @@
               </button>
             </div>
             <div id="iso-upload-progress" style="display:none;margin-top:12px">
-              <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                <span id="iso-upload-filename" style="font-size:12px;color:var(--text-muted)"></span>
-                <span id="iso-upload-pct" style="font-size:12px;font-weight:600">0%</span>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span id="iso-upload-filename" style="font-size:12px;color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+                <span id="iso-upload-pct" style="font-size:12px;font-weight:600;margin:0 8px">0%</span>
+                <button id="iso-upload-cancel" class="btn sm danger" onclick="cancelIsoUpload()" title="İptal Et" style="padding:2px 8px;font-size:11px">✕ İptal</button>
               </div>
               <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden">
                 <div id="iso-upload-bar" style="background:var(--accent);height:100%;width:0%;transition:width .3s;border-radius:4px"></div>
@@ -1709,6 +1714,39 @@
 
             <div id="sec-msg" style="margin-top:10px;font-size:12px;display:none"></div>
           </div>
+
+          <!-- ── Aktif Oturumlar ── -->
+          <div class="card" style="margin-top:14px">
+            <div class="card-title" style="display:flex;align-items:center;gap:10px">
+              <i class="fa-solid fa-id-badge" style="color:var(--accent-lt)"></i>
+              Aktif Oturumlar
+              <button class="btn sm" onclick="loadSessions()" style="margin-left:auto">
+                <i class="fa-solid fa-rotate"></i> Yenile
+              </button>
+            </div>
+            <div id="sessions-list" style="margin-top:8px">
+              <div style="font-size:11px;color:var(--text-muted)">Yükleniyor...</div>
+            </div>
+          </div>
+
+          <!-- ── IP Allowlist ── -->
+          <div class="card" style="margin-top:14px">
+            <div class="card-title"><i class="fa-solid fa-shield-halved" style="color:var(--accent-lt)"></i> IP Erişim Kısıtlaması</div>
+            <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px">
+              Aktifleştirilirse yalnızca listedeki IP'ler API'ye erişebilir. Kendi IP'ni eklemeden kaydetme!
+            </p>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+              <label style="font-size:12px;font-weight:600">Aktif</label>
+              <input type="checkbox" id="ip-al-enabled" style="width:16px;height:16px">
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <input id="ip-al-input" type="text" class="form-control" placeholder="203.0.113.10" style="flex:1">
+              <button class="btn sm" onclick="ipAllowlistAdd()"><i class="fa-solid fa-plus"></i> Ekle</button>
+            </div>
+            <div id="ip-al-list" style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap"></div>
+            <button class="btn-primary" onclick="saveIpAllowlist()"><i class="fa-solid fa-floppy-disk"></i> Kaydet</button>
+            <div id="ip-al-msg" style="margin-top:8px;font-size:12px;display:none"></div>
+          </div>
         </div>
 
         <!-- ─────── tab-integrations ─────── -->
@@ -1856,6 +1894,26 @@
                 <div class="form-row"><label>E-posta</label><input id="leEmail" type="text" class="form-control" placeholder="admin@example.com"></div>
                 <button class="btn-primary" onclick="requestLetsEncrypt()">🔒 Sertifika Al</button>
               </div>
+            </div>
+          </div>
+
+          <!-- VM Zamanlaması -->
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-title" style="display:flex;align-items:center;gap:10px">
+              <i class="fa-solid fa-calendar-check" style="color:var(--accent-lt)"></i>
+              VM Zamanlaması
+              <button class="btn sm" onclick="openVmSchedModal()" style="margin-left:auto">
+                <i class="fa-solid fa-plus"></i> Yeni
+              </button>
+            </div>
+            <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">
+              VM'leri otomatik başlat/durdur/yeniden başlat. Her gün veya belirli günlerde çalışır.
+            </p>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>VM</th><th>İşlem</th><th>Saat</th><th>Günler</th><th>Durum</th><th>Sil</th></tr></thead>
+                <tbody id="vm-sched-tbody"><tr><td colspan="6" class="text-center text-muted" style="padding:10px">Yükleniyor...</td></tr></tbody>
+              </table>
             </div>
           </div>
 
@@ -2299,6 +2357,48 @@
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-backup-schedule')">İptal</button>
       <button class="btn primary" onclick="saveBackupSchedule()">💾 Planı Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── VM Schedule Modal ── -->
+<div class="modal-overlay" id="modal-vm-sched">
+  <div class="modal">
+    <div class="modal-header">
+      <h2><i class="fa-solid fa-calendar-check"></i> VM Zamanlaması Ekle</h2>
+      <button class="modal-close" onclick="closeModal('modal-vm-sched')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row"><label>Sanal Makine</label>
+        <select id="sched-vm-sel"><option value="">— VM Seç —</option></select>
+      </div>
+      <div class="form-row"><label>İşlem</label>
+        <select id="sched-action">
+          <option value="start">▶ Başlat</option>
+          <option value="shutdown">■ Kapat</option>
+          <option value="reboot">↺ Yeniden Başlat</option>
+          <option value="snapshot">📷 Snapshot Al</option>
+        </select>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>Saat</label><input id="sched-hour" type="number" value="0" min="0" max="23"></div>
+        <div class="form-row"><label>Dakika</label><input id="sched-minute" type="number" value="0" min="0" max="59"></div>
+      </div>
+      <div class="form-row"><label>Günler (boş = her gün)</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+          <label style="font-size:12px"><input type="checkbox" class="sched-day-chk" value="0"> Paz</label>
+          <label style="font-size:12px"><input type="checkbox" class="sched-day-chk" value="1"> Pzt</label>
+          <label style="font-size:12px"><input type="checkbox" class="sched-day-chk" value="2"> Sal</label>
+          <label style="font-size:12px"><input type="checkbox" class="sched-day-chk" value="3"> Çar</label>
+          <label style="font-size:12px"><input type="checkbox" class="sched-day-chk" value="4"> Per</label>
+          <label style="font-size:12px"><input type="checkbox" class="sched-day-chk" value="5"> Cum</label>
+          <label style="font-size:12px"><input type="checkbox" class="sched-day-chk" value="6"> Cmt</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-vm-sched')">İptal</button>
+      <button class="btn primary" onclick="saveVmSchedule()"><i class="fa-solid fa-plus"></i> Ekle</button>
     </div>
   </div>
 </div>
@@ -2904,23 +3004,34 @@ async function deactivateLicense() {
 
 /* ══════════════════ ISO Upload ══════════════════ */
 
+let _activeIsoXhr = null;  // aktif yükleme XHR referansı
+
+function cancelIsoUpload() {
+  if (!_activeIsoXhr) return;
+  _activeIsoXhr.abort();
+  _activeIsoXhr = null;
+}
+
 async function uploadIsoFile(input) {
   const file = input.files[0];
   if (!file) return;
   if (!file.name.endsWith('.iso')) return toast('Yalnızca .iso dosyaları kabul edilir', 'error');
 
   const progressEl = document.getElementById('iso-upload-progress');
-  const barEl = document.getElementById('iso-upload-bar');
-  const pctEl = document.getElementById('iso-upload-pct');
-  const nameEl = document.getElementById('iso-upload-filename');
-  const statusEl = document.getElementById('iso-upload-status');
+  const barEl      = document.getElementById('iso-upload-bar');
+  const pctEl      = document.getElementById('iso-upload-pct');
+  const nameEl     = document.getElementById('iso-upload-filename');
+  const statusEl   = document.getElementById('iso-upload-status');
+  const cancelBtn  = document.getElementById('iso-upload-cancel');
 
   progressEl.style.display = 'block';
   nameEl.textContent = file.name;
   pctEl.textContent = '0%';
   barEl.style.width = '0%';
+  barEl.style.background = 'var(--accent)';
   statusEl.textContent = 'Yükleniyor...';
   statusEl.style.color = 'var(--text-muted)';
+  if (cancelBtn) cancelBtn.style.display = '';
 
   const taskId = 'iso-' + Date.now();
   addTaskToPanel(taskId, `ISO Yükleme: ${file.name}`, 'running');
@@ -2929,6 +3040,8 @@ async function uploadIsoFile(input) {
   formData.append('file', file);
 
   const xhr = new XMLHttpRequest();
+  _activeIsoXhr = xhr;
+
   xhr.upload.onprogress = (e) => {
     if (e.lengthComputable) {
       const pct = Math.round((e.loaded / e.total) * 100);
@@ -2938,7 +3051,10 @@ async function uploadIsoFile(input) {
       updateTaskPanel(taskId, pct);
     }
   };
+
   xhr.onload = () => {
+    _activeIsoXhr = null;
+    if (cancelBtn) cancelBtn.style.display = 'none';
     if (xhr.status === 200) {
       barEl.style.width = '100%';
       pctEl.textContent = '100%';
@@ -2946,7 +3062,7 @@ async function uploadIsoFile(input) {
       statusEl.style.color = 'var(--green-lt)';
       toast(`${file.name} başarıyla yüklendi`, 'success');
       completeTaskPanel(taskId, 'success');
-      setTimeout(() => { progressEl.style.display = 'none'; if (typeof loadIsoLibrary === 'function') loadIsoLibrary(); }, 2000);
+      setTimeout(() => { progressEl.style.display = 'none'; loadISOList(); }, 2000);
     } else {
       statusEl.textContent = 'Yükleme başarısız!';
       statusEl.style.color = 'var(--red-lt)';
@@ -2955,12 +3071,30 @@ async function uploadIsoFile(input) {
     }
     input.value = '';
   };
+
   xhr.onerror = () => {
+    _activeIsoXhr = null;
+    if (cancelBtn) cancelBtn.style.display = 'none';
     statusEl.textContent = 'Bağlantı hatası!';
     toast('Bağlantı hatası', 'error');
     completeTaskPanel(taskId, 'error');
     input.value = '';
   };
+
+  xhr.onabort = () => {
+    _activeIsoXhr = null;
+    if (cancelBtn) cancelBtn.style.display = 'none';
+    barEl.style.width = '0%';
+    barEl.style.background = 'var(--red-lt)';
+    pctEl.textContent = '—';
+    statusEl.textContent = 'Yükleme iptal edildi.';
+    statusEl.style.color = 'var(--red-lt)';
+    toast('ISO yükleme iptal edildi', 'warning');
+    completeTaskPanel(taskId, 'error');
+    input.value = '';
+    setTimeout(() => { progressEl.style.display = 'none'; }, 2500);
+  };
+
   xhr.open('POST', '/api/storage/iso/upload');
   xhr.setRequestHeader('Authorization', 'Bearer ' + TOKEN());
   xhr.send(formData);
@@ -3578,9 +3712,16 @@ function clearVmSelection() {
 async function batchVmAction(action) {
   if (!_selectedVMs.size) return;
   if (!confirm(`${_selectedVMs.size} VM üzerinde "${action}" uygulanacak. Devam?`)) return;
-  const promises = [..._selectedVMs].map(id => api(`/vms/${id}/${action}`, {method:'POST'}).catch(e => e));
-  await Promise.all(promises);
-  toast(`${_selectedVMs.size} VM → ${action} gönderildi`, 'success');
+  const vm_ids = [..._selectedVMs];
+  try {
+    // Yeni bulk endpoint kullan
+    await api('/vms/bulk', { method: 'POST', body: { vm_ids, action } });
+    toast(`${vm_ids.length} VM → ${action} gönderildi`, 'success');
+  } catch {
+    // Fallback: tek tek gönder
+    await Promise.all(vm_ids.map(id => api(`/vms/${id}/${action}`, {method:'POST'}).catch(e => e)));
+    toast(`${vm_ids.length} VM → ${action} gönderildi`, 'success');
+  }
   clearVmSelection();
   setTimeout(loadVMs, 800);
 }
@@ -3621,18 +3762,36 @@ async function loadVMs() {
         <td>
           <div class="action-btns">
             ${v.state !== "running"
-              ? `<button class="btn sm success" onclick="vmAction('${v.id}','start')">▶</button>`
-              : `<button class="btn sm danger" onclick="vmAction('${v.id}','stop')">■</button>`}
-            <button class="btn sm" onclick="vmAction('${v.id}','reboot')">↺</button>
-            ${v.state === "running" ? `<button class="btn sm" onclick="openConsole('${v.id}')">▣</button>` : ""}
+              ? `<button class="btn sm success" onclick="vmAction('${v.id}','start')" title="Başlat">▶</button>`
+              : `<button class="btn sm danger" onclick="vmAction('${v.id}','stop')" title="Durdur">■</button>`}
+            <button class="btn sm" onclick="vmAction('${v.id}','reboot')" title="Yeniden Başlat">↺</button>
+            ${v.state === "running" ? `<button class="btn sm" onclick="openConsole('${v.id}')" title="Konsol">▣</button>` : ""}
             <button class="btn sm" onclick="openLiveMigrate('${v.id}','${escHtml(v.name)}')" title="Canlı Geçiş">🚀</button>
-            <button class="btn sm danger" onclick="deleteVM('${v.id}','${escHtml(v.name)}')">✕</button>
+            <button class="btn sm" onclick="cloneVM('${v.id}','${escHtml(v.name)}')" title="Klonla" style="color:var(--accent-lt)">⧉</button>
+            <button class="btn sm danger" onclick="deleteVM('${v.id}','${escHtml(v.name)}')" title="Sil">✕</button>
           </div>
         </td>
       </tr>`;
     }).join("");
     updateBatchBar();
   } catch (e) { toast("VM listesi alınamadı: " + e.message, "error"); }
+}
+
+async function cloneVM(vmId, vmName) {
+  const newName = prompt(`"${vmName}" klonlanacak.\nYeni VM adı:`, vmName + '-clone');
+  if (!newName || !newName.trim()) return;
+  const taskId = 'clone-' + Date.now();
+  addTaskToPanel(taskId, `Klon: ${vmName} → ${newName.trim()}`, 'running');
+  try {
+    const d = await api(`/vms/${vmId}/clone`, { method: 'POST', body: { new_name: newName.trim() } });
+    if (d.error) throw new Error(d.error);
+    completeTaskPanel(taskId, 'success');
+    toast(`"${newName.trim()}" klonlandı`, 'success');
+    loadVMs(); refreshTreeVMs();
+  } catch(e) {
+    completeTaskPanel(taskId, 'error');
+    toast('Klonlama başarısız: ' + e.message, 'error');
+  }
 }
 
 async function loadISOOptions() {
@@ -5243,6 +5402,166 @@ async function unlockAccount(username) {
   } catch(e) { showToast('Hata: ' + e, 'error'); }
 }
 
+/* ══════════════════ Active Sessions ══════════════════ */
+
+async function loadSessions() {
+  const el = document.getElementById('sessions-list');
+  if (!el) return;
+  try {
+    const d = await api('/sessions');
+    const sessions = d.sessions || [];
+    if (!sessions.length) {
+      el.innerHTML = '<div style="font-size:11px;color:var(--text-muted);padding:8px 0">Aktif oturum yok.</div>';
+      return;
+    }
+    el.innerHTML = sessions.map(s => `
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <i class="fa-solid fa-circle" style="font-size:7px;color:${s.revoked?'#ef4444':'#22c55e'}"></i>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600">${escHtml(s.username)}
+            <span style="font-size:10px;color:var(--text-muted);font-weight:400;margin-left:6px">${escHtml(s.ip)}</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(s.user_agent||'')}</div>
+        </div>
+        <div style="text-align:right;font-size:10px;color:var(--text-muted)">
+          <div>${s.age_minutes} dk önce</div>
+          <div>ID: ${escHtml(s.session_id)}</div>
+        </div>
+        ${!s.revoked ? `<button class="btn sm danger" onclick="revokeSession('${escHtml(s.session_id)}')" style="font-size:10px;padding:2px 6px">
+          <i class="fa-solid fa-ban"></i>
+        </button>` : '<span style="font-size:10px;color:#ef4444;padding:0 4px">İptal</span>'}
+      </div>`).join('');
+  } catch(e) { el.innerHTML = `<div style="font-size:11px;color:var(--red-lt)">${e.message}</div>`; }
+}
+
+async function revokeSession(sessionId) {
+  if (!confirm('Bu oturumu iptal etmek istiyor musunuz?')) return;
+  try {
+    await api(`/sessions/${sessionId}`, {method:'DELETE'});
+    toast('Oturum iptal edildi', 'success');
+    loadSessions();
+  } catch(e) { toast('Hata: ' + e.message, 'error'); }
+}
+
+/* ══════════════════ IP Allowlist ══════════════════ */
+
+let _ipAllowlistItems = [];
+
+async function loadIpAllowlist() {
+  try {
+    const d = await api('/settings/ip-allowlist');
+    _ipAllowlistItems = d.allowed_ips || [];
+    document.getElementById('ip-al-enabled').checked = !!d.enabled;
+    renderIpAllowlist();
+  } catch(e) { console.warn('loadIpAllowlist:', e); }
+}
+
+function renderIpAllowlist() {
+  const el = document.getElementById('ip-al-list');
+  if (!el) return;
+  if (!_ipAllowlistItems.length) { el.innerHTML = '<span style="font-size:11px;color:var(--text-muted)">Liste boş</span>'; return; }
+  el.innerHTML = _ipAllowlistItems.map((ip, i) => `
+    <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(61,130,240,.12);border:1px solid rgba(61,130,240,.25);border-radius:4px;padding:2px 8px;font-size:11px">
+      ${escHtml(ip)}
+      <span onclick="ipAllowlistRemove(${i})" style="cursor:pointer;color:var(--text-muted);margin-left:2px">✕</span>
+    </span>`).join('');
+}
+
+function ipAllowlistAdd() {
+  const input = document.getElementById('ip-al-input');
+  const val = (input.value || '').trim();
+  if (!val) return;
+  if (!/^[\d\.\:\/a-fA-F]+$/.test(val)) { toast('Geçersiz IP formatı', 'error'); return; }
+  if (_ipAllowlistItems.includes(val)) { toast('Zaten ekli', 'warning'); return; }
+  _ipAllowlistItems.push(val);
+  input.value = '';
+  renderIpAllowlist();
+}
+
+function ipAllowlistRemove(idx) {
+  _ipAllowlistItems.splice(idx, 1);
+  renderIpAllowlist();
+}
+
+async function saveIpAllowlist() {
+  const enabled = document.getElementById('ip-al-enabled').checked;
+  const msg = document.getElementById('ip-al-msg');
+  try {
+    await api('/settings/ip-allowlist', {method:'POST', body:{enabled, allowed_ips: _ipAllowlistItems}});
+    msg.style.display = 'block';
+    msg.style.color = 'var(--green-lt)';
+    msg.textContent = '✓ IP listesi kaydedildi';
+    toast('IP listesi kaydedildi', 'success');
+    setTimeout(() => { msg.style.display = 'none'; }, 3000);
+  } catch(e) { toast('Hata: ' + e.message, 'error'); }
+}
+
+/* ══════════════════ VM Scheduling ══════════════════ */
+
+async function loadVmSchedules() {
+  const tbody = document.getElementById('vm-sched-tbody');
+  if (!tbody) return;
+  try {
+    const d = await api('/vm-schedules');
+    const schedules = d.schedules || [];
+    if (!schedules.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding:10px">Zamanlama yok</td></tr>';
+      return;
+    }
+    const DAY_NAMES = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
+    tbody.innerHTML = schedules.map(s => {
+      const days = s.days ? s.days.map(d => DAY_NAMES[d]||d).join(', ') : 'Her gün';
+      const actionMap = {start:'<span style="color:#22c55e">▶ Başlat</span>', shutdown:'<span style="color:#ef4444">■ Durdur</span>', reboot:'<span style="color:#f59e0b">↺ Yeniden Başlat</span>', snapshot:'<span style="color:#3d82f0">📷 Snapshot</span>'};
+      return `<tr>
+        <td style="font-size:12px">${escHtml(s.vm_name||s.vm_id)}</td>
+        <td>${actionMap[s.action]||escHtml(s.action)}</td>
+        <td style="font-family:monospace">${String(s.hour).padStart(2,'0')}:${String(s.minute).padStart(2,'0')}</td>
+        <td style="font-size:11px;color:var(--text-muted)">${days}</td>
+        <td><span class="badge-${s.enabled?'success':'muted'}">${s.enabled?'Aktif':'Pasif'}</span></td>
+        <td><button class="btn sm danger" onclick="deleteVmSchedule('${escHtml(s.id)}')">✕</button></td>
+      </tr>`;
+    }).join('');
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding:10px">${e.message}</td></tr>`; }
+}
+
+async function deleteVmSchedule(id) {
+  if (!confirm('Zamanlamayı sil?')) return;
+  await api(`/vm-schedules/${id}`, {method:'DELETE'});
+  toast('Zamanlama silindi', 'success');
+  loadVmSchedules();
+}
+
+function openVmSchedModal() {
+  // Populate VM list in modal
+  loadVmListForSched();
+  openModal('modal-vm-sched');
+}
+
+async function loadVmListForSched() {
+  try {
+    const d = await api('/vms');
+    const sel = document.getElementById('sched-vm-sel');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— VM Seç —</option>' +
+      (d.vms||[]).map(v => `<option value="${escHtml(v.id)}" data-name="${escHtml(v.name)}">${escHtml(v.name)}</option>`).join('');
+  } catch(e) { console.warn('loadVmListForSched:', e); }
+}
+
+async function saveVmSchedule() {
+  const sel = document.getElementById('sched-vm-sel');
+  const vmId = sel?.value;
+  const vmName = sel?.options[sel.selectedIndex]?.dataset?.name || vmId;
+  const action = document.getElementById('sched-action')?.value;
+  const hour = parseInt(document.getElementById('sched-hour')?.value||'0');
+  const minute = parseInt(document.getElementById('sched-minute')?.value||'0');
+  const daysChk = [...document.querySelectorAll('.sched-day-chk:checked')].map(c => parseInt(c.value));
+  if (!vmId || !action) { toast('VM ve işlem seçin', 'error'); return; }
+  await api('/vm-schedules', {method:'POST', body:{vm_id:vmId, vm_name:vmName, action, hour, minute, days: daysChk.length?daysChk:null}});
+  toast('Zamanlama eklendi', 'success');
+  closeModal('modal-vm-sched');
+  loadVmSchedules();
+}
+
 /* ══════════════════ Mobile Nav ══════════════════ */
 function toggleMobileNav() {
   const nav = document.getElementById('nav-panel');
@@ -5284,9 +5603,9 @@ async function loadTabData(tabId) {
     case 'tab-proxy':        loadNginxSites(); break;
     case 'tab-monitoring':   loadPerfHistory('1h'); loadSmartData(); loadUptimes(); loadIdsStatus(); loadTrendAnalysis(); loadHAStatus(); break;
     case 'tab-ai':           loadAiRecommendations(); loadAnomalies(); loadAIAgents(); break;
-    case 'tab-security':     load2faStatus(); loadAuditLog(); loadApiKeys(); loadLdapConfig(); checkLicenseStatus(); loadAutoSnapConfig(); break;
+    case 'tab-security':     load2faStatus(); loadAuditLog(); loadApiKeys(); loadLdapConfig(); checkLicenseStatus(); loadAutoSnapConfig(); loadSessions(); loadSecurityLockouts(); loadIpAllowlist(); break;
     case 'tab-integrations': loadWebhooks(); loadS3Config(); loadEmailConfig(); loadVlans(); break;
-    case 'tab-settings':     loadSdnStatus(); loadSslStatus(); loadScalerPolicies(); loadQuotas(); break;
+    case 'tab-settings':     loadSdnStatus(); loadSslStatus(); loadScalerPolicies(); loadQuotas(); loadVmSchedules(); break;
   }
 }
 
