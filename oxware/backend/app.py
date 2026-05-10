@@ -495,11 +495,13 @@ def api_vm_stats(vm_id):
 @require_auth
 def api_clone_vm(vm_id):
     data = request.get_json() or {}
-    new_name = data.get("name")
+    new_name = (data.get("new_name") or data.get("name") or "").strip()
     if not new_name:
         return err("Yeni VM adı zorunludur")
     try:
-        return ok(**vm_manager.clone_vm(vm_id, new_name)), 201
+        result = vm_manager.clone_vm(vm_id, new_name)
+        ev.info(f"VM klonlandı: {vm_id} → {new_name}", category="vm")
+        return ok(**(result if isinstance(result, dict) else {}), status="ok", name=new_name), 201
     except Exception as e:
         return err(e, 500)
 
@@ -2300,21 +2302,6 @@ def prometheus_metrics():
     from flask import Response
     return Response("\n".join(lines) + "\n", mimetype="text/plain; version=0.0.4")
 
-# ── VM Clone ──────────────────────────────────────────────────────────────────
-@app.route("/api/vms/<vm_id>/clone", methods=["POST"])
-@require_auth
-def api_vm_clone(vm_id):
-    data     = request.get_json() or {}
-    new_name = data.get("new_name", "").strip()
-    if not new_name:
-        return err("Yeni VM adı gerekli")
-    try:
-        result = vm_manager.clone_vm(vm_id, new_name)
-        ev.info(f"VM klonlandı: {vm_id} → {new_name}", category="vm")
-        return ok(result)
-    except Exception as e:
-        return err(str(e))
-
 # ── Bulk VM İşlemleri ─────────────────────────────────────────────────────────
 @app.route("/api/vms/bulk", methods=["POST"])
 @require_auth
@@ -2642,29 +2629,6 @@ def api_ha_status():
         return ok(nodes=nodes, ha_enabled=len(nodes) > 1)
     except Exception as e:
         return ok(nodes=[], ha_enabled=False, error=str(e))
-
-# ── VM Clone ──────────────────────────────────────────────────────────────────
-@app.route("/api/vms/<vm_id>/clone", methods=["POST"])
-@require_auth
-def api_vm_clone(vm_id):
-    data = request.get_json() or {}
-    new_name = data.get("name", "")
-    if not new_name:
-        return err("name zorunludur")
-    try:
-        import subprocess
-        result = subprocess.run(
-            ["virt-clone", "--original", vm_id, "--name", new_name, "--auto-clone"],
-            capture_output=True, text=True, timeout=300
-        )
-        if result.returncode != 0:
-            return err(result.stderr or "Klonlama başarısız", 500)
-        ev.info(f"VM klonlandı: {vm_id} → {new_name}", category="vm")
-        return ok(status="ok", name=new_name)
-    except subprocess.TimeoutExpired:
-        return err("Klonlama zaman aşımına uğradı", 504)
-    except Exception as e:
-        return err(e, 500)
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
