@@ -2350,6 +2350,28 @@ function escHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+/** Minimal Markdown → HTML (XSS-safe: HTML escape önce yapılır) */
+function mdToHtml(raw) {
+  if (raw == null) return "";
+  let s = escHtml(String(raw));
+  // Başlıklar: ### / ## / #
+  s = s.replace(/^#{3}\s+(.+)$/gm, '<span style="font-size:12px;font-weight:700;color:var(--text-primary);display:block;margin-top:6px">$1</span>');
+  s = s.replace(/^#{1,2}\s+(.+)$/gm, '<span style="font-size:13px;font-weight:700;color:var(--accent-lt);display:block;margin-top:8px">$1</span>');
+  // Kalın: **text**
+  s = s.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
+  // İtalik: *text* (çift yıldız değil)
+  s = s.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em>$1</em>');
+  // Kod: `code`
+  s = s.replace(/`([^`\n]+)`/g, '<code style="background:rgba(0,0,0,.25);border-radius:3px;padding:1px 4px;font-size:10px">$1</code>');
+  // Liste öğeleri: - item veya • item
+  s = s.replace(/^[-•]\s+(.+)$/gm, '<span style="display:block;padding-left:10px;margin-top:2px">• $1</span>');
+  // Yatay çizgi: ---
+  s = s.replace(/^-{3,}$/gm, '<hr style="border:none;border-top:1px solid var(--border);margin:6px 0">');
+  // Satır sonları
+  s = s.replace(/\n/g, '<br>');
+  return s;
+}
+
 /* ══ Modal helpers ══ */
 function openModal(id) { document.getElementById(id).classList.add("open"); }
 function closeModal(id) { document.getElementById(id).classList.remove("open"); }
@@ -4545,7 +4567,7 @@ function renderOxyMessages() {
 
   container.innerHTML = msgs.map(m => {
     const isUser = m.role === 'user';
-    const text = escHtml(m.content).replace(/\n/g,'<br>').replace(/`([^`]+)`/g,'<code>$1</code>');
+    const text = isUser ? escHtml(m.content).replace(/\n/g,'<br>') : mdToHtml(m.content);
     const time = m.ts ? new Date(m.ts).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}) : '';
     return `<div class="oxy-msg ${isUser?'user':'ai'}">
       <div class="oxy-msg-avatar">${isUser?'👤':'🤖'}</div>
@@ -4709,7 +4731,7 @@ function _renderUpdateResult(data) {
   const aiTime = document.getElementById('upd-ai-time');
   if (data.ai_analysis) {
     aiCard.style.display = 'block';
-    aiText.textContent   = data.ai_analysis;
+    aiText.innerHTML     = mdToHtml(data.ai_analysis);
     aiTime.textContent   = checkedAt ? `Analiz: ${checkedAt}` : '';
   } else {
     aiCard.style.display = 'none';
