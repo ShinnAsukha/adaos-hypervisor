@@ -3151,6 +3151,357 @@ def api_openapi_spec():
     }
     return jsonify(spec)
 
+# ── Wake-on-LAN ───────────────────────────────────────────────────────────────
+import struct as _struct
+
+def _send_magic_packet(mac: str) -> None:
+    """Send Wake-on-LAN magic packet."""
+    mac_clean = mac.replace(":", "").replace("-", "").upper()
+    if len(mac_clean) != 12:
+        raise ValueError(f"Geçersiz MAC: {mac}")
+    mac_bytes = bytes.fromhex(mac_clean)
+    magic = b"\xff" * 6 + mac_bytes * 16
+    import socket as _sock
+    with _sock.socket(_sock.AF_INET, _sock.SOCK_DGRAM) as s:
+        s.setsockopt(_sock.SOL_SOCKET, _sock.SO_BROADCAST, 1)
+        s.sendto(magic, ("<broadcast>", 9))
+
+@app.route("/api/vms/<vm_id>/wol", methods=["POST"])
+@require_auth
+def api_vm_wol(vm_id):
+    """Wake-on-LAN: kapalı VM'i uzaktan aç."""
+    r = subprocess.run(["virsh", "dominfo", vm_id], capture_output=True, text=True)
+    if r.returncode != 0:
+        return jsonify({"error": "VM bulunamadı"}), 404
+    nets = subprocess.run(["virsh", "domiflist", vm_id], capture_output=True, text=True)
+    mac = None
+    for line in nets.stdout.splitlines():
+        parts = line.split()
+        if len(parts) >= 5 and ":" in parts[2]:
+            mac = parts[2]
+            break
+    if not mac:
+        return jsonify({"error": "MAC adresi bulunamadı — VM ağ arayüzü yok"}), 400
+    body = request.get_json(silent=True) or {}
+    target_mac = body.get("mac", mac)
+    try:
+        _send_magic_packet(target_mac)
+        ev.info(f"WoL gönderildi: {vm_id} → {target_mac}", category="vm")
+        return jsonify({"ok": True, "mac": target_mac})
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 500
+
+# ── Per-VM Firewall ────────────────────────────────────────────────────────────
+_VM_FW_FILE = _pathlib.Path("/var/lib/oxware/vm_firewall.json")
+
+def _fw_load() -> dict:
+    if _VM_FW_FILE.exists():
+        try:
+            return json.loads(_VM_FW_FILE.read_text())
+        except Exception:
+            pass
+    return {}
+
+def _fw_save(data: dict) -> None:
+    _VM_FW_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _VM_FW_FILE.write_text(json.dumps(data, indent=2))
+
+def _fw_apply_vm(vm_id: str, rules: list) -> None:
+    """Apply iptables rules for VM IP (from virsh domifaddr)."""
+    r = subprocess.run(["virsh", "domifaddr", vm_id], capture_output=True, text=True)
+    vm_ips = []
+    for line in r.stdout.splitlines():
+        parts = line.split()
+        for p in parts:
+            if "/" in p and not p.startswith("ff"):
+                ip = p.split("/")[0]
+                vm_ips.append(ip)
+    if not vm_ips:
+        return
+    for ip in vm_ips:
+        subprocess.run(["iptables", "-D", "FORWARD", "-s", ip, "-j", "ACCEPT"], capture_output=True)
+        subprocess.run(["iptables", "-D", "FORWARD", "-d", ip, "-j", "ACCEPT"], capture_output=True)
+    for rule in rules:
+        if not rule.get("enabled", True):
+            continue
+        proto = rule.get("proto", "tcp")
+        port = rule.get("port", "")
+        action = rule.get("action", "ACCEPT")
+        direction = rule.get("direction", "in")
+        for ip in vm_ips:
+            cmd = ["iptables", "-I", "FORWARD", "1"]
+            if direction == "in":
+                cmd += ["-d", ip]
+            else:
+                cmd += ["-s", ip]
+            if proto in ("tcp", "udp"):
+                cmd += ["-p", proto]
+                if port:
+                    cmd += ["--dport" if direction == "in" else "--sport", str(port)]
+            cmd += ["-j", action]
+            subprocess.run(cmd, capture_output=True)
+
+@app.route("/api/vms/<vm_id>/firewall", methods=["GET"])
+@require_auth
+def api_vm_fw_get(vm_id):
+    data = _fw_load()
+    return jsonify({"rules": data.get(vm_id, [])})
+
+@app.route("/api/vms/<vm_id>/firewall", methods=["POST"])
+@require_auth
+def api_vm_fw_post(vm_id):
+    body = request.get_json(silent=True) or {}
+    rules = body.get("rules", [])
+    data = _fw_load()
+    data[vm_id] = rules
+    _fw_save(data)
+    try:
+        _fw_apply_vm(vm_id, rules)
+    except Exception as ex:
+        pass  # iptables hatası kritik değil, kurallar kaydedildi
+    ev.info(f"VM firewall güncellendi: {vm_id} — {len(rules)} kural", category="vm")
+    return jsonify({"ok": True, "rules": rules})
+
+@app.route("/api/vms/<vm_id>/firewall", methods=["DELETE"])
+@require_auth
+def api_vm_fw_delete(vm_id):
+    data = _fw_load()
+    data.pop(vm_id, None)
+    _fw_save(data)
+    ev.info(f"VM firewall silindi: {vm_id}", category="vm")
+    return jsonify({"ok": True})
+
+# ── Maintenance Mode ───────────────────────────────────────────────────────────
+@app.route("/api/vms/<vm_id>/maintenance", methods=["POST"])
+@require_auth
+def api_vm_maintenance(vm_id):
+    """VM bakım modunu aç/kapat."""
+    body = request.get_json(silent=True) or {}
+    enabled = bool(body.get("enabled", True))
+    data = _load_meta()
+    if vm_id not in data:
+        data[vm_id] = {}
+    data[vm_id]["maintenance"] = enabled
+    _save_meta(data)
+    ev.info(f"VM bakım modu {'açıldı' if enabled else 'kapatıldı'}: {vm_id}", category="vm")
+    return jsonify({"ok": True, "maintenance": enabled})
+
+# ── PCI / USB Passthrough ──────────────────────────────────────────────────────
+@app.route("/api/host/pci-devices", methods=["GET"])
+@require_auth
+def api_host_pci_devices():
+    """Host PCI cihazlarını listele."""
+    r = subprocess.run(["virsh", "nodedev-list", "--cap", "pci"], capture_output=True, text=True)
+    devices = []
+    for line in r.stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        info = subprocess.run(["virsh", "nodedev-dumpxml", line], capture_output=True, text=True)
+        desc = line
+        for iline in info.stdout.splitlines():
+            iline = iline.strip()
+            if "<product " in iline and ">" in iline:
+                import re as _re
+                m = _re.search(r">([^<]+)<", iline)
+                if m:
+                    desc = m.group(1).strip() or desc
+                break
+        bus = dom = func = "?"
+        for iline in info.stdout.splitlines():
+            iline = iline.strip()
+            if "<bus>" in iline:
+                import re as _re2
+                m = _re2.search(r">([^<]+)<", iline)
+                if m: bus = m.group(1)
+            elif "<slot>" in iline:
+                m = _re2.search(r">([^<]+)<", iline)
+                if m: dom = m.group(1)
+            elif "<function>" in iline:
+                m = _re2.search(r">([^<]+)<", iline)
+                if m: func = m.group(1)
+        devices.append({"id": line, "description": desc, "bus": bus, "slot": dom, "func": func})
+    return jsonify({"devices": devices})
+
+@app.route("/api/vms/<vm_id>/pci/attach", methods=["POST"])
+@require_auth
+def api_vm_pci_attach(vm_id):
+    body = request.get_json(silent=True) or {}
+    device_id = body.get("device_id", "")
+    if not device_id:
+        return jsonify({"error": "device_id gerekli"}), 400
+    r = subprocess.run(["virsh", "nodedev-dumpxml", device_id], capture_output=True, text=True)
+    if r.returncode != 0:
+        return jsonify({"error": "Cihaz bulunamadı"}), 404
+    xml = r.stdout
+    import re as _re3
+    domain_m = _re3.search(r"<domain>(\w+)</domain>", xml)
+    bus_m = _re3.search(r"<bus>(\w+)</bus>", xml)
+    slot_m = _re3.search(r"<slot>(\w+)</slot>", xml)
+    func_m = _re3.search(r"<function>(\w+)</function>", xml)
+    if not all([domain_m, bus_m, slot_m, func_m]):
+        return jsonify({"error": "PCI adresi parse edilemedi"}), 500
+    hostdev_xml = f"""<hostdev mode='subsystem' type='pci' managed='yes'>
+  <source>
+    <address domain='{domain_m.group(1)}' bus='{bus_m.group(1)}' slot='{slot_m.group(1)}' function='{func_m.group(1)}'/>
+  </source>
+</hostdev>"""
+    import tempfile as _tmp
+    with _tmp.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
+        f.write(hostdev_xml)
+        tmp_path = f.name
+    r2 = subprocess.run(["virsh", "attach-device", vm_id, tmp_path, "--live", "--config"], capture_output=True, text=True)
+    os.unlink(tmp_path)
+    if r2.returncode != 0:
+        return jsonify({"error": r2.stderr.strip()}), 500
+    ev.info(f"PCI passthrough eklendi: {vm_id} → {device_id}", category="vm")
+    return jsonify({"ok": True})
+
+@app.route("/api/vms/<vm_id>/pci/<path:device_id>", methods=["DELETE"])
+@require_auth
+def api_vm_pci_detach(vm_id, device_id):
+    r = subprocess.run(["virsh", "nodedev-dumpxml", device_id], capture_output=True, text=True)
+    if r.returncode != 0:
+        return jsonify({"error": "Cihaz bulunamadı"}), 404
+    xml = r.stdout
+    import re as _re4
+    domain_m = _re4.search(r"<domain>(\w+)</domain>", xml)
+    bus_m = _re4.search(r"<bus>(\w+)</bus>", xml)
+    slot_m = _re4.search(r"<slot>(\w+)</slot>", xml)
+    func_m = _re4.search(r"<function>(\w+)</function>", xml)
+    if not all([domain_m, bus_m, slot_m, func_m]):
+        return jsonify({"error": "PCI adresi parse edilemedi"}), 500
+    hostdev_xml = f"""<hostdev mode='subsystem' type='pci' managed='yes'>
+  <source>
+    <address domain='{domain_m.group(1)}' bus='{bus_m.group(1)}' slot='{slot_m.group(1)}' function='{func_m.group(1)}'/>
+  </source>
+</hostdev>"""
+    import tempfile as _tmp2
+    with _tmp2.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
+        f.write(hostdev_xml)
+        tmp_path = f.name
+    r2 = subprocess.run(["virsh", "detach-device", vm_id, tmp_path, "--live", "--config"], capture_output=True, text=True)
+    os.unlink(tmp_path)
+    if r2.returncode != 0:
+        return jsonify({"error": r2.stderr.strip()}), 500
+    ev.info(f"PCI passthrough kaldırıldı: {vm_id} → {device_id}", category="vm")
+    return jsonify({"ok": True})
+
+# ── SPICE Console ──────────────────────────────────────────────────────────────
+@app.route("/api/vms/<vm_id>/spice", methods=["GET"])
+@require_auth
+def api_vm_spice(vm_id):
+    """SPICE bağlantı bilgilerini döndür."""
+    r = subprocess.run(["virsh", "domdisplay", "--type", "spice", vm_id], capture_output=True, text=True)
+    if r.returncode != 0 or not r.stdout.strip():
+        r2 = subprocess.run(["virsh", "domdisplay", "--type", "vnc", vm_id], capture_output=True, text=True)
+        if r2.returncode == 0 and r2.stdout.strip():
+            return jsonify({"type": "vnc", "url": r2.stdout.strip(), "note": "Bu VM SPICE değil VNC kullanıyor"})
+        return jsonify({"error": "Bu VM'de SPICE veya VNC konsolu yapılandırılmamış"}), 404
+    url = r.stdout.strip()
+    import re as _re5
+    m = _re5.match(r"spice://([^:]+):(\d+)", url)
+    host_s = m.group(1) if m else "localhost"
+    port_s = m.group(2) if m else "?"
+    return jsonify({
+        "type": "spice",
+        "url": url,
+        "host": host_s,
+        "port": port_s,
+        "note": "SPICE client veya web SPICE (spice-html5) gereklidir"
+    })
+
+# ── OVA / OVF Import ──────────────────────────────────────────────────────────
+_IMPORT_DIR = _pathlib.Path("/var/lib/oxware/imports")
+
+@app.route("/api/import/ova", methods=["POST"])
+@require_auth
+def api_import_ova():
+    """OVA/OVF dosyasından VM içe aktar."""
+    if "file" not in request.files:
+        return jsonify({"error": "file alanı gerekli"}), 400
+    f = request.files["file"]
+    fname = f.filename or "import.ova"
+    if not fname.lower().endswith((".ova", ".ovf", ".tar", ".tar.gz")):
+        return jsonify({"error": "Desteklenen format: .ova .ovf .tar .tar.gz"}), 400
+    _IMPORT_DIR.mkdir(parents=True, exist_ok=True)
+    save_path = _IMPORT_DIR / fname
+    f.save(str(save_path))
+
+    def _do_import():
+        try:
+            import tarfile as _tar
+            extract_dir = _IMPORT_DIR / (fname + "_extracted")
+            extract_dir.mkdir(exist_ok=True)
+            if fname.lower().endswith((".ova", ".tar", ".tar.gz")):
+                with _tar.open(str(save_path)) as tf:
+                    tf.extractall(str(extract_dir))
+            else:
+                import shutil as _sh
+                _sh.copy(str(save_path), str(extract_dir / fname))
+            ovf_file = None
+            disk_files = []
+            for fp in extract_dir.iterdir():
+                if fp.suffix.lower() == ".ovf":
+                    ovf_file = fp
+                elif fp.suffix.lower() in (".vmdk", ".qcow2", ".img", ".raw"):
+                    disk_files.append(fp)
+            if not disk_files:
+                ev.warning(f"OVA import: disk dosyası bulunamadı — {fname}", category="vm")
+                return
+            vm_name = fname.replace(".ova", "").replace(".tar.gz", "").replace(".tar", "")
+            disk_path = _pathlib.Path("/var/lib/libvirt/images") / f"{vm_name}.qcow2"
+            src_disk = disk_files[0]
+            r_conv = subprocess.run(["qemu-img", "convert", "-O", "qcow2", str(src_disk), str(disk_path)], capture_output=True, text=True)
+            if r_conv.returncode != 0:
+                ev.warning(f"OVA import disk convert hatası: {r_conv.stderr}", category="vm")
+                return
+            xml = f"""<domain type='kvm'>
+  <name>{vm_name}</name>
+  <memory unit='MiB'>2048</memory>
+  <vcpu>2</vcpu>
+  <os><type arch='x86_64' machine='pc'>hvm</type><boot dev='hd'/></os>
+  <features><acpi/><apic/></features>
+  <devices>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='{disk_path}'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+    <interface type='network'>
+      <source network='default'/>
+      <model type='virtio'/>
+    </interface>
+    <graphics type='vnc' port='-1' listen='0.0.0.0'/>
+    <video><model type='vga'/></video>
+  </devices>
+</domain>"""
+            import tempfile as _tmp3
+            with _tmp3.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as xf:
+                xf.write(xml)
+                xml_path = xf.name
+            r_def = subprocess.run(["virsh", "define", xml_path], capture_output=True, text=True)
+            os.unlink(xml_path)
+            if r_def.returncode == 0:
+                ev.info(f"OVA import tamamlandı: {vm_name}", category="vm")
+            else:
+                ev.warning(f"OVA import virsh define hatası: {r_def.stderr}", category="vm")
+        except Exception as ex:
+            ev.warning(f"OVA import hatası: {ex}", category="vm")
+
+    t = threading.Thread(target=_do_import, daemon=True)
+    t.start()
+    return jsonify({"ok": True, "message": f"Import başlatıldı: {fname}", "filename": fname})
+
+@app.route("/api/import/status", methods=["GET"])
+@require_auth
+def api_import_status():
+    """Import edilen dosyaları listele."""
+    if not _IMPORT_DIR.exists():
+        return jsonify({"imports": []})
+    files = [{"name": p.name, "size": p.stat().st_size} for p in _IMPORT_DIR.iterdir() if p.is_file()]
+    return jsonify({"imports": files})
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     log.info("OXware Hypervisor v2.0 başlatılıyor")

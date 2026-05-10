@@ -904,6 +904,8 @@
             <button class="btn" onclick="loadVMs()">↻ Yenile</button>
             <button class="btn" onclick="openModal('modal-vm-template')">📋 Şablonlar</button>
             <button class="btn primary" onclick="openCreateVMModal()">+ Yeni VM</button>
+            <button class="btn" onclick="openImportOvaModal()" style="color:#34d399">⬆ OVA Import</button>
+            <input id="vmTagFilter" type="text" placeholder="🏷 Etiket filtrele..." style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:13px;min-width:160px" oninput="filterVmsByTag(this.value)">
           </div>
 
           <!-- Batch toolbar -->
@@ -3911,7 +3913,7 @@ async function loadVMs() {
       const disks = v.disks?.map(d => d.device).join(", ") || "—";
       const nets = v.networks?.map(n => n.network || n.type).join(", ") || "—";
       const checked = _selectedVMs.has(v.id) ? 'checked' : '';
-      return `<tr>
+      return `<tr data-vmid="${v.id}">
         <td style="width:32px"><input type="checkbox" class="vm-checkbox" data-vmid="${v.id}" ${checked} onchange="toggleVmSelection('${v.id}',this.checked)"></td>
         <td><a style="color:var(--accent-lt);cursor:pointer" onclick="selectTreeItem('vm','${v.id}','${escHtml(v.name)}')"><strong>${escHtml(v.name)}</strong></a><br><small style="color:var(--text-muted)">${v.id.slice(0, 8)}</small></td>
         <td>${stateBadge(v.state)}</td>
@@ -3932,6 +3934,12 @@ async function loadVMs() {
             <button class="btn sm" onclick="openVmMetaModal('${v.id}','${escHtml(v.name)}')" title="Not & Etiket" style="color:#a78bfa">📝</button>
             <button class="btn sm" onclick="openCdromModal('${v.id}','${escHtml(v.name)}')" title="CD-ROM">💿</button>
             <button class="btn sm" onclick="exportVM('${v.id}','${escHtml(v.name)}')" title="OVA Export" style="color:#34d399">⬇</button>
+            <button class="btn sm" onclick="sendWoL('${v.id}','${escHtml(v.name)}')" title="Wake-on-LAN" style="color:#60a5fa">⚡</button>
+            <button class="btn sm" onclick="openPciModal('${v.id}','${escHtml(v.name)}')" title="PCI/USB Passthrough" style="color:#f97316">🔌</button>
+            <button class="btn sm" onclick="openCpuPinModal('${v.id}','${escHtml(v.name)}')" title="CPU Pinning" style="color:#e879f9">📌</button>
+            <button class="btn sm" onclick="openVmFirewallModal('${v.id}','${escHtml(v.name)}')" title="VM Firewall" style="color:#f43f5e">🛡</button>
+            <button class="btn sm" onclick="toggleMaintenance('${v.id}','${escHtml(v.name)}')" title="Bakım Modu" style="color:#fbbf24">🔧</button>
+            <button class="btn sm" onclick="openSpiceInfo('${v.id}','${escHtml(v.name)}')" title="SPICE Konsol" style="color:#34d399">📺</button>
             <button class="btn sm danger" onclick="deleteVM('${v.id}','${escHtml(v.name)}')" title="Sil">✕</button>
           </div>
         </td>
@@ -7069,6 +7077,343 @@ window.addEventListener("DOMContentLoaded", () => {
   // Task log every 15s
   setInterval(loadTaskLog, 15000);
 });
+
+// ── Tag Filter ─────────────────────────────────────────────────────────────
+function filterVmsByTag(tag) {
+  const q = tag.trim().toLowerCase();
+  document.querySelectorAll('#vm-table-body tr').forEach(row => {
+    if (!q) { row.style.display = ''; return; }
+    const vmId = row.dataset.vmid || '';
+    const meta = _vmMetaCache[vmId] || {};
+    const tags = (meta.tags || []).map(t => t.toLowerCase());
+    const name = (row.querySelector('td')?.textContent || '').toLowerCase();
+    row.style.display = (tags.some(t => t.includes(q)) || name.includes(q)) ? '' : 'none';
+  });
+}
+
+// ── CPU Pinning ─────────────────────────────────────────────────────────────
+let _cpupinVmId = null;
+async function openCpuPinModal(vmId, vmName) {
+  _cpupinVmId = vmId;
+  document.getElementById('cpupin-vmname').textContent = vmName;
+  document.getElementById('modal-cpupin').style.display = 'flex';
+  await loadCpuPins();
+}
+async function loadCpuPins() {
+  if (!_cpupinVmId) return;
+  const el = document.getElementById('cpupin-list');
+  try {
+    const d = await _api(`/api/vms/${_cpupinVmId}/cpu-pinning`);
+    if (!d.pinning || d.pinning.length === 0) {
+      el.textContent = 'Pin tanımlanmamış — tüm vCPU\'lar serbest.';
+    } else {
+      el.innerHTML = d.pinning.map(p => `<div>vCPU ${p.vcpu} → pCPU ${p.cpumap}</div>`).join('');
+    }
+  } catch(e) { el.textContent = 'Yüklenemedi: ' + e.message; }
+}
+async function doCpuPin() {
+  const vcpu = document.getElementById('cpupin-vcpu').value;
+  const pcpu = document.getElementById('cpupin-pcpu').value;
+  if (vcpu === '' || pcpu === '') { toast('vCPU ve pCPU numarası girin', 'error'); return; }
+  try {
+    await _api(`/api/vms/${_cpupinVmId}/cpu-pinning`, 'POST', { vcpu: parseInt(vcpu), cpumap: pcpu });
+    toast('CPU pin eklendi', 'success');
+    await loadCpuPins();
+  } catch(e) { toast('Hata: ' + e.message, 'error'); }
+}
+async function doCpuPinClear() {
+  if (!confirm('Tüm CPU pin\'leri kaldırılsın mı?')) return;
+  try {
+    await _api(`/api/vms/${_cpupinVmId}/cpu-pinning`, 'DELETE');
+    toast('Tüm pin\'ler kaldırıldı', 'success');
+    await loadCpuPins();
+  } catch(e) { toast('Hata: ' + e.message, 'error'); }
+}
+
+// ── Wake-on-LAN ─────────────────────────────────────────────────────────────
+async function sendWoL(vmId, vmName) {
+  if (!confirm(`"${vmName}" için Wake-on-LAN magic packet gönderilsin mi?`)) return;
+  try {
+    const d = await _api(`/api/vms/${vmId}/wol`, 'POST');
+    toast(`WoL gönderildi → ${d.mac}`, 'success');
+  } catch(e) { toast('WoL hatası: ' + e.message, 'error'); }
+}
+
+// ── Maintenance Mode ─────────────────────────────────────────────────────────
+async function toggleMaintenance(vmId, vmName) {
+  const meta = _vmMetaCache[vmId] || {};
+  const current = !!meta.maintenance;
+  const action = current ? 'kapatılsın' : 'açılsın';
+  if (!confirm(`"${vmName}" için bakım modu ${action} mı?`)) return;
+  try {
+    await _api(`/api/vms/${vmId}/maintenance`, 'POST', { enabled: !current });
+    toast(`Bakım modu ${!current ? 'açıldı' : 'kapatıldı'}`, 'success');
+    await loadAllVmMetadata();
+    loadVMs();
+  } catch(e) { toast('Hata: ' + e.message, 'error'); }
+}
+
+// ── PCI Passthrough ─────────────────────────────────────────────────────────
+let _pciVmId = null;
+let _pciDevices = [];
+async function openPciModal(vmId, vmName) {
+  _pciVmId = vmId;
+  document.getElementById('pci-vmname').textContent = vmName;
+  document.getElementById('modal-pci').style.display = 'flex';
+  await loadPciDevices();
+}
+async function loadPciDevices() {
+  const el = document.getElementById('pci-device-list');
+  el.innerHTML = '<div style="color:var(--fg2);font-size:13px">Yükleniyor...</div>';
+  try {
+    const d = await _api('/api/host/pci-devices');
+    _pciDevices = d.devices || [];
+    if (_pciDevices.length === 0) {
+      el.innerHTML = '<div style="color:var(--fg2)">PCI cihaz bulunamadı.</div>';
+      return;
+    }
+    el.innerHTML = _pciDevices.map((dev, i) =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid var(--border);font-size:13px">
+        <div>
+          <b>${escHtml(dev.description)}</b><br>
+          <span style="color:var(--fg2);font-size:11px">${escHtml(dev.id)} — bus:${dev.bus} slot:${dev.slot} func:${dev.func}</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn sm success" onclick="attachPci('${escHtml(dev.id)}')">+ Ekle</button>
+          <button class="btn sm danger" onclick="detachPci('${escHtml(dev.id)}')">− Kaldır</button>
+        </div>
+      </div>`
+    ).join('');
+  } catch(e) { el.innerHTML = `<div style="color:#f43f5e">${e.message}</div>`; }
+}
+async function attachPci(deviceId) {
+  try {
+    await _api(`/api/vms/${_pciVmId}/pci/attach`, 'POST', { device_id: deviceId });
+    toast('PCI cihaz eklendi', 'success');
+  } catch(e) { toast('Eklenemedi: ' + e.message, 'error'); }
+}
+async function detachPci(deviceId) {
+  try {
+    await _api(`/api/vms/${_pciVmId}/pci/${encodeURIComponent(deviceId)}`, 'DELETE');
+    toast('PCI cihaz kaldırıldı', 'success');
+  } catch(e) { toast('Kaldırılamadı: ' + e.message, 'error'); }
+}
+
+// ── VM Firewall ─────────────────────────────────────────────────────────────
+let _vmfwVmId = null;
+let _vmfwRules = [];
+async function openVmFirewallModal(vmId, vmName) {
+  _vmfwVmId = vmId;
+  document.getElementById('vmfw-vmname').textContent = vmName;
+  document.getElementById('modal-vm-firewall').style.display = 'flex';
+  await loadVmFwRules();
+}
+async function loadVmFwRules() {
+  try {
+    const d = await _api(`/api/vms/${_vmfwVmId}/firewall`);
+    _vmfwRules = d.rules || [];
+    renderVmFwRules();
+  } catch(e) { toast('Kurallar yüklenemedi: ' + e.message, 'error'); }
+}
+function renderVmFwRules() {
+  const el = document.getElementById('vmfw-rules-list');
+  if (_vmfwRules.length === 0) {
+    el.innerHTML = '<div style="color:var(--fg2);font-size:13px;padding:8px">Kural yok — tüm trafik serbest.</div>';
+    return;
+  }
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="border-bottom:1px solid var(--border)">
+      <th style="text-align:left;padding:4px">Yön</th><th style="text-align:left;padding:4px">Proto</th>
+      <th style="text-align:left;padding:4px">Port</th><th style="text-align:left;padding:4px">Eylem</th>
+      <th style="text-align:left;padding:4px">Durum</th><th></th>
+    </tr></thead>
+    <tbody>${_vmfwRules.map((r,i) => `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:4px">${r.direction==='in'?'↓ Gelen':'↑ Giden'}</td>
+      <td style="padding:4px">${r.proto||'any'}</td>
+      <td style="padding:4px">${r.port||'*'}</td>
+      <td style="padding:4px;color:${r.action==='ACCEPT'?'#34d399':'#f43f5e'}">${r.action}</td>
+      <td style="padding:4px">${r.enabled!==false?'✅':'⏸'}</td>
+      <td style="padding:4px"><button class="btn sm danger" onclick="removeVmFwRule(${i})">✕</button></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+function addVmFwRule() {
+  const direction = document.getElementById('vmfw-direction').value;
+  const proto = document.getElementById('vmfw-proto').value;
+  const port = document.getElementById('vmfw-port').value;
+  const action = document.getElementById('vmfw-action').value;
+  _vmfwRules.push({ direction, proto, port, action, enabled: true });
+  renderVmFwRules();
+}
+function removeVmFwRule(idx) {
+  _vmfwRules.splice(idx, 1);
+  renderVmFwRules();
+}
+async function saveVmFwRules() {
+  try {
+    await _api(`/api/vms/${_vmfwVmId}/firewall`, 'POST', { rules: _vmfwRules });
+    toast('Firewall kuralları kaydedildi ve uygulandı', 'success');
+  } catch(e) { toast('Kayıt hatası: ' + e.message, 'error'); }
+}
+async function clearVmFwRules() {
+  if (!confirm('Tüm VM firewall kuralları silinsin mi?')) return;
+  try {
+    await _api(`/api/vms/${_vmfwVmId}/firewall`, 'DELETE');
+    _vmfwRules = [];
+    renderVmFwRules();
+    toast('Tüm kurallar silindi', 'success');
+  } catch(e) { toast('Silme hatası: ' + e.message, 'error'); }
+}
+
+// ── SPICE Console ─────────────────────────────────────────────────────────────
+async function openSpiceInfo(vmId, vmName) {
+  document.getElementById('spice-vmname').textContent = vmName;
+  document.getElementById('spice-info-content').innerHTML = '<span style="color:var(--fg2)">Yükleniyor...</span>';
+  document.getElementById('modal-spice').style.display = 'flex';
+  try {
+    const d = await _api(`/api/vms/${vmId}/spice`);
+    if (d.type === 'spice') {
+      document.getElementById('spice-info-content').innerHTML = `
+        <div style="background:var(--bg2);padding:12px;border-radius:8px;font-family:monospace">
+          <div>🖥 Tip: <b>SPICE</b></div>
+          <div>🌐 Host: <b>${escHtml(d.host)}</b></div>
+          <div>🔌 Port: <b>${escHtml(d.port)}</b></div>
+          <div style="margin-top:8px;font-size:12px;color:var(--fg2)">URL: ${escHtml(d.url)}</div>
+        </div>
+        <p style="font-size:13px;color:var(--fg2);margin-top:10px">💡 Bağlanmak için: <code>virt-viewer spice://${escHtml(d.host)}:${escHtml(d.port)}</code> veya spice-html5 kullanın.</p>
+        ${d.note ? `<p style="font-size:12px;color:#fbbf24">ℹ ${escHtml(d.note)}</p>` : ''}`;
+    } else if (d.type === 'vnc') {
+      document.getElementById('spice-info-content').innerHTML = `
+        <div style="background:var(--bg2);padding:12px;border-radius:8px">
+          <div>🖥 Tip: <b>VNC</b> (SPICE değil)</div>
+          <div style="font-family:monospace;margin-top:4px">${escHtml(d.url)}</div>
+        </div>
+        <p style="color:#fbbf24;font-size:13px">⚠ ${escHtml(d.note)}</p>`;
+    }
+  } catch(e) {
+    document.getElementById('spice-info-content').innerHTML = `<div style="color:#f43f5e">Hata: ${e.message}</div>`;
+  }
+}
+
+// ── OVA Import ───────────────────────────────────────────────────────────────
+function openImportOvaModal() {
+  document.getElementById('ova-import-status').textContent = '';
+  document.getElementById('ova-file-input').value = '';
+  document.getElementById('modal-ova-import').style.display = 'flex';
+}
+async function doImportOva() {
+  const fileInput = document.getElementById('ova-file-input');
+  const statusEl = document.getElementById('ova-import-status');
+  if (!fileInput.files.length) { toast('Dosya seçin', 'error'); return; }
+  const file = fileInput.files[0];
+  statusEl.textContent = '⏳ Yükleniyor...';
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const resp = await fetch('/api/import/ova', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+      body: fd
+    });
+    const d = await resp.json();
+    if (!resp.ok) throw new Error(d.error || resp.statusText);
+    statusEl.innerHTML = `<span style="color:#34d399">✅ ${escHtml(d.message)}</span>`;
+    toast('OVA import başlatıldı', 'success');
+    setTimeout(() => { document.getElementById('modal-ova-import').style.display='none'; loadVMs(); }, 2000);
+  } catch(e) {
+    statusEl.innerHTML = `<span style="color:#f43f5e">❌ ${e.message}</span>`;
+  }
+}
 </script>
+
+<!-- CPU Pinning Modal -->
+<div id="modal-cpupin" class="modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal" style="max-width:520px">
+    <h3>📌 CPU Pinning — <span id="cpupin-vmname"></span></h3>
+    <p style="color:var(--fg2);font-size:13px">vCPU'yu fiziksel CPU çekirdeğine sabitle. VM durmalıysa etkili olmayabilir.</p>
+    <div id="cpupin-list" style="margin:12px 0;font-family:monospace;font-size:13px;background:var(--bg2);padding:10px;border-radius:6px;min-height:40px"></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="cpupin-vcpu" type="number" min="0" placeholder="vCPU #" style="width:80px;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--fg)">
+      <input id="cpupin-pcpu" type="number" min="0" placeholder="pCPU #" style="width:80px;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--fg)">
+      <button class="btn primary" onclick="doCpuPin()">Sabitle</button>
+      <button class="btn danger" onclick="doCpuPinClear()">Tüm Pin'leri Kaldır</button>
+    </div>
+    <div style="text-align:right;margin-top:14px"><button class="btn" onclick="document.getElementById('modal-cpupin').style.display='none'">Kapat</button></div>
+  </div>
+</div>
+
+<!-- PCI Passthrough Modal -->
+<div id="modal-pci" class="modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal" style="max-width:620px">
+    <h3>🔌 PCI/USB Passthrough — <span id="pci-vmname"></span></h3>
+    <p style="color:var(--fg2);font-size:13px">Host PCI cihazını doğrudan VM'e aktar. VM kapalıyken daha güvenlidir.</p>
+    <div style="margin:8px 0"><button class="btn sm" onclick="loadPciDevices()">↻ Cihazları Yenile</button></div>
+    <div id="pci-device-list" style="max-height:300px;overflow-y:auto;margin:8px 0"></div>
+    <div style="text-align:right;margin-top:14px"><button class="btn" onclick="document.getElementById('modal-pci').style.display='none'">Kapat</button></div>
+  </div>
+</div>
+
+<!-- VM Firewall Modal -->
+<div id="modal-vm-firewall" class="modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal" style="max-width:620px">
+    <h3>🛡 VM Firewall — <span id="vmfw-vmname"></span></h3>
+    <p style="color:var(--fg2);font-size:13px">Bu VM'e özgü iptables kuralları. FORWARD zinciri üzerinden uygulanır.</p>
+    <div id="vmfw-rules-list" style="margin:12px 0;min-height:40px"></div>
+    <div style="background:var(--bg2);padding:12px;border-radius:8px;margin-top:8px">
+      <b style="font-size:13px">Yeni Kural Ekle</b>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <select id="vmfw-direction" style="padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--fg)">
+          <option value="in">Gelen (IN)</option>
+          <option value="out">Giden (OUT)</option>
+        </select>
+        <select id="vmfw-proto" style="padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--fg)">
+          <option value="tcp">TCP</option>
+          <option value="udp">UDP</option>
+          <option value="any">Hepsi</option>
+        </select>
+        <input id="vmfw-port" type="text" placeholder="Port (ör: 80)" style="width:100px;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--fg)">
+        <select id="vmfw-action" style="padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--fg)">
+          <option value="ACCEPT">ACCEPT</option>
+          <option value="DROP">DROP</option>
+          <option value="REJECT">REJECT</option>
+        </select>
+        <button class="btn primary" onclick="addVmFwRule()">+ Ekle</button>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:14px">
+      <button class="btn danger" onclick="clearVmFwRules()">Tüm Kuralları Sil</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn primary" onclick="saveVmFwRules()">💾 Kaydet & Uygula</button>
+        <button class="btn" onclick="document.getElementById('modal-vm-firewall').style.display='none'">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SPICE Info Modal -->
+<div id="modal-spice" class="modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal" style="max-width:480px">
+    <h3>📺 SPICE Konsol — <span id="spice-vmname"></span></h3>
+    <div id="spice-info-content" style="margin:16px 0;font-size:14px"></div>
+    <div style="text-align:right"><button class="btn" onclick="document.getElementById('modal-spice').style.display='none'">Kapat</button></div>
+  </div>
+</div>
+
+<!-- OVA Import Modal -->
+<div id="modal-ova-import" class="modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal" style="max-width:480px">
+    <h3>⬆ OVA/OVF Import</h3>
+    <p style="color:var(--fg2);font-size:13px">OVA, OVF veya VMDK içeren tar arşivini yükle. Disk otomatik qcow2'ye dönüştürülür.</p>
+    <div style="margin:16px 0">
+      <input type="file" id="ova-file-input" accept=".ova,.ovf,.tar,.tar.gz" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--fg)">
+    </div>
+    <div id="ova-import-status" style="font-size:13px;color:var(--fg2);min-height:20px"></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+      <button class="btn primary" onclick="doImportOva()">⬆ İçe Aktar</button>
+      <button class="btn" onclick="document.getElementById('modal-ova-import').style.display='none'">Kapat</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
