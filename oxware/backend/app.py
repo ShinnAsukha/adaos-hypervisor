@@ -2271,6 +2271,7 @@ def _start_background_services():
         (ai_planner,     "start_periodic_analysis", {"interval_hours": 24}),
         (auto_snap,      "start_scheduler",          {}),
         (updater,        "start_auto_check",         {"interval_seconds": 3600}),
+        (sec_hard,       "start_audit_scheduler",    {"interval_hours": 24}),
     ]
     for mod, fn, kwargs in services:
         if mod and hasattr(mod, fn):

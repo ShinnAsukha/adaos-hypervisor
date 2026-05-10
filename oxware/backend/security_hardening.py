@@ -324,6 +324,183 @@ def check_default_password() -> dict:
             "status": "pass", "detail": "Şifre değiştirilmiş ✓", "fix": None}
 
 
+# ── Yeni Kontroller ───────────────────────────────────────────────────────────
+
+def check_ksm() -> dict:
+    """KSM (Kernel Samepage Merging) — cross-VM bellek yan kanal riski."""
+    ksm_run = _read_file("/sys/kernel/mm/ksm/run")
+    if ksm_run is None or ksm_run == "0":
+        return {"id": "ksm", "title": "KSM Bellek Dedup",
+                "status": "pass", "detail": "KSM kapalı ✓ — cross-VM side-channel riski yok", "fix": None}
+    # KSM açık — VM sayısını kontrol et
+    code, vms = _run(["virsh", "list", "--all", "--name"])
+    vm_count = len([v for v in vms.splitlines() if v.strip()]) if code == 0 else 2
+    if vm_count > 1:
+        return {
+            "id":     "ksm",
+            "title":  "KSM Bellek Dedup",
+            "status": "warn",
+            "detail": f"KSM açık ve {vm_count} VM var — çok kiracılı ortamda cross-VM bellek sızıntısı riski (CVE-class)",
+            "fix":    "echo 0 > /sys/kernel/mm/ksm/run && echo 'w /sys/kernel/mm/ksm/run - - - - 0' > /etc/tmpfiles.d/ksm-disable.conf",
+        }
+    return {"id": "ksm", "title": "KSM Bellek Dedup",
+            "status": "pass", "detail": "KSM açık ama tek VM — risk düşük ✓", "fix": None}
+
+
+def check_l2_isolation() -> dict:
+    """Bridge L2 izolasyonu — ARP spoofing ve MAC sahteciliği koruması."""
+    issues = []
+    for key, expected in [
+        ("net.bridge.bridge-nf-call-iptables", "1"),
+        ("net.bridge.bridge-nf-call-ip6tables", "1"),
+    ]:
+        val = _sysctl_get(key)
+        if val != expected:
+            issues.append(key)
+
+    code, out = _run(["ebtables", "-L"])
+    ebtables_ok = (code == 0 and len(out) > 20)
+
+    if not issues and ebtables_ok:
+        return {"id": "l2_isolation", "title": "L2 Ağ İzolasyonu",
+                "status": "pass", "detail": "Bridge L2 filtering aktif ✓", "fix": None}
+
+    fix = ("modprobe br_netfilter && "
+           "sysctl -w net.bridge.bridge-nf-call-iptables=1 && "
+           "sysctl -w net.bridge.bridge-nf-call-ip6tables=1")
+    return {
+        "id":     "l2_isolation",
+        "title":  "L2 Ağ İzolasyonu",
+        "status": "warn",
+        "detail": f"Bridge filtering eksik: {', '.join(issues) if issues else 'ebtables kuralı yok'} — ARP spoofing riski",
+        "fix":    fix,
+    }
+
+
+def check_nested_virt() -> dict:
+    """Nested sanallaştırma — L2 hypervisor kaçış riski."""
+    intel = _read_file("/sys/module/kvm_intel/parameters/nested")
+    amd   = _read_file("/sys/module/kvm_amd/parameters/nested")
+    enabled = (intel in ("1", "Y")) or (amd in ("1", "Y"))
+    if not enabled:
+        return {"id": "nested_virt", "title": "Nested Sanallaştırma",
+                "status": "pass", "detail": "Nested virtualization kapalı ✓", "fix": None}
+    vendor = "intel" if intel in ("1", "Y") else "amd"
+    return {
+        "id":     "nested_virt",
+        "title":  "Nested Sanallaştırma",
+        "status": "warn",
+        "detail": "Nested virtualization aktif — VM içi hypervisor kaçış riski (corCTF 2024 PoC mevcut)",
+        "fix":    f"echo 'options kvm_{vendor} nested=0' >> /etc/modprobe.d/kvm-hardening.conf",
+    }
+
+
+def check_vm_devices() -> dict:
+    """VM'lerde riskli sanal cihaz kontrolü (floppy, 9p, audio)."""
+    code, xml_list = _run(["virsh", "list", "--all", "--name"])
+    if code != 0:
+        return {"id": "vm_devices", "title": "VM Cihaz Güvenliği",
+                "status": "warn", "detail": "virsh erişilemedi", "fix": None}
+    vms = [v.strip() for v in xml_list.splitlines() if v.strip()]
+    if not vms:
+        return {"id": "vm_devices", "title": "VM Cihaz Güvenliği",
+                "status": "pass", "detail": "Aktif VM yok ✓", "fix": None}
+    risky = []
+    for vm in vms[:10]:
+        code2, xml = _run(["virsh", "dumpxml", vm])
+        if code2 != 0:
+            continue
+        xml_lower = xml.lower()
+        if "floppy" in xml_lower or "<disk.*fd" in xml_lower:
+            risky.append(f"{vm}:floppy")
+        if "<filesystem type='mount'" in xml_lower or "9p" in xml_lower:
+            risky.append(f"{vm}:9p/virtfs")
+    if not risky:
+        return {"id": "vm_devices", "title": "VM Cihaz Güvenliği",
+                "status": "pass", "detail": "Riskli sanal cihaz bulunamadı ✓", "fix": None}
+    return {
+        "id":     "vm_devices",
+        "title":  "VM Cihaz Güvenliği",
+        "status": "warn",
+        "detail": f"Riskli sanal cihazlar: {', '.join(risky[:5])} — hypervisor kaçış yüzeyi",
+        "fix":    "VM konfigürasyonundan floppy/9p cihazlarını kaldırın: virsh edit <vm>",
+    }
+
+
+def check_cert_expiry() -> dict:
+    """SSL sertifika geçerlilik tarihi kontrolü."""
+    import datetime
+    cert_paths = ["/etc/oxware/ssl/oxware.crt", "/etc/ssl/oxware/oxware.crt",
+                  "/etc/oxware/ssl/server.crt"]
+    cert_file = next((p for p in cert_paths if os.path.exists(p)), None)
+    if not cert_file:
+        return {"id": "cert_expiry", "title": "SSL Sertifika",
+                "status": "warn", "detail": "SSL sertifika dosyası bulunamadı", "fix": None}
+    code, out = _run(["openssl", "x509", "-in", cert_file, "-noout", "-enddate"])
+    if code != 0:
+        return {"id": "cert_expiry", "title": "SSL Sertifika",
+                "status": "warn", "detail": f"Sertifika okunamadı: {out[:80]}", "fix": None}
+    try:
+        date_str = out.split("=", 1)[1].strip()
+        exp = datetime.datetime.strptime(date_str, "%b %d %H:%M:%S %Y %Z")
+        days_left = (exp - datetime.datetime.utcnow()).days
+        renew_cmd = (f"openssl req -x509 -nodes -days 3650 -newkey rsa:2048 "
+                     f"-keyout {cert_file.replace('.crt','.key')} -out {cert_file} "
+                     f"-subj '/CN=oxware' && systemctl restart oxware")
+        if days_left < 0:
+            return {"id": "cert_expiry", "title": "SSL Sertifika", "status": "fail",
+                    "detail": f"Sertifika {abs(days_left)} gün önce sona erdi!", "fix": renew_cmd}
+        if days_left < 30:
+            return {"id": "cert_expiry", "title": "SSL Sertifika", "status": "warn",
+                    "detail": f"Sertifika {days_left} gün içinde sona eriyor", "fix": renew_cmd}
+        return {"id": "cert_expiry", "title": "SSL Sertifika",
+                "status": "pass", "detail": f"Sertifika geçerli, {days_left} gün kaldı ✓", "fix": None}
+    except Exception as e:
+        return {"id": "cert_expiry", "title": "SSL Sertifika",
+                "status": "warn", "detail": f"Sertifika tarihi ayrıştırılamadı: {e}", "fix": None}
+
+
+def check_cve_exposure() -> dict:
+    """NVD API üzerinden son QEMU/KVM CVE'lerini sorgula."""
+    import datetime, urllib.request
+    try:
+        end   = datetime.datetime.utcnow()
+        start = end - datetime.timedelta(days=90)
+        url = (
+            "https://services.nvd.nist.gov/rest/json/cves/2.0"
+            f"?keywordSearch=QEMU%20KVM"
+            f"&pubStartDate={start.strftime('%Y-%m-%dT00:00:00.000')}"
+            f"&pubEndDate={end.strftime('%Y-%m-%dT23:59:59.999')}"
+            f"&cvssV3Severity=HIGH"
+            f"&resultsPerPage=5"
+        )
+        req = urllib.request.Request(url, headers={"User-Agent": "OXware/2.1"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read())
+        total = data.get("totalResults", 0)
+        vulns = data.get("vulnerabilities", [])
+        if total == 0:
+            return {"id": "cve_exposure", "title": "KVM/QEMU CVE İzleme",
+                    "status": "pass", "detail": "Son 90 günde kritik CVE bulunamadı ✓", "fix": None}
+        cve_list = []
+        for v in vulns[:3]:
+            cve_id = v.get("cve", {}).get("id", "?")
+            desc   = (v.get("cve", {}).get("descriptions") or [{}])[0].get("value", "")[:80]
+            cve_list.append(f"{cve_id}: {desc}")
+        return {
+            "id":     "cve_exposure",
+            "title":  "KVM/QEMU CVE İzleme",
+            "status": "warn",
+            "detail": f"Son 90 günde {total} yüksek CVE: {cve_list[0] if cve_list else ''}",
+            "fix":    "apt-get update && apt-get upgrade -y qemu-kvm qemu-system-x86 libvirt-daemon-system",
+            "cves":   cve_list,
+        }
+    except Exception as e:
+        log.warning("CVE sorgusu başarısız: %s", e)
+        return {"id": "cve_exposure", "title": "KVM/QEMU CVE İzleme",
+                "status": "warn", "detail": f"CVE sorgusu yapılamadı (ağ?): {str(e)[:60]}", "fix": None}
+
+
 # ── Ana audit fonksiyonu ──────────────────────────────────────────────────────
 
 def run_security_audit() -> dict:
@@ -341,6 +518,12 @@ def run_security_audit() -> dict:
         check_firewall,
         check_open_ports,
         check_default_password,
+        check_ksm,
+        check_l2_isolation,
+        check_nested_virt,
+        check_vm_devices,
+        check_cert_expiry,
+        check_cve_exposure,
     ]
     for fn in runners:
         try:
@@ -382,6 +565,16 @@ def apply_fix(check_id: str) -> dict:
             ["sysctl", "-w", "net.ipv4.conf.all.log_martians=1"],
             ["sysctl", "-w", "kernel.dmesg_restrict=1"],
         ],
+        "ksm": [
+            ["sh", "-c", "echo 0 > /sys/kernel/mm/ksm/run"],
+            ["sh", "-c", "echo 'w /sys/kernel/mm/ksm/run - - - - 0' > /etc/tmpfiles.d/ksm-disable.conf"],
+        ],
+        "l2_isolation": [
+            ["modprobe", "br_netfilter"],
+            ["sysctl", "-w", "net.bridge.bridge-nf-call-iptables=1"],
+            ["sysctl", "-w", "net.bridge.bridge-nf-call-ip6tables=1"],
+            ["sh", "-c", "echo 'net.bridge.bridge-nf-call-iptables=1' >> /etc/sysctl.d/99-oxware-bridge.conf"],
+        ],
     }
     cmds = SAFE_FIXES.get(check_id)
     if not cmds:
@@ -394,3 +587,76 @@ def apply_fix(check_id: str) -> dict:
 
     success = all(r["code"] == 0 for r in results)
     return {"success": success, "results": results}
+
+
+# ── Periyodik Denetim + AI Uyarısı ───────────────────────────────────────────
+
+_last_audit_result: dict = {}
+_audit_sched_lock  = threading.Lock()
+
+
+def run_scheduled_audit() -> dict:
+    """
+    Güvenlik denetimi çalıştır, değişiklikleri tespit et, bildirim gönder.
+    Yeni fail/warn ortaya çıkarsa Telegram/Discord'a AI uyarısı gider.
+    """
+    global _last_audit_result
+    result = run_security_audit()
+    new_issues = []
+
+    with _audit_sched_lock:
+        old_statuses = {c["id"]: c["status"] for c in _last_audit_result.get("checks", [])}
+        for check in result.get("checks", []):
+            prev = old_statuses.get(check["id"])
+            if prev in ("pass", None) and check["status"] in ("fail", "warn"):
+                new_issues.append(check)
+        _last_audit_result = result
+
+    summary = result.get("summary", {})
+    score    = summary.get("score", 0)
+    fails    = summary.get("fail", 0)
+    warns    = summary.get("warn", 0)
+
+    try:
+        import notifications as _notif
+
+        if new_issues:
+            details = {c["title"]: c["detail"][:80] for c in new_issues[:5]}
+            _notif.send_alert(
+                message=f"🔴 Güvenlik denetimi: {len(new_issues)} YENİ sorun tespit edildi! Puan: {score}/100",
+                level="ERROR",
+                category="security",
+                details=details,
+            )
+            log.warning("Yeni güvenlik sorunları bildirildi: %s", [c["id"] for c in new_issues])
+        elif fails > 0:
+            details = {c["title"]: c["detail"][:80]
+                       for c in result.get("checks", []) if c["status"] == "fail"}
+            _notif.send_alert(
+                message=f"⚠️ Güvenlik denetimi: {fails} açık sorun, {warns} uyarı. Puan: {score}/100",
+                level="WARNING",
+                category="security",
+                details=details,
+            )
+    except Exception as e:
+        log.warning("Güvenlik bildirimi gönderilemedi: %s", e)
+
+    return result
+
+
+def start_audit_scheduler(interval_hours: int = 24):
+    """Arka planda periyodik güvenlik denetimi başlat."""
+    def _loop():
+        time.sleep(120)   # 2 dk başlangıç gecikmesi
+        while True:
+            try:
+                log.info("Periyodik güvenlik denetimi başlatılıyor...")
+                run_scheduled_audit()
+                log.info("Periyodik güvenlik denetimi tamamlandı.")
+            except Exception as e:
+                log.error("Periyodik denetim hatası: %s", e)
+            time.sleep(interval_hours * 3600)
+
+    t = threading.Thread(target=_loop, daemon=True, name="oxware-security-audit")
+    t.start()
+    log.info("Güvenlik denetimi zamanlayıcısı başlatıldı (%dh aralık)", interval_hours)
