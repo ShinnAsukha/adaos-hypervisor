@@ -29,8 +29,9 @@
 21. [VM Klonlama ve Toplu İşlemler](#21-vm-klonlama-ve-toplu-işlemler)
 22. [Prometheus Metrikleri](#22-prometheus-metrikleri)
 23. [PWA (Masaüstü / Mobil Uygulama)](#23-pwa-masaüstü--mobil-uygulama)
-24. [Sorun Giderme](#24-sorun-giderme)
-25. [AdaOS → OXware Canlı Sunucu Geçişi](#25-adaos--oxware-canlı-sunucu-geçişi)
+24. [Domain Bağlama (Nginx + Let's Encrypt)](#24-domain-bağlama-nginx--lets-encrypt)
+25. [Sorun Giderme](#25-sorun-giderme)
+26. [AdaOS → OXware Canlı Sunucu Geçişi](#26-adaos--oxware-canlı-sunucu-geçişi)
 
 ---
 
@@ -910,7 +911,126 @@ OXware, Progressive Web App (PWA) olarak masaüstüne veya telefona eklenebilir.
 
 ---
 
-## 24. Sorun Giderme
+## 24. Domain Bağlama (Nginx + Let's Encrypt)
+
+OXware varsayılan olarak `https://<IP>:8006` adresinde çalışır. Özel domain ve ücretsiz SSL sertifikası için iki yöntem var.
+
+### Ön koşul — DNS kaydı
+
+Domain DNS panelinden A kaydı ekle:
+```
+A  oxware.domain.com  →  <sunucu-IP>
+```
+Yayılmasını bekle (1-10 dakika). Kontrol:
+```bash
+dig oxware.domain.com +short
+# Sunucu IP'si çıkmalı
+```
+
+---
+
+### Yöntem 1 — Nginx Reverse Proxy (önerilen)
+
+Nginx önde durur, `oxware.domain.com:443` → `https://localhost:8006` yönlendirir. noVNC WebSocket desteği dahil.
+
+```bash
+# Nginx + Certbot kur
+apt install -y nginx certbot python3-certbot-nginx
+
+# Site yapılandırması oluştur
+cat > /etc/nginx/sites-available/oxware << 'EOF'
+server {
+    listen 80;
+    server_name oxware.domain.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name oxware.domain.com;
+
+    ssl_certificate     /etc/letsencrypt/live/oxware.domain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/oxware.domain.com/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
+    # WebSocket desteği (noVNC konsol için şart)
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_read_timeout 86400;
+
+    location / {
+        proxy_pass https://127.0.0.1:8006;
+        proxy_ssl_verify off;
+    }
+}
+EOF
+
+# Etkinleştir ve test et
+ln -s /etc/nginx/sites-available/oxware /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+
+# Let's Encrypt sertifikası al (port 80 dışarıdan açık olmalı)
+certbot --nginx -d oxware.domain.com --non-interactive --agree-tos -m admin@domain.com
+
+systemctl reload nginx
+```
+
+Tarayıcıda `https://oxware.domain.com` — kilit simgesi, uyarı yok.
+
+**Sertifika otomatik yenileme** (90 günde bir):
+```bash
+# Cron'a ekle (zaten certbot kurulumda ekler, kontrol et)
+crontab -l | grep certbot
+# Yoksa:
+echo "0 3 * * * certbot renew --quiet && systemctl reload nginx" >> /etc/crontab
+```
+
+**UFW'de port 80 ve 443 aç:**
+```bash
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw reload
+```
+
+---
+
+### Yöntem 2 — OXware'e Direkt Let's Encrypt (Nginx yok)
+
+Web arayüzü: **Ayarlar → SSL Sertifika Yönetimi → Let's Encrypt** alanını doldur → "Sertifika Al".
+
+Veya API:
+```bash
+curl -k -X POST -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  https://localhost:8006/api/ssl/letsencrypt \
+  -d '{"domain": "oxware.domain.com", "email": "admin@domain.com"}'
+```
+
+OXware 8006 portunu doğrudan kullanmaya devam eder, sertifikası artık Let's Encrypt olur.
+Erişim: `https://oxware.domain.com:8006`
+
+> Port 8006 → 443'e taşımak istersen `/etc/oxware/oxware.conf` içinde `port = 443` yap, UFW'den 443 aç.
+
+---
+
+### Yöntem karşılaştırması
+
+| | Nginx (Yöntem 1) | Direkt (Yöntem 2) |
+|--|--|--|
+| URL | `https://oxware.domain.com` | `https://oxware.domain.com:8006` |
+| Port | 443 (standart) | 8006 |
+| WebSocket | ✓ Nginx yapılandırılmış | ✓ Direkt |
+| Ek servis | Nginx gerekli | Gerekmez |
+| Önerilir | ✓ Üretim | Hızlı kurulum |
+
+---
+
+## 25. Sorun Giderme
 
 ### Servis çalışmıyor
 
@@ -1021,7 +1141,7 @@ Veya web arayüzünden: **Güncellemeler → Şimdi Kontrol Et**
 
 ---
 
-## 25. AdaOS → OXware Canlı Sunucu Geçişi
+## 26. AdaOS → OXware Canlı Sunucu Geçişi
 
 > Bu bölüm, halihazırda **AdaOS** kurulu çalışan bir üretim sunucusunu  
 > **OXware**'e geçirmek için adım adım kılavuzdur.  
