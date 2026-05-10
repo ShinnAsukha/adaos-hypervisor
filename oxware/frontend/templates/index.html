@@ -1747,6 +1747,46 @@
             <button class="btn-primary" onclick="saveIpAllowlist()"><i class="fa-solid fa-floppy-disk"></i> Kaydet</button>
             <div id="ip-al-msg" style="margin-top:8px;font-size:12px;display:none"></div>
           </div>
+
+          <!-- ── Pen Test ── -->
+          <div class="card" style="margin-top:14px">
+            <div class="card-title" style="display:flex;align-items:center;gap:10px">
+              <i class="fa-solid fa-shield-virus" style="color:#ef4444"></i>
+              Güvenlik Pen Testi
+              <span style="font-size:10px;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:1px 6px">BETA</span>
+            </div>
+            <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px">
+              Kendi sunucunuza karşı otomatik güvenlik testi. Port tarama, SSL analizi, header kontrolü, varsayılan kimlik bilgisi testi.
+            </p>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+              <input id="pentest-host" type="text" class="form-control" value="127.0.0.1" style="width:160px" placeholder="127.0.0.1">
+              <input id="pentest-port" type="number" class="form-control" value="8006" style="width:80px">
+              <button class="btn primary" onclick="runPentest()" id="pentest-run-btn">
+                <i class="fa-solid fa-crosshairs"></i> Testi Başlat
+              </button>
+              <button class="btn sm" onclick="loadPentestResult()" style="display:none" id="pentest-refresh-btn">
+                <i class="fa-solid fa-rotate"></i> Sonucu Yenile
+              </button>
+            </div>
+            <div id="pentest-status" style="font-size:11px;color:var(--text-muted);margin-bottom:8px;display:none"></div>
+            <div id="pentest-result" style="display:none">
+              <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;padding:10px;background:rgba(0,0,0,.2);border-radius:6px">
+                <div>
+                  <div style="font-size:11px;color:var(--text-muted)">Güvenlik Skoru</div>
+                  <div id="pentest-score" style="font-size:28px;font-weight:700"></div>
+                </div>
+                <div style="display:flex;gap:12px;flex-wrap:wrap">
+                  <div style="text-align:center"><div style="font-size:18px;font-weight:700;color:#ef4444" id="pt-critical">0</div><div style="font-size:10px;color:var(--text-muted)">KRİTİK</div></div>
+                  <div style="text-align:center"><div style="font-size:18px;font-weight:700;color:#f97316" id="pt-high">0</div><div style="font-size:10px;color:var(--text-muted)">YÜKSEK</div></div>
+                  <div style="text-align:center"><div style="font-size:18px;font-weight:700;color:#f59e0b" id="pt-medium">0</div><div style="font-size:10px;color:var(--text-muted)">ORTA</div></div>
+                  <div style="text-align:center"><div style="font-size:18px;font-weight:700;color:#3b82f6" id="pt-low">0</div><div style="font-size:10px;color:var(--text-muted)">DÜŞÜK</div></div>
+                  <div style="text-align:center"><div style="font-size:18px;font-weight:700;color:#22c55e" id="pt-pass">0</div><div style="font-size:10px;color:var(--text-muted)">GEÇTI</div></div>
+                </div>
+                <div style="margin-left:auto;font-size:10px;color:var(--text-muted)" id="pt-duration"></div>
+              </div>
+              <div id="pentest-findings"></div>
+            </div>
+          </div>
         </div>
 
         <!-- ─────── tab-integrations ─────── -->
@@ -5494,6 +5534,87 @@ async function unlockAccount(username) {
     showToast(`${username} kilidi açıldı`, 'success');
     loadSecurityLockouts();
   } catch(e) { showToast('Hata: ' + e, 'error'); }
+}
+
+/* ══════════════════ Pen Test ══════════════════ */
+
+let _pentestPolling = null;
+
+async function runPentest() {
+  const host = document.getElementById('pentest-host').value.trim() || '127.0.0.1';
+  const port = parseInt(document.getElementById('pentest-port').value) || 8006;
+  const btn  = document.getElementById('pentest-run-btn');
+  const status = document.getElementById('pentest-status');
+  const refreshBtn = document.getElementById('pentest-refresh-btn');
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Çalışıyor...';
+  status.style.display = 'block';
+  status.textContent = '⏳ Pen test başlatıldı, sonuç için ~30-60 saniye bekleyin...';
+  document.getElementById('pentest-result').style.display = 'none';
+  refreshBtn.style.display = '';
+
+  try {
+    await api('/pentest/run', { method: 'POST', body: { host, port } });
+    // Poll sonucu
+    clearInterval(_pentestPolling);
+    _pentestPolling = setInterval(async () => {
+      const r = await api('/pentest/result').catch(() => null);
+      if (r && r.result) {
+        clearInterval(_pentestPolling);
+        _pentestPolling = null;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Testi Başlat';
+        status.textContent = `✓ Test tamamlandı — ${r.result.timestamp}`;
+        renderPentestResult(r.result);
+      }
+    }, 3000);
+  } catch(e) {
+    toast('Pen test başlatılamadı: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Testi Başlat';
+  }
+}
+
+async function loadPentestResult() {
+  const r = await api('/pentest/result').catch(() => null);
+  if (r && r.result) renderPentestResult(r.result);
+  else toast('Henüz sonuç yok', 'warning');
+}
+
+function renderPentestResult(res) {
+  const resultEl = document.getElementById('pentest-result');
+  resultEl.style.display = 'block';
+
+  const score = res.score ?? 0;
+  const scoreEl = document.getElementById('pentest-score');
+  scoreEl.textContent = score + '/100';
+  scoreEl.style.color = score >= 75 ? '#22c55e' : score >= 50 ? '#f59e0b' : '#ef4444';
+
+  const s = res.summary || {};
+  document.getElementById('pt-critical').textContent = s.critical || 0;
+  document.getElementById('pt-high').textContent = s.high || 0;
+  document.getElementById('pt-medium').textContent = s.medium || 0;
+  document.getElementById('pt-low').textContent = s.low || 0;
+  document.getElementById('pt-pass').textContent = s.pass || 0;
+  document.getElementById('pt-duration').textContent = res.duration_seconds
+    ? `Süre: ${res.duration_seconds.toFixed(1)}s` : '';
+
+  const SEVER_COLOR = {
+    CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#f59e0b',
+    LOW: '#3b82f6', PASS: '#22c55e', INFO: '#6b7280',
+  };
+  const findings = res.findings || [];
+  document.getElementById('pentest-findings').innerHTML = findings.map(f => `
+    <div style="border-left:3px solid ${SEVER_COLOR[f.severity]||'#6b7280'};padding:10px 12px;margin-bottom:8px;background:rgba(0,0,0,.2);border-radius:0 6px 6px 0">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:10px;font-weight:700;color:${SEVER_COLOR[f.severity]||'#6b7280'};background:rgba(0,0,0,.3);padding:1px 6px;border-radius:3px">${escHtml(f.severity)}</span>
+        <span style="font-size:12px;font-weight:600">${escHtml(f.title)}</span>
+        <span style="font-size:10px;color:var(--text-muted);margin-left:auto">${escHtml(f.category||'')}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:${f.recommendation?'4px':'0'}">${escHtml(f.detail||'')}</div>
+      ${f.recommendation ? `<div style="font-size:11px;color:#60a5fa"><i class="fa-solid fa-lightbulb"></i> ${escHtml(f.recommendation)}</div>` : ''}
+    </div>`).join('') || '<div style="color:var(--text-muted);font-size:12px">Bulgu yok</div>';
 }
 
 /* ══════════════════ Active Sessions ══════════════════ */

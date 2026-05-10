@@ -2730,6 +2730,33 @@ def api_ha_status():
     except Exception as e:
         return ok(nodes=[], ha_enabled=False, error=str(e))
 
+# ── Pen Test ──────────────────────────────────────────────────────────────────
+pentest = _safe_import("pentest")
+
+@app.route("/api/pentest/run", methods=["POST"])
+@require_auth
+def api_pentest_run():
+    if not pentest:
+        return err("pentest modülü yüklenemedi")
+    d = request.get_json() or {}
+    host = d.get("host", "127.0.0.1")
+    port = int(d.get("port", config.PORT))
+    import threading
+    def _run():
+        pentest._last_result = pentest.run_pentest(host, port)
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    return ok({"status": "started", "message": f"Pen test başlatıldı: {host}:{port}"})
+
+@app.route("/api/pentest/result", methods=["GET"])
+@require_auth
+def api_pentest_result():
+    if not pentest:
+        return err("pentest modülü yüklenemedi")
+    if pentest._last_result is None:
+        return ok({"status": "no_result", "result": None})
+    return ok({"status": "done", "result": pentest._last_result})
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     log.info("OXware Hypervisor v2.0 başlatılıyor")
