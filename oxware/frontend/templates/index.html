@@ -1127,6 +1127,12 @@
             <div class="spacer"></div>
             <button class="btn primary" onclick="openCreateSnapModal()" id="btn-create-snap" disabled>📷 Snapshot Al</button>
           </div>
+          <div id="snap-tree-container" style="margin-bottom:14px;display:none">
+            <div class="card">
+              <div class="card-title">📷 Snapshot Ağacı</div>
+              <div id="snap-tree-view" style="padding:8px;font-family:monospace;font-size:12px;line-height:1.8"></div>
+            </div>
+          </div>
           <div id="snap-list">
             <div class="empty-state"><div class="icon">📸</div><h3>VM seçin</h3><p>Snapshot görmek için yukarıdan bir VM seçin</p></div>
           </div>
@@ -2487,6 +2493,74 @@
   </div>
 </div>
 
+<!-- VM Metadata Modal -->
+<div class="modal-overlay" id="modal-vm-meta">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2>📝 Not & Etiket</h2>
+      <button class="modal-close" onclick="closeModal('modal-vm-meta')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="vm-meta-name" style="font-size:13px;font-weight:600;color:var(--accent-lt);margin-bottom:12px"></div>
+      <div class="form-row">
+        <label>🔒 Kilit</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="vm-meta-lock" style="width:16px;height:16px">
+          <span style="font-size:11px;color:var(--text-muted)">Aktifken VM silinemez/kapatılamaz (arayüzden)</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>🏷 Etiketler</label>
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <input id="vm-meta-tag-input" type="text" class="form-control" placeholder="etiket ekle..." style="flex:1" onkeydown="if(event.key==='Enter'){addVmTag();event.preventDefault()}">
+          <button class="btn sm" onclick="addVmTag()">+ Ekle</button>
+        </div>
+        <div id="vm-meta-tags" style="display:flex;flex-wrap:wrap;gap:6px;min-height:24px"></div>
+      </div>
+      <div class="form-row">
+        <label>📋 Notlar</label>
+        <textarea id="vm-meta-notes" class="form-control" rows="4" placeholder="VM hakkında notlar..." style="width:100%;resize:vertical"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-vm-meta')">İptal</button>
+      <button class="btn primary" onclick="saveVmMeta()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- CD-ROM Modal -->
+<div class="modal-overlay" id="modal-cdrom">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h2>💿 CD-ROM Yönetimi</h2>
+      <button class="modal-close" onclick="closeModal('modal-cdrom')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="cdrom-vm-name" style="font-size:13px;font-weight:600;color:var(--accent-lt);margin-bottom:12px"></div>
+      <div class="form-row">
+        <label>ISO Seç</label>
+        <select id="cdrom-iso-sel" class="form-control">
+          <option value="">— Yüklenecek ISO seç —</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Cihaz</label>
+        <select id="cdrom-device">
+          <option value="hdc">hdc (varsayılan)</option>
+          <option value="hdb">hdb</option>
+          <option value="sda">sda</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn danger" onclick="doCdromEject()">⏏ Çıkar</button>
+      <button class="btn" onclick="closeModal('modal-cdrom')">İptal</button>
+      <button class="btn primary" onclick="doCdromInsert()">💿 Takt</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ══════════════════ Globals ══════════════════ */
 let currentPage = "summary";
@@ -3820,6 +3894,8 @@ async function batchVmDelete() {
   loadVMs(); refreshTreeVMs();
 }
 
+let _vmMetaCache = {}; // { vm_id: {notes, tags, locked} }
+
 async function loadVMs() {
   try {
     const data = await api("/vms");
@@ -3853,12 +3929,16 @@ async function loadVMs() {
             <button class="btn sm" onclick="openLiveMigrate('${v.id}','${escHtml(v.name)}')" title="Canlı Geçiş">🚀</button>
             <button class="btn sm" onclick="cloneVM('${v.id}','${escHtml(v.name)}')" title="Klonla" style="color:var(--accent-lt)">⧉</button>
             <button class="btn sm" onclick="openDiskResize('${v.id}','${escHtml(v.name)}')" title="Disk Genişlet" style="color:#f59e0b">⊞</button>
+            <button class="btn sm" onclick="openVmMetaModal('${v.id}','${escHtml(v.name)}')" title="Not & Etiket" style="color:#a78bfa">📝</button>
+            <button class="btn sm" onclick="openCdromModal('${v.id}','${escHtml(v.name)}')" title="CD-ROM">💿</button>
+            <button class="btn sm" onclick="exportVM('${v.id}','${escHtml(v.name)}')" title="OVA Export" style="color:#34d399">⬇</button>
             <button class="btn sm danger" onclick="deleteVM('${v.id}','${escHtml(v.name)}')" title="Sil">✕</button>
           </div>
         </td>
       </tr>`;
     }).join("");
     updateBatchBar();
+    loadAllVmMetadata();
   } catch (e) { toast("VM listesi alınamadı: " + e.message, "error"); }
 }
 
@@ -3876,6 +3956,129 @@ async function cloneVM(vmId, vmName) {
   } catch(e) {
     completeTaskPanel(taskId, 'error');
     toast('Klonlama başarısız: ' + e.message, 'error');
+  }
+}
+
+/* ══════════════════ VM Metadata ══════════════════ */
+
+async function loadAllVmMetadata() {
+  try {
+    const d = await api('/vms/metadata/all');
+    _vmMetaCache = d.metadata || {};
+    // Her VM row'unda tag/lock göster
+    Object.entries(_vmMetaCache).forEach(([vmId, meta]) => {
+      const row = document.querySelector(`[data-vmid="${vmId}"]`)?.closest('tr');
+      if (!row) return;
+      const nameCell = row.cells[1];
+      if (!nameCell) return;
+      // Lock ikonu
+      let extras = nameCell.querySelector('.vm-meta-extras');
+      if (!extras) { extras = document.createElement('div'); extras.className = 'vm-meta-extras'; nameCell.appendChild(extras); }
+      extras.innerHTML = '';
+      if (meta.locked) extras.innerHTML += `<span style="color:#f59e0b;font-size:10px" title="Kilitli">🔒</span> `;
+      if (meta.notes) extras.innerHTML += `<span style="color:var(--text-muted);font-size:10px" title="${escHtml(meta.notes)}">📝</span> `;
+      (meta.tags||[]).forEach(tag => {
+        extras.innerHTML += `<span style="background:rgba(61,130,240,.2);border:1px solid rgba(61,130,240,.4);border-radius:3px;padding:1px 5px;font-size:10px;color:var(--accent-lt)">${escHtml(tag)}</span> `;
+      });
+    });
+  } catch(e) { console.warn('loadAllVmMetadata:', e); }
+}
+
+let _vmMetaModalId = null;
+let _vmMetaTags = [];
+
+async function openVmMetaModal(vmId, vmName) {
+  _vmMetaModalId = vmId;
+  _vmMetaTags = [];
+  document.getElementById('vm-meta-name').textContent = `VM: ${vmName}`;
+  try {
+    const d = await api(`/vms/${vmId}/metadata`);
+    document.getElementById('vm-meta-notes').value = d.notes || '';
+    document.getElementById('vm-meta-lock').checked = !!d.locked;
+    _vmMetaTags = [...(d.tags || [])];
+    renderVmMetaTags();
+  } catch(e) { document.getElementById('vm-meta-notes').value = ''; }
+  openModal('modal-vm-meta');
+}
+
+function renderVmMetaTags() {
+  const el = document.getElementById('vm-meta-tags');
+  if (!el) return;
+  el.innerHTML = _vmMetaTags.map((t, i) => `
+    <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(61,130,240,.15);border:1px solid rgba(61,130,240,.3);border-radius:4px;padding:2px 8px;font-size:11px">
+      ${escHtml(t)}<span onclick="_vmMetaTags.splice(${i},1);renderVmMetaTags()" style="cursor:pointer;color:var(--text-muted);margin-left:2px">✕</span>
+    </span>`).join('');
+}
+
+function addVmTag() {
+  const input = document.getElementById('vm-meta-tag-input');
+  const val = (input.value || '').trim();
+  if (!val || _vmMetaTags.includes(val) || _vmMetaTags.length >= 10) return;
+  _vmMetaTags.push(val);
+  input.value = '';
+  renderVmMetaTags();
+}
+
+async function saveVmMeta() {
+  if (!_vmMetaModalId) return;
+  const notes = document.getElementById('vm-meta-notes').value;
+  const locked = document.getElementById('vm-meta-lock').checked;
+  await api(`/vms/${_vmMetaModalId}/metadata`, { method: 'POST', body: { notes, tags: _vmMetaTags, locked } });
+  toast('Metadata kaydedildi', 'success');
+  closeModal('modal-vm-meta');
+  await loadAllVmMetadata();
+}
+
+/* ══════════════════ CD-ROM ══════════════════ */
+let _cdromVmId = null;
+
+async function openCdromModal(vmId, vmName) {
+  _cdromVmId = vmId;
+  document.getElementById('cdrom-vm-name').textContent = `VM: ${vmName}`;
+  // ISO listesi yükle
+  try {
+    const d = await api('/storage/isos');
+    const sel = document.getElementById('cdrom-iso-sel');
+    sel.innerHTML = '<option value="">— ISO seç —</option>' +
+      (d.isos||[]).map(i => `<option value="${escHtml(i.path||i.name)}">${escHtml(i.name)} (${i.size_mb} MB)</option>`).join('');
+  } catch(e) {}
+  openModal('modal-cdrom');
+}
+
+async function doCdromInsert() {
+  if (!_cdromVmId) return;
+  const iso_path = document.getElementById('cdrom-iso-sel').value;
+  const device = document.getElementById('cdrom-device').value;
+  if (!iso_path) { toast('ISO seçin', 'error'); return; }
+  try {
+    await api(`/vms/${_cdromVmId}/cdrom`, { method: 'PUT', body: { iso_path, device } });
+    toast('CD-ROM takıldı', 'success');
+    closeModal('modal-cdrom');
+  } catch(e) { toast('Hata: ' + e.message, 'error'); }
+}
+
+async function doCdromEject() {
+  if (!_cdromVmId) return;
+  const device = document.getElementById('cdrom-device').value;
+  try {
+    await api(`/vms/${_cdromVmId}/cdrom`, { method: 'PUT', body: { eject: true, device } });
+    toast('CD-ROM çıkarıldı', 'success');
+    closeModal('modal-cdrom');
+  } catch(e) { toast('Hata: ' + e.message, 'error'); }
+}
+
+/* ══════════════════ OVA Export ══════════════════ */
+async function exportVM(vmId, vmName) {
+  if (!confirm(`"${vmName}" OVA formatında dışa aktarılacak. Disk boyutuna göre uzun sürebilir. Devam?`)) return;
+  const taskId = 'export-' + Date.now();
+  addTaskToPanel(taskId, `OVA Export: ${vmName}`, 'running');
+  try {
+    const d = await api(`/vms/${vmId}/export`, { method: 'POST' });
+    completeTaskPanel(taskId, 'success');
+    toast(`Export başlatıldı: ${d.output_path}`, 'success');
+  } catch(e) {
+    completeTaskPanel(taskId, 'error');
+    toast('Export hatası: ' + e.message, 'error');
   }
 }
 
@@ -4602,7 +4805,7 @@ async function loadSnapshots() {
 async function loadSnapshotsForVM(vmId) {
   _currentSnapVm = vmId;
   document.getElementById("btn-create-snap").disabled = !vmId;
-  if (!vmId) { document.getElementById("snap-list").innerHTML = `<div class="empty-state"><div class="icon">📸</div><h3>VM seçin</h3></div>`; document.getElementById("snap-timeline").style.display = "none"; return; }
+  if (!vmId) { document.getElementById("snap-list").innerHTML = `<div class="empty-state"><div class="icon">📸</div><h3>VM seçin</h3></div>`; document.getElementById("snap-timeline").style.display = "none"; const _stc = document.getElementById("snap-tree-container"); if(_stc) _stc.style.display="none"; return; }
   try {
     const data = await api(`/vms/${vmId}/snapshots`);
     const snaps = data.snapshots || [];
@@ -4619,9 +4822,50 @@ async function loadSnapshotsForVM(vmId) {
           <button class="btn sm danger" onclick="deleteSnapshot('${vmId}','${escHtml(s.name)}')">✕ Sil</button>
         </td>
       </tr>`).join("")}</tbody></table></div>`;
+    renderSnapshotTree(snaps);
     document.getElementById("snap-timeline").style.display = "block";
     _renderSnapTimeline(snaps);
   } catch (e) { toast(e.message, "error"); }
+}
+
+function renderSnapshotTree(snapshots) {
+  const container = document.getElementById('snap-tree-view');
+  const treeEl = document.getElementById('snap-tree-container');
+  if (!container || !snapshots.length) { if(treeEl) treeEl.style.display='none'; return; }
+  treeEl.style.display = '';
+
+  // Parent-child ilişkisi kur
+  const byName = {};
+  snapshots.forEach(s => { byName[s.name] = {...s, children: []}; });
+  const roots = [];
+  snapshots.forEach(s => {
+    if (s.parent && byName[s.parent]) {
+      byName[s.parent].children.push(byName[s.name]);
+    } else {
+      roots.push(byName[s.name]);
+    }
+  });
+
+  function renderNode(node, prefix, isLast) {
+    const connector = isLast ? '└─ ' : '├─ ';
+    const childPrefix = prefix + (isLast ? '   ' : '│  ');
+    const isCurrent = node.current;
+    const color = isCurrent ? 'color:#22c55e;font-weight:700' : 'color:var(--text)';
+    let html = `<div style="${color}">${prefix}${connector}📷 ${escHtml(node.name)}`;
+    if (isCurrent) html += ' <span style="color:#22c55e;font-size:10px">[şimdiki]</span>';
+    if (node.creation_time) html += `<span style="color:var(--text-muted);font-size:10px;margin-left:8px">${escHtml(String(node.creation_time))}</span>`;
+    html += `<button onclick="revertSnapshot('${escHtml(_currentSnapVm)}','${escHtml(node.name)}')" style="margin-left:8px;background:none;border:1px solid rgba(61,130,240,.4);border-radius:3px;padding:1px 6px;font-size:10px;color:var(--accent-lt);cursor:pointer">↩ Geri al</button>`;
+    html += `<button onclick="deleteSnapshot('${escHtml(_currentSnapVm)}','${escHtml(node.name)}')" style="margin-left:4px;background:none;border:1px solid rgba(239,68,68,.4);border-radius:3px;padding:1px 6px;font-size:10px;color:#ef4444;cursor:pointer">✕</button>`;
+    html += '</div>';
+    node.children.forEach((child, i) => {
+      html += renderNode(child, childPrefix, i === node.children.length - 1);
+    });
+    return html;
+  }
+
+  container.innerHTML = roots.length
+    ? roots.map((r, i) => renderNode(r, '', i === roots.length - 1)).join('')
+    : '<div style="color:var(--text-muted)">Snapshot yok</div>';
 }
 
 function _renderSnapTimeline(snaps) {

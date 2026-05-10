@@ -2802,6 +2802,355 @@ def api_pentest_result():
         return ok({"status": "no_result", "result": None})
     return ok({"status": "done", "result": pentest._last_result})
 
+# ── VM Metadata ───────────────────────────────────────────────────────────────
+import pathlib as _pathlib
+
+_META_FILE = _pathlib.Path("/var/lib/oxware/vm_metadata.json")
+
+def _load_meta() -> dict:
+    try:
+        return json.loads(_META_FILE.read_text()) if _META_FILE.exists() else {}
+    except Exception:
+        return {}
+
+def _save_meta(data: dict):
+    _META_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _META_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+
+@app.route("/api/vms/<vm_id>/metadata", methods=["GET"])
+@require_auth
+def api_vm_metadata_get(vm_id):
+    meta = _load_meta()
+    return ok(meta.get(vm_id, {"notes": "", "tags": [], "locked": False}))
+
+@app.route("/api/vms/<vm_id>/metadata", methods=["POST"])
+@require_auth
+def api_vm_metadata_set(vm_id):
+    d = request.get_json() or {}
+    meta = _load_meta()
+    if vm_id not in meta:
+        meta[vm_id] = {"notes": "", "tags": [], "locked": False}
+    if "notes" in d:
+        meta[vm_id]["notes"] = str(d["notes"])[:2000]
+    if "tags" in d:
+        meta[vm_id]["tags"] = [str(t)[:30] for t in d["tags"][:10]]
+    if "locked" in d:
+        meta[vm_id]["locked"] = bool(d["locked"])
+    _save_meta(meta)
+    ev.info(f"VM metadata güncellendi: {vm_id}", category="vm")
+    return ok(meta[vm_id])
+
+@app.route("/api/vms/metadata/all", methods=["GET"])
+@require_auth
+def api_all_metadata():
+    return ok({"metadata": _load_meta()})
+
+# ── CD-ROM Hot-Swap ───────────────────────────────────────────────────────────
+@app.route("/api/vms/<vm_id>/cdrom", methods=["PUT"])
+@require_auth
+def api_vm_cdrom(vm_id):
+    d = request.get_json() or {}
+    eject = d.get("eject", False)
+    iso_path = d.get("iso_path", "")
+
+    # VM'deki CD-ROM cihaz adını bul
+    device = d.get("device", "hdc")  # varsayılan
+
+    try:
+        if eject:
+            r = subprocess.run(
+                ["virsh", "change-media", vm_id, device, "--eject", "--live", "--config"],
+                capture_output=True, text=True, timeout=30
+            )
+        else:
+            if not iso_path or not os.path.exists(iso_path):
+                return err("ISO dosyası bulunamadı")
+            r = subprocess.run(
+                ["virsh", "change-media", vm_id, device, iso_path, "--insert", "--live", "--config"],
+                capture_output=True, text=True, timeout=30
+            )
+        if r.returncode != 0:
+            return err(r.stderr or "CD-ROM işlemi başarısız", 500)
+        action = "çıkarıldı" if eject else f"takıldı: {iso_path}"
+        ev.info(f"CD-ROM {action}: {vm_id}", category="vm")
+        return ok({"status": "ok", "ejected": eject, "iso_path": iso_path if not eject else None})
+    except subprocess.TimeoutExpired:
+        return err("CD-ROM işlemi zaman aşımına uğradı", 504)
+    except Exception as e:
+        return err(e, 500)
+
+# ── CPU Pinning ───────────────────────────────────────────────────────────────
+@app.route("/api/vms/<vm_id>/cpu-pinning", methods=["GET"])
+@require_auth
+def api_cpu_pinning_get(vm_id):
+    try:
+        r = subprocess.run(
+            ["virsh", "vcpuinfo", vm_id],
+            capture_output=True, text=True, timeout=10
+        )
+        if r.returncode != 0:
+            return err(r.stderr or "vcpuinfo alınamadı")
+        # Parse vcpuinfo output
+        pinnings = []
+        current = {}
+        for line in r.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("VCPU:"):
+                if current:
+                    pinnings.append(current)
+                current = {"vcpu": int(line.split(":")[1].strip()), "cpu_affinity": ""}
+            elif line.startswith("CPU Affinity:") and current:
+                current["cpu_affinity"] = line.split(":", 1)[1].strip()
+        if current:
+            pinnings.append(current)
+        # Get host CPU count
+        host_cpus = os.cpu_count() or 1
+        return ok({"pinnings": pinnings, "host_cpu_count": host_cpus})
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/vms/<vm_id>/cpu-pinning", methods=["POST"])
+@require_auth
+def api_cpu_pinning_set(vm_id):
+    d = request.get_json() or {}
+    vcpu = d.get("vcpu", 0)
+    cpulist = d.get("cpulist", "")  # "0-3" or "0,2,4" or "all"
+    if not cpulist:
+        return err("cpulist gerekli (örn: '0-3', '0,2')")
+    try:
+        r = subprocess.run(
+            ["virsh", "vcpupin", vm_id, str(vcpu), str(cpulist), "--live", "--config"],
+            capture_output=True, text=True, timeout=30
+        )
+        if r.returncode != 0:
+            return err(r.stderr or "vcpupin başarısız")
+        ev.info(f"CPU pinning: {vm_id} vCPU{vcpu}→pCPU{cpulist}", category="vm")
+        return ok({"vm_id": vm_id, "vcpu": vcpu, "cpulist": cpulist})
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/vms/<vm_id>/cpu-pinning", methods=["DELETE"])
+@require_auth
+def api_cpu_pinning_clear(vm_id):
+    """Tüm pinning'i kaldır — tüm vCPU'ları tüm pCPU'lara serbest bırak."""
+    try:
+        info = vm_manager.get_vm_info(vm_id)
+        vcpus = info.get("vcpus", 1)
+        host_cpus = os.cpu_count() or 1
+        cpulist = f"0-{host_cpus-1}"
+        for vcpu in range(vcpus):
+            subprocess.run(
+                ["virsh", "vcpupin", vm_id, str(vcpu), cpulist, "--live", "--config"],
+                capture_output=True, timeout=10
+            )
+        ev.info(f"CPU pinning temizlendi: {vm_id}", category="vm")
+        return ok({"status": "cleared"})
+    except Exception as e:
+        return err(e, 500)
+
+# ── NIC Hot-Add/Remove ────────────────────────────────────────────────────────
+@app.route("/api/vms/<vm_id>/nics", methods=["POST"])
+@require_auth
+def api_vm_nic_add(vm_id):
+    d = request.get_json() or {}
+    network = d.get("network", "default")
+    model = d.get("model", "virtio")
+    try:
+        r = subprocess.run(
+            ["virsh", "attach-interface", vm_id, "network", network,
+             "--model", model, "--live", "--config"],
+            capture_output=True, text=True, timeout=30
+        )
+        if r.returncode != 0:
+            return err(r.stderr or "NIC eklenemedi")
+        ev.info(f"NIC eklendi: {vm_id} → {network}", category="vm")
+        return ok({"status": "ok", "network": network, "model": model})
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/vms/<vm_id>/nics/<mac>", methods=["DELETE"])
+@require_auth
+def api_vm_nic_remove(vm_id, mac):
+    try:
+        r = subprocess.run(
+            ["virsh", "detach-interface", vm_id, "network",
+             "--mac", mac, "--live", "--config"],
+            capture_output=True, text=True, timeout=30
+        )
+        if r.returncode != 0:
+            return err(r.stderr or "NIC kaldırılamadı")
+        ev.info(f"NIC kaldırıldı: {vm_id} MAC:{mac}", category="vm")
+        return ok({"status": "ok", "mac": mac})
+    except Exception as e:
+        return err(e, 500)
+
+# ── Disk Hot-Add ──────────────────────────────────────────────────────────────
+@app.route("/api/vms/<vm_id>/disks/attach", methods=["POST"])
+@require_auth
+def api_vm_disk_attach(vm_id):
+    d = request.get_json() or {}
+    size_gb = int(d.get("size_gb", 10))
+    fmt = d.get("format", "qcow2")
+    import shutil, datetime as _dt
+    ts = _dt.datetime.now().strftime("%Y%m%d%H%M%S")
+    disk_path = f"/var/lib/oxware/disks/{vm_id}-extra-{ts}.{fmt}"
+    os.makedirs("/var/lib/oxware/disks", exist_ok=True)
+    try:
+        # Disk oluştur
+        r = subprocess.run(
+            ["qemu-img", "create", "-f", fmt, disk_path, f"{size_gb}G"],
+            capture_output=True, text=True, timeout=60
+        )
+        if r.returncode != 0:
+            return err(r.stderr or "Disk oluşturulamadı")
+        # Attach
+        r2 = subprocess.run(
+            ["virsh", "attach-disk", vm_id, disk_path, "vdb",
+             "--driver", "qemu", "--subdriver", fmt,
+             "--live", "--config"],
+            capture_output=True, text=True, timeout=30
+        )
+        if r2.returncode != 0:
+            os.remove(disk_path)
+            return err(r2.stderr or "Disk bağlanamadı")
+        ev.info(f"Disk eklendi: {vm_id} {size_gb}GB → {disk_path}", category="vm")
+        return ok({"status": "ok", "disk_path": disk_path, "size_gb": size_gb})
+    except Exception as e:
+        return err(e, 500)
+
+# ── OVA Export ────────────────────────────────────────────────────────────────
+@app.route("/api/vms/<vm_id>/export", methods=["POST"])
+@require_auth
+def api_vm_export(vm_id):
+    """VM'i OVA benzeri tar arşivine aktar (XML + disk)."""
+    import threading as _thr, tarfile, datetime as _dt
+    try:
+        info = vm_manager.get_vm_info(vm_id)
+        vm_name = info.get("name", vm_id)
+        disks = info.get("disks", [])
+        ts = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+        export_dir = f"/var/lib/oxware/backups/exports"
+        os.makedirs(export_dir, exist_ok=True)
+        output_path = f"{export_dir}/{vm_name}-{ts}.tar.gz"
+
+        def _do_export():
+            try:
+                # XML dump
+                xr = subprocess.run(["virsh", "dumpxml", vm_id],
+                    capture_output=True, text=True, timeout=30)
+                xml_content = xr.stdout
+
+                with tarfile.open(output_path, "w:gz") as tar:
+                    # XML ekle
+                    import io
+                    xml_bytes = xml_content.encode()
+                    info_obj = tarfile.TarInfo(name=f"{vm_name}.xml")
+                    info_obj.size = len(xml_bytes)
+                    tar.addfile(info_obj, io.BytesIO(xml_bytes))
+                    # Diskleri ekle
+                    for disk in disks:
+                        src = disk.get("source") or disk.get("path", "")
+                        if src and os.path.exists(src):
+                            tar.add(src, arcname=os.path.basename(src))
+                ev.info(f"OVA export tamamlandı: {vm_name} → {output_path}", category="vm")
+            except Exception as ex:
+                ev.info(f"OVA export hatası: {ex}", category="vm")
+
+        t = _thr.Thread(target=_do_export, daemon=True)
+        t.start()
+        return ok({
+            "status": "started",
+            "output_path": output_path,
+            "vm_name": vm_name,
+            "message": "Export arkaplanda çalışıyor. Backups sayfasından indirin."
+        })
+    except Exception as e:
+        return err(e, 500)
+
+# ── OpenAPI / Swagger Docs ────────────────────────────────────────────────────
+@app.route("/api/docs", methods=["GET"])
+def api_swagger_ui():
+    html = """<!DOCTYPE html>
+<html>
+<head>
+  <title>OXware API Docs</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css">
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
+<script>
+SwaggerUIBundle({
+  url: '/api/openapi.json',
+  dom_id: '#swagger-ui',
+  presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+  layout: "BaseLayout"
+})
+</script>
+</body>
+</html>"""
+    return html, 200, {"Content-Type": "text/html"}
+
+@app.route("/api/openapi.json", methods=["GET"])
+@require_auth
+def api_openapi_spec():
+    spec = {
+        "openapi": "3.0.3",
+        "info": {
+            "title": "OXware Hypervisor API",
+            "version": "2.2.0",
+            "description": "KVM tabanlı hypervisor yönetim API'si"
+        },
+        "servers": [{"url": "/api", "description": "OXware API"}],
+        "components": {
+            "securitySchemes": {
+                "bearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}
+            }
+        },
+        "security": [{"bearerAuth": []}],
+        "paths": {
+            "/vms": {
+                "get": {"summary": "VM listesi", "tags": ["VMs"], "responses": {"200": {"description": "VM listesi"}}},
+                "post": {"summary": "VM oluştur", "tags": ["VMs"], "responses": {"201": {"description": "Oluşturuldu"}}}
+            },
+            "/vms/{vm_id}": {
+                "get": {"summary": "VM detayı", "tags": ["VMs"], "parameters": [{"name": "vm_id", "in": "path", "required": True, "schema": {"type": "string"}}], "responses": {"200": {"description": "VM bilgisi"}}},
+                "delete": {"summary": "VM sil", "tags": ["VMs"], "parameters": [{"name": "vm_id", "in": "path", "required": True, "schema": {"type": "string"}}], "responses": {"200": {"description": "Silindi"}}}
+            },
+            "/vms/{vm_id}/start": {"post": {"summary": "VM başlat", "tags": ["VMs"], "parameters": [{"name": "vm_id", "in": "path", "required": True, "schema": {"type": "string"}}], "responses": {"200": {"description": "Başlatıldı"}}}},
+            "/vms/{vm_id}/stop": {"post": {"summary": "VM durdur", "tags": ["VMs"], "parameters": [{"name": "vm_id", "in": "path", "required": True, "schema": {"type": "string"}}], "responses": {"200": {"description": "Durduruldu"}}}},
+            "/vms/{vm_id}/clone": {"post": {"summary": "VM klonla", "tags": ["VMs"], "parameters": [{"name": "vm_id", "in": "path", "required": True, "schema": {"type": "string"}}], "requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": {"new_name": {"type": "string"}}}}}}, "responses": {"201": {"description": "Klonlandı"}}}},
+            "/vms/{vm_id}/metadata": {
+                "get": {"summary": "VM metadata", "tags": ["VMs"], "parameters": [{"name": "vm_id", "in": "path", "required": True, "schema": {"type": "string"}}], "responses": {"200": {"description": "Metadata"}}},
+                "post": {"summary": "VM metadata güncelle", "tags": ["VMs"], "requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": {"notes": {"type": "string"}, "tags": {"type": "array", "items": {"type": "string"}}, "locked": {"type": "boolean"}}}}}}, "parameters": [{"name": "vm_id", "in": "path", "required": True, "schema": {"type": "string"}}], "responses": {"200": {"description": "Güncellendi"}}}
+            },
+            "/vms/{vm_id}/cdrom": {"put": {"summary": "CD-ROM hot-swap", "tags": ["VMs"], "parameters": [{"name": "vm_id", "in": "path", "required": True, "schema": {"type": "string"}}], "requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": {"iso_path": {"type": "string"}, "eject": {"type": "boolean"}}}}}}, "responses": {"200": {"description": "CD-ROM değiştirildi"}}}},
+            "/vms/{vm_id}/export": {"post": {"summary": "OVA export", "tags": ["VMs"], "parameters": [{"name": "vm_id", "in": "path", "required": True, "schema": {"type": "string"}}], "responses": {"200": {"description": "Export başlatıldı"}}}},
+            "/vms/bulk": {"post": {"summary": "Toplu VM işlemi", "tags": ["VMs"], "requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": {"vm_ids": {"type": "array", "items": {"type": "string"}}, "action": {"type": "string", "enum": ["start", "stop", "reboot", "snapshot"]}}}}}}, "responses": {"200": {"description": "İşlemler tamamlandı"}}}},
+            "/sessions": {
+                "get": {"summary": "Aktif oturumlar", "tags": ["Auth"], "responses": {"200": {"description": "Oturum listesi"}}},
+            },
+            "/sessions/{session_id}": {
+                "delete": {"summary": "Oturum iptal et", "tags": ["Auth"], "parameters": [{"name": "session_id", "in": "path", "required": True, "schema": {"type": "string"}}], "responses": {"200": {"description": "İptal edildi"}}}
+            },
+            "/security/audit": {"post": {"summary": "Güvenlik denetimi çalıştır", "tags": ["Security"], "responses": {"200": {"description": "Denetim sonucu"}}}},
+            "/security/pentest": {"post": {"summary": "Pen test çalıştır", "tags": ["Security"], "responses": {"200": {"description": "Test sonucu"}}}},
+            "/metrics": {"get": {"summary": "Prometheus metrikleri", "tags": ["Monitoring"], "responses": {"200": {"description": "text/plain metrikler"}}}},
+            "/storage/isos": {"get": {"summary": "ISO listesi", "tags": ["Storage"]}, "post": {"summary": "ISO yükle", "tags": ["Storage"]}},
+            "/vm-schedules": {
+                "get": {"summary": "VM zamanlamaları", "tags": ["Scheduling"]},
+                "post": {"summary": "Zamanlama ekle", "tags": ["Scheduling"]}
+            },
+            "/settings/ip-allowlist": {
+                "get": {"summary": "IP allowlist", "tags": ["Settings"]},
+                "post": {"summary": "IP allowlist güncelle", "tags": ["Settings"]}
+            },
+        }
+    }
+    return jsonify(spec)
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     log.info("OXware Hypervisor v2.0 başlatılıyor")
