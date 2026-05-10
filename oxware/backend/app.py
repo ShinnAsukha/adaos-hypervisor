@@ -127,6 +127,25 @@ def require_auth(fn):
             verify_jwt_in_request()
         except Exception:
             return err("Kimlik doğrulama gerekli", 401)
+        # Token valid — session kayıtlı değilse otomatik kaydet (restart sonrası)
+        if sess_mgr:
+            try:
+                from flask_jwt_extended import get_jwt, get_jwt_identity
+                claims = get_jwt()
+                jti = claims.get("jti", "")
+                if jti and not sess_mgr.is_revoked(jti):
+                    # is_revoked False döndürüyor + session yoksa da False → kaydet
+                    if jti not in sess_mgr._sessions:
+                        sess_mgr.register_session(
+                            jti=jti,
+                            username=get_jwt_identity() or "unknown",
+                            ip=request.headers.get("X-Forwarded-For", request.remote_addr or ""),
+                            user_agent=request.headers.get("User-Agent", "")[:120],
+                        )
+                    else:
+                        sess_mgr.touch_session(jti)
+            except Exception:
+                pass
         return fn(*args, **kwargs)
     return wrapper
 
