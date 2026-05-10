@@ -1672,6 +1672,43 @@
               <button class="btn" onclick="runAutoSnapshotNow()"><i class="fa-solid fa-play"></i> Şimdi Çalıştır</button>
             </div>
           </div>
+
+          <!-- ── Güvenlik Denetimi ── -->
+          <div class="card" style="margin-top:14px">
+            <div class="card-title" style="display:flex;align-items:center;gap:10px">
+              <i class="fa-solid fa-shield-virus" style="color:#f97316"></i>
+              Güvenlik Denetimi
+              <span id="sec-score-badge" style="display:none;margin-left:auto;padding:2px 12px;border-radius:20px;font-size:11px;font-weight:700"></span>
+              <button class="btn sm" onclick="runSecurityAudit()" style="margin-left:8px"><i class="fa-solid fa-magnifying-glass"></i> Tara</button>
+            </div>
+            <p style="font-size:11px;color:var(--text-muted);margin-bottom:14px">
+              Kernel modülleri, SSH, güvenlik duvarı, sysctl, IOMMU ve hesap kilidi dahil sistem güvenliği kontrol eder.
+            </p>
+
+            <!-- Özet çubukları -->
+            <div id="sec-summary" style="display:none;margin-bottom:14px">
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+                <span id="sec-pass-ct" style="padding:3px 12px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)"></span>
+                <span id="sec-warn-ct" style="padding:3px 12px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(234,179,8,.13);color:#eab308;border:1px solid rgba(234,179,8,.3)"></span>
+                <span id="sec-fail-ct" style="padding:3px 12px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.3)"></span>
+              </div>
+              <!-- puan çubuğu -->
+              <div style="background:rgba(255,255,255,.07);border-radius:6px;height:6px;overflow:hidden">
+                <div id="sec-score-bar" style="height:100%;border-radius:6px;transition:width .5s"></div>
+              </div>
+            </div>
+
+            <!-- Kontrol listesi -->
+            <div id="sec-checks-list"></div>
+
+            <!-- Hesap kilitleri -->
+            <div id="sec-lockouts-wrap" style="display:none;margin-top:14px">
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px"><i class="fa-solid fa-lock"></i> Kilitli Hesaplar</div>
+              <div id="sec-lockouts-list"></div>
+            </div>
+
+            <div id="sec-msg" style="margin-top:10px;font-size:12px;display:none"></div>
+          </div>
         </div>
 
         <!-- ─────── tab-integrations ─────── -->
@@ -5022,6 +5059,135 @@ async function runAutoSnapshotNow() {
   try {
     await api('/auto-snapshot/run', {method:'POST'});
     showToast('Auto-snapshot başlatıldı (arkaplanda çalışıyor)', 'success');
+  } catch(e) { showToast('Hata: ' + e, 'error'); }
+}
+
+/* ══════════════════ Security Audit ══════════════════ */
+async function runSecurityAudit() {
+  const msg = document.getElementById('sec-msg');
+  const list = document.getElementById('sec-checks-list');
+  const sumDiv = document.getElementById('sec-summary');
+  msg.style.display = 'block';
+  msg.style.color = 'var(--text-muted)';
+  msg.textContent = '⏳ Sistem taranıyor...';
+  list.innerHTML = '';
+  sumDiv.style.display = 'none';
+  try {
+    const r = await api('/security/audit');
+    _renderSecurityAudit(r);
+    msg.style.display = 'none';
+    // Kilitli hesapları da yükle
+    loadSecurityLockouts();
+  } catch(e) {
+    msg.style.color = '#ef4444';
+    msg.textContent = 'Tarama hatası: ' + e;
+  }
+}
+
+function _renderSecurityAudit(data) {
+  const checks  = data.checks || [];
+  const summary = data.summary || {};
+  const list    = document.getElementById('sec-checks-list');
+  const sumDiv  = document.getElementById('sec-summary');
+
+  // Özet
+  const score = summary.score ?? 0;
+  document.getElementById('sec-pass-ct').textContent = `✓ ${summary.pass ?? 0} Geçti`;
+  document.getElementById('sec-warn-ct').textContent = `⚠ ${summary.warn ?? 0} Uyarı`;
+  document.getElementById('sec-fail-ct').textContent = `✗ ${summary.fail ?? 0} Başarısız`;
+  const bar   = document.getElementById('sec-score-bar');
+  bar.style.width      = score + '%';
+  bar.style.background = score >= 75 ? '#22c55e' : score >= 50 ? '#eab308' : '#ef4444';
+  const badge = document.getElementById('sec-score-badge');
+  badge.style.display  = 'inline-block';
+  badge.textContent    = `Puan: ${score}/100`;
+  badge.style.background = score >= 75 ? 'rgba(34,197,94,.15)' : score >= 50 ? 'rgba(234,179,8,.13)' : 'rgba(239,68,68,.12)';
+  badge.style.color      = score >= 75 ? '#22c55e' : score >= 50 ? '#eab308' : '#ef4444';
+  badge.style.border     = `1px solid ${score >= 75 ? 'rgba(34,197,94,.3)' : score >= 50 ? 'rgba(234,179,8,.3)' : 'rgba(239,68,68,.3)'}`;
+  sumDiv.style.display = 'block';
+
+  // Kontroller
+  const statusCfg = {
+    pass:  {icon:'fa-circle-check', color:'#22c55e', label:'GEÇTİ'},
+    warn:  {icon:'fa-triangle-exclamation', color:'#eab308', label:'UYARI'},
+    fail:  {icon:'fa-circle-xmark', color:'#ef4444', label:'BAŞARISIZ'},
+    error: {icon:'fa-circle-question', color:'#94a3b8', label:'HATA'},
+  };
+
+  list.innerHTML = checks.map(c => {
+    const s = statusCfg[c.status] || statusCfg.error;
+    const fixBtn = (c.fix && (c.id === 'br_netfilter' || c.id === 'sysctl'))
+      ? `<button class="btn sm" onclick="applySecFix('${c.id}')" style="font-size:10px;padding:2px 8px;margin-left:8px;color:#22c55e;border-color:rgba(34,197,94,.4)">
+           <i class="fa-solid fa-wrench"></i> Otomatik Düzelt
+         </button>` : '';
+    const manualFix = (c.fix && c.id !== 'br_netfilter' && c.id !== 'sysctl')
+      ? `<details style="margin-top:6px"><summary style="font-size:10px;color:var(--text-muted);cursor:pointer">Manuel Düzeltme</summary>
+           <code style="font-size:10px;display:block;margin-top:4px;padding:6px 8px;background:rgba(0,0,0,.3);border-radius:4px;word-break:break-all">${c.fix}</code>
+         </details>` : '';
+    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+      <i class="fa-solid ${s.icon}" style="color:${s.color};margin-top:2px;font-size:14px;flex-shrink:0"></i>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:600;color:var(--text-primary)">${c.title}</span>
+          <span style="font-size:10px;font-weight:700;color:${s.color}">${s.label}</span>
+          ${fixBtn}
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${c.detail}</div>
+        ${manualFix}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function applySecFix(checkId) {
+  if (!confirm(`"${checkId}" için otomatik düzeltme uygulanacak. Devam edilsin mi?`)) return;
+  const msg = document.getElementById('sec-msg');
+  msg.style.display = 'block';
+  msg.style.color = 'var(--text-muted)';
+  msg.textContent = '⚙️ Düzeltme uygulanıyor...';
+  try {
+    const r = await api(`/security/audit/fix/${checkId}`, {method:'POST'});
+    if (r.success) {
+      showToast('Düzeltme uygulandı ✓ Yeniden taranıyor...', 'success');
+      msg.style.display = 'none';
+      await runSecurityAudit();
+    } else {
+      msg.style.color = '#ef4444';
+      msg.textContent = 'Düzeltme başarısız: ' + (r.error || JSON.stringify(r.results));
+    }
+  } catch(e) {
+    msg.style.color = '#ef4444';
+    msg.textContent = 'Hata: ' + e;
+  }
+}
+
+async function loadSecurityLockouts() {
+  try {
+    const r = await api('/security/lockouts');
+    const lockouts = r.lockouts || [];
+    const wrap = document.getElementById('sec-lockouts-wrap');
+    const llist = document.getElementById('sec-lockouts-list');
+    if (!lockouts.length) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    llist.innerHTML = lockouts.map(l => `
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <i class="fa-solid fa-lock" style="color:#ef4444;font-size:12px"></i>
+        <span style="font-size:12px;flex:1"><b>${l.username}</b>
+          — ${l.failed_count} başarısız deneme
+          ${l.locked ? `<span style="color:#ef4444">(${l.seconds_left}s kilitli)</span>` : '<span style="color:#22c55e">(kilit süresi doldu)</span>'}
+        </span>
+        <button class="btn sm" onclick="unlockAccount('${l.username}')" style="font-size:10px;padding:2px 8px;color:#22c55e;border-color:rgba(34,197,94,.4)">
+          <i class="fa-solid fa-lock-open"></i> Kilidi Aç
+        </button>
+      </div>`).join('');
+  } catch(e) { console.warn('loadSecurityLockouts:', e); }
+}
+
+async function unlockAccount(username) {
+  try {
+    await api(`/security/lockouts/${username}`, {method:'DELETE'});
+    showToast(`${username} kilidi açıldı`, 'success');
+    loadSecurityLockouts();
   } catch(e) { showToast('Hata: ' + e, 'error'); }
 }
 

@@ -84,6 +84,7 @@ sdn_mgr         = _safe_import("sdn_manager")
 ids_mgr         = _safe_import("ids_manager")
 minio_mgr       = _safe_import("minio_manager")
 auto_snap       = _safe_import("auto_snapshot")
+sec_hard        = _safe_import("security_hardening")
 
 # ── Flask ─────────────────────────────────────────────────────────────────────
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend", "templates")
@@ -184,9 +185,19 @@ def api_login():
     password = data.get("password", "")
     if not username or not password:
         return err("Kullanıcı adı ve şifre zorunludur")
+    # Account lockout kontrolü
+    if sec_hard:
+        locked, secs = sec_hard.is_account_locked(username)
+        if locked:
+            ev.warn(f"Kilitli hesaba giriş denemesi: {username} / {request.remote_addr}", category="auth")
+            return err(f"Hesap kilitli. {secs} saniye bekleyin.", 429)
     if not cred_mgr.verify_credentials(username, password):
+        if sec_hard:
+            sec_hard.record_failed_login(username)
         ev.warn(f"Başarısız giriş: {username} / {request.remote_addr}", category="auth")
         return err("Geçersiz kimlik bilgileri", 401)
+    if sec_hard:
+        sec_hard.record_successful_login(username)
     token = create_access_token(identity=username)
     ev.info(f"Giriş başarılı: {username}", category="auth")
     return ok(token=token, username=username)
@@ -1415,6 +1426,42 @@ def api_autosnap_run():
     _th.Thread(target=auto_snap.run_auto_snapshots, daemon=True).start()
     ev.info("Auto-snapshot manuel tetiklendi", category="vm")
     return ok({"triggered": True})
+
+# ── Security Audit ────────────────────────────────────────────────────────────
+@app.route("/api/security/audit", methods=["GET"])
+@require_auth
+def api_security_audit():
+    if not sec_hard:
+        return err("security_hardening modülü yüklenemedi")
+    result = sec_hard.run_security_audit()
+    return ok(result)
+
+@app.route("/api/security/audit/fix/<check_id>", methods=["POST"])
+@require_auth
+def api_security_fix(check_id):
+    if not sec_hard:
+        return err("security_hardening modülü yüklenemedi")
+    result = sec_hard.apply_fix(check_id)
+    ev.info(f"Güvenlik düzeltmesi uygulandı: {check_id}", category="security")
+    return ok(result)
+
+@app.route("/api/security/lockouts", methods=["GET"])
+@require_auth
+def api_security_lockouts():
+    if not sec_hard:
+        return ok({"lockouts": []})
+    return ok({"lockouts": sec_hard.get_lockout_status()})
+
+@app.route("/api/security/lockouts/<username>", methods=["DELETE"])
+@require_auth
+def api_security_unlock(username):
+    if not sec_hard:
+        return err("security_hardening modülü yüklenemedi")
+    success = sec_hard.unlock_account(username)
+    if success:
+        ev.info(f"Hesap kilidi açıldı: {username}", category="auth")
+        return ok({"unlocked": True})
+    return err(f"Kullanıcı bulunamadı veya kilitli değil: {username}", 404)
 
 # ── Firewall ──────────────────────────────────────────────────────────────────
 @app.route("/api/firewall/status", methods=["GET"])
