@@ -462,7 +462,7 @@ def check_cert_expiry() -> dict:
 
 def check_cve_exposure() -> dict:
     """NVD API üzerinden son QEMU/KVM CVE'lerini sorgula."""
-    import datetime, urllib.request
+    import datetime, urllib.request, json
     try:
         end   = datetime.datetime.utcnow()
         start = end - datetime.timedelta(days=90)
@@ -564,6 +564,17 @@ def apply_fix(check_id: str) -> dict:
             ["sysctl", "-w", "net.ipv4.tcp_syncookies=1"],
             ["sysctl", "-w", "net.ipv4.conf.all.log_martians=1"],
             ["sysctl", "-w", "kernel.dmesg_restrict=1"],
+            ["sysctl", "-w", "kernel.kptr_restrict=2"],
+            # Kalıcı yap
+            ["sh", "-c", "cat >> /etc/sysctl.d/99-oxware.conf << 'EOF'\n"
+                          "net.ipv4.conf.all.rp_filter=1\n"
+                          "net.ipv4.conf.all.accept_redirects=0\n"
+                          "net.ipv4.conf.all.send_redirects=0\n"
+                          "net.ipv4.tcp_syncookies=1\n"
+                          "net.ipv4.conf.all.log_martians=1\n"
+                          "kernel.dmesg_restrict=1\n"
+                          "kernel.kptr_restrict=2\n"
+                          "EOF"],
         ],
         "ksm": [
             ["sh", "-c", "echo 0 > /sys/kernel/mm/ksm/run"],
