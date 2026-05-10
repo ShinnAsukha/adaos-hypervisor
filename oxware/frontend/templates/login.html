@@ -247,6 +247,28 @@
       </div>
     </form>
 
+    <!-- 2FA Doğrulama Paneli -->
+    <div id="twofa-panel" style="display:none">
+      <div style="text-align:center;margin-bottom:18px">
+        <div style="font-size:32px;margin-bottom:8px">🔐</div>
+        <div style="font-size:15px;font-weight:700;color:#e6edf3">İki Faktörlü Doğrulama</div>
+        <div style="font-size:12px;color:#8b949e;margin-top:4px">Google Authenticator uygulamasındaki 6 haneli kodu girin</div>
+      </div>
+      <div class="form-group">
+        <label for="totp-code">Doğrulama Kodu</label>
+        <input type="text" id="totp-code" placeholder="000000"
+               maxlength="6" inputmode="numeric" pattern="[0-9]{6}"
+               autocomplete="one-time-code"
+               style="text-align:center;font-size:22px;letter-spacing:8px;font-family:monospace"
+               oninput="this.value=this.value.replace(/\D/g,'')">
+      </div>
+      <button onclick="doVerify2fa()" class="btn-login" id="verifyBtn">✅ Doğrula</button>
+      <div class="error-msg" id="twofa-errorMsg"></div>
+      <div style="text-align:center;margin-top:12px">
+        <a href="#" onclick="cancelTwofa();return false" style="font-size:12px;color:#8b949e;text-decoration:none">← Geri dön</a>
+      </div>
+    </div>
+
     <!-- Şifre Sıfırlama Paneli -->
     <div id="reset-panel" style="display:none;margin-top:18px;padding:18px;background:rgba(30,36,48,.8);border:1px solid rgba(48,54,61,.8);border-radius:10px">
       <div style="font-size:13px;font-weight:700;color:#e6edf3;margin-bottom:12px">🔑 Şifre Sıfırlama</div>
@@ -279,6 +301,8 @@
   </div>
 
   <script>
+    let _tempToken = null;
+
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const btn   = document.getElementById("loginBtn");
@@ -298,7 +322,14 @@
         });
         const data = await res.json();
 
-        if (res.ok && data.token) {
+        if (res.ok && data.requires_2fa) {
+          // 2FA gerekli — TOTP panelini göster
+          _tempToken = data.temp_token;
+          document.getElementById("loginForm").style.display = "none";
+          document.getElementById("reset-panel").style.display = "none";
+          document.getElementById("twofa-panel").style.display = "block";
+          setTimeout(() => document.getElementById("totp-code").focus(), 100);
+        } else if (res.ok && data.token) {
           localStorage.setItem("oxware_token", data.token);
           localStorage.setItem("oxware_user", data.username);
           localStorage.setItem("oxware_role", data.role || "administrator");
@@ -315,6 +346,56 @@
         btn.innerHTML = "Giriş Yap";
       }
     });
+
+    async function doVerify2fa() {
+      const code  = document.getElementById("totp-code").value.trim();
+      const btn   = document.getElementById("verifyBtn");
+      const errEl = document.getElementById("twofa-errorMsg");
+      if (code.length !== 6) { errEl.textContent = "6 haneli kod giriniz"; errEl.style.display = "block"; return; }
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Doğrulanıyor...';
+      errEl.style.display = "none";
+      try {
+        const res = await fetch("/api/auth/2fa/verify-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ temp_token: _tempToken, code }),
+        });
+        const data = await res.json();
+        if (res.ok && data.token) {
+          localStorage.setItem("oxware_token", data.token);
+          localStorage.setItem("oxware_user", data.username);
+          localStorage.setItem("oxware_role", data.role || "administrator");
+          window.location.href = "/";
+        } else {
+          errEl.textContent = data.error || "Geçersiz kod";
+          errEl.style.display = "block";
+          document.getElementById("totp-code").value = "";
+          document.getElementById("totp-code").focus();
+        }
+      } catch {
+        errEl.textContent = "Sunucuya bağlanılamadı";
+        errEl.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = "✅ Doğrula";
+      }
+    }
+
+    // Enter tuşu ile TOTP doğrula
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && document.getElementById("twofa-panel").style.display !== "none") {
+        doVerify2fa();
+      }
+    });
+
+    function cancelTwofa() {
+      _tempToken = null;
+      document.getElementById("twofa-panel").style.display = "none";
+      document.getElementById("loginForm").style.display = "block";
+      document.getElementById("totp-code").value = "";
+      document.getElementById("twofa-errorMsg").style.display = "none";
+    }
 
     // Token varsa direkt ana sayfaya yönlendir
     if (localStorage.getItem("oxware_token") || localStorage.getItem("adaos_token")) {

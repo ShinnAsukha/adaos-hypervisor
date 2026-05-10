@@ -1929,6 +1929,17 @@
         <div class="page" id="page-tab-settings">
           <div class="section-header"><h2><i class="fa-solid fa-gear" style="margin-right:8px;color:var(--accent-lt)"></i>Sistem Ayarları</h2></div>
 
+          <!-- 2FA Kartı -->
+          <div class="card" style="margin-bottom:14px;border:1px solid rgba(99,102,241,.3)">
+            <div class="card-title" style="display:flex;align-items:center;gap:10px">
+              <i class="fa-solid fa-shield-halved" style="color:#818cf8"></i>
+              İki Faktörlü Doğrulama (2FA)
+              <span id="twofa-badge" style="margin-left:8px;font-size:11px;padding:2px 8px;border-radius:10px;background:var(--bg2);color:var(--fg2)">Yükleniyor...</span>
+            </div>
+            <p style="font-size:12px;color:var(--fg2);margin-bottom:12px">Google Authenticator veya uyumlu TOTP uygulaması. 2FA aktifken her girişte 6 haneli kod sorulur.</p>
+            <div id="twofa-setup-area" style="min-height:40px"></div>
+          </div>
+
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
             <div class="card">
               <div class="card-title">SDN Durumu (OVS)</div>
@@ -6072,7 +6083,7 @@ async function loadTabData(tabId) {
     case 'tab-ai':           loadAiRecommendations(); loadAnomalies(); loadAIAgents(); break;
     case 'tab-security':     load2faStatus(); loadAuditLog(); loadApiKeys(); loadLdapConfig(); checkLicenseStatus(); loadAutoSnapConfig(); loadSessions(); loadSecurityLockouts(); loadIpAllowlist(); break;
     case 'tab-integrations': loadWebhooks(); loadS3Config(); loadEmailConfig(); loadVlans(); break;
-    case 'tab-settings':     loadSdnStatus(); loadSslStatus(); loadScalerPolicies(); loadQuotas(); loadVmSchedules(); break;
+    case 'tab-settings':     loadSdnStatus(); loadSslStatus(); loadScalerPolicies(); loadQuotas(); loadVmSchedules(); load2faStatus(); break;
   }
 }
 
@@ -7323,6 +7334,96 @@ async function doImportOva() {
   } catch(e) {
     statusEl.innerHTML = `<span style="color:#f43f5e">❌ ${e.message}</span>`;
   }
+}
+
+// ── 2FA Yönetimi ─────────────────────────────────────────────────────────────
+async function load2faStatus() {
+  const badge = document.getElementById('twofa-badge');
+  const area  = document.getElementById('twofa-setup-area');
+  if (!badge || !area) return;
+  try {
+    const d = await _api('/api/auth/2fa/status');
+    if (!d.available) {
+      badge.textContent = 'Kullanılamıyor';
+      badge.style.background = 'rgba(239,68,68,.15)';
+      badge.style.color = '#f87171';
+      area.innerHTML = '<div style="color:var(--fg2);font-size:13px">⚠ pyotp paketi kurulu değil. <code>pip install pyotp qrcode[pil]</code> çalıştırın.</div>';
+      return;
+    }
+    if (d.enabled) {
+      badge.textContent = '✅ Aktif';
+      badge.style.background = 'rgba(52,211,153,.15)';
+      badge.style.color = '#34d399';
+      area.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="font-size:13px;color:var(--fg2)">2FA aktif — her girişte Google Authenticator kodu sorulur.</div>
+          <button class="btn danger" onclick="disable2fa()">🗑 2FA'yı Kapat</button>
+        </div>`;
+    } else {
+      badge.textContent = '⚠ Pasif';
+      badge.style.background = 'rgba(251,191,36,.15)';
+      badge.style.color = '#fbbf24';
+      area.innerHTML = `
+        <div style="margin-bottom:12px;font-size:13px;color:var(--fg2)">2FA aktif değil. Etkinleştirmek için QR kodu Google Authenticator ile tarayın.</div>
+        <button class="btn primary" onclick="setup2fa()">📱 2FA Kurulumunu Başlat</button>
+        <div id="twofa-qr-area" style="margin-top:14px"></div>`;
+    }
+  } catch(e) {
+    if (badge) { badge.textContent = 'Hata'; badge.style.color = '#f87171'; }
+    if (area) area.innerHTML = `<div style="color:#f87171">Yüklenemedi: ${e.message}</div>`;
+  }
+}
+
+async function setup2fa() {
+  const area = document.getElementById('twofa-qr-area');
+  area.innerHTML = '<div style="color:var(--fg2);font-size:13px">⏳ QR kod oluşturuluyor...</div>';
+  try {
+    const d = await _api('/api/auth/2fa/setup', 'POST');
+    if (!d.available) { area.innerHTML = '<div style="color:#f87171">pyotp yok</div>'; return; }
+    let html = '';
+    if (d.qr_image) {
+      html += `<div style="margin-bottom:12px"><img src="${d.qr_image}" style="width:180px;height:180px;border-radius:8px;border:3px solid #fff"></div>`;
+    }
+    html += `
+      <div style="font-size:12px;color:var(--fg2);margin-bottom:10px">
+        QR kodu tarayamıyorsanız bu kodu elle girin: <code style="font-size:11px;word-break:break-all">${escHtml(d.secret)}</code>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="twofa-enable-code" type="text" placeholder="6 haneli kod" maxlength="6" inputmode="numeric"
+               style="width:130px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:16px;letter-spacing:4px;font-family:monospace;text-align:center"
+               oninput="this.value=this.value.replace(/\\D/g,'')">
+        <button class="btn primary" onclick="enable2fa()">✅ Etkinleştir</button>
+      </div>
+      <div id="twofa-enable-msg" style="margin-top:8px;font-size:13px"></div>`;
+    area.innerHTML = html;
+    setTimeout(() => document.getElementById('twofa-enable-code')?.focus(), 100);
+  } catch(e) {
+    area.innerHTML = `<div style="color:#f87171">Hata: ${e.message}</div>`;
+  }
+}
+
+async function enable2fa() {
+  const code = document.getElementById('twofa-enable-code')?.value.trim();
+  const msg  = document.getElementById('twofa-enable-msg');
+  if (!code || code.length !== 6) { if(msg){msg.style.color='#f87171';msg.textContent='6 haneli kod girin';} return; }
+  try {
+    const d = await _api('/api/auth/2fa/enable', 'POST', { code });
+    if (d.success) {
+      toast('2FA başarıyla etkinleştirildi!', 'success');
+      load2faStatus();
+    } else {
+      if(msg){msg.style.color='#f87171';msg.textContent='Geçersiz kod. Uygulamadaki kodu kontrol edin.';}
+    }
+  } catch(e) { if(msg){msg.style.color='#f87171';msg.textContent='Hata: '+e.message;} }
+}
+
+async function disable2fa() {
+  if (!confirm('2FA kapatılsın mı? Hesabın güvenliği azalacak.')) return;
+  try {
+    await _api('/api/auth/2fa/disable', 'DELETE');
+    toast('2FA kapatıldı', 'success');
+    load2faStatus();
+  } catch(e) { toast('Hata: ' + e.message, 'error'); }
 }
 </script>
 

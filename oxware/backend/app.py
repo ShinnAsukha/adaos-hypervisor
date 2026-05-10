@@ -198,6 +198,9 @@ def api_setup_init():
     except Exception as e:
         return err(e)
 
+# ── 2FA pending store (in-memory, 5 dk TTL) ───────────────────────────────────
+_2fa_pending: dict = {}  # temp_token → {username, expires, ip, ua}
+
 # ── Auth ──────────────────────────────────────────────────────────────────────
 @app.route("/api/auth/login", methods=["POST"])
 def api_login():
@@ -219,6 +222,19 @@ def api_login():
         return err("Geçersiz kimlik bilgileri", 401)
     if sec_hard:
         sec_hard.record_successful_login(username)
+    # ── 2FA kontrolü ──────────────────────────────────────────────────────────
+    if totp_mgr and totp_mgr.is_enabled(username):
+        import uuid as _uuid
+        temp_token = str(_uuid.uuid4())
+        _2fa_pending[temp_token] = {
+            "username": username,
+            "expires": time.time() + 300,  # 5 dakika
+            "ip": request.headers.get("X-Forwarded-For", request.remote_addr or ""),
+            "ua": request.headers.get("User-Agent", "")[:120],
+        }
+        ev.info(f"2FA bekleniyor: {username} / {request.remote_addr}", category="auth")
+        return jsonify({"requires_2fa": True, "temp_token": temp_token}), 200
+    # ── 2FA yok: direkt JWT ver ───────────────────────────────────────────────
     token = create_access_token(identity=username)
     # Session kayıt
     if sess_mgr:
@@ -234,6 +250,45 @@ def api_login():
         except Exception:
             pass
     ev.info(f"Giriş başarılı: {username}", category="auth")
+    return ok(token=token, username=username)
+
+@app.route("/api/auth/2fa/verify-login", methods=["POST"])
+def api_2fa_verify_login():
+    """2FA doğrulama — temp_token + 6 haneli TOTP kodu → gerçek JWT."""
+    data = request.get_json() or {}
+    temp_token = data.get("temp_token", "").strip()
+    code = data.get("code", "").strip()
+    if not temp_token or not code:
+        return err("temp_token ve code zorunludur", 400)
+    # Pending kaydı bul
+    pending = _2fa_pending.get(temp_token)
+    if not pending:
+        return err("Geçersiz veya süresi dolmuş token", 401)
+    if time.time() > pending["expires"]:
+        _2fa_pending.pop(temp_token, None)
+        return err("2FA süresi doldu. Tekrar giriş yapın.", 401)
+    username = pending["username"]
+    # TOTP doğrula
+    if not totp_mgr or not totp_mgr.verify_totp(username, code):
+        ev.warn(f"Geçersiz 2FA kodu: {username} / {request.remote_addr}", category="auth")
+        return err("Geçersiz doğrulama kodu", 401)
+    # Başarılı — temp token tüket
+    _2fa_pending.pop(temp_token, None)
+    # Gerçek JWT ver
+    token = create_access_token(identity=username)
+    if sess_mgr:
+        try:
+            from flask_jwt_extended import decode_token
+            decoded = decode_token(token)
+            jti = decoded.get("jti", token[:16])
+            sess_mgr.register_session(
+                jti=jti, username=username,
+                ip=pending.get("ip", request.remote_addr or ""),
+                user_agent=pending.get("ua", "")[:120],
+            )
+        except Exception:
+            pass
+    ev.info(f"2FA giriş başarılı: {username} / {request.remote_addr}", category="auth")
     return ok(token=token, username=username)
 
 @app.route("/api/auth/2fa/status", methods=["GET"])
