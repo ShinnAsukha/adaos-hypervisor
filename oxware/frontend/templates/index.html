@@ -2913,25 +2913,217 @@ const PAGE_STRINGS = {
   },
   tr: {},  /* TR zaten varsayılan — boş bırak */
   es: {
-    'Sanal Makineler':'Máquinas Virtuales','Depolama':'Almacenamiento',
-    'Güvenlik':'Seguridad','Entegrasyonlar':'Integraciones','Sistem Ayarları':'Configuración',
-    'Kaydet':'Guardar','İptal':'Cancelar','Sil':'Eliminar','Yenile':'Actualizar',
-    'Çalışıyor':'Ejecutando','Durduruldu':'Detenido','Durum':'Estado',
-    'Kullanıcı Adı':'Usuario','Şifre':'Contraseña','Yükleniyor...':'Cargando...',
+    /* Genel */
+    'Güncellemeler':'Actualizaciones','Yeniden Başlat':'Reiniciar','Kapat':'Cerrar','Yardım':'Ayuda',
+    'Kaydet':'Guardar','İptal':'Cancelar','Sil':'Eliminar','Ekle':'Agregar','Yenile':'Actualizar',
+    'Tamam':'OK','Hata':'Error','Başarılı':'Éxito','Uyarı':'Advertencia',
+    'Yükleniyor...':'Cargando...','Veri yok':'Sin datos','Oluştur':'Crear','Düzenle':'Editar',
+    'Gönder':'Enviar','Test':'Probar','Bağlantı Test':'Probar Conexión','Detay':'Detalles',
+    'Açıklama':'Descripción','Ad':'Nombre','Tür':'Tipo','Durum':'Estado','İşlem':'Acción',
+    'İşlemler':'Acciones','Tarih':'Fecha','Kullanıcı':'Usuario','Boyut':'Tamaño','Yol':'Ruta',
+    'Başlat':'Iniciar','Durdur':'Detener','Güç':'Energía','Klonla':'Clonar',
+    /* Özet */
+    'KAYNAKLAR':'RECURSOS','SİSTEM BİLGİSİ':'INFO DEL SISTEMA',
+    'Kaynak Durumu':'Estado de Recursos','Sistem Bilgisi':'Información del Sistema',
+    'Hızlı Komutlar':'Comandos Rápidos','Donanım':'Hardware',
+    /* VM */
+    'Sanal Makineler':'Máquinas Virtuales','VM Oluştur':'Crear VM',
+    'Çalışıyor':'Ejecutando','Durduruldu':'Detenido','Duraklatıldı':'Pausado','Çöktü':'Caído',
+    'Durdu':'Detenido','Önce VM seçin':'Seleccione una VM primero',
+    'Snapshot\'lar':'Snapshots','Snapshot Al':'Tomar Snapshot','Snapshot Adı':'Nombre Snapshot',
+    /* Ağ */
+    'Ağ Yönetimi':'Gestión de Red','Host Arayüzleri':'Interfaces de Host',
+    'Yeni Ağ Oluştur':'Crear Red','Ağ Adı':'Nombre de Red',
+    'IP Adresi':'Dirección IP','Köprü':'Puente','Arayüz':'Interfaz',
+    'Ağ Topoloji Haritası':'Mapa de Topología de Red','Ağ Geçidi IP':'IP de Puerta de Enlace',
+    'Ağ Maskesi':'Máscara de Red','DHCP Başlangıç':'DHCP Inicio','DHCP Bitiş':'DHCP Fin',
+    /* Depolama */
+    'Depolama':'Almacenamiento','ISO Kütüphanesi':'Biblioteca ISO','Disk Birimleri':'Volúmenes de Disco',
+    'Dosya Adı':'Nombre de Archivo','Kullanılan':'Usado','Boş':'Libre','Kapasite':'Capacidad',
+    'ISO Yükle':'Subir ISO','Havuz Ekle':'Agregar Pool',
+    /* İzleme */
+    'Sistem İzleme':'Monitoreo del Sistema','Süreçler':'Procesos','Disk Kullanımı':'Uso de Disco',
+    /* Kullanıcılar */
+    'Kullanıcı Yönetimi':'Gestión de Usuarios','Kullanıcı Adı':'Nombre de Usuario',
+    'Şifre':'Contraseña','Rol':'Rol','Yönetici':'Administrador','Yeni Kullanıcı':'Nuevo Usuario',
+    /* Güncellemeler */
+    'Kontrol Et':'Verificar','Yeni Güncellemeler':'Nuevas Actualizaciones',
+    /* Şablonlar */
+    'VM Şablonları':'Plantillas VM','VM Seç':'Seleccionar VM','Şablon Adı':'Nombre de Plantilla',
+    /* Yedekleme */
+    'Yedekleme Zamanlamaları':'Programaciones de Backup',
+    'Cron İfadesi':'Expresión Cron','Seç':'Seleccionar',
+    'Günlük (02:00)':'Diario (02:00)','Haftalık (Pazar 02:00)':'Semanal (Dom 02:00)',
+    /* Güvenlik Duvarı */
+    'Güvenlik Duvarı (nftables)':'Firewall (nftables)','Yeni Kural Ekle':'Agregar Regla',
+    'Kaynak IP':'IP de Origen','Hedef Port':'Puerto Destino',
+    /* VPN */
+    'WireGuard VPN':'WireGuard VPN','Yeni Peer Ekle':'Agregar Peer','Peer Adı':'Nombre Peer',
+    /* DNS */
+    'DNS Yönetimi':'Gestión DNS','Yeni Host Kaydı':'Nuevo Registro','Host Kayıtları':'Registros de Host',
+    /* Güvenlik */
+    'Güvenlik':'Seguridad','2FA Yönetimi':'Gestión 2FA','API Anahtarları':'Claves API',
+    'Anahtar Adı':'Nombre de Clave','Audit Log':'Registro de Auditoría',
+    /* Entegrasyonlar */
+    'Entegrasyonlar':'Integraciones','Bildirim Ayarları':'Config. de Notificaciones',
+    /* Sistem Ayarları */
+    'Sistem Ayarları':'Configuración del Sistema','SSL Sertifika Yönetimi':'Gestión de Certificados SSL',
+    'Sertifika Al':'Obtener Certificado',
+    /* VM Modal */
+    'Yeni Sanal Makine Oluştur':'Crear Nueva Máquina Virtual',
+    'VM Adı':'Nombre de VM','Bellek (MB)':'Memoria (MB)','Disk Formatı':'Formato de Disco',
+    'İşletim Sistemi':'Sistema Operativo','Açılış Sırası':'Orden de Arranque',
+    /* AI */
+    'AI Asistan':'Asistente IA','Öneriler':'Recomendaciones',
+    'Anomali Dedektörü':'Detector de Anomalías',
+    /* Tasks */
+    'Tasks':'Tareas','Event Log':'Registro de Eventos',
+    /* Yeni özellikler */
+    'Bakım Modu':'Modo de Mantenimiento','Dışa Aktar':'Exportar',
+    'Etiket Filtrele':'Filtrar por Etiqueta','Notlar':'Notas','Etiketler':'Etiquetas',
+    'Kilit':'Bloqueo','Disk Genişlet':'Ampliar Disco',
   },
   de: {
-    'Sanal Makineler':'Virtuelle Maschinen','Depolama':'Speicher',
-    'Güvenlik':'Sicherheit','Entegrasyonlar':'Integrationen','Sistem Ayarları':'Einstellungen',
-    'Kaydet':'Speichern','İptal':'Abbrechen','Sil':'Löschen','Yenile':'Aktualisieren',
-    'Çalışıyor':'Läuft','Durduruldu':'Gestoppt','Durum':'Status',
-    'Kullanıcı Adı':'Benutzername','Şifre':'Passwort','Yükleniyor...':'Lädt...',
+    /* Genel */
+    'Güncellemeler':'Updates','Yeniden Başlat':'Neustart','Kapat':'Schließen','Yardım':'Hilfe',
+    'Kaydet':'Speichern','İptal':'Abbrechen','Sil':'Löschen','Ekle':'Hinzufügen','Yenile':'Aktualisieren',
+    'Tamam':'OK','Hata':'Fehler','Başarılı':'Erfolg','Uyarı':'Warnung',
+    'Yükleniyor...':'Lädt...','Veri yok':'Keine Daten','Oluştur':'Erstellen','Düzenle':'Bearbeiten',
+    'Gönder':'Senden','Test':'Testen','Bağlantı Test':'Verbindung testen','Detay':'Details',
+    'Açıklama':'Beschreibung','Ad':'Name','Tür':'Typ','Durum':'Status','İşlem':'Aktion',
+    'İşlemler':'Aktionen','Tarih':'Datum','Kullanıcı':'Benutzer','Boyut':'Größe','Yol':'Pfad',
+    'Başlat':'Starten','Durdur':'Stoppen','Güç':'Energie','Klonla':'Klonen',
+    /* Özet */
+    'KAYNAKLAR':'RESSOURCEN','SİSTEM BİLGİSİ':'SYSTEMINFORMATIONEN',
+    'Kaynak Durumu':'Ressourcenstatus','Sistem Bilgisi':'Systeminformationen',
+    'Hızlı Komutlar':'Schnellbefehle','Donanım':'Hardware',
+    /* VM */
+    'Sanal Makineler':'Virtuelle Maschinen','VM Oluştur':'VM erstellen',
+    'Çalışıyor':'Läuft','Durduruldu':'Gestoppt','Duraklatıldı':'Pausiert','Çöktü':'Abgestürzt',
+    'Durdu':'Gestoppt','Önce VM seçin':'Zuerst eine VM auswählen',
+    'Snapshot\'lar':'Snapshots','Snapshot Al':'Snapshot erstellen','Snapshot Adı':'Snapshot-Name',
+    /* Ağ */
+    'Ağ Yönetimi':'Netzwerkverwaltung','Host Arayüzleri':'Host-Schnittstellen',
+    'Yeni Ağ Oluştur':'Neues Netzwerk','Ağ Adı':'Netzwerkname',
+    'IP Adresi':'IP-Adresse','Köprü':'Bridge','Arayüz':'Schnittstelle',
+    'Ağ Topoloji Haritası':'Netzwerktopologiekarte','Ağ Geçidi IP':'Gateway-IP',
+    'Ağ Maskesi':'Netzmaske','DHCP Başlangıç':'DHCP-Start','DHCP Bitiş':'DHCP-Ende',
+    /* Depolama */
+    'Depolama':'Speicher','ISO Kütüphanesi':'ISO-Bibliothek','Disk Birimleri':'Datenträger',
+    'Dosya Adı':'Dateiname','Kullanılan':'Verwendet','Boş':'Frei','Kapasite':'Kapazität',
+    'ISO Yükle':'ISO hochladen','Havuz Ekle':'Pool hinzufügen',
+    /* İzleme */
+    'Sistem İzleme':'Systemüberwachung','Süreçler':'Prozesse','Disk Kullanımı':'Festplattennutzung',
+    /* Kullanıcılar */
+    'Kullanıcı Yönetimi':'Benutzerverwaltung','Kullanıcı Adı':'Benutzername',
+    'Şifre':'Passwort','Rol':'Rolle','Yönetici':'Administrator','Yeni Kullanıcı':'Neuer Benutzer',
+    /* Güncellemeler */
+    'Kontrol Et':'Überprüfen','Yeni Güncellemeler':'Neue Updates',
+    /* Şablonlar */
+    'VM Şablonları':'VM-Vorlagen','VM Seç':'VM auswählen','Şablon Adı':'Vorlagenname',
+    /* Yedekleme */
+    'Yedekleme Zamanlamaları':'Backup-Zeitpläne',
+    'Cron İfadesi':'Cron-Ausdruck','Seç':'Auswählen',
+    'Günlük (02:00)':'Täglich (02:00)','Haftalık (Pazar 02:00)':'Wöchentlich (So 02:00)',
+    /* Güvenlik Duvarı */
+    'Güvenlik Duvarı (nftables)':'Firewall (nftables)','Yeni Kural Ekle':'Regel hinzufügen',
+    'Kaynak IP':'Quell-IP','Hedef Port':'Zielport',
+    /* VPN */
+    'WireGuard VPN':'WireGuard VPN','Yeni Peer Ekle':'Peer hinzufügen','Peer Adı':'Peer-Name',
+    /* DNS */
+    'DNS Yönetimi':'DNS-Verwaltung','Yeni Host Kaydı':'Neuer Eintrag','Host Kayıtları':'Host-Einträge',
+    /* Güvenlik */
+    'Güvenlik':'Sicherheit','2FA Yönetimi':'2FA-Verwaltung','API Anahtarları':'API-Schlüssel',
+    'Anahtar Adı':'Schlüsselname','Audit Log':'Audit-Protokoll',
+    /* Entegrasyonlar */
+    'Entegrasyonlar':'Integrationen','Bildirim Ayarları':'Benachrichtigungseinstellungen',
+    /* Sistem Ayarları */
+    'Sistem Ayarları':'Systemeinstellungen','SSL Sertifika Yönetimi':'SSL-Zertifikatverwaltung',
+    'Sertifika Al':'Zertifikat erhalten',
+    /* VM Modal */
+    'Yeni Sanal Makine Oluştur':'Neue Virtuelle Maschine erstellen',
+    'VM Adı':'VM-Name','Bellek (MB)':'Arbeitsspeicher (MB)','Disk Formatı':'Festplattenformat',
+    'İşletim Sistemi':'Betriebssystem','Açılış Sırası':'Startreihenfolge',
+    /* AI */
+    'AI Asistan':'KI-Assistent','Öneriler':'Empfehlungen',
+    'Anomali Dedektörü':'Anomalie-Detektor',
+    /* Tasks */
+    'Tasks':'Aufgaben','Event Log':'Ereignisprotokoll',
+    /* Yeni özellikler */
+    'Bakım Modu':'Wartungsmodus','Dışa Aktar':'Exportieren',
+    'Etiket Filtrele':'Nach Tag filtern','Notlar':'Notizen','Etiketler':'Tags',
+    'Kilit':'Sperre','Disk Genişlet':'Festplatte erweitern',
   },
   zh: {
-    'Sanal Makineler':'虚拟机','Depolama':'存储',
-    'Güvenlik':'安全','Entegrasyonlar':'集成','Sistem Ayarları':'系统设置',
-    'Kaydet':'保存','İptal':'取消','Sil':'删除','Yenile':'刷新',
-    'Çalışıyor':'运行中','Durduruldu':'已停止','Durum':'状态',
-    'Kullanıcı Adı':'用户名','Şifre':'密码','Yükleniyor...':'加载中...',
+    /* Genel */
+    'Güncellemeler':'更新','Yeniden Başlat':'重启','Kapat':'关闭','Yardım':'帮助',
+    'Kaydet':'保存','İptal':'取消','Sil':'删除','Ekle':'添加','Yenile':'刷新',
+    'Tamam':'确定','Hata':'错误','Başarılı':'成功','Uyarı':'警告',
+    'Yükleniyor...':'加载中...','Veri yok':'无数据','Oluştur':'创建','Düzenle':'编辑',
+    'Gönder':'发送','Test':'测试','Bağlantı Test':'测试连接','Detay':'详情',
+    'Açıklama':'描述','Ad':'名称','Tür':'类型','Durum':'状态','İşlem':'操作',
+    'İşlemler':'操作','Tarih':'日期','Kullanıcı':'用户','Boyut':'大小','Yol':'路径',
+    'Başlat':'启动','Durdur':'停止','Güç':'电源','Klonla':'克隆',
+    /* Özet */
+    'KAYNAKLAR':'资源','SİSTEM BİLGİSİ':'系统信息',
+    'Kaynak Durumu':'资源状态','Sistem Bilgisi':'系统信息',
+    'Hızlı Komutlar':'快速命令','Donanım':'硬件',
+    /* VM */
+    'Sanal Makineler':'虚拟机','VM Oluştur':'创建虚拟机',
+    'Çalışıyor':'运行中','Durduruldu':'已停止','Duraklatıldı':'已暂停','Çöktü':'已崩溃',
+    'Durdu':'已停止','Önce VM seçin':'请先选择虚拟机',
+    'Snapshot\'lar':'快照','Snapshot Al':'创建快照','Snapshot Adı':'快照名称',
+    /* Ağ */
+    'Ağ Yönetimi':'网络管理','Host Arayüzleri':'主机接口',
+    'Yeni Ağ Oluştur':'创建网络','Ağ Adı':'网络名称',
+    'IP Adresi':'IP地址','Köprü':'桥接','Arayüz':'接口',
+    'Ağ Topoloji Haritası':'网络拓扑图','Ağ Geçidi IP':'网关IP',
+    'Ağ Maskesi':'网络掩码','DHCP Başlangıç':'DHCP起始','DHCP Bitiş':'DHCP结束',
+    /* Depolama */
+    'Depolama':'存储','ISO Kütüphanesi':'ISO库','Disk Birimleri':'磁盘卷',
+    'Dosya Adı':'文件名','Kullanılan':'已用','Boş':'空闲','Kapasite':'容量',
+    'ISO Yükle':'上传ISO','Havuz Ekle':'添加存储池',
+    /* İzleme */
+    'Sistem İzleme':'系统监控','Süreçler':'进程','Disk Kullanımı':'磁盘使用',
+    /* Kullanıcılar */
+    'Kullanıcı Yönetimi':'用户管理','Kullanıcı Adı':'用户名',
+    'Şifre':'密码','Rol':'角色','Yönetici':'管理员','Yeni Kullanıcı':'新用户',
+    /* Güncellemeler */
+    'Kontrol Et':'检查','Yeni Güncellemeler':'新更新',
+    /* Şablonlar */
+    'VM Şablonları':'VM模板','VM Seç':'选择VM','Şablon Adı':'模板名称',
+    /* Yedekleme */
+    'Yedekleme Zamanlamaları':'备份计划',
+    'Cron İfadesi':'Cron表达式','Seç':'选择',
+    'Günlük (02:00)':'每日 (02:00)','Haftalık (Pazar 02:00)':'每周 (周日 02:00)',
+    /* Güvenlik Duvarı */
+    'Güvenlik Duvarı (nftables)':'防火墙 (nftables)','Yeni Kural Ekle':'添加规则',
+    'Kaynak IP':'源IP','Hedef Port':'目标端口',
+    /* VPN */
+    'WireGuard VPN':'WireGuard VPN','Yeni Peer Ekle':'添加对等体','Peer Adı':'对等体名称',
+    /* DNS */
+    'DNS Yönetimi':'DNS管理','Yeni Host Kaydı':'新主机记录','Host Kayıtları':'主机记录',
+    /* Güvenlik */
+    'Güvenlik':'安全','2FA Yönetimi':'双因素认证管理','API Anahtarları':'API密钥',
+    'Anahtar Adı':'密钥名称','Audit Log':'审计日志',
+    /* Entegrasyonlar */
+    'Entegrasyonlar':'集成','Bildirim Ayarları':'通知设置',
+    /* Sistem Ayarları */
+    'Sistem Ayarları':'系统设置','SSL Sertifika Yönetimi':'SSL证书管理',
+    'Sertifika Al':'获取证书',
+    /* VM Modal */
+    'Yeni Sanal Makine Oluştur':'创建新虚拟机',
+    'VM Adı':'VM名称','Bellek (MB)':'内存 (MB)','Disk Formatı':'磁盘格式',
+    'İşletim Sistemi':'操作系统','Açılış Sırası':'启动顺序',
+    /* AI */
+    'AI Asistan':'AI助手','Öneriler':'建议',
+    'Anomali Dedektörü':'异常检测器',
+    /* Tasks */
+    'Tasks':'任务','Event Log':'事件日志',
+    /* Yeni özellikler */
+    'Bakım Modu':'维护模式','Dışa Aktar':'导出',
+    'Etiket Filtrele':'按标签过滤','Notlar':'备注','Etiketler':'标签',
+    'Kilit':'锁定','Disk Genişlet':'扩展磁盘',
   },
 };
 
@@ -3029,6 +3221,22 @@ function setLang(code) {
                 es:'Idioma cambiado a Español',de:'Sprache auf Deutsch geändert',zh:'语言已更改为中文'};
   toast(msgs[code] || 'Language changed', 'info');
 }
+
+/* ── MutationObserver: dinamik DOM değişince otomatik çeviri ──────────────── */
+(function() {
+  let _i18nTimer = null;
+  const _i18nObserver = new MutationObserver(() => {
+    if (currentLang === 'tr') return;          // TR → çeviri gerekmez
+    clearTimeout(_i18nTimer);
+    _i18nTimer = setTimeout(() => applyPageTranslations(currentLang), 250);
+  });
+  // DOM hazır olunca başlat
+  const startObs = () => _i18nObserver.observe(document.body, {
+    childList: true, subtree: true
+  });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startObs);
+  else startObs();
+})();
 
 function toggleLangMenu() {
   const m = document.getElementById('lang-menu');
