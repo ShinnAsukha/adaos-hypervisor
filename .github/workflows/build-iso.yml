@@ -1,0 +1,82 @@
+name: Build OXware ISO
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            debootstrap \
+            xorriso \
+            grub-pc-bin \
+            grub-efi-amd64-bin \
+            mtools \
+            squashfs-tools \
+            rsync
+
+      - name: Build ISO
+        run: sudo bash build/build-iso.sh
+
+      - name: Locate ISO file
+        id: iso
+        run: |
+          ISO_FILE=$(ls oxware-*.iso 2>/dev/null | head -1)
+          if [[ -z "$ISO_FILE" ]]; then
+            echo "ERROR: No ISO file found after build." >&2
+            exit 1
+          fi
+          echo "path=${ISO_FILE}" >> "$GITHUB_OUTPUT"
+          echo "name=${ISO_FILE}" >> "$GITHUB_OUTPUT"
+          echo "Built: $ISO_FILE ($(du -sh "$ISO_FILE" | cut -f1))"
+
+      - name: Upload ISO as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxware-iso
+          path: ${{ steps.iso.outputs.path }}
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "OXware ${{ github.ref_name }}"
+          generate_release_notes: true
+          files: ${{ steps.iso.outputs.path }}
+          body: |
+            ## OXware Hypervisor ${{ github.ref_name }}
+
+            ### Installation
+            1. Download `${{ steps.iso.outputs.name }}`
+            2. Write to USB: `dd if=${{ steps.iso.outputs.name }} of=/dev/sdX bs=4M status=progress`
+               Or use Rufus / Ventoy on Windows.
+            3. Boot from USB — the installer launches automatically.
+            4. Follow the on-screen TUI installer (Proxmox-style).
+            5. After reboot, access the web UI at `http://<server-ip>:8080`
+
+            ### Requirements
+            - x86_64 server with VT-x/AMD-V enabled in BIOS
+            - 4 GB RAM minimum (8 GB+ recommended)
+            - 40 GB disk minimum
+
+            ### Default credentials
+            Set during installation. Username: `admin`
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

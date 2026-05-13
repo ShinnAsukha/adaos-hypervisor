@@ -1,0 +1,16 @@
+[Unit]
+Description=OXware Hypervisor Backend
+After=network.target libvirtd.service
+Wants=libvirtd.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/oxware/backend
+ExecStart=/usr/bin/python3 /opt/oxware/backend/app.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
