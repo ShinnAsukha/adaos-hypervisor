@@ -1,248 +1,546 @@
-#!/usr/bin/env bash
-# build/build-iso.sh — OXware Hypervisor ISO builder
-# Usage: sudo bash build/build-iso.sh
-# Requires: Ubuntu 22.04+ or Debian 12 host with root access
+#!/bin/bash
+# ============================================================
+#  OXware Hypervisor — Özel ISO Oluşturucu v2.0
+#  Ubuntu Server tabanlı, tam otomatik kurulum ISO'su
+#  BIOS sanallaştırma zorunlu, minimum kaynak optimize
+# ============================================================
 
-set -euo pipefail
+set -e
 
-# ── config ─────────────────────────────────────────────────────────────────────
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WORK="${REPO_ROOT}/work"
-ISO_NAME="oxware-$(date +%Y%m%d).iso"
-DEBIAN_MIRROR="http://deb.debian.org/debian"
-DEBIAN_SUITE="bookworm"
-ARCH="amd64"
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+CYAN='\033[0;36m'; WHITE='\033[1;37m'; NC='\033[0m'
 
-# ── sanity checks ──────────────────────────────────────────────────────────────
-if [[ "$(id -u)" -ne 0 ]]; then
-    echo "ERROR: This script must be run as root." >&2
-    exit 1
-fi
+OXWARE_VERSION="2.0.0"
+UBUNTU_CODENAME="jammy"   # 22.04 LTS
+UBUNTU_VERSION="22.04.4"
+UBUNTU_ISO_URL="https://releases.ubuntu.com/22.04/ubuntu-${UBUNTU_VERSION}-live-server-amd64.iso"
+ISO_CACHE="/tmp/ubuntu-${UBUNTU_VERSION}-server.iso"
+WORK_DIR="/tmp/oxware-iso-$$"
+OUTPUT_ISO="${PWD}/OXware-Hypervisor-${OXWARE_VERSION}-amd64.iso"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [[ ! -f "${REPO_ROOT}/build/installer/install.py" ]]; then
-    echo "ERROR: build/installer/install.py not found." >&2
-    echo "       Run this script from the repository root." >&2
-    exit 1
-fi
+log()  { echo -e "${GREEN}[BUILD]${NC}  $1"; }
+warn() { echo -e "${YELLOW}[WARN]${NC}   $1"; }
+err()  { echo -e "${RED}[ERROR]${NC}  $1"; exit 1; }
+step() { echo -e "${CYAN}━━━ $1 ━━━${NC}"; }
 
-# ── helper ─────────────────────────────────────────────────────────────────────
-log() { echo -e "\033[1;36m[BUILD]\033[0m $*"; }
-die() { echo -e "\033[1;31m[ERROR]\033[0m $*" >&2; exit 1; }
+[[ $EUID -ne 0 ]] && err "Root yetkisi gerekli: sudo bash build-iso.sh"
 
-# ── install build dependencies ─────────────────────────────────────────────────
-log "Installing build dependencies …"
+# ── Bağımlılıklar ─────────────────────────────────────────────────────────────
+step "Bağımlılıklar"
 apt-get update -qq
-apt-get install -y --no-install-recommends \
-    debootstrap \
-    xorriso \
-    grub-pc-bin \
-    grub-efi-amd64-bin \
-    mtools \
-    squashfs-tools \
-    rsync
+apt-get install -y -qq xorriso squashfs-tools wget curl p7zip-full \
+    genisoimage isolinux syslinux-utils 2>/dev/null || true
+log "Bağımlılıklar hazır"
 
-# ── clean previous work dir (idempotent) ───────────────────────────────────────
-log "Cleaning previous build directory …"
-if mountpoint -q "${WORK}/rootfs/proc"     2>/dev/null; then umount -lf "${WORK}/rootfs/proc";     fi
-if mountpoint -q "${WORK}/rootfs/sys"      2>/dev/null; then umount -lf "${WORK}/rootfs/sys";      fi
-if mountpoint -q "${WORK}/rootfs/dev/pts"  2>/dev/null; then umount -lf "${WORK}/rootfs/dev/pts";  fi
-if mountpoint -q "${WORK}/rootfs/dev"      2>/dev/null; then umount -lf "${WORK}/rootfs/dev";      fi
-rm -rf "${WORK}"
-
-# ── directory layout ───────────────────────────────────────────────────────────
-log "Creating directory layout …"
-mkdir -p \
-    "${WORK}/rootfs" \
-    "${WORK}/iso/live" \
-    "${WORK}/iso/boot/grub"
-
-# ── debootstrap base system ────────────────────────────────────────────────────
-log "Running debootstrap (${DEBIAN_SUITE}/${ARCH}) — this takes a while …"
-debootstrap \
-    --arch="${ARCH}" \
-    --variant=minbase \
-    "${DEBIAN_SUITE}" \
-    "${WORK}/rootfs" \
-    "${DEBIAN_MIRROR}"
-
-# ── mount virtual filesystems for chroot ──────────────────────────────────────
-log "Mounting virtual filesystems …"
-mount --bind /proc    "${WORK}/rootfs/proc"
-mount --bind /sys     "${WORK}/rootfs/sys"
-mount --bind /dev     "${WORK}/rootfs/dev"
-mount --bind /dev/pts "${WORK}/rootfs/dev/pts"
-
-# ensure these are unmounted even on error
-trap 'log "Cleaning up mounts …"
-      umount -lf "${WORK}/rootfs/dev/pts"  2>/dev/null || true
-      umount -lf "${WORK}/rootfs/dev"      2>/dev/null || true
-      umount -lf "${WORK}/rootfs/sys"      2>/dev/null || true
-      umount -lf "${WORK}/rootfs/proc"     2>/dev/null || true' EXIT
-
-# ── configure APT inside chroot ───────────────────────────────────────────────
-log "Configuring APT sources …"
-cat > "${WORK}/rootfs/etc/apt/sources.list" <<EOF
-deb ${DEBIAN_MIRROR} ${DEBIAN_SUITE} main contrib non-free non-free-firmware
-deb ${DEBIAN_MIRROR}-security ${DEBIAN_SUITE}-security main contrib non-free non-free-firmware
-deb ${DEBIAN_MIRROR} ${DEBIAN_SUITE}-updates main contrib non-free non-free-firmware
-EOF
-
-# ── install packages inside chroot ────────────────────────────────────────────
-log "Installing packages inside chroot …"
-chroot "${WORK}/rootfs" /bin/bash -c "apt-get update -qq"
-DEBIAN_FRONTEND=noninteractive chroot "${WORK}/rootfs" /bin/bash -c \
-    "apt-get install -y --no-install-recommends \
-        linux-image-${ARCH} \
-        live-boot \
-        live-boot-initramfs-tools \
-        python3 \
-        python3-pip \
-        python3-curses \
-        qemu-kvm \
-        libvirt-daemon-system \
-        libvirt-clients \
-        bridge-utils \
-        nginx \
-        python3-flask \
-        python3-flask-jwt-extended \
-        parted \
-        dosfstools \
-        e2fsprogs \
-        debootstrap \
-        curl \
-        wget \
-        git \
-        systemd \
-        systemd-sysv \
-        openssh-server \
-        iproute2 \
-        iputils-ping \
-        net-tools \
-        dialog \
-        whiptail \
-        grub-pc \
-        grub-efi-amd64 \
-        grub2-common \
-        rsync \
-        sudo"
-
-# ── copy oxware source into rootfs ────────────────────────────────────────────
-log "Copying OXware source into rootfs …"
-mkdir -p "${WORK}/rootfs/opt/oxware"
-rsync -a --delete \
-    "${REPO_ROOT}/oxware/" \
-    "${WORK}/rootfs/opt/oxware/"
-
-# ── copy installer ────────────────────────────────────────────────────────────
-log "Copying installer …"
-mkdir -p "${WORK}/rootfs/opt/oxware-installer"
-cp "${REPO_ROOT}/build/installer/install.py" \
-   "${WORK}/rootfs/opt/oxware-installer/install.py"
-chmod +x "${WORK}/rootfs/opt/oxware-installer/install.py"
-
-# ── copy rootfs overlay (systemd services, motd, etc.) ───────────────────────
-log "Copying rootfs overlay …"
-if [[ -d "${REPO_ROOT}/build/rootfs" ]]; then
-    rsync -a "${REPO_ROOT}/build/rootfs/" "${WORK}/rootfs/"
-fi
-
-# ── system configuration ──────────────────────────────────────────────────────
-log "Configuring live system …"
-echo "oxware-live" > "${WORK}/rootfs/etc/hostname"
-
-# root password for live env
-chroot "${WORK}/rootfs" /bin/bash -c "echo 'root:oxware' | chpasswd"
-
-# autologin on tty1 for the installer
-mkdir -p "${WORK}/rootfs/etc/systemd/system/getty@tty1.service.d"
-cat > "${WORK}/rootfs/etc/systemd/system/getty@tty1.service.d/autologin.conf" <<'EOF'
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM
-EOF
-
-# ── enable services ───────────────────────────────────────────────────────────
-log "Enabling services …"
-chroot "${WORK}/rootfs" /bin/bash -c \
-    "systemctl enable oxware-installer libvirtd nginx 2>/dev/null || true"
-
-# disable services that conflict with live boot
-chroot "${WORK}/rootfs" /bin/bash -c \
-    "systemctl disable apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true"
-
-# ── build squashfs ────────────────────────────────────────────────────────────
-# Unmount before squashfs
-log "Unmounting virtual filesystems before squashfs …"
-umount -lf "${WORK}/rootfs/dev/pts"  2>/dev/null || true
-umount -lf "${WORK}/rootfs/dev"      2>/dev/null || true
-umount -lf "${WORK}/rootfs/sys"      2>/dev/null || true
-umount -lf "${WORK}/rootfs/proc"     2>/dev/null || true
-
-# clear trap since we unmounted manually
-trap - EXIT
-
-log "Building squashfs (xz compression, may take several minutes) …"
-mksquashfs \
-    "${WORK}/rootfs" \
-    "${WORK}/iso/live/filesystem.squashfs" \
-    -comp xz \
-    -e boot \
-    -noappend
-
-# ── copy kernel and initrd ────────────────────────────────────────────────────
-log "Copying kernel and initrd …"
-KERNEL=$(ls "${WORK}/rootfs/boot/vmlinuz-"* 2>/dev/null | sort -V | tail -1)
-INITRD=$(ls "${WORK}/rootfs/boot/initrd.img-"* 2>/dev/null | sort -V | tail -1)
-
-if [[ -z "${KERNEL}" ]]; then
-    die "No kernel found in rootfs/boot/. Check package installation."
-fi
-if [[ -z "${INITRD}" ]]; then
-    die "No initrd found in rootfs/boot/. Check package installation."
-fi
-
-cp "${KERNEL}" "${WORK}/iso/live/vmlinuz"
-cp "${INITRD}" "${WORK}/iso/live/initrd.img"
-
-log "Kernel:  ${KERNEL}"
-log "Initrd:  ${INITRD}"
-
-# ── GRUB config ───────────────────────────────────────────────────────────────
-log "Writing GRUB configuration …"
-# Use build/grub/grub.cfg if it exists, otherwise generate
-if [[ -f "${REPO_ROOT}/build/grub/grub.cfg" ]]; then
-    cp "${REPO_ROOT}/build/grub/grub.cfg" "${WORK}/iso/boot/grub/grub.cfg"
+# ── Ubuntu ISO ────────────────────────────────────────────────────────────────
+step "Ubuntu Server ISO"
+if [ -f "$ISO_CACHE" ]; then
+    log "Önbellekte mevcut: $ISO_CACHE"
 else
-    cat > "${WORK}/iso/boot/grub/grub.cfg" <<'GRUBCFG'
-set timeout=5
-set default=0
+    log "İndiriliyor: $UBUNTU_ISO_URL"
+    wget -q --show-progress -c -O "$ISO_CACHE" "$UBUNTU_ISO_URL" \
+      || err "İndirme başarısız.\nManuel indirip şuraya koyun: $ISO_CACHE"
+fi
 
-menuentry "OXware Hypervisor Installer" {
-    linux   /live/vmlinuz boot=live quiet splash
-    initrd  /live/initrd.img
+# ── ISO Ayıklama ──────────────────────────────────────────────────────────────
+step "ISO Ayıklama"
+rm -rf "$WORK_DIR"
+mkdir -p "$WORK_DIR"/{iso,scratch}
+
+xorriso -osirrox on -indev "$ISO_CACHE" -extract / "$WORK_DIR/iso" 2>/dev/null \
+  || 7z x "$ISO_CACHE" -o"$WORK_DIR/iso" -y -bd >/dev/null 2>&1 \
+  || err "ISO ayıklanamadı"
+
+chmod -R u+w "$WORK_DIR/iso"
+log "ISO içeriği hazır"
+
+# ── OXware Dosyaları ──────────────────────────────────────────────────────────
+step "OXware Dosyaları"
+mkdir -p "$WORK_DIR/iso/oxware"
+cp -r "$SCRIPT_DIR/oxware/"* "$WORK_DIR/iso/oxware/"
+log "OXware dosyaları kopyalandı"
+
+# ── cloud-init / autoinstall ──────────────────────────────────────────────────
+step "Autoinstall Yapılandırması"
+mkdir -p "$WORK_DIR/iso/oxware-autoinstall"
+
+cat > "$WORK_DIR/iso/oxware-autoinstall/meta-data" << 'META'
+instance-id: oxware-hypervisor-install
+local-hostname: oxware-hypervisor
+META
+
+cat > "$WORK_DIR/iso/oxware-autoinstall/user-data" << 'USERDATA'
+#cloud-config
+autoinstall:
+  version: 1
+
+  # Dil & klavye
+  locale: tr_TR.UTF-8
+  keyboard:
+    layout: tr
+    variant: ''
+
+  # Ağ — DHCP ile otomatik
+  network:
+    network:
+      version: 2
+      ethernets:
+        any-en:
+          match: {name: "en*"}
+          dhcp4: true
+          dhcp6: false
+        any-eth:
+          match: {name: "eth*"}
+          dhcp4: true
+          dhcp6: false
+
+  # Depolama — LVM ile minimum bölümleme
+  storage:
+    layout:
+      name: lvm
+      match:
+        size: largest
+    swap:
+      size: 0
+
+  # Kullanıcı — ilk açılışta setup wizard devreye girer
+  identity:
+    hostname: oxware-hypervisor
+    username: oxware
+    # Varsayılan şifre: oxware2024 (ilk girişte değiştirilir)
+    password: "$6$rounds=4096$saltsalt$Dd4KpxVUGGWW3AkFh5PXzX4TgGQFBfDv9rKV8VWL5F2MfFl0G1BSKt6XeA.UJJtVsqpIlPnpuYD2c1dX6U0"
+
+  # SSH
+  ssh:
+    install-server: true
+    allow-pw: true
+    authorized-keys: []
+
+  # Paketler — minimum set
+  packages:
+    - qemu-kvm
+    - qemu-utils
+    - libvirt-daemon-system
+    - libvirt-clients
+    - libvirt-dev
+    - bridge-utils
+    - net-tools
+    - python3
+    - python3-pip
+    - python3-venv
+    - python3-libvirt
+    - python3-dev
+    - openssl
+    - ufw
+    - fail2ban
+    - novnc
+    - websockify
+    - cpu-checker
+    - htop
+    - curl
+    - wget
+    - git
+    - jq
+    - lvm2
+    - parted
+    - socat
+
+  # Kurulum sonrası komutlar
+  late-commands:
+    # OXware dosyalarını kopyala
+    - mkdir -p /target/opt/oxware
+    - cp -r /cdrom/oxware/. /target/opt/oxware/
+    - chmod -R 755 /target/opt/oxware
+    - chmod 700 /target/opt/oxware/backend
+
+    # Python sanal ortamı
+    - curtin in-target --target=/target -- bash -c "python3 -m venv /opt/oxware/venv"
+    - curtin in-target --target=/target -- bash -c "/opt/oxware/venv/bin/pip install --upgrade pip -q"
+    - curtin in-target --target=/target -- bash -c "/opt/oxware/venv/bin/pip install -r /opt/oxware/backend/requirements.txt -q 2>&1 | tail -5"
+
+    # Dizinler
+    - mkdir -p /target/etc/oxware/ssl
+    - mkdir -p /target/var/lib/oxware/{isos,disks,backups,templates}
+    - mkdir -p /target/var/log/oxware
+
+    # SSL sertifikası
+    - curtin in-target --target=/target -- bash -c "openssl req -x509 -nodes -days 3650 -newkey rsa:4096 -keyout /etc/oxware/ssl/oxware.key -out /etc/oxware/ssl/oxware.crt -subj '/C=TR/ST=Istanbul/O=OXware/CN=oxware-hypervisor' 2>/dev/null"
+    - chmod 600 /target/etc/oxware/ssl/oxware.key
+
+    # Yapılandırma
+    - |
+      cat > /target/etc/oxware/oxware.conf << 'CONF'
+      [server]
+      host = 0.0.0.0
+      port = 8006
+      ssl = true
+      ssl_cert = /etc/oxware/ssl/oxware.crt
+      ssl_key = /etc/oxware/ssl/oxware.key
+      secret_key = REPLACE_ME_ON_FIRST_BOOT
+
+      [storage]
+      data_dir = /var/lib/oxware
+      iso_dir = /var/lib/oxware/isos
+      disk_dir = /var/lib/oxware/disks
+      backup_dir = /var/lib/oxware/backups
+      template_dir = /var/lib/oxware/templates
+
+      [vnc]
+      start_port = 5900
+      end_port = 5999
+      websocket_port = 6080
+
+      [libvirt]
+      uri = qemu:///system
+
+      [logging]
+      log_dir = /var/log/oxware
+      level = INFO
+      CONF
+
+    # Systemd servisi
+    - cp /cdrom/oxware/oxware-hypervisor.service /target/etc/systemd/system/oxware.service
+    - curtin in-target --target=/target -- systemctl enable oxware
+    - curtin in-target --target=/target -- systemctl enable libvirtd
+
+    # First-boot scripti
+    - cp /cdrom/oxware-autoinstall/first-boot.sh /target/opt/oxware/first-boot.sh
+    - chmod +x /target/opt/oxware/first-boot.sh
+    - |
+      cat > /target/etc/systemd/system/oxware-firstboot.service << 'SVC'
+      [Unit]
+      Description=OXware First Boot Setup
+      After=network.target
+      ConditionPathExists=!/etc/oxware/.setup_done
+
+      [Service]
+      Type=oneshot
+      ExecStart=/opt/oxware/first-boot.sh
+      RemainAfterExit=yes
+
+      [Install]
+      WantedBy=multi-user.target
+      SVC
+    - curtin in-target --target=/target -- systemctl enable oxware-firstboot
+
+    # Güvenlik duvarı
+    - curtin in-target --target=/target -- bash -c "ufw --force reset && ufw default deny incoming && ufw default allow outgoing && ufw allow 22/tcp && ufw allow 8006/tcp && ufw allow 5900:5999/tcp && ufw allow 6080/tcp && echo 'y' | ufw enable"
+
+    # libvirt oxware grubuna ekle
+    - curtin in-target --target=/target -- usermod -aG libvirt oxware 2>/dev/null || true
+
+    # Secret key güncelle
+    - curtin in-target --target=/target -- bash -c "SK=\$(openssl rand -hex 32) && sed -i \"s/REPLACE_ME_ON_FIRST_BOOT/\$SK/\" /etc/oxware/oxware.conf"
+
+  # Yeniden başlatma
+  reboot-cmd: reboot
+USERDATA
+
+# ── First-boot scripti ────────────────────────────────────────────────────────
+cat > "$WORK_DIR/iso/oxware-autoinstall/first-boot.sh" << 'FIRSTBOOT'
+#!/bin/bash
+# OXware İlk Açılış Yapılandırması
+# Bu script /etc/oxware/.setup_done yoksa çalışır
+
+LOG="/var/log/oxware/firstboot.log"
+mkdir -p /var/log/oxware
+exec >> "$LOG" 2>&1
+
+echo "[$(date)] OXware first-boot başlıyor..."
+
+# libvirt default network
+systemctl start libvirtd 2>/dev/null || true
+sleep 3
+virsh net-autostart default 2>/dev/null || true
+virsh net-start default 2>/dev/null || true
+
+# MOTD güncelle
+cat > /etc/motd << 'MOTD'
+╔══════════════════════════════════════════════════════════╗
+║           OXware Hypervisor v2.0                         ║
+║     Ubuntu/KVM tabanlı Sanallaştırma Platformu           ║
+╠══════════════════════════════════════════════════════════╣
+║  Web UI: https://<IP>:8006                               ║
+║  İlk kurulum için tarayıcıdan bağlanın                   ║
+║  Servis: systemctl status oxware                         ║
+╚══════════════════════════════════════════════════════════╝
+MOTD
+
+# OXware servisini başlat
+systemctl start oxware 2>/dev/null || true
+
+echo "[$(date)] OXware first-boot tamamlandı"
+FIRSTBOOT
+
+chmod +x "$WORK_DIR/iso/oxware-autoinstall/first-boot.sh"
+log "Autoinstall yapılandırması hazır"
+
+# ── BIOS Sanallaştırma Kontrol Scripti ───────────────────────────────────────
+step "BIOS Kontrol Scripti"
+
+cat > "$WORK_DIR/iso/oxware-autoinstall/check-virt.sh" << 'CHECKVIRT'
+#!/bin/bash
+# BIOS sanallaştırma kontrolü — ISO boot sırasında çalışır
+
+if ! grep -qE "vmx|svm" /proc/cpuinfo 2>/dev/null; then
+    clear
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║         OXware Hypervisor — DONANIM GEREKSİNİMİ             ║"
+    echo "╠══════════════════════════════════════════════════════════════╣"
+    echo "║                                                              ║"
+    echo "║  ⚠️  CPU SANALLAŞTIRMA DESTEĞİ BULUNAMADI!                  ║"
+    echo "║                                                              ║"
+    echo "║  OXware KVM sanallaştırma gerektirmektedir:                  ║"
+    echo "║                                                              ║"
+    echo "║  Intel işlemciler için:                                      ║"
+    echo "║    BIOS/UEFI → Gelişmiş → CPU Yapılandırma                  ║"
+    echo "║    → Intel Virtualization Technology (VT-x) → Enable        ║"
+    echo "║                                                              ║"
+    echo "║  AMD işlemciler için:                                        ║"
+    echo "║    BIOS/UEFI → Gelişmiş → CPU Yapılandırma                  ║"
+    echo "║    → AMD-V / SVM Mode → Enable                              ║"
+    echo "║                                                              ║"
+    echo "║  Değişiklikten sonra kaydedin ve yeniden başlatın.           ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo "  Kurulum durduruluyor. BIOS'ta sanallaştırmayı etkinleştirin."
+    echo ""
+    sleep 30
+    reboot
+    exit 1
+fi
+
+# RAM kontrolü (minimum 1.5 GB)
+TOTAL_RAM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+if [ "$TOTAL_RAM_KB" -lt 1572864 ]; then
+    clear
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║  ⚠️  YETERSİZ BELLEK                                        ║"
+    echo "║  OXware minimum 2 GB RAM gerektirir.                        ║"
+    echo "║  Mevcut: $(( TOTAL_RAM_KB / 1024 )) MB                              ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    sleep 20
+    exit 1
+fi
+
+# Disk kontrolü (minimum 15 GB)
+ROOT_DISK=$(lsblk -d -o NAME,SIZE,TYPE | awk '$3=="disk"{print $1}' | head -1)
+if [ -n "$ROOT_DISK" ]; then
+    DISK_SIZE_GB=$(lsblk -d -b -o SIZE "/dev/$ROOT_DISK" 2>/dev/null | tail -1)
+    DISK_SIZE_GB=$(( DISK_SIZE_GB / 1073741824 ))
+    if [ "$DISK_SIZE_GB" -lt 15 ]; then
+        echo "⚠️  Yetersiz disk: ${DISK_SIZE_GB}GB (minimum 15GB gerekli)"
+        sleep 15
+        exit 1
+    fi
+fi
+
+echo "✓ Tüm donanım gereksinimleri karşılandı"
+echo "  CPU: $(grep -c processor /proc/cpuinfo) çekirdek | $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs)"
+echo "  RAM: $(( TOTAL_RAM_KB / 1024 )) MB"
+echo "  Disk: ${DISK_SIZE_GB}GB"
+CHECKVIRT
+
+chmod +x "$WORK_DIR/iso/oxware-autoinstall/check-virt.sh"
+log "BIOS kontrol scripti hazır"
+
+# ── GRUB Yapılandırması ───────────────────────────────────────────────────────
+step "GRUB Boot Menüsü"
+
+GRUB_CFG="$WORK_DIR/iso/boot/grub/grub.cfg"
+mkdir -p "$(dirname "$GRUB_CFG")"
+
+cat > "$GRUB_CFG" << GRUBCFG
+# OXware Hypervisor Boot Menüsü
+set default=0
+set timeout=15
+set gfxmode=auto
+
+insmod all_video
+insmod gfxterm
+insmod png
+
+terminal_output gfxterm
+
+# OXware renk teması
+set color_normal=white/black
+set color_highlight=black/cyan
+
+# ── Başlık ──
+echo ""
+echo "  ██████╗ ██╗  ██╗██╗    ██╗ █████╗ ██████╗ ███████╗"
+echo " ██╔═══██╗╚██╗██╔╝██║    ██║██╔══██╗██╔══██╗██╔════╝"
+echo " ██║   ██║ ╚███╔╝ ██║ █╗ ██║███████║██████╔╝█████╗  "
+echo " ██║   ██║ ██╔██╗ ██║███╗██║██╔══██║██╔══██╗██╔══╝  "
+echo " ╚██████╔╝██╔╝ ██╗╚███╔███╔╝██║  ██║██║  ██║███████╗"
+echo "  ╚═════╝ ╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝"
+echo ""
+echo "  Hypervisor Management System v${OXWARE_VERSION}"
+echo ""
+
+# Otomatik kurulum
+menuentry "OXware Hypervisor ${OXWARE_VERSION} — Otomatik Kur" --class oxware {
+    set gfxpayload=keep
+    linux   /casper/vmlinuz quiet splash autoinstall \
+            ds="nocloud;s=/cdrom/oxware-autoinstall/" \
+            console=tty0 console=ttyS0,115200n8 \
+            fsck.mode=skip \
+            --- quiet
+    initrd  /casper/initrd
 }
 
-menuentry "OXware Installer (Debug)" {
-    linux   /live/vmlinuz boot=live
-    initrd  /live/initrd.img
+# Manuel kurulum (Ubuntu Subiquity)
+menuentry "OXware Hypervisor — Manuel Kurulum" --class ubuntu {
+    set gfxpayload=keep
+    linux   /casper/vmlinuz quiet splash \
+            ds="nocloud;s=/cdrom/oxware-autoinstall/" \
+            --- quiet
+    initrd  /casper/initrd
+}
+
+# Donanım kontrolü (kurulum öncesi test)
+menuentry "Donanım Kontrolü (BIOS Sanallaştırma)" --class memtest {
+    linux16 /boot/memtest86+.bin
+}
+
+# Sistem kurtarma
+menuentry "Sistem Kurtarma / Recovery" --class recovery {
+    set gfxpayload=keep
+    linux   /casper/vmlinuz quiet splash recovery \
+            --- quiet
+    initrd  /casper/initrd
 }
 GRUBCFG
+
+log "GRUB menüsü yapılandırıldı"
+
+# ── isolinux (BIOS boot) ──────────────────────────────────────────────────────
+ISOLINUX_CFG="$WORK_DIR/iso/isolinux/isolinux.cfg"
+mkdir -p "$(dirname "$ISOLINUX_CFG")" 2>/dev/null
+
+if [ -d "$WORK_DIR/iso/isolinux" ]; then
+cat > "$ISOLINUX_CFG" << 'ISOLINUX'
+DEFAULT oxware-auto
+TIMEOUT 150
+PROMPT 0
+
+LABEL oxware-auto
+  MENU LABEL OXware Hypervisor - Otomatik Kur
+  KERNEL /casper/vmlinuz
+  APPEND initrd=/casper/initrd quiet splash autoinstall ds=nocloud;s=/cdrom/oxware-autoinstall/ ---
+
+LABEL oxware-manual
+  MENU LABEL OXware Hypervisor - Manuel Kur
+  KERNEL /casper/vmlinuz
+  APPEND initrd=/casper/initrd quiet splash ds=nocloud;s=/cdrom/oxware-autoinstall/ ---
+
+LABEL recovery
+  MENU LABEL Sistem Kurtarma
+  KERNEL /casper/vmlinuz
+  APPEND initrd=/casper/initrd quiet splash recovery ---
+ISOLINUX
 fi
 
-# ── build ISO ─────────────────────────────────────────────────────────────────
-log "Building ISO with grub-mkrescue …"
-cd "${REPO_ROOT}"
-grub-mkrescue \
-    --output="${ISO_NAME}" \
-    "${WORK}/iso" \
-    -- -volid "OXware-Installer"
+log "isolinux yapılandırıldı"
 
-ISO_SIZE=$(du -sh "${ISO_NAME}" | cut -f1)
-log "──────────────────────────────────────────────"
-log "SUCCESS!"
-log "ISO file : ${REPO_ROOT}/${ISO_NAME}"
-log "ISO size : ${ISO_SIZE}"
-log ""
-log "Write to USB:  dd if=${ISO_NAME} of=/dev/sdX bs=4M status=progress"
-log "Or use Rufus / Ventoy on Windows."
-log "──────────────────────────────────────────────"
+# ── ISO Oluştur ───────────────────────────────────────────────────────────────
+step "ISO Oluşturma"
+
+# MBR ve EFI boot
+MBR_FILE=""
+EFI_FILE=""
+for f in /usr/lib/grub/i386-pc/boot_hybrid.img /usr/share/grub/boot_hybrid.img; do
+    [ -f "$f" ] && MBR_FILE="$f" && break
+done
+for f in "$WORK_DIR/iso/boot/grub/efi.img" "$WORK_DIR/iso/EFI/boot/bootx64.efi"; do
+    [ -f "$f" ] && EFI_FILE="$f" && break
+done
+
+XORRISO_ARGS=(
+    -as mkisofs
+    -r
+    -V "OXware-Hypervisor-${OXWARE_VERSION}"
+    -o "$OUTPUT_ISO"
+    -J -l -joliet-long
+    -iso-level 3
+)
+
+# MBR desteği
+if [ -n "$MBR_FILE" ]; then
+    XORRISO_ARGS+=(
+        --grub2-mbr "$MBR_FILE"
+    )
+fi
+
+# isolinux/BIOS boot
+if [ -f "$WORK_DIR/iso/isolinux/isolinux.bin" ]; then
+    XORRISO_ARGS+=(
+        -b isolinux/isolinux.bin
+        -c isolinux/boot.cat
+        -no-emul-boot -boot-load-size 4 -boot-info-table
+    )
+fi
+
+# EFI boot
+if [ -f "$WORK_DIR/iso/boot/grub/efi.img" ]; then
+    XORRISO_ARGS+=(
+        -eltorito-alt-boot
+        -e boot/grub/efi.img
+        -no-emul-boot
+    )
+fi
+
+XORRISO_ARGS+=("$WORK_DIR/iso")
+
+xorriso "${XORRISO_ARGS[@]}" 2>&1 | grep -E "^(INFO|WARNING|ERROR|xorriso)" || true
+
+if [ ! -f "$OUTPUT_ISO" ]; then
+    warn "xorriso başarısız, genisoimage deneniyor..."
+    genisoimage -r -V "OXware-${OXWARE_VERSION}" \
+        -cache-inodes -J -l \
+        -b isolinux/isolinux.bin -c isolinux/boot.cat \
+        -no-emul-boot -boot-load-size 4 -boot-info-table \
+        -o "$OUTPUT_ISO" "$WORK_DIR/iso" 2>/dev/null \
+        || err "ISO oluşturma başarısız!"
+fi
+
+# ── isohybrid (USB desteği) ───────────────────────────────────────────────────
+if command -v isohybrid &>/dev/null; then
+    isohybrid --uefi "$OUTPUT_ISO" 2>/dev/null || isohybrid "$OUTPUT_ISO" 2>/dev/null || true
+    log "isohybrid uygulandı (USB-bootable)"
+fi
+
+# ── Checksum ──────────────────────────────────────────────────────────────────
+sha256sum "$OUTPUT_ISO" > "${OUTPUT_ISO}.sha256"
+log "SHA256: $(cat "${OUTPUT_ISO}.sha256" | awk '{print $1}')"
+
+# ── Temizlik ──────────────────────────────────────────────────────────────────
+rm -rf "$WORK_DIR"
+
+# ── Sonuç ─────────────────────────────────────────────────────────────────────
+ISO_SIZE=$(du -sh "$OUTPUT_ISO" | cut -f1)
+
+echo ""
+echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${CYAN}║           OXware Hypervisor ISO Hazır!                       ║${NC}"
+echo -e "${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+echo -e "${CYAN}║${NC}  Dosya  : ${WHITE}$(basename "$OUTPUT_ISO")${NC}"
+echo -e "${CYAN}║${NC}  Boyut  : ${WHITE}${ISO_SIZE}${NC}"
+echo -e "${CYAN}║${NC}  SHA256 : ${WHITE}$(head -c 16 "${OUTPUT_ISO}.sha256")...${NC}"
+echo -e "${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+echo -e "${CYAN}║${NC}  ${YELLOW}USB'ye yazmak için:${NC}"
+echo -e "${CYAN}║${NC}  sudo dd if=$(basename "$OUTPUT_ISO") of=/dev/sdX bs=4M status=progress"
+echo -e "${CYAN}║${NC}  veya: sudo cp $(basename "$OUTPUT_ISO") /dev/sdX"
+echo -e "${CYAN}║${NC}"
+echo -e "${CYAN}║${NC}  ${YELLOW}VMware / VirtualBox için:${NC}"
+echo -e "${CYAN}║${NC}  Doğrudan ISO olarak seçin."
+echo -e "${CYAN}║${NC}"
+echo -e "${CYAN}║${NC}  ${YELLOW}Minimum Sistem Gereksinimleri:${NC}"
+echo -e "${CYAN}║${NC}  • CPU  : 2 çekirdek + Intel VT-x / AMD-V (BIOS'ta ZORUNLU)"
+echo -e "${CYAN}║${NC}  • RAM  : 2 GB (4 GB önerilen)"
+echo -e "${CYAN}║${NC}  • Disk : 20 GB SSD/HDD"
+echo -e "${CYAN}║${NC}  • Ağ   : 1 Ethernet arayüzü"
+echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+echo ""
