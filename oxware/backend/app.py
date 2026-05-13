@@ -9,6 +9,7 @@ import sys
 import ssl
 import time
 import json
+import hmac
 import logging
 import subprocess
 import threading
@@ -16,7 +17,7 @@ from datetime import timedelta
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from flask import Flask, request, jsonify, send_from_directory, render_template
+from flask import Flask, request, jsonify, send_from_directory, render_template, make_response
 from flask_socketio import SocketIO, emit
 from flask_jwt_extended import (
     JWTManager, create_access_token, get_jwt_identity, verify_jwt_in_request
@@ -101,6 +102,39 @@ app.config["MAX_CONTENT_LENGTH"]       = 64 * 1024 * 1024 * 1024
 CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 jwt  = JWTManager(app)
 sock = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet", logger=False)
+
+# ── CSRF Token store (stateless double-submit pattern) ────────────────────────
+_csrf_exempt_paths = {"/api/auth/login", "/api/auth/2fa/verify-login",
+                      "/api/auth/password-reset/request", "/api/auth/password-reset/confirm",
+                      "/api/setup", "/metrics"}
+
+@app.before_request
+def _check_csrf():
+    """State-changing istekler için CSRF token doğrula (double-submit cookie pattern)."""
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return
+    path = request.path
+    if path in _csrf_exempt_paths or path.startswith("/static"):
+        return
+    # API istekleri için X-CSRF-Token header kontrolü
+    # Token, /api/auth/csrf endpoint'inden alınır ve localStorage'da saklanır
+    csrf_header = request.headers.get("X-CSRF-Token", "")
+    csrf_cookie = request.cookies.get("csrf_token", "")
+    if not csrf_header or not csrf_cookie:
+        return  # Token yoksa geç — backward compatibility (JWT zaten koruma sağlıyor)
+    if not hmac.compare_digest(csrf_header, csrf_cookie):
+        return jsonify({"status": "error", "error": "CSRF token geçersiz"}), 403
+
+@app.route("/api/auth/csrf", methods=["GET"])
+def api_csrf_token():
+    """CSRF token üret ve cookie olarak set et."""
+    import secrets
+    token = secrets.token_hex(32)
+    resp = make_response(jsonify({"csrf_token": token}))
+    resp.set_cookie("csrf_token", token,
+                    secure=True, httponly=False, samesite="Strict",
+                    max_age=3600)
+    return resp
 
 # Güvenlik katmanını kaydet
 security.register_security(app)
@@ -2857,6 +2891,61 @@ def api_pentest_result():
         return ok({"status": "no_result", "result": None})
     return ok({"status": "done", "result": pentest._last_result})
 
+
+@app.route("/api/pentest/history", methods=["GET"])
+@require_auth
+def api_pentest_history():
+    if not pentest:
+        return err("pentest modülü yüklenemedi")
+    history = pentest.get_history() if hasattr(pentest, "get_history") else []
+    return ok({"history": history})
+
+
+@app.route("/api/pentest/export", methods=["POST"])
+@require_auth
+def api_pentest_export():
+    if not pentest:
+        return err("pentest modülü yüklenemedi")
+    body = request.get_json(silent=True) or {}
+    fmt  = body.get("format", "json")
+    result = pentest._last_result
+    if result is None:
+        return err("Henüz tamamlanmış pentest sonucu yok", 404)
+    if not hasattr(pentest, "export_report"):
+        return err("export_report fonksiyonu bulunamadı", 501)
+    exported = pentest.export_report(result, fmt)
+    if fmt == "html":
+        from flask import Response as _Resp
+        return _Resp(exported, mimetype="text/html",
+                     headers={"Content-Disposition": "attachment; filename=pentest_report.html"})
+    elif fmt == "txt":
+        from flask import Response as _Resp
+        return _Resp(exported, mimetype="text/plain",
+                     headers={"Content-Disposition": "attachment; filename=pentest_report.txt"})
+    else:
+        return ok({"report": exported})
+
+
+@app.route("/api/pentest/diff", methods=["POST"])
+@require_auth
+def api_pentest_diff():
+    if not pentest:
+        return err("pentest modülü yüklenemedi")
+    if not hasattr(pentest, "diff_results"):
+        return err("diff_results fonksiyonu bulunamadı", 501)
+    body = request.get_json(silent=True) or {}
+    idx_a = body.get("a", -2)
+    idx_b = body.get("b", -1)
+    history = pentest.get_history() if hasattr(pentest, "get_history") else []
+    try:
+        result_a = history[idx_a]
+        result_b = history[idx_b]
+    except (IndexError, TypeError):
+        return err("Geçersiz tarihçe indeksi", 400)
+    diff = pentest.diff_results(result_a, result_b)
+    return ok({"diff": diff})
+
+
 # ── VM Metadata ───────────────────────────────────────────────────────────────
 import pathlib as _pathlib
 
@@ -3082,11 +3171,13 @@ def api_vm_export(vm_id):
     try:
         info = vm_manager.get_vm_info(vm_id)
         vm_name = info.get("name", vm_id)
+        import re as _re_sec
+        vm_name_safe = _re_sec.sub(r'[^\w\-.]', '_', str(vm_name))[:64]
         disks = info.get("disks", [])
         ts = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
         export_dir = f"/var/lib/oxware/backups/exports"
         os.makedirs(export_dir, exist_ok=True)
-        output_path = f"{export_dir}/{vm_name}-{ts}.tar.gz"
+        output_path = f"{export_dir}/{vm_name_safe}-{ts}.tar.gz"
 
         def _do_export():
             try:
@@ -3099,7 +3190,7 @@ def api_vm_export(vm_id):
                     # XML ekle
                     import io
                     xml_bytes = xml_content.encode()
-                    info_obj = tarfile.TarInfo(name=f"{vm_name}.xml")
+                    info_obj = tarfile.TarInfo(name=f"{vm_name_safe}.xml")
                     info_obj.size = len(xml_bytes)
                     tar.addfile(info_obj, io.BytesIO(xml_bytes))
                     # Diskleri ekle
@@ -3556,6 +3647,152 @@ def api_import_status():
         return jsonify({"imports": []})
     files = [{"name": p.name, "size": p.stat().st_size} for p in _IMPORT_DIR.iterdir() if p.is_file()]
     return jsonify({"imports": files})
+
+# ── MAC Address Yönetimi ──────────────────────────────────────────────────────
+import random as _random
+
+def _generate_qemu_mac() -> str:
+    """QEMU/KVM için geçerli rastgele MAC adresi üretir (52:54:00:xx:xx:xx)."""
+    return "52:54:00:{:02x}:{:02x}:{:02x}".format(
+        _random.randint(0, 255),
+        _random.randint(0, 255),
+        _random.randint(0, 255),
+    )
+
+def _validate_mac(mac: str) -> bool:
+    """MAC adresinin geçerli formatta olup olmadığını kontrol eder."""
+    import re
+    return bool(re.match(r'^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$', mac))
+
+@app.route("/api/vms/<vm_id>/nics/macs", methods=["GET"])
+@require_auth
+def api_vm_mac_list(vm_id):
+    """VM'in tüm NIC'lerini ve MAC adreslerini listele."""
+    r = subprocess.run(["virsh", "domiflist", vm_id], capture_output=True, text=True)
+    if r.returncode != 0:
+        return err(f"domiflist hatası: {r.stderr.strip()}")
+    lines = r.stdout.strip().splitlines()
+    nics = []
+    for line in lines[2:]:
+        parts = line.split()
+        if len(parts) >= 5:
+            nics.append({
+                "interface": parts[0],
+                "type": parts[1],
+                "source": parts[2],
+                "model": parts[3],
+                "mac": parts[4],
+            })
+    return ok(nics=nics)
+
+@app.route("/api/vms/<vm_id>/nics/mac", methods=["POST"])
+@require_auth
+def api_vm_mac_change(vm_id):
+    """
+    VM NIC MAC adresini değiştir.
+    Body: {"mac": "52:54:00:xx:xx:xx", "interface": "vnet0"}
+    mac boşsa rastgele üretir.
+    VM kapalıyken XML doğrudan düzenlenir; açıksa hot-plug gerekir.
+    """
+    data = request.get_json() or {}
+    new_mac = data.get("mac", "").strip()
+    interface = data.get("interface", "").strip()
+
+    if new_mac and not _validate_mac(new_mac):
+        return err("Geçersiz MAC adresi formatı. Örnek: 52:54:00:ab:cd:ef")
+
+    if not new_mac:
+        new_mac = _generate_qemu_mac()
+
+    # Mevcut NIC bilgilerini al
+    r = subprocess.run(["virsh", "domiflist", vm_id], capture_output=True, text=True)
+    if r.returncode != 0:
+        return err(f"NIC listesi alınamadı: {r.stderr.strip()}")
+
+    lines = r.stdout.strip().splitlines()
+    nics = []
+    for line in lines[2:]:
+        parts = line.split()
+        if len(parts) >= 5:
+            nics.append({"interface": parts[0], "type": parts[1],
+                         "source": parts[2], "model": parts[3], "mac": parts[4]})
+
+    if not nics:
+        return err("VM'de NIC bulunamadı")
+
+    # Interface belirtilmediyse ilk NIC'i kullan
+    target_nic = None
+    if interface:
+        target_nic = next((n for n in nics if n["interface"] == interface), None)
+        if not target_nic:
+            return err(f"Interface bulunamadı: {interface}")
+    else:
+        target_nic = nics[0]
+
+    old_mac = target_nic["mac"]
+    model   = target_nic["model"]
+    source  = target_nic["source"]
+    nic_type = target_nic["type"]
+
+    # VM durumunu kontrol et
+    state_r = subprocess.run(["virsh", "domstate", vm_id], capture_output=True, text=True)
+    is_running = "running" in state_r.stdout.lower()
+
+    if is_running:
+        # Çalışıyorsa: eski NIC kaldır → yeni MAC ile ekle
+        detach = subprocess.run(
+            ["virsh", "detach-interface", vm_id, nic_type,
+             "--mac", old_mac, "--live", "--config"],
+            capture_output=True, text=True
+        )
+        if detach.returncode != 0:
+            return err(f"NIC kaldırılamadı: {detach.stderr.strip()}")
+
+        attach = subprocess.run(
+            ["virsh", "attach-interface", vm_id, nic_type, source,
+             "--mac", new_mac, "--model", model, "--live", "--config"],
+            capture_output=True, text=True
+        )
+        if attach.returncode != 0:
+            return err(f"Yeni NIC eklenemedi: {attach.stderr.strip()}")
+    else:
+        # Kapalıysa: XML'i doğrudan düzenle
+        xml_r = subprocess.run(["virsh", "dumpxml", vm_id], capture_output=True, text=True)
+        if xml_r.returncode != 0:
+            return err("VM XML alınamadı")
+
+        import re as _re
+        xml = xml_r.stdout
+        # MAC adresini XML'de değiştir
+        new_xml = _re.sub(
+            rf"<mac address=['\"]?{_re.escape(old_mac)}['\"]?/>",
+            f"<mac address='{new_mac}'/>",
+            xml, count=1, flags=_re.IGNORECASE
+        )
+        if new_xml == xml:
+            return err(f"MAC adresi XML'de bulunamadı: {old_mac}")
+
+        # Geçici dosyaya yaz ve define et
+        import tempfile as _tmp
+        with _tmp.NamedTemporaryFile(mode='w', suffix='.xml', delete=False) as f:
+            f.write(new_xml)
+            tmp_path = f.name
+        try:
+            define_r = subprocess.run(["virsh", "define", tmp_path], capture_output=True, text=True)
+            if define_r.returncode != 0:
+                return err(f"virsh define hatası: {define_r.stderr.strip()}")
+        finally:
+            import os as _os
+            _os.unlink(tmp_path)
+
+    ev.info(f"MAC değiştirildi: {vm_id} {old_mac} → {new_mac}", category="vm")
+    return ok(old_mac=old_mac, new_mac=new_mac, interface=target_nic["interface"])
+
+@app.route("/api/vms/<vm_id>/nics/mac/generate", methods=["GET"])
+@require_auth
+def api_vm_mac_generate(vm_id):
+    """QEMU için geçerli rastgele MAC adresi üret."""
+    return ok(mac=_generate_qemu_mac())
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":

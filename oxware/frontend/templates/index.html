@@ -533,10 +533,15 @@
       .section-header{flex-wrap:wrap;gap:6px}
       .table-wrap{font-size:11px}
       thead th,tbody td{padding:6px 8px!important}
+      #license-banner{display:none!important}
+      #topbar{flex-wrap:nowrap;overflow:hidden}
+      .tb-logo .tb-logo-text{display:none!important}
     }
     @media (max-width:480px){
       .vm-stat-grid{grid-template-columns:1fr!important}
       .tb-logo-icon img{width:42px!important;height:42px!important}
+      #lang-btn span#current-lang-label{display:none}
+      #oxy-btn span:not(:first-child){display:none}
     }
   </style>
 </head>
@@ -4145,6 +4150,7 @@ async function loadVMs() {
             <button class="btn sm" onclick="sendWoL('${v.id}','${escHtml(v.name)}')" title="Wake-on-LAN" style="color:#60a5fa">⚡</button>
             <button class="btn sm" onclick="openPciModal('${v.id}','${escHtml(v.name)}')" title="PCI/USB Passthrough" style="color:#f97316">🔌</button>
             <button class="btn sm" onclick="openCpuPinModal('${v.id}','${escHtml(v.name)}')" title="CPU Pinning" style="color:#e879f9">📌</button>
+            <button class="btn sm" onclick="openMacModal('${v.id}','${escHtml(v.name)}')" title="MAC Adresi" style="color:#38bdf8">🔗</button>
             <button class="btn sm" onclick="openVmFirewallModal('${v.id}','${escHtml(v.name)}')" title="VM Firewall" style="color:#f43f5e">🛡</button>
             <button class="btn sm" onclick="toggleMaintenance('${v.id}','${escHtml(v.name)}')" title="Bakım Modu" style="color:#fbbf24">🔧</button>
             <button class="btn sm" onclick="openSpiceInfo('${v.id}','${escHtml(v.name)}')" title="SPICE Konsol" style="color:#34d399">📺</button>
@@ -7533,6 +7539,59 @@ async function doImportOva() {
   }
 }
 
+// ── MAC Address ──────────────────────────────────────────────────────────────
+let _macVmId = null;
+async function openMacModal(vmId, vmName) {
+  _macVmId = vmId;
+  document.getElementById('mac-vmname').textContent = vmName;
+  document.getElementById('modal-mac').style.display = 'flex';
+  await loadMacList();
+}
+async function loadMacList() {
+  const list = document.getElementById('mac-nics-list');
+  const sel  = document.getElementById('mac-iface-select');
+  list.innerHTML = '<span style="color:var(--fg2);font-size:13px">Yükleniyor...</span>';
+  try {
+    const d = await _api(`/api/vms/${_macVmId}/nics/macs`);
+    const nics = d.nics || [];
+    if (nics.length === 0) {
+      list.innerHTML = '<div style="color:var(--fg2);font-size:13px">NIC bulunamadı.</div>';
+      sel.innerHTML = '';
+      return;
+    }
+    list.innerHTML = `<table style="width:100%;font-size:13px;border-collapse:collapse">
+      <thead><tr style="border-bottom:1px solid var(--border)">
+        <th style="text-align:left;padding:4px">Interface</th>
+        <th style="text-align:left;padding:4px">Model</th>
+        <th style="text-align:left;padding:4px">MAC</th>
+        <th style="text-align:left;padding:4px">Kaynak</th>
+      </tr></thead>
+      <tbody>${nics.map(n=>`<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:4px;font-family:monospace">${escHtml(n.interface)}</td>
+        <td style="padding:4px">${escHtml(n.model)}</td>
+        <td style="padding:4px;font-family:monospace;color:#60a5fa">${escHtml(n.mac)}</td>
+        <td style="padding:4px;color:var(--fg2)">${escHtml(n.source)}</td>
+      </tr>`).join('')}</tbody></table>`;
+    sel.innerHTML = nics.map(n => `<option value="${escHtml(n.interface)}">${escHtml(n.interface)} (${escHtml(n.mac)})</option>`).join('');
+  } catch(e) { list.innerHTML = `<div style="color:#f43f5e">Yüklenemedi: ${e.message}</div>`; }
+}
+async function generateMac() {
+  try {
+    const d = await _api(`/api/vms/${_macVmId}/nics/mac/generate`);
+    document.getElementById('mac-new-input').value = d.mac;
+  } catch(e) { toast('MAC üretilemedi: ' + e.message, 'error'); }
+}
+async function doChangeMac() {
+  const iface  = document.getElementById('mac-iface-select').value;
+  const newMac = document.getElementById('mac-new-input').value.trim();
+  try {
+    const d = await _api(`/api/vms/${_macVmId}/nics/mac`, 'POST', { interface: iface, mac: newMac });
+    toast(`MAC değiştirildi: ${d.old_mac} → ${d.new_mac}`, 'success');
+    await loadMacList();
+    document.getElementById('mac-new-input').value = '';
+  } catch(e) { toast('Hata: ' + e.message, 'error'); }
+}
+
 </script>
 
 <!-- CPU Pinning Modal -->
@@ -7620,6 +7679,29 @@ async function doImportOva() {
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
       <button class="btn primary" onclick="doImportOva()">⬆ İçe Aktar</button>
       <button class="btn" onclick="document.getElementById('modal-ova-import').style.display='none'">Kapat</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAC Address Modal -->
+<div id="modal-mac" class="modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal" style="max-width:540px">
+    <h3>🔗 MAC Adresi — <span id="mac-vmname"></span></h3>
+    <p style="color:var(--fg2);font-size:13px;margin-bottom:12px">NIC MAC adreslerini görüntüle ve değiştir. Değişiklik için VM kapalıysa XML güncellenir, açıksa hot-plug yapılır.</p>
+    <div id="mac-nics-list" style="margin-bottom:14px"></div>
+    <div style="background:var(--bg2);padding:12px;border-radius:8px">
+      <b style="font-size:13px">MAC Değiştir</b>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+        <select id="mac-iface-select" style="padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);flex:1;min-width:120px"></select>
+        <input id="mac-new-input" type="text" placeholder="52:54:00:xx:xx:xx (boş=rastgele)"
+               style="flex:2;min-width:180px;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-family:monospace"
+               maxlength="17">
+        <button class="btn sm" onclick="generateMac()" title="Rastgele üret">🎲</button>
+        <button class="btn primary" onclick="doChangeMac()">Uygula</button>
+      </div>
+    </div>
+    <div style="text-align:right;margin-top:14px">
+      <button class="btn" onclick="document.getElementById('modal-mac').style.display='none'">Kapat</button>
     </div>
   </div>
 </div>
