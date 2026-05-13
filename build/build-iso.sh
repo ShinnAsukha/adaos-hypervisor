@@ -12,8 +12,10 @@ CYAN='\033[0;36m'; WHITE='\033[1;37m'; NC='\033[0m'
 
 OXWARE_VERSION="2.0.0"
 UBUNTU_CODENAME="jammy"   # 22.04 LTS
-UBUNTU_VERSION="22.04.4"
+UBUNTU_VERSION="22.04.5"
+# Primary mirror → fallback to old-releases if not found
 UBUNTU_ISO_URL="https://releases.ubuntu.com/22.04/ubuntu-${UBUNTU_VERSION}-live-server-amd64.iso"
+UBUNTU_ISO_URL_FALLBACK="https://old-releases.ubuntu.com/releases/22.04/ubuntu-${UBUNTU_VERSION}-live-server-amd64.iso"
 ISO_CACHE="/tmp/ubuntu-${UBUNTU_VERSION}-server.iso"
 WORK_DIR="/tmp/oxware-iso-$$"
 OUTPUT_ISO="${PWD}/OXware-Hypervisor-${OXWARE_VERSION}-amd64.iso"
@@ -39,8 +41,11 @@ if [ -f "$ISO_CACHE" ]; then
     log "Önbellekte mevcut: $ISO_CACHE"
 else
     log "İndiriliyor: $UBUNTU_ISO_URL"
-    wget -q --show-progress -c -O "$ISO_CACHE" "$UBUNTU_ISO_URL" \
-      || err "İndirme başarısız.\nManuel indirip şuraya koyun: $ISO_CACHE"
+    if ! wget -q --show-progress -c -O "$ISO_CACHE" "$UBUNTU_ISO_URL" 2>/dev/null; then
+        warn "Ana mirror başarısız, old-releases deneniyor..."
+        wget -q --show-progress -c -O "$ISO_CACHE" "$UBUNTU_ISO_URL_FALLBACK" \
+          || err "İndirme başarısız.\nManuel indirip şuraya koyun: $ISO_CACHE\n\nAlternatif komut:\n  wget -O $ISO_CACHE https://releases.ubuntu.com/22.04.5/ubuntu-22.04.5-live-server-amd64.iso"
+    fi
 fi
 
 # ── ISO Ayıklama ──────────────────────────────────────────────────────────────
