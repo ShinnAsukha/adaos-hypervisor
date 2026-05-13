@@ -98,6 +98,9 @@ app.config["JWT_SECRET_KEY"]           = config.SECRET_KEY
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=12)
 app.config["JWT_TOKEN_LOCATION"]       = ["headers", "cookies"]
 app.config["MAX_CONTENT_LENGTH"]       = 64 * 1024 * 1024 * 1024
+# Security: restrict JWT to HS256 only — blocks alg:none / RSA confusion attacks
+app.config["JWT_ALGORITHM"]            = "HS256"
+app.config["JWT_DECODE_ALGORITHMS"]    = ["HS256"]
 
 CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 jwt  = JWTManager(app)
@@ -182,6 +185,50 @@ def require_auth(fn):
                 pass
         return fn(*args, **kwargs)
     return wrapper
+
+
+def require_role(*allowed_roles):
+    """
+    Decorator: JWT valid olmalı VE kullanıcının rolü allowed_roles içinde olmalı.
+    Kullanım: @require_role("admin") veya @require_role("admin", "operator")
+    CVE-2023-43320 / CVE-2024-38813 — API token privilege escalation mitigation.
+    """
+    from functools import wraps
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            try:
+                verify_jwt_in_request()
+                username = get_jwt_identity()
+            except Exception:
+                return err("Kimlik doğrulama gerekli", 401)
+            try:
+                role = cred_mgr.get_role(username) if hasattr(cred_mgr, "get_role") else "admin"
+            except Exception:
+                role = "viewer"
+            if role not in allowed_roles:
+                log.warning("require_role: %s rolü %s için yetersiz (gerekli: %s)",
+                            role, username, allowed_roles)
+                return err("Bu işlem için yetki gerekli", 403)
+            return fn(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+# noVNC session token store — CVE-2022-35508 mitigation
+# Short-lived tokens prevent unauthenticated direct WebSocket access
+import secrets as _secrets
+_novnc_sessions: dict = {}   # {token: {"vm_id": str, "ws_port": int, "ip": str, "expires": float}}
+_NOVNC_TOKEN_TTL = 300       # 5 minutes
+
+
+def _novnc_clean():
+    """Expire old noVNC tokens."""
+    now = time.time()
+    expired = [t for t, v in _novnc_sessions.items() if v["expires"] < now]
+    for t in expired:
+        del _novnc_sessions[t]
+
 
 # ── HTML Sayfaları ────────────────────────────────────────────────────────────
 @app.route("/")
@@ -513,18 +560,43 @@ def api_create_vm():
             iso_path = security.validate_path_safe(
                 iso_path, [config.ISO_DIR, "/var/lib/oxware/isos"]
             )
+        app_install = security.sanitize_str(data.get("app_install", ""), 64)
+        if app_install and app_install not in _VALID_APPS:
+            app_install = ""
     except (ValueError, TypeError) as e:
         return err(str(e))
     try:
-        result = vm_manager.create_vm(
+        # Build cloud-init userdata if app install requested
+        ci_userdata = data.get("ci_userdata", "")
+        if app_install:
+            app_script = _get_app_install_script(app_install)
+            if app_script:
+                ci_userdata = (ci_userdata + "\n" + app_script).strip() if ci_userdata else app_script
+
+        create_kwargs = dict(
             name=name, memory_mb=memory_mb, vcpus=vcpus, disk_gb=disk_gb,
             iso_path=iso_path, network=network, disk_format=disk_format,
             os_variant=os_variant, boot_order=boot_order,
         )
+        # Pass cloud-init data if vm_manager supports it
+        try:
+            import inspect as _inspect
+            if "ci_userdata" in _inspect.signature(vm_manager.create_vm).parameters:
+                create_kwargs["ci_userdata"] = ci_userdata
+        except Exception:
+            pass
+
+        result = vm_manager.create_vm(**create_kwargs)
         ev.vm_event(f"VM oluşturuldu: {name}", result["id"], level="INFO")
+        if app_install:
+            ev.vm_event(f"App kurulum planlandı: {app_install}", result["id"], level="INFO")
         if webhook_mgr: webhook_mgr.trigger("vm.created", {"vm_id": result.get("id"), "vm_name": name})
         if resource_quota: resource_quota.check_quota(get_jwt_identity(), vcpus, memory_mb)
-        return ok(**result), 201
+        resp = dict(result)
+        if app_install:
+            resp["app_install"] = app_install
+            resp["app_script"]  = _get_app_install_script(app_install)
+        return ok(**resp), 201
     except Exception as e:
         return err(e, 500)
 
@@ -636,21 +708,61 @@ def api_vm_console(vm_id):
 @app.route("/api/vms/<vm_id>/console/start", methods=["POST"])
 @require_auth
 def api_start_console(vm_id):
+    """
+    Start websockify for noVNC.
+    Security (CVE-2022-35508): websockify binds to 127.0.0.1 only.
+    Returns a short-lived session token — frontend must pass ?token=<t> to noVNC.
+    """
     try:
         vm = vm_manager.get_vm(vm_id)
         vnc_port = vm.get("vnc_port", -1)
         if vnc_port < 0:
             return err("VNC portu bulunamadı")
         ws_port = config.WS_PORT
+        client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1").split(",")[0].strip()
         def _start():
             subprocess.Popen(
-                ["websockify", "--web", config.NOVNC_DIR, str(ws_port), f"localhost:{vnc_port}"],
+                [
+                    "websockify",
+                    "--listen", "127.0.0.1",   # bind localhost only — CVE-2022-35508
+                    "--web", config.NOVNC_DIR,
+                    str(ws_port),
+                    f"127.0.0.1:{vnc_port}",   # VNC also localhost
+                ],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             )
         threading.Thread(target=_start, daemon=True).start()
-        return ok(vnc_port=vnc_port, ws_port=ws_port)
+
+        # Generate short-lived noVNC session token
+        _novnc_clean()
+        token = _secrets.token_urlsafe(32)
+        _novnc_sessions[token] = {
+            "vm_id":   vm_id,
+            "ws_port": ws_port,
+            "ip":      client_ip,
+            "expires": time.time() + _NOVNC_TOKEN_TTL,
+        }
+        return ok(vnc_port=vnc_port, ws_port=ws_port, novnc_token=token)
     except Exception as e:
         return err(e, 500)
+
+
+@app.route("/api/vms/<vm_id>/console/token", methods=["GET"])
+@require_auth
+def api_console_token_validate(vm_id):
+    """Validate noVNC session token. Frontend calls this before opening WebSocket."""
+    token = request.args.get("token", "")
+    _novnc_clean()
+    session = _novnc_sessions.get(token)
+    if not session:
+        return err("Geçersiz veya süresi dolmuş noVNC token", 403)
+    if session["vm_id"] != vm_id:
+        return err("Token bu VM için geçerli değil", 403)
+    client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+    if session["ip"] and client_ip and session["ip"] != client_ip:
+        log.warning("noVNC token IP mismatch: expected %s got %s", session["ip"], client_ip)
+        return err("Token IP uyuşmazlığı", 403)
+    return ok(valid=True, ws_port=session["ws_port"])
 
 # ── Snapshot ──────────────────────────────────────────────────────────────────
 # Snapshot v1 routes kaldırıldı — v2 (security validated) kullanılıyor (aşağıda)
@@ -1136,6 +1248,7 @@ def api_list_users():
 
 @app.route("/api/users", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_create_user():
     data = request.get_json() or {}
     username = data.get("username", "").strip()
@@ -1152,6 +1265,7 @@ def api_create_user():
 
 @app.route("/api/users/<username>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_delete_user(username):
     primary_admin = cred_mgr.get_username()
     if username == primary_admin:
@@ -1167,6 +1281,7 @@ def api_delete_user(username):
 
 @app.route("/api/users/<username>/role", methods=["PUT"])
 @require_auth
+@require_role("admin", "administrator")
 def api_update_user_role(username):
     data = request.get_json() or {}
     role = data.get("role", "")
@@ -1180,6 +1295,7 @@ def api_update_user_role(username):
 # ── Shell Konsol ──────────────────────────────────────────────────────────────
 @app.route("/api/system/execute", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_execute_command():
     """Tek komut çalıştır (non-interactive)."""
     data = request.get_json() or {}
@@ -1696,6 +1812,392 @@ def api_dns_del_host(hostname):
 def api_dns_leases():
     if not dns_mgr: return ok({"leases": []})
     return ok({"leases": dns_mgr.list_leases()})
+
+# ── IPAM ─────────────────────────────────────────────────────────────────────
+import glob as _glob
+
+_IPAM_LOCKS_FILE = "/var/lib/oxware/ipam_locks.json"
+
+
+def _ipam_load_locks() -> set:
+    try:
+        if os.path.exists(_IPAM_LOCKS_FILE):
+            with open(_IPAM_LOCKS_FILE, "r") as f:
+                return set(json.load(f))
+    except Exception:
+        pass
+    return set()
+
+
+def _ipam_save_locks(locks: set):
+    try:
+        os.makedirs(os.path.dirname(_IPAM_LOCKS_FILE), exist_ok=True)
+        tmp = _IPAM_LOCKS_FILE + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(list(locks), f)
+        os.replace(tmp, _IPAM_LOCKS_FILE)
+    except Exception as e:
+        log.error("_ipam_save_locks: %s", e)
+
+
+def _ipam_get_vm_nics() -> dict:
+    """Returns {mac: {"vm": name, "network": bridge}} from virsh domiflist --all."""
+    result = {}
+    try:
+        r = subprocess.run(
+            ["virsh", "domiflist", "--all"],
+            capture_output=True, text=True, timeout=10
+        )
+        # header: Interface  Type  Source  Model  MAC
+        # We need domain name — use domiflist per VM instead
+        # First get list of all domains
+        r2 = subprocess.run(["virsh", "list", "--all", "--name"],
+                            capture_output=True, text=True, timeout=10)
+        vm_names = [n.strip() for n in r2.stdout.splitlines() if n.strip()]
+        for vm in vm_names:
+            r3 = subprocess.run(["virsh", "domiflist", vm],
+                                capture_output=True, text=True, timeout=5)
+            for line in r3.stdout.splitlines():
+                parts = line.split()
+                if len(parts) >= 5:
+                    mac = parts[4].lower()
+                    source = parts[2]
+                    result[mac] = {"vm": vm, "network": f"bridge:{source}"}
+    except Exception as e:
+        log.warning("_ipam_get_vm_nics: %s", e)
+    return result
+
+
+def _ipam_parse_leases() -> list:
+    """Parse all dnsmasq *.leases files under /var/lib/libvirt/dnsmasq/."""
+    leases = []
+    vm_nics = _ipam_get_vm_nics()
+    locks   = _ipam_load_locks()
+    seen_macs = set()
+    try:
+        patterns = [
+            "/var/lib/libvirt/dnsmasq/*.leases",
+            "/var/lib/misc/dnsmasq.leases",
+            "/var/lib/dnsmasq/*.leases",
+        ]
+        files = []
+        for p in patterns:
+            files.extend(_glob.glob(p))
+        for lf in files:
+            try:
+                with open(lf, "r") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith("#"):
+                            continue
+                        parts = line.split()
+                        if len(parts) < 4:
+                            continue
+                        expiry, mac, ip, hostname = parts[0], parts[1], parts[2], parts[3]
+                        mac = mac.lower()
+                        if mac in seen_macs:
+                            continue
+                        seen_macs.add(mac)
+                        nic_info = vm_nics.get(mac, {})
+                        vm_name  = nic_info.get("vm", "")
+                        network  = nic_info.get("network", "bridge:virbr0")
+                        state    = "bound" if vm_name else "released"
+                        try:
+                            ts = int(expiry)
+                            last_seen = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts))
+                        except Exception:
+                            last_seen = expiry
+                        leases.append({
+                            "ip":        ip,
+                            "mac":       mac,
+                            "hostname":  hostname if hostname != "*" else "",
+                            "vm":        vm_name,
+                            "network":   network,
+                            "state":     state,
+                            "source":    "dnsmasq",
+                            "last_seen": last_seen,
+                            "locked":    mac in locks,
+                            "expires":   int(expiry) if expiry.isdigit() else 0,
+                        })
+            except Exception as e:
+                log.warning("IPAM lease parse %s: %s", lf, e)
+        # Also add bound VMs that may not have a lease yet (static/running)
+        for mac, info in vm_nics.items():
+            if mac not in seen_macs:
+                leases.append({
+                    "ip":        "—",
+                    "mac":       mac,
+                    "hostname":  "",
+                    "vm":        info.get("vm", ""),
+                    "network":   info.get("network", ""),
+                    "state":     "bound",
+                    "source":    "api",
+                    "last_seen": "—",
+                    "locked":    mac in locks,
+                    "expires":   0,
+                })
+    except Exception as e:
+        log.error("_ipam_parse_leases: %s", e)
+    return leases
+
+
+@app.route("/api/ipam/leases", methods=["GET"])
+@require_auth
+def api_ipam_leases():
+    leases = _ipam_parse_leases()
+    return ok({"leases": leases})
+
+
+@app.route("/api/ipam/stats", methods=["GET"])
+@require_auth
+def api_ipam_stats():
+    leases = _ipam_parse_leases()
+    locks  = _ipam_load_locks()
+    bound    = sum(1 for l in leases if l["state"] == "bound")
+    released = sum(1 for l in leases if l["state"] == "released")
+    return ok({
+        "total":    len(leases),
+        "bound":    bound,
+        "released": released,
+        "locked":   len(locks),
+    })
+
+
+@app.route("/api/ipam/leases/<mac>", methods=["DELETE"])
+@require_auth
+def api_ipam_delete_lease(mac):
+    mac = mac.lower()
+    deleted = False
+    patterns = [
+        "/var/lib/libvirt/dnsmasq/*.leases",
+        "/var/lib/misc/dnsmasq.leases",
+        "/var/lib/dnsmasq/*.leases",
+    ]
+    files = []
+    for p in patterns:
+        files.extend(_glob.glob(p))
+    for lf in files:
+        try:
+            with open(lf, "r") as f:
+                lines = f.readlines()
+            new_lines = [l for l in lines if mac not in l.lower()]
+            if len(new_lines) != len(lines):
+                with open(lf, "w") as f:
+                    f.writelines(new_lines)
+                deleted = True
+        except Exception as e:
+            log.warning("IPAM delete lease %s: %s", lf, e)
+    # Also remove from locks
+    locks = _ipam_load_locks()
+    locks.discard(mac)
+    _ipam_save_locks(locks)
+    return ok({"deleted": deleted})
+
+
+@app.route("/api/ipam/leases/<mac>/lock", methods=["POST"])
+@require_auth
+def api_ipam_lock(mac):
+    mac = mac.lower()
+    locks = _ipam_load_locks()
+    if mac in locks:
+        locks.discard(mac)
+        locked = False
+    else:
+        locks.add(mac)
+        locked = True
+    _ipam_save_locks(locks)
+    return ok({"mac": mac, "locked": locked})
+
+
+@app.route("/api/ipam/leases/<mac>/reassign", methods=["POST"])
+@require_auth
+def api_ipam_reassign(mac):
+    mac    = mac.lower()
+    body   = request.get_json(silent=True) or {}
+    new_ip = body.get("ip", "").strip()
+    if not new_ip:
+        return err("IP adresi gerekli", 400)
+    updated = False
+    patterns = [
+        "/var/lib/libvirt/dnsmasq/*.leases",
+        "/var/lib/misc/dnsmasq.leases",
+        "/var/lib/dnsmasq/*.leases",
+    ]
+    files = []
+    for p in patterns:
+        files.extend(_glob.glob(p))
+    for lf in files:
+        try:
+            with open(lf, "r") as f:
+                lines = f.readlines()
+            new_lines = []
+            for line in lines:
+                parts = line.split()
+                if len(parts) >= 3 and parts[1].lower() == mac:
+                    parts[2] = new_ip
+                    new_lines.append(" ".join(parts) + "\n")
+                    updated = True
+                else:
+                    new_lines.append(line)
+            if updated:
+                with open(lf, "w") as f:
+                    f.writelines(new_lines)
+                break
+        except Exception as e:
+            log.warning("IPAM reassign %s: %s", lf, e)
+    return ok({"updated": updated, "ip": new_ip})
+
+
+# ── App Install Scripts ────────────────────────────────────────────────────────
+_VALID_APPS = {
+    "portainer", "nextcloud", "vaultwarden", "n8n", "coolify",
+    "docker-portainer", "gitea", "cyberpanel", "nginx-proxy-manager",
+    "grafana", "uptime-kuma", "minio", "pihole", "wireguard",
+}
+
+def _get_app_install_script(app_id: str) -> str:
+    scripts = {
+        "portainer": """#!/bin/bash
+apt-get update -y && apt-get install -y docker.io
+systemctl enable --now docker
+docker volume create portainer_data
+docker run -d -p 9000:9000 -p 9443:9443 --name portainer --restart=always \\
+  -v /var/run/docker.sock:/var/run/docker.sock \\
+  -v portainer_data:/data portainer/portainer-ce:latest
+""",
+        "nextcloud": """#!/bin/bash
+apt-get update -y && apt-get install -y docker.io docker-compose-plugin
+systemctl enable --now docker
+mkdir -p /opt/nextcloud
+cat > /opt/nextcloud/docker-compose.yml << 'NCEOF'
+version: '3'
+services:
+  nextcloud:
+    image: nextcloud:latest
+    ports: ["80:80"]
+    volumes: [nextcloud_data:/var/www/html]
+    environment:
+      MYSQL_HOST: db
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: nextcloud_pass
+    depends_on: [db]
+  db:
+    image: mariadb:10.6
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pass
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: nextcloud_pass
+    volumes: [db_data:/var/lib/mysql]
+volumes:
+  nextcloud_data:
+  db_data:
+NCEOF
+cd /opt/nextcloud && docker compose up -d
+""",
+        "vaultwarden": """#!/bin/bash
+apt-get update -y && apt-get install -y docker.io
+systemctl enable --now docker
+mkdir -p /opt/vaultwarden/data
+docker run -d --name vaultwarden --restart=always \\
+  -v /opt/vaultwarden/data:/data -p 80:80 vaultwarden/server:latest
+""",
+        "n8n": """#!/bin/bash
+apt-get update -y && apt-get install -y docker.io
+systemctl enable --now docker
+docker volume create n8n_data
+docker run -d --name n8n --restart=always \\
+  -p 5678:5678 -v n8n_data:/home/node/.n8n n8nio/n8n:latest
+""",
+        "coolify": """#!/bin/bash
+curl -fsSL https://cdn.coollabs.io/coolify/install.sh | bash
+""",
+        "docker-portainer": """#!/bin/bash
+apt-get update -y && apt-get install -y docker.io
+systemctl enable --now docker
+docker volume create portainer_data
+docker run -d -p 9000:9000 --name portainer --restart=always \\
+  -v /var/run/docker.sock:/var/run/docker.sock \\
+  -v portainer_data:/data portainer/portainer-ce:latest
+""",
+        "gitea": """#!/bin/bash
+apt-get update -y && apt-get install -y docker.io
+systemctl enable --now docker
+mkdir -p /opt/gitea
+docker run -d --name=gitea --restart=always \\
+  -p 3000:3000 -p 222:22 -v /opt/gitea:/data gitea/gitea:latest
+""",
+        "cyberpanel": """#!/bin/bash
+apt-get update -y && apt-get install -y wget
+wget -O installer.sh https://cyberpanel.net/install.sh
+printf '1\\n1\\nN\\nN\\nN\\nN\\nN\\nN\\nN\\n' | bash installer.sh
+""",
+        "nginx-proxy-manager": """#!/bin/bash
+apt-get update -y && apt-get install -y docker.io docker-compose-plugin
+systemctl enable --now docker
+mkdir -p /opt/npm
+cat > /opt/npm/docker-compose.yml << 'NPMEOF'
+version: '3'
+services:
+  npm:
+    image: jc21/nginx-proxy-manager:latest
+    ports: ["80:80","443:443","81:81"]
+    volumes: [data:/data, letsencrypt:/etc/letsencrypt]
+volumes:
+  data:
+  letsencrypt:
+NPMEOF
+cd /opt/npm && docker compose up -d
+""",
+        "grafana": """#!/bin/bash
+apt-get update -y && apt-get install -y docker.io
+systemctl enable --now docker
+docker volume create grafana_data
+docker run -d --name grafana --restart=always \\
+  -p 3000:3000 -v grafana_data:/var/lib/grafana grafana/grafana:latest
+""",
+        "uptime-kuma": """#!/bin/bash
+apt-get update -y && apt-get install -y docker.io
+systemctl enable --now docker
+docker volume create uptime-kuma
+docker run -d --name uptime-kuma --restart=always \\
+  -p 3001:3001 -v uptime-kuma:/app/data louislam/uptime-kuma:latest
+""",
+        "minio": """#!/bin/bash
+apt-get update -y && apt-get install -y docker.io
+systemctl enable --now docker
+mkdir -p /opt/minio/data
+docker run -d --name minio --restart=always \\
+  -p 9000:9000 -p 9001:9001 -v /opt/minio/data:/data \\
+  -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \\
+  quay.io/minio/minio server /data --console-address ':9001'
+""",
+        "pihole": """#!/bin/bash
+apt-get update -y && apt-get install -y docker.io
+systemctl enable --now docker
+mkdir -p /opt/pihole/etc-pihole /opt/pihole/etc-dnsmasq.d
+docker run -d --name pihole --restart=always \\
+  -p 53:53/tcp -p 53:53/udp -p 80:80 \\
+  -e TZ=Europe/Istanbul \\
+  -v /opt/pihole/etc-pihole:/etc/pihole \\
+  -v /opt/pihole/etc-dnsmasq.d:/etc/dnsmasq.d \\
+  --dns=127.0.0.1 --dns=1.1.1.1 pihole/pihole:latest
+""",
+        "wireguard": """#!/bin/bash
+apt-get update -y && apt-get install -y docker.io
+systemctl enable --now docker
+mkdir -p /opt/wireguard
+docker run -d --name wg-easy --restart=always \\
+  -e WG_HOST=$(curl -s ifconfig.me) \\
+  -e PASSWORD=changeme123 \\
+  -v /opt/wireguard:/etc/wireguard \\
+  -p 51820:51820/udp -p 51821:51821/tcp \\
+  --cap-add=NET_ADMIN --cap-add=SYS_MODULE ghcr.io/wg-easy/wg-easy:latest
+""",
+    }
+    return scripts.get(app_id, "")
+
 
 @app.route("/api/dns/config", methods=["GET", "PUT"])
 @require_auth
