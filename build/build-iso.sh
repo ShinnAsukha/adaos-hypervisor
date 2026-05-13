@@ -33,7 +33,7 @@ step() { echo -e "${CYAN}━━━ $1 ━━━${NC}"; }
 step "Bağımlılıklar"
 apt-get update -qq
 apt-get install -y -qq xorriso squashfs-tools wget curl p7zip-full \
-    genisoimage isolinux syslinux-utils 2>/dev/null || true
+    genisoimage isolinux syslinux-utils grub-pc-bin grub-efi-amd64-bin mtools 2>/dev/null || true
 log "Bağımlılıklar hazır"
 
 # ── Ubuntu ISO ────────────────────────────────────────────────────────────────
@@ -467,65 +467,79 @@ done
 # ISO 9660 volid: max 32 chars, only A-Z 0-9 _ allowed
 _VOLID="OXWARE_$(echo "$OXWARE_VERSION" | tr '.' '_' | tr '[:lower:]' '[:upper:]')"
 
-XORRISO_ARGS=(
-    -as mkisofs
-    -r
-    -V "$_VOLID"
-    -o "$OUTPUT_ISO"
-    -J -l -joliet-long
-    -iso-level 3
-)
-
-# MBR desteği
-if [ -n "$MBR_FILE" ]; then
-    XORRISO_ARGS+=(
-        --grub2-mbr "$MBR_FILE"
-    )
+# Disk alanı kontrolü — en az 3GB gerek
+_FREE_KB=$(df -k "$PWD" | awk 'NR==2{print $4}')
+if [ "$_FREE_KB" -lt 3145728 ]; then
+    err "Yetersiz disk alanı: $(df -h "$PWD" | awk 'NR==2{print $4}') boş, en az 3GB gerek."
 fi
+log "Disk alanı yeterli: $(df -h "$PWD" | awk 'NR==2{print $4}') boş"
 
-# isolinux/BIOS boot
-if [ -f "$WORK_DIR/iso/isolinux/isolinux.bin" ]; then
-    XORRISO_ARGS+=(
-        -b isolinux/isolinux.bin
-        -c isolinux/boot.cat
-        -no-emul-boot -boot-load-size 4 -boot-info-table
-    )
-fi
+# ISO önce /tmp'e yazılır, sonra hedef konuma taşınır
+# (xorriso libburn bazı ortamlarda NFS/FUSE/tmpfs'e yazamaz)
+_TMP_ISO="$WORK_DIR/output.iso"
 
-# EFI boot
-if [ -f "$WORK_DIR/iso/boot/grub/efi.img" ]; then
-    XORRISO_ARGS+=(
-        -eltorito-alt-boot
-        -e boot/grub/efi.img
-        -no-emul-boot
-    )
-fi
+_make_iso() {
+    local OUT="$1"
+    local ISO_DIR="$WORK_DIR/iso"
 
-XORRISO_ARGS+=("$WORK_DIR/iso")
+    # Yöntem 1: xorriso (Ubuntu-style hybrid)
+    if command -v xorriso &>/dev/null; then
+        log "xorriso ile ISO oluşturuluyor..."
+        local XARGS=(-as mkisofs -r -V "$_VOLID" -o "$OUT" -J -l -joliet-long -iso-level 3)
+        [ -n "$MBR_FILE" ] && XARGS+=(--grub2-mbr "$MBR_FILE")
+        if [ -f "$ISO_DIR/isolinux/isolinux.bin" ]; then
+            XARGS+=(-b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table)
+        fi
+        if [ -f "$ISO_DIR/boot/grub/efi.img" ]; then
+            XARGS+=(-eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot)
+        fi
+        XARGS+=("$ISO_DIR")
+        xorriso "${XARGS[@]}" 2>&1
+        [ -s "$OUT" ] && return 0
+        warn "xorriso başarısız, genisoimage deneniyor..."
+        rm -f "$OUT"
+    fi
 
-xorriso "${XORRISO_ARGS[@]}" 2>&1 | grep -E "^(INFO|WARNING|ERROR|xorriso)"
-XORRISO_EXIT=${PIPESTATUS[0]}
+    # Yöntem 2: genisoimage
+    if command -v genisoimage &>/dev/null; then
+        log "genisoimage ile ISO oluşturuluyor..."
+        local GARGS=(-r -V "$_VOLID" -cache-inodes -J -l -iso-level 3 -o "$OUT")
+        if [ -f "$ISO_DIR/isolinux/isolinux.bin" ]; then
+            GARGS+=(-b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table)
+        fi
+        GARGS+=("$ISO_DIR")
+        genisoimage "${GARGS[@]}" 2>&1
+        [ -s "$OUT" ] && return 0
+        warn "genisoimage başarısız..."
+        rm -f "$OUT"
+    fi
 
-if [ "$XORRISO_EXIT" -ne 0 ] || [ ! -s "$OUTPUT_ISO" ]; then
-    warn "xorriso başarısız (exit=$XORRISO_EXIT), genisoimage deneniyor..."
-    rm -f "$OUTPUT_ISO"
-    genisoimage -r -V "$_VOLID" \
-        -cache-inodes -J -l \
-        -b isolinux/isolinux.bin -c isolinux/boot.cat \
-        -no-emul-boot -boot-load-size 4 -boot-info-table \
-        -o "$OUTPUT_ISO" "$WORK_DIR/iso" 2>/dev/null \
-        || err "ISO oluşturma başarısız!"
-fi
+    # Yöntem 3: grub-mkrescue (en güvenilir fallback)
+    if command -v grub-mkrescue &>/dev/null; then
+        log "grub-mkrescue ile ISO oluşturuluyor..."
+        grub-mkrescue -o "$OUT" "$ISO_DIR" -- -volid "$_VOLID" 2>&1
+        [ -s "$OUT" ] && return 0
+        rm -f "$OUT"
+    fi
+
+    return 1
+}
+
+_make_iso "$_TMP_ISO" || err "ISO oluşturma başarısız! Tüm yöntemler denendi.\nDisk alanı: $(df -h "$PWD" | awk 'NR==2{print $4}') boş"
+
+# /tmp → hedef konuma taşı
+log "ISO taşınıyor: $_TMP_ISO → $OUTPUT_ISO"
+mv "$_TMP_ISO" "$OUTPUT_ISO"
 
 # ── isohybrid (USB desteği) ───────────────────────────────────────────────────
-if command -v isohybrid &>/dev/null; then
+if command -v isohybrid &>/dev/null && [ -s "$OUTPUT_ISO" ]; then
     isohybrid --uefi "$OUTPUT_ISO" 2>/dev/null || isohybrid "$OUTPUT_ISO" 2>/dev/null || true
     log "isohybrid uygulandı (USB-bootable)"
 fi
 
-# Son kontrol — sıfır byte ISO'yu yakala
+# Son kontrol
 if [ ! -s "$OUTPUT_ISO" ]; then
-    err "ISO oluşturuldu ama boş (0 byte)! Disk alanı yeterli mi? df -h /tmp ve $PWD kontrol edin."
+    err "ISO boş (0 byte)! Bir şeyler yanlış gitti."
 fi
 
 # ── Checksum ──────────────────────────────────────────────────────────────────
