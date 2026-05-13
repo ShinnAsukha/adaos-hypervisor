@@ -20,6 +20,7 @@ ISO_CACHE="/tmp/ubuntu-${UBUNTU_VERSION}-server.iso"
 WORK_DIR="/tmp/oxware-iso-$$"
 OUTPUT_ISO="${PWD}/OXware-Hypervisor-${OXWARE_VERSION}-amd64.iso"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"   # repo kökü (build/ bir üst)
 
 log()  { echo -e "${GREEN}[BUILD]${NC}  $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC}   $1"; }
@@ -63,7 +64,7 @@ log "ISO içeriği hazır"
 # ── OXware Dosyaları ──────────────────────────────────────────────────────────
 step "OXware Dosyaları"
 mkdir -p "$WORK_DIR/iso/oxware"
-cp -r "$SCRIPT_DIR/oxware/"* "$WORK_DIR/iso/oxware/"
+cp -r "$REPO_ROOT/oxware/"* "$WORK_DIR/iso/oxware/"
 log "OXware dosyaları kopyalandı"
 
 # ── cloud-init / autoinstall ──────────────────────────────────────────────────
