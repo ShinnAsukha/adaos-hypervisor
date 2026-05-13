@@ -464,10 +464,13 @@ for f in "$WORK_DIR/iso/boot/grub/efi.img" "$WORK_DIR/iso/EFI/boot/bootx64.efi";
     [ -f "$f" ] && EFI_FILE="$f" && break
 done
 
+# ISO 9660 volid: max 32 chars, only A-Z 0-9 _ allowed
+_VOLID="OXWARE_$(echo "$OXWARE_VERSION" | tr '.' '_' | tr '[:lower:]' '[:upper:]')"
+
 XORRISO_ARGS=(
     -as mkisofs
     -r
-    -V "OXware-Hypervisor-${OXWARE_VERSION}"
+    -V "$_VOLID"
     -o "$OUTPUT_ISO"
     -J -l -joliet-long
     -iso-level 3
@@ -500,11 +503,13 @@ fi
 
 XORRISO_ARGS+=("$WORK_DIR/iso")
 
-xorriso "${XORRISO_ARGS[@]}" 2>&1 | grep -E "^(INFO|WARNING|ERROR|xorriso)" || true
+xorriso "${XORRISO_ARGS[@]}" 2>&1 | grep -E "^(INFO|WARNING|ERROR|xorriso)"
+XORRISO_EXIT=${PIPESTATUS[0]}
 
-if [ ! -f "$OUTPUT_ISO" ]; then
-    warn "xorriso başarısız, genisoimage deneniyor..."
-    genisoimage -r -V "OXware-${OXWARE_VERSION}" \
+if [ "$XORRISO_EXIT" -ne 0 ] || [ ! -s "$OUTPUT_ISO" ]; then
+    warn "xorriso başarısız (exit=$XORRISO_EXIT), genisoimage deneniyor..."
+    rm -f "$OUTPUT_ISO"
+    genisoimage -r -V "$_VOLID" \
         -cache-inodes -J -l \
         -b isolinux/isolinux.bin -c isolinux/boot.cat \
         -no-emul-boot -boot-load-size 4 -boot-info-table \
@@ -516,6 +521,11 @@ fi
 if command -v isohybrid &>/dev/null; then
     isohybrid --uefi "$OUTPUT_ISO" 2>/dev/null || isohybrid "$OUTPUT_ISO" 2>/dev/null || true
     log "isohybrid uygulandı (USB-bootable)"
+fi
+
+# Son kontrol — sıfır byte ISO'yu yakala
+if [ ! -s "$OUTPUT_ISO" ]; then
+    err "ISO oluşturuldu ama boş (0 byte)! Disk alanı yeterli mi? df -h /tmp ve $PWD kontrol edin."
 fi
 
 # ── Checksum ──────────────────────────────────────────────────────────────────
