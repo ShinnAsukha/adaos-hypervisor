@@ -11,6 +11,7 @@ ExecStart=/usr/bin/python3 /opt/oxware/backend/app.py
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
+# Update: cd /opt/oxware && git pull && systemctl restart oxware
 
 [Install]
 WantedBy=multi-user.target

@@ -693,14 +693,30 @@ def do_install(progress_cb):
         "iproute2 iputils-ping net-tools sudo"
     )
 
-    progress_cb(70, "Copying OXware files …")
+    progress_cb(70, "Installing OXware from GitHub …")
     target_oxware = Path(f"{TARGET_MOUNT}/opt/oxware")
     if target_oxware.exists():
         shutil.rmtree(str(target_oxware))
-    if Path(OXWARE_SRC).exists():
-        shutil.copytree(OXWARE_SRC, str(target_oxware))
-    else:
-        target_oxware.mkdir(parents=True, exist_ok=True)
+
+    # Clone from GitHub so future updates work via git pull (no reinstall needed)
+    GITHUB_REPO = "https://github.com/ShinnAsukha/oxware-hypervisor.git"
+    clone_result = subprocess.run(
+        ["git", "clone", "--depth=1", GITHUB_REPO, str(target_oxware)],
+        capture_output=True, text=True, timeout=120
+    )
+    if clone_result.returncode != 0:
+        # Fallback: copy from ISO if no internet
+        if Path(OXWARE_SRC).exists():
+            shutil.copytree(OXWARE_SRC, str(target_oxware))
+            # Write a marker so user knows git pull won't work
+            Path(f"{TARGET_MOUNT}/opt/oxware/.no-git-remote").write_text(
+                "Installed from ISO without internet. Run:\n"
+                "  cd /opt/oxware && git init && git remote add origin "
+                "https://github.com/ShinnAsukha/oxware-hypervisor.git\n"
+                "  git fetch && git reset --hard origin/main\n"
+            )
+        else:
+            target_oxware.mkdir(parents=True, exist_ok=True)
 
     progress_cb(73, "Writing system configuration …")
     # hostname
