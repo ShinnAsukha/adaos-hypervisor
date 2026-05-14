@@ -687,6 +687,34 @@ def do_install(progress_cb):
     Path(f"{TARGET_MOUNT}/boot/efi").mkdir(parents=True, exist_ok=True)
     run(f"mount {blk(2)} {TARGET_MOUNT}/boot/efi")
 
+    progress_cb(15, "Waiting for network …")
+    # Ensure a network interface is up. Try dhclient on any ethernet-like iface.
+    _net_ready = False
+    for _iface in ("eth0", "ens33", "ens3", "enp0s3", "enp3s0", "ens160"):
+        _r = subprocess.run(f"ip link show {_iface} 2>/dev/null", shell=True,
+                            capture_output=True)
+        if _r.returncode == 0:
+            subprocess.run(f"ip link set {_iface} up", shell=True, check=False)
+            subprocess.run(f"dhclient -v {_iface}", shell=True, check=False,
+                           timeout=30)
+            break
+    # Wait up to 20 s for default route / DNS
+    import time as _time
+    for _i in range(20):
+        _ping = subprocess.run(
+            "curl -sf --max-time 3 http://archive.ubuntu.com/ubuntu/dists/jammy/Release -o /dev/null",
+            shell=True, capture_output=True)
+        if _ping.returncode == 0:
+            _net_ready = True
+            break
+        _time.sleep(1)
+    if not _net_ready:
+        raise RuntimeError(
+            "İnternet bağlantısı kurulamadı.\n"
+            "Lütfen VM ağ bağdaştırıcısının NAT/Bridged modunda olduğunu ve\n"
+            "DHCP'nin çalıştığını doğrulayın, sonra yeniden deneyin."
+        )
+
     progress_cb(16, "Running debootstrap (this may take several minutes) …")
     run(
         f"debootstrap --no-check-gpg --arch=amd64 "
