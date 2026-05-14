@@ -145,7 +145,27 @@ ln -sf /etc/systemd/system/oxware-installer.service \
     "$SQUASHFS_ROOT/etc/systemd/system/multi-user.target.wants/oxware-installer.service"
 log "oxware-installer.service etkinleştirildi"
 
-# 7. Chroot: gerekli paketleri kur (debootstrap, python3-curses, git)
+# 7. debootstrap'i build host'tan kopyala (chroot apt genelde başarısız olur)
+log "debootstrap build host'tan kopyalanıyor..."
+if [ -f "/usr/sbin/debootstrap" ]; then
+    cp /usr/sbin/debootstrap "$SQUASHFS_ROOT/usr/sbin/debootstrap"
+    chmod +x "$SQUASHFS_ROOT/usr/sbin/debootstrap"
+fi
+if [ -d "/usr/share/debootstrap" ]; then
+    mkdir -p "$SQUASHFS_ROOT/usr/share/debootstrap"
+    cp -r /usr/share/debootstrap/. "$SQUASHFS_ROOT/usr/share/debootstrap/"
+fi
+# Debian bookworm keyring (debootstrap için gerekli)
+for keyring_dir in /usr/share/keyrings /etc/apt/trusted.gpg.d; do
+    [ -d "$keyring_dir" ] && {
+        mkdir -p "$SQUASHFS_ROOT$keyring_dir"
+        cp "$keyring_dir"/*.gpg "$SQUASHFS_ROOT$keyring_dir/" 2>/dev/null || true
+        cp "$keyring_dir"/*.asc "$SQUASHFS_ROOT$keyring_dir/" 2>/dev/null || true
+    }
+done
+log "debootstrap hazır: $(debootstrap --version 2>/dev/null || echo 'version unknown')"
+
+# 8. Chroot: python3-curses, git, parted kur
 log "Chroot: paketler kuruluyor..."
 
 # Mount noktaları squashfs içinde yoksa oluştur
@@ -171,18 +191,12 @@ mount --bind /dev/pts "$SQUASHFS_ROOT/dev/pts"
 
 chroot "$SQUASHFS_ROOT" /bin/bash << 'CHROOT'
 export DEBIAN_FRONTEND=noninteractive
-# Debootstrap genelde Ubuntu server squashfs'te yok — kur
+# python3-curses, git, parted — debootstrap build host'tan kopyalandı
 apt-get update -qq 2>/dev/null || true
 apt-get install -y -qq --no-install-recommends \
-    python3 python3-curses debootstrap git \
+    python3 python3-curses git \
     parted dosfstools e2fsprogs util-linux \
     2>/dev/null || true
-# Debootstrap hala yoksa direkt indir (sadece shell script)
-if ! command -v debootstrap &>/dev/null; then
-    wget -qO /usr/sbin/debootstrap \
-        https://salsa.debian.org/installer-team/debootstrap/-/raw/master/debootstrap \
-        2>/dev/null && chmod +x /usr/sbin/debootstrap || true
-fi
 CHROOT
 
 cleanup_mounts
