@@ -57,7 +57,8 @@ fi
 # ── ISO Ayıklama ──────────────────────────────────────────────────────────────
 step "ISO Ayıklama"
 rm -rf "$WORK_DIR"
-mkdir -p "$WORK_DIR/iso" "$SQUASHFS_ROOT"
+mkdir -p "$WORK_DIR/iso"
+# NOT: squashfs-root'u unsquashfs kendisi yaratır — önceden oluşturma!
 
 xorriso -osirrox on -indev "$ISO_CACHE" -extract / "$WORK_DIR/iso" 2>/dev/null \
     || err "ISO ayıklanamadı"
