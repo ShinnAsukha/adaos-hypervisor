@@ -551,44 +551,86 @@
     #mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:340}
     #mob-overlay.visible{display:block}
 
+    /* ── 900px: nav panel drawer, topbar kompakt ── */
     @media (max-width:900px){
       #mob-menu-btn{display:flex}
       #nav-panel{
         position:fixed!important;top:var(--topbar-h)!important;left:0!important;bottom:0!important;
-        width:220px!important;z-index:350!important;
+        width:240px!important;z-index:350!important;
         transform:translateX(-100%)!important;
         transition:transform .25s cubic-bezier(.4,0,.2,1)!important;
         box-shadow:4px 0 24px rgba(0,0,0,.6)!important;
       }
       #nav-panel.mob-open{transform:translateX(0)!important}
+      /* content-area tüm genişliği alsın */
+      #content-area{width:100%!important;min-width:0!important}
+      #middle{overflow-x:hidden}
       .tb-stats{display:none!important}
       #taskbar{display:none!important}
-    }
-    @media (max-width:768px){
-      #dash-quick-stats{grid-template-columns:1fr 1fr!important}
-      .tb-actions .tb-action:not(.primary){display:none!important}
-      .tb-action.primary span[data-i18n]{display:none}
-      #oxy-btn>span:last-of-type{display:none}
-      #oxy-panel{width:100%!important}
+      /* tüm grid'ler tek sütuna düş */
       .summary-grid{grid-template-columns:1fr!important}
-      .vm-stat-grid{grid-template-columns:1fr 1fr!important}
       .charts-row{grid-template-columns:1fr!important}
       .form-grid{grid-template-columns:1fr!important}
-      .modal{width:95vw!important}
+      .card-grid{grid-template-columns:1fr 1fr!important}
+      .vm-stat-grid{grid-template-columns:1fr 1fr!important}
+      #dash-quick-stats{grid-template-columns:1fr 1fr!important}
+      /* res-row: bar tam genişlik */
+      .res-row{flex-wrap:wrap;gap:4px}
+      .res-lbl{width:100%!important;margin-bottom:2px}
+      .res-bar{flex:1!important;min-width:0!important}
+      .res-val{width:auto!important;min-width:60px;text-align:right!important}
+      /* page padding */
       .page{padding:10px!important}
-      .card-grid{grid-template-columns:1fr!important}
       .section-header{flex-wrap:wrap;gap:6px}
-      .table-wrap{font-size:11px}
+      /* modal */
+      .modal{width:95vw!important;max-height:90vh!important}
+      /* table */
+      .table-wrap{font-size:11px;overflow-x:auto}
       thead th,tbody td{padding:6px 8px!important}
+      /* topbar */
       #license-banner{display:none!important}
-      #topbar{flex-wrap:nowrap;overflow:hidden}
       .tb-logo .tb-logo-text{display:none!important}
+      #oxy-panel{width:100%!important;right:0!important;left:0!important}
+      /* topbar actions — sadece Create VM göster */
+      .tb-actions .tb-action:not([id="createVmBtn"]){padding:0 8px!important}
+      .tb-actions .tb-action span[data-i18n]{display:none!important}
+      #oxy-btn>span:last-of-type{display:none}
+      /* app-install grid */
+      .app-install-grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))!important}
     }
-    @media (max-width:480px){
+
+    /* ── 600px: çok küçük ekran ── */
+    @media (max-width:600px){
       .vm-stat-grid{grid-template-columns:1fr!important}
-      .tb-logo-icon img{width:42px!important;height:42px!important}
+      .card-grid{grid-template-columns:1fr!important}
+      #dash-quick-stats{grid-template-columns:1fr 1fr!important}
+      /* res-row tamamen dikey */
+      .res-bar{order:3;min-width:100%!important}
+      .res-lbl{order:1}
+      .res-val{order:2;text-align:left!important}
+      /* tb-logo küçük */
+      .tb-logo{width:50px!important}
+      .tb-logo-icon img,.tb-logo-icon .tb-logo-fb{width:34px!important;height:34px!important}
       #lang-btn span#current-lang-label{display:none}
       #oxy-btn span:not(:first-child){display:none}
+      /* VM detail header stack */
+      .vm-detail-hdr{flex-direction:column!important;align-items:flex-start!important}
+      .action-btns{flex-wrap:wrap!important;gap:4px!important}
+      /* info table compak */
+      .info-table td{padding:4px 6px!important;font-size:11px}
+      /* sub-tabs scroll */
+      .sub-tabs{overflow-x:auto!important;flex-wrap:nowrap!important}
+      .sub-tab{white-space:nowrap!important;flex-shrink:0!important}
+    }
+
+    /* ── 480px: telefon ── */
+    @media (max-width:480px){
+      #dash-quick-stats{grid-template-columns:1fr 1fr!important}
+      .tb-logo-icon img{width:30px!important;height:30px!important}
+      .btn,.btn-primary,.btn-sm{padding:5px 8px!important;font-size:11px!important}
+      .badge{font-size:9px!important;padding:1px 5px!important}
+      .page{padding:8px!important}
+      .chart-container{height:140px!important}
     }
   </style>
 </head>
