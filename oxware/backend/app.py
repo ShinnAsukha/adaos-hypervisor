@@ -1198,6 +1198,116 @@ def api_clone_vm(vm_id):
     except Exception as e:
         return err(e, 500)
 
+# ── Hardware Tuning & Hot-Plug ────────────────────────────────────────────────
+
+@app.route("/api/vms/<vm_id>/hardware", methods=["GET"])
+@require_auth
+def api_vm_hardware_get(vm_id):
+    try:
+        return ok(**vm_manager.get_hardware_config(vm_id))
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/vms/<vm_id>/hardware/vcpus", methods=["POST"])
+@require_auth
+def api_vm_hot_vcpus(vm_id):
+    data = request.get_json() or {}
+    count = int(data.get("count", 1))
+    if count < 1 or count > 128:
+        return err("vCPU sayısı 1-128 arası olmalı")
+    try:
+        result = vm_manager.hot_set_vcpus(vm_id, count)
+        ev.info(f"vCPU değiştirildi: {vm_id} → {count} ({'live' if result['live'] else 'config'})", category="vm")
+        return ok(**result)
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/vms/<vm_id>/hardware/memory", methods=["POST"])
+@require_auth
+def api_vm_hot_memory(vm_id):
+    data = request.get_json() or {}
+    mb = int(data.get("mb", 512))
+    if mb < 128:
+        return err("Minimum 128 MB")
+    try:
+        result = vm_manager.hot_set_memory(vm_id, mb)
+        ev.info(f"Bellek değiştirildi: {vm_id} → {mb} MB ({'live' if result['live'] else 'config'})", category="vm")
+        return ok(**result)
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/vms/<vm_id>/hardware/cpu-mode", methods=["POST"])
+@require_auth
+def api_vm_cpu_mode(vm_id):
+    data = request.get_json() or {}
+    mode = data.get("mode", "host-passthrough")
+    try:
+        result = vm_manager.set_cpu_mode(vm_id, mode)
+        ev.info(f"CPU modu değiştirildi: {vm_id} → {mode}", category="vm")
+        return ok(**result)
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/vms/<vm_id>/hardware/nested-virt", methods=["POST"])
+@require_auth
+def api_vm_nested_virt(vm_id):
+    data = request.get_json() or {}
+    enabled = bool(data.get("enabled", False))
+    try:
+        result = vm_manager.set_nested_virt(vm_id, enabled)
+        ev.info(f"Nested virt {'açıldı' if enabled else 'kapatıldı'}: {vm_id}", category="vm")
+        return ok(**result)
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/vms/<vm_id>/hardware/disk/attach", methods=["POST"])
+@require_auth
+def api_vm_disk_attach(vm_id):
+    data = request.get_json() or {}
+    size_gb  = int(data.get("size_gb", 10))
+    bus      = data.get("bus", "virtio")
+    disk_fmt = data.get("format", "qcow2")
+    try:
+        disk_path = vm_manager.create_extra_disk(vm_id, size_gb, disk_fmt)
+        result = vm_manager.hot_attach_disk(vm_id, disk_path, bus)
+        ev.info(f"Disk eklendi: {vm_id} → {disk_path} ({size_gb}GB)", category="vm")
+        return ok(**result, size_gb=size_gb), 201
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/vms/<vm_id>/hardware/disk/<target_dev>", methods=["DELETE"])
+@require_auth
+def api_vm_disk_detach(vm_id, target_dev):
+    try:
+        result = vm_manager.hot_detach_disk(vm_id, target_dev)
+        ev.info(f"Disk çıkarıldı: {vm_id} / {target_dev}", category="vm")
+        return ok(**result)
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/vms/<vm_id>/hardware/nic/attach", methods=["POST"])
+@require_auth
+def api_vm_nic_attach(vm_id):
+    data = request.get_json() or {}
+    network = data.get("network", "default")
+    model   = data.get("model", "virtio")
+    try:
+        result = vm_manager.hot_attach_nic(vm_id, network, model)
+        ev.info(f"NIC eklendi: {vm_id} → {network}", category="vm")
+        return ok(**result), 201
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/vms/<vm_id>/hardware/nic/<path:mac>", methods=["DELETE"])
+@require_auth
+def api_vm_nic_detach(vm_id, mac):
+    try:
+        result = vm_manager.hot_detach_nic(vm_id, mac)
+        ev.info(f"NIC çıkarıldı: {vm_id} / {mac}", category="vm")
+        return ok(**result)
+    except Exception as e:
+        return err(e, 500)
+
 @app.route("/api/vms/<vm_id>/autostart", methods=["PUT"])
 @require_auth
 def api_vm_autostart(vm_id):

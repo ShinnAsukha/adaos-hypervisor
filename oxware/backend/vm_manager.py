@@ -495,6 +495,302 @@ def delete_snapshot(vm_id, snap_name):
         conn.close()
 
 
+# ── Hardware Tuning & Hot-Plug ─────────────────────────────────────────────────
+
+def get_hardware_config(vm_id: str) -> dict:
+    """VM'nin tam donanım yapılandırmasını döndür (CPU modu, nested virt, NIC'ler, diskler)."""
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        xml_str = dom.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE)
+        root = ET.fromstring(xml_str)
+        state_val, _ = dom.state()
+        running = (state_val == libvirt.VIR_DOMAIN_RUNNING)
+
+        # CPU
+        vcpu_el = root.find("vcpu")
+        vcpu_max     = int(vcpu_el.text) if vcpu_el is not None else 1
+        vcpu_current = int(vcpu_el.get("current", vcpu_max)) if vcpu_el is not None else vcpu_max
+        cpu_el   = root.find("cpu")
+        cpu_mode = cpu_el.get("mode", "custom") if cpu_el is not None else "custom"
+        nested   = False
+        if cpu_el is not None:
+            for feat in cpu_el.findall("feature"):
+                if feat.get("name") in ("vmx", "svm") and feat.get("policy") == "require":
+                    nested = True
+                    break
+
+        # Memory
+        mem_el     = root.find("memory")
+        mem_max_kb = int(mem_el.text) if mem_el is not None else 0
+        cur_el     = root.find("currentMemory")
+        mem_cur_kb = int(cur_el.text) if cur_el is not None else mem_max_kb
+
+        # Disks
+        disks = []
+        for disk in root.findall(".//disk"):
+            if disk.get("device") != "disk":
+                continue
+            src  = disk.find("source")
+            tgt  = disk.find("target")
+            drv  = disk.find("driver")
+            disks.append({
+                "path":   src.get("file", "") if src is not None else "",
+                "target": tgt.get("dev", "")  if tgt is not None else "",
+                "bus":    tgt.get("bus", "")  if tgt is not None else "",
+                "format": drv.get("type", "qcow2") if drv is not None else "qcow2",
+            })
+
+        # NICs
+        nics = []
+        for iface in root.findall(".//interface"):
+            mac_el  = iface.find("mac")
+            src_el  = iface.find("source")
+            mdl_el  = iface.find("model")
+            nics.append({
+                "mac":     mac_el.get("address", "") if mac_el is not None else "",
+                "network": src_el.get("network", src_el.get("bridge", "")) if src_el is not None else "",
+                "model":   mdl_el.get("type", "virtio") if mdl_el is not None else "virtio",
+                "type":    iface.get("type", "network"),
+            })
+
+        return {
+            "running":      running,
+            "vcpu_max":     vcpu_max,
+            "vcpu_current": vcpu_current,
+            "mem_max_mb":   mem_max_kb // 1024,
+            "mem_current_mb": mem_cur_kb // 1024,
+            "cpu_mode":     cpu_mode,
+            "nested_virt":  nested,
+            "disks":        disks,
+            "nics":         nics,
+        }
+    finally:
+        conn.close()
+
+
+def hot_set_vcpus(vm_id: str, count: int) -> dict:
+    """Çalışan VM'de vCPU sayısını canlı değiştir."""
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        state_val, _ = dom.state()
+        running = (state_val == libvirt.VIR_DOMAIN_RUNNING)
+        flags = libvirt.VIR_DOMAIN_VCPU_CONFIG
+        if running:
+            flags |= libvirt.VIR_DOMAIN_VCPU_LIVE
+        dom.setVcpusFlags(count, flags)
+        return {"ok": True, "vcpus": count, "live": running}
+    finally:
+        conn.close()
+
+
+def hot_set_memory(vm_id: str, mb: int) -> dict:
+    """Çalışan VM'de RAM'i balloon ile canlı değiştir (max değerini aşamaz)."""
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        state_val, _ = dom.state()
+        running = (state_val == libvirt.VIR_DOMAIN_RUNNING)
+        kb = mb * 1024
+        flags = libvirt.VIR_DOMAIN_MEM_CONFIG
+        if running:
+            flags |= libvirt.VIR_DOMAIN_MEM_LIVE
+        dom.setMemoryFlags(kb, flags)
+        return {"ok": True, "memory_mb": mb, "live": running}
+    finally:
+        conn.close()
+
+
+def set_cpu_mode(vm_id: str, mode: str) -> dict:
+    """CPU modunu değiştir (host-passthrough/host-model/custom). Restart gerekli."""
+    valid = {"host-passthrough", "host-model", "custom"}
+    if mode not in valid:
+        raise ValueError(f"Geçersiz CPU modu: {mode}")
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        xml_str = dom.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE)
+        root = ET.fromstring(xml_str)
+        cpu_el = root.find("cpu")
+        if cpu_el is None:
+            cpu_el = ET.SubElement(root, "cpu")
+        cpu_el.set("mode", mode)
+        if mode == "host-passthrough":
+            cpu_el.set("check", "none")
+        new_xml = ET.tostring(root, encoding="unicode")
+        conn.defineXML(new_xml)
+        return {"ok": True, "cpu_mode": mode, "restart_required": True}
+    finally:
+        conn.close()
+
+
+def set_nested_virt(vm_id: str, enabled: bool) -> dict:
+    """Nested virtualization (vmx/svm) aç/kapat. Restart gerekli."""
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        xml_str = dom.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE)
+        root = ET.fromstring(xml_str)
+        cpu_el = root.find("cpu")
+        if cpu_el is None:
+            cpu_el = ET.SubElement(root, "cpu")
+
+        # Host CPU flag gerekiyor
+        if enabled and cpu_el.get("mode") not in ("host-passthrough", "host-model"):
+            cpu_el.set("mode", "host-passthrough")
+            cpu_el.set("check", "none")
+
+        # Mevcut vmx/svm feature'ları temizle
+        for feat in cpu_el.findall("feature"):
+            if feat.get("name") in ("vmx", "svm"):
+                cpu_el.remove(feat)
+
+        if enabled:
+            # vmx (Intel) ve svm (AMD) ikisini de ekle — hypervisor hangisini destekliyorsa kullanır
+            for fname in ("vmx", "svm"):
+                feat_el = ET.SubElement(cpu_el, "feature")
+                feat_el.set("policy", "require")
+                feat_el.set("name", fname)
+
+        new_xml = ET.tostring(root, encoding="unicode")
+        conn.defineXML(new_xml)
+        return {"ok": True, "nested_virt": enabled, "restart_required": True}
+    finally:
+        conn.close()
+
+
+def hot_attach_disk(vm_id: str, disk_path: str, bus: str = "virtio") -> dict:
+    """Yeni disk hot-attach et. VM çalışıyorsa canlı, değilse config'e yazar."""
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        state_val, _ = dom.state()
+        running = (state_val == libvirt.VIR_DOMAIN_RUNNING)
+
+        # Hedef aygıt adı bul (vda,vdb,... veya sda,sdb,...)
+        prefix = "vd" if bus == "virtio" else "sd"
+        existing = set()
+        xml_str = dom.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE)
+        root = ET.fromstring(xml_str)
+        for tgt in root.findall(".//disk/target"):
+            existing.add(tgt.get("dev", ""))
+        letter = "a"
+        while f"{prefix}{letter}" in existing:
+            letter = chr(ord(letter) + 1)
+        dev = f"{prefix}{letter}"
+
+        disk_xml = f"""<disk type='file' device='disk'>
+  <driver name='qemu' type='qcow2' cache='none'/>
+  <source file='{disk_path}'/>
+  <target dev='{dev}' bus='{bus}'/>
+</disk>"""
+
+        flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
+        if running:
+            flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
+        dom.attachDeviceFlags(disk_xml, flags)
+        return {"ok": True, "target": dev, "path": disk_path, "live": running}
+    finally:
+        conn.close()
+
+
+def hot_detach_disk(vm_id: str, target_dev: str) -> dict:
+    """Disk hot-detach et (hedef aygıt adına göre, örn. vdb)."""
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        state_val, _ = dom.state()
+        running = (state_val == libvirt.VIR_DOMAIN_RUNNING)
+
+        xml_str = dom.XMLDesc()
+        root = ET.fromstring(xml_str)
+        disk_el = None
+        for disk in root.findall(".//disk[@device='disk']"):
+            tgt = disk.find("target")
+            if tgt is not None and tgt.get("dev") == target_dev:
+                disk_el = disk
+                break
+        if disk_el is None:
+            raise ValueError(f"Disk bulunamadı: {target_dev}")
+
+        disk_xml = ET.tostring(disk_el, encoding="unicode")
+        flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
+        if running:
+            flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
+        dom.detachDeviceFlags(disk_xml, flags)
+        return {"ok": True, "target": target_dev, "live": running}
+    finally:
+        conn.close()
+
+
+def hot_attach_nic(vm_id: str, network: str = "default", model: str = "virtio") -> dict:
+    """Yeni NIC hot-attach et."""
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        state_val, _ = dom.state()
+        running = (state_val == libvirt.VIR_DOMAIN_RUNNING)
+
+        # Rastgele MAC üret
+        import random
+        mac = "52:54:00:%02x:%02x:%02x" % (random.randint(0,255), random.randint(0,255), random.randint(0,255))
+        nic_xml = f"""<interface type='network'>
+  <mac address='{mac}'/>
+  <source network='{network}'/>
+  <model type='{model}'/>
+</interface>"""
+
+        flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
+        if running:
+            flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
+        dom.attachDeviceFlags(nic_xml, flags)
+        return {"ok": True, "mac": mac, "network": network, "model": model, "live": running}
+    finally:
+        conn.close()
+
+
+def hot_detach_nic(vm_id: str, mac: str) -> dict:
+    """NIC hot-detach et (MAC adresine göre)."""
+    conn = _connect()
+    try:
+        dom = conn.lookupByUUIDString(vm_id)
+        state_val, _ = dom.state()
+        running = (state_val == libvirt.VIR_DOMAIN_RUNNING)
+
+        xml_str = dom.XMLDesc()
+        root = ET.fromstring(xml_str)
+        iface_el = None
+        for iface in root.findall(".//interface"):
+            mac_el = iface.find("mac")
+            if mac_el is not None and mac_el.get("address", "").lower() == mac.lower():
+                iface_el = iface
+                break
+        if iface_el is None:
+            raise ValueError(f"NIC bulunamadı: {mac}")
+
+        iface_xml = ET.tostring(iface_el, encoding="unicode")
+        flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
+        if running:
+            flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
+        dom.detachDeviceFlags(iface_xml, flags)
+        return {"ok": True, "mac": mac, "live": running}
+    finally:
+        conn.close()
+
+
+def create_extra_disk(vm_id: str, size_gb: int, fmt: str = "qcow2") -> str:
+    """Yeni boş disk oluştur ve yolunu döndür (hot-attach için)."""
+    vm = get_vm(vm_id)
+    disk_name = f"{vm['name']}-extra-{int(time.time())}.{fmt}"
+    disk_path = os.path.join(config.DISK_DIR, disk_name)
+    subprocess.run(
+        ["qemu-img", "create", "-f", fmt, disk_path, f"{size_gb}G"],
+        check=True, capture_output=True
+    )
+    return disk_path
+
+
 def clone_vm(vm_id, new_name):
     source = get_vm(vm_id)
     src_disk = source["disks"][0]["path"] if source["disks"] else None

@@ -278,6 +278,23 @@
     .sub-tab{padding:6px 14px;font-size:12px;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .12s,border-color .12s;background:none;border-top:none;border-left:none;border-right:none}
     .sub-tab.active{color:var(--accent-lt);border-bottom-color:var(--accent)}
     .sub-tab:hover{color:var(--text)}
+    /* ── Hardware Tuning Panel ── */
+    .hw-section{border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:12px;background:var(--surface2)}
+    .hw-section-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+    .hw-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+    .hw-label{width:170px;font-size:11px;color:var(--text-muted);flex-shrink:0}
+    .hw-ctrl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1}
+    .hw-input{background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:4px 8px;font-size:12px}
+    .hw-input:focus{outline:none;border-color:var(--accent)}
+    .hw-live-badge{font-size:10px;font-weight:700;color:#22c55e;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:3px;padding:1px 6px}
+    .hw-restart-badge{font-size:10px;font-weight:700;color:#eab308;background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.3);border-radius:3px;padding:1px 6px}
+    /* Toggle switch */
+    .hw-toggle{position:relative;display:inline-block;width:38px;height:20px;flex-shrink:0}
+    .hw-toggle input{opacity:0;width:0;height:0}
+    .hw-toggle-slider{position:absolute;inset:0;background:var(--surface3);border-radius:20px;cursor:pointer;transition:.2s;border:1px solid var(--border2)}
+    .hw-toggle-slider:before{content:"";position:absolute;height:14px;width:14px;left:2px;bottom:2px;background:#888;border-radius:50%;transition:.2s}
+    .hw-toggle input:checked+.hw-toggle-slider{background:rgba(34,197,94,.2);border-color:#22c55e}
+    .hw-toggle input:checked+.hw-toggle-slider:before{transform:translateX(18px);background:#22c55e}
     /* Tab içerikleri için ortak */
     .tab-content{padding:0}
 
@@ -934,20 +951,156 @@
             </div>
           </div>
 
-          <div class="section-header"><h2>Donanım</h2></div>
-          <div class="table-wrap" style="margin-bottom:14px">
-            <table>
-              <thead><tr><th>Tip</th><th>Detay</th></tr></thead>
-              <tbody id="vd-hw-tbody"></tbody>
-            </table>
+          <!-- VM Detail Tabs -->
+          <div class="sub-tabs" id="vd-tabs" style="margin-top:6px">
+            <div class="sub-tab active" onclick="vdTab('hw')" id="vd-tab-hw">🔧 Donanım & Tuning</div>
+            <div class="sub-tab" onclick="vdTab('snap')" id="vd-tab-snap">📸 Snapshot'lar</div>
           </div>
 
-          <div class="section-header"><h2>Snapshot'lar</h2></div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Ad</th><th>Tarih</th><th>Açıklama</th><th>İşlem</th></tr></thead>
-              <tbody id="vd-snap-tbody"></tbody>
-            </table>
+          <!-- ── Hardware & Tuning Tab ── -->
+          <div id="vd-pane-hw">
+            <!-- CPU -->
+            <div class="hw-section">
+              <div class="hw-section-title">⚙️ İşlemci (CPU)</div>
+              <div class="hw-row">
+                <div class="hw-label">vCPU Sayısı</div>
+                <div class="hw-ctrl">
+                  <input type="number" id="hw-vcpu-count" min="1" max="128" value="1" style="width:70px" class="hw-input">
+                  <span id="hw-vcpu-max" style="font-size:11px;color:var(--text-muted)">/ max —</span>
+                  <button class="btn-sm" onclick="hwApplyVcpu()" title="Uygula (VM çalışıyorsa canlı)">▶ Uygula</button>
+                  <span class="hw-live-badge">⚡ Live</span>
+                </div>
+              </div>
+              <div class="hw-row">
+                <div class="hw-label">CPU Modu</div>
+                <div class="hw-ctrl">
+                  <select id="hw-cpu-mode" class="hw-input" style="width:180px">
+                    <option value="host-passthrough">host-passthrough (önerilen)</option>
+                    <option value="host-model">host-model</option>
+                    <option value="custom">custom (emüle)</option>
+                  </select>
+                  <button class="btn-sm" onclick="hwApplyCpuMode()">▶ Uygula</button>
+                  <span class="hw-restart-badge">🔄 Restart</span>
+                </div>
+              </div>
+              <div class="hw-row">
+                <div class="hw-label">Nested Virtualization</div>
+                <div class="hw-ctrl">
+                  <label class="hw-toggle">
+                    <input type="checkbox" id="hw-nested-virt" onchange="hwApplyNestedVirt(this.checked)">
+                    <span class="hw-toggle-slider"></span>
+                  </label>
+                  <span style="font-size:11px;color:var(--text-muted);margin-left:8px">VM içinde KVM çalıştır (vmx/svm)</span>
+                  <span class="hw-restart-badge">🔄 Restart</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- RAM -->
+            <div class="hw-section">
+              <div class="hw-section-title">🧠 Bellek (RAM)</div>
+              <div class="hw-row">
+                <div class="hw-label">Mevcut RAM</div>
+                <div class="hw-ctrl">
+                  <input type="number" id="hw-mem-mb" min="128" step="256" value="1024" style="width:90px" class="hw-input">
+                  <span style="font-size:11px;color:var(--text-muted)">MB &nbsp;/ max <span id="hw-mem-max">—</span> MB</span>
+                  <button class="btn-sm" onclick="hwApplyMemory()">▶ Uygula</button>
+                  <span class="hw-live-badge">⚡ Live (balloon)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Disks -->
+            <div class="hw-section">
+              <div class="hw-section-title">💾 Diskler
+                <button class="btn-sm" style="margin-left:10px" onclick="hwOpenAddDisk()">+ Disk Ekle</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Aygıt</th><th>Yol</th><th>Bus</th><th>Format</th><th>İşlem</th></tr></thead>
+                  <tbody id="hw-disk-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- NICs -->
+            <div class="hw-section">
+              <div class="hw-section-title">🌐 Ağ Arayüzleri
+                <button class="btn-sm" style="margin-left:10px" onclick="hwOpenAddNic()">+ NIC Ekle</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>MAC</th><th>Ağ</th><th>Model</th><th>İşlem</th></tr></thead>
+                  <tbody id="hw-nic-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Snapshots Tab ── -->
+          <div id="vd-pane-snap" style="display:none">
+            <div class="section-header" style="margin-top:10px"><h2>Snapshot'lar</h2></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Ad</th><th>Tarih</th><th>Açıklama</th><th>İşlem</th></tr></thead>
+                <tbody id="vd-snap-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Disk Modal -->
+        <div class="modal-overlay" id="modal-add-disk-overlay" onclick="hwCloseAddDisk()" style="display:none"></div>
+        <div class="modal" id="modal-add-disk" style="display:none;max-width:380px">
+          <div class="modal-header"><span>💾 Yeni Disk Ekle</span><button class="modal-close" onclick="hwCloseAddDisk()">✕</button></div>
+          <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="form-group">
+              <label>Boyut (GB)</label>
+              <input type="number" id="add-disk-size" value="10" min="1" max="2000" class="hw-input" style="width:100%">
+            </div>
+            <div class="form-group">
+              <label>Bus</label>
+              <select id="add-disk-bus" class="hw-input" style="width:100%">
+                <option value="virtio">virtio (önerilen)</option>
+                <option value="scsi">scsi</option>
+                <option value="ide">ide</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Format</label>
+              <select id="add-disk-fmt" class="hw-input" style="width:100%">
+                <option value="qcow2">qcow2 (thin provision)</option>
+                <option value="raw">raw (tam boyut)</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn" onclick="hwCloseAddDisk()">İptal</button>
+            <button class="btn-primary" onclick="hwConfirmAddDisk()">💾 Ekle</button>
+          </div>
+        </div>
+
+        <!-- Add NIC Modal -->
+        <div class="modal-overlay" id="modal-add-nic-overlay" onclick="hwCloseAddNic()" style="display:none"></div>
+        <div class="modal" id="modal-add-nic" style="display:none;max-width:380px">
+          <div class="modal-header"><span>🌐 Yeni NIC Ekle</span><button class="modal-close" onclick="hwCloseAddNic()">✕</button></div>
+          <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="form-group">
+              <label>Ağ</label>
+              <input type="text" id="add-nic-net" value="default" class="hw-input" style="width:100%">
+            </div>
+            <div class="form-group">
+              <label>Model</label>
+              <select id="add-nic-model" class="hw-input" style="width:100%">
+                <option value="virtio">virtio (önerilen)</option>
+                <option value="e1000">e1000</option>
+                <option value="rtl8139">rtl8139</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn" onclick="hwCloseAddNic()">İptal</button>
+            <button class="btn-primary" onclick="hwConfirmAddNic()">🌐 Ekle</button>
           </div>
         </div>
 
@@ -4385,18 +4538,8 @@ async function loadVMDetail(vmId) {
     actHtml += `<button class="btn sm danger" onclick="deleteVM('${v.id}','${escHtml(v.name)}')">✕ Sil</button>`;
     document.getElementById("vd-actions").innerHTML = actHtml;
 
-    // Hardware
-    const hw = [];
-    hw.push(["CPU", `${v.vcpus} vCPU`]);
-    hw.push(["Bellek", `${v.memory_mb.toLocaleString()} MB`]);
-    hw.push(["İşletim Sistemi", v.os_type || "generic"]);
-    (v.disks || []).forEach((d, i) => {
-      hw.push([`Disk ${i + 1}`, `${d.device || ""} · ${d.capacity_gb || "?"} GB · ${d.format || "qcow2"}`]);
-    });
-    (v.networks || []).forEach((n, i) => {
-      hw.push([`Ağ Arayüzü ${i + 1}`, `${n.network || n.type || "—"} · ${n.mac || ""}`]);
-    });
-    document.getElementById("vd-hw-tbody").innerHTML = hw.map(([k, val]) => `<tr><td style="width:160px;color:var(--text-muted)">${k}</td><td><code>${escHtml(val)}</code></td></tr>`).join("");
+    // Load hardware tuning panel
+    loadHardwareConfig(vmId);
 
     // Snapshots
     try {
@@ -4419,6 +4562,164 @@ async function loadVMDetail(vmId) {
   } catch (e) {
     toast("VM detayı alınamadı: " + e.message, "error");
   }
+}
+
+// ── VM Detail Tab Switch ──────────────────────────────────────────────────────
+function vdTab(name) {
+  document.getElementById('vd-pane-hw').style.display   = name === 'hw'   ? '' : 'none';
+  document.getElementById('vd-pane-snap').style.display = name === 'snap' ? '' : 'none';
+  document.getElementById('vd-tab-hw').classList.toggle('active',   name === 'hw');
+  document.getElementById('vd-tab-snap').classList.toggle('active', name === 'snap');
+}
+
+// ── Hardware Tuning Panel ─────────────────────────────────────────────────────
+let _hwVmId = null;
+
+async function loadHardwareConfig(vmId) {
+  _hwVmId = vmId;
+  try {
+    const hw = await api(`/vms/${vmId}/hardware`);
+
+    // CPU
+    document.getElementById('hw-vcpu-count').value = hw.vcpu_current;
+    document.getElementById('hw-vcpu-max').textContent = `/ max ${hw.vcpu_max}`;
+    document.getElementById('hw-vcpu-count').max = hw.vcpu_max;
+    document.getElementById('hw-cpu-mode').value = hw.cpu_mode || 'host-passthrough';
+    document.getElementById('hw-nested-virt').checked = hw.nested_virt || false;
+
+    // RAM
+    document.getElementById('hw-mem-mb').value = hw.mem_current_mb;
+    document.getElementById('hw-mem-max').textContent = hw.mem_max_mb;
+
+    // Disks
+    const dt = document.getElementById('hw-disk-tbody');
+    dt.innerHTML = (hw.disks || []).map(d => `
+      <tr>
+        <td><code>${escHtml(d.target)}</code></td>
+        <td style="font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(d.path)}">${escHtml(d.path)}</td>
+        <td>${escHtml(d.bus)}</td>
+        <td>${escHtml(d.format)}</td>
+        <td>${d.target !== 'vda' && d.target !== 'sda'
+          ? `<button class="btn sm danger" onclick="hwDetachDisk('${escHtml(d.target)}')">✕ Çıkar</button>`
+          : '<span style="color:var(--text-dim);font-size:10px">Ana disk</span>'}</td>
+      </tr>`).join('') || `<tr><td colspan="5"><div class="empty-state"><p>Disk yok</p></div></td></tr>`;
+
+    // NICs
+    const nt = document.getElementById('hw-nic-tbody');
+    nt.innerHTML = (hw.nics || []).map(n => `
+      <tr>
+        <td><code style="font-size:11px">${escHtml(n.mac)}</code></td>
+        <td>${escHtml(n.network)}</td>
+        <td>${escHtml(n.model)}</td>
+        <td><button class="btn sm danger" onclick="hwDetachNic('${escHtml(n.mac)}')">✕ Çıkar</button></td>
+      </tr>`).join('') || `<tr><td colspan="4"><div class="empty-state"><p>NIC yok</p></div></td></tr>`;
+
+  } catch(e) {
+    toast('Donanım bilgisi alınamadı: ' + e.message, 'error');
+  }
+}
+
+async function hwApplyVcpu() {
+  if (!_hwVmId) return;
+  const count = parseInt(document.getElementById('hw-vcpu-count').value);
+  try {
+    const r = await api(`/vms/${_hwVmId}/hardware/vcpus`, { method:'POST', body: JSON.stringify({count}) });
+    toast(`vCPU ${count} olarak ${r.live ? 'canlı' : 'config'} uygulandı`, 'success');
+    loadVMDetail(_hwVmId);
+  } catch(e) { toast('vCPU değiştirilemedi: ' + e.message, 'error'); }
+}
+
+async function hwApplyMemory() {
+  if (!_hwVmId) return;
+  const mb = parseInt(document.getElementById('hw-mem-mb').value);
+  try {
+    const r = await api(`/vms/${_hwVmId}/hardware/memory`, { method:'POST', body: JSON.stringify({mb}) });
+    toast(`RAM ${mb} MB ${r.live ? 'canlı balloon' : 'config'} uygulandı`, 'success');
+    loadVMDetail(_hwVmId);
+  } catch(e) { toast('RAM değiştirilemedi: ' + e.message, 'error'); }
+}
+
+async function hwApplyCpuMode() {
+  if (!_hwVmId) return;
+  const mode = document.getElementById('hw-cpu-mode').value;
+  try {
+    await api(`/vms/${_hwVmId}/hardware/cpu-mode`, { method:'POST', body: JSON.stringify({mode}) });
+    toast(`CPU modu "${mode}" olarak ayarlandı. VM yeniden başlatılmalı.`, 'warning');
+  } catch(e) { toast('CPU modu değiştirilemedi: ' + e.message, 'error'); }
+}
+
+async function hwApplyNestedVirt(enabled) {
+  if (!_hwVmId) return;
+  try {
+    await api(`/vms/${_hwVmId}/hardware/nested-virt`, { method:'POST', body: JSON.stringify({enabled}) });
+    toast(`Nested virt ${enabled ? 'açıldı' : 'kapatıldı'}. VM yeniden başlatılmalı.`, 'warning');
+  } catch(e) {
+    toast('Nested virt değiştirilemedi: ' + e.message, 'error');
+    document.getElementById('hw-nested-virt').checked = !enabled;  // revert
+  }
+}
+
+async function hwDetachDisk(targetDev) {
+  if (!_hwVmId) return;
+  if (!confirm(`"${targetDev}" diski çıkarılacak. Devam?`)) return;
+  try {
+    await api(`/vms/${_hwVmId}/hardware/disk/${targetDev}`, { method:'DELETE' });
+    toast(`Disk ${targetDev} çıkarıldı`, 'success');
+    loadHardwareConfig(_hwVmId);
+    loadVMDetail(_hwVmId);
+  } catch(e) { toast('Disk çıkarılamadı: ' + e.message, 'error'); }
+}
+
+async function hwDetachNic(mac) {
+  if (!_hwVmId) return;
+  if (!confirm(`MAC ${mac} NIC çıkarılacak. Devam?`)) return;
+  try {
+    await api(`/vms/${_hwVmId}/hardware/nic/${mac}`, { method:'DELETE' });
+    toast('NIC çıkarıldı', 'success');
+    loadHardwareConfig(_hwVmId);
+  } catch(e) { toast('NIC çıkarılamadı: ' + e.message, 'error'); }
+}
+
+function hwOpenAddDisk() {
+  document.getElementById('modal-add-disk').style.display = '';
+  document.getElementById('modal-add-disk-overlay').style.display = '';
+}
+function hwCloseAddDisk() {
+  document.getElementById('modal-add-disk').style.display = 'none';
+  document.getElementById('modal-add-disk-overlay').style.display = 'none';
+}
+async function hwConfirmAddDisk() {
+  if (!_hwVmId) return;
+  const size_gb = parseInt(document.getElementById('add-disk-size').value);
+  const bus     = document.getElementById('add-disk-bus').value;
+  const format  = document.getElementById('add-disk-fmt').value;
+  try {
+    const r = await api(`/vms/${_hwVmId}/hardware/disk/attach`, { method:'POST', body: JSON.stringify({size_gb, bus, format}) });
+    toast(`${size_gb}GB disk eklendi (${r.target}) ${r.live ? '— canlı' : '— config'}`, 'success');
+    hwCloseAddDisk();
+    loadHardwareConfig(_hwVmId);
+    loadVMDetail(_hwVmId);
+  } catch(e) { toast('Disk eklenemedi: ' + e.message, 'error'); }
+}
+
+function hwOpenAddNic() {
+  document.getElementById('modal-add-nic').style.display = '';
+  document.getElementById('modal-add-nic-overlay').style.display = '';
+}
+function hwCloseAddNic() {
+  document.getElementById('modal-add-nic').style.display = 'none';
+  document.getElementById('modal-add-nic-overlay').style.display = 'none';
+}
+async function hwConfirmAddNic() {
+  if (!_hwVmId) return;
+  const network = document.getElementById('add-nic-net').value.trim() || 'default';
+  const model   = document.getElementById('add-nic-model').value;
+  try {
+    const r = await api(`/vms/${_hwVmId}/hardware/nic/attach`, { method:'POST', body: JSON.stringify({network, model}) });
+    toast(`NIC eklendi (${r.mac}) ${r.live ? '— canlı' : '— config'}`, 'success');
+    hwCloseAddNic();
+    loadHardwareConfig(_hwVmId);
+  } catch(e) { toast('NIC eklenemedi: ' + e.message, 'error'); }
 }
 
 /* ══════════════════ VMs ══════════════════ */
