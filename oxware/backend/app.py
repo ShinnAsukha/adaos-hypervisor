@@ -2548,7 +2548,7 @@ def api_ipam_reassign(mac):
 _VALID_APPS = {
     "portainer", "nextcloud", "vaultwarden", "n8n", "coolify",
     "docker-portainer", "gitea", "cyberpanel", "nginx-proxy-manager",
-    "grafana", "uptime-kuma", "minio", "pihole", "wireguard",
+    "grafana", "uptime-kuma", "minio", "pihole", "wireguard", "plesk",
 }
 
 def _get_app_install_script(app_id: str) -> str:
@@ -2690,6 +2690,12 @@ docker run -d --name wg-easy --restart=always \\
   -v /opt/wireguard:/etc/wireguard \\
   -p 51820:51820/udp -p 51821:51821/tcp \\
   --cap-add=NET_ADMIN --cap-add=SYS_MODULE ghcr.io/wg-easy/wg-easy:latest
+""",
+        "plesk": """#!/bin/bash
+apt-get update -y && apt-get install -y curl wget
+# Plesk One-Click Installer (Obsidian, latest stable)
+sh <(curl https://autoinstall.plesk.com/one-click-installer || wget -O - https://autoinstall.plesk.com/one-click-installer)
+# After install: https://<IP>:8443 for web UI, admin / check /etc/plesk-install.log for initial password
 """,
     }
     return scripts.get(app_id, "")
