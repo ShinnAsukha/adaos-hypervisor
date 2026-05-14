@@ -203,14 +203,17 @@ cp "$SCRIPT_DIR/installer/install.py" "$SQUASHFS_ROOT/opt/oxware-installer/insta
 chmod +x "$SQUASHFS_ROOT/opt/oxware-installer/install.py"
 log "install.py kopyalandı"
 
-# 3b. Web installer kopyala
-mkdir -p "$SQUASHFS_ROOT/opt/oxware-installer/web"
-for f in server.py launcher.py start.sh index.html style.css app.js; do
-    [ -f "$SCRIPT_DIR/web-installer/$f" ] && \
-        cp "$SCRIPT_DIR/web-installer/$f" "$SQUASHFS_ROOT/opt/oxware-installer/web/$f"
-done
-chmod +x "$SQUASHFS_ROOT/opt/oxware-installer/web/start.sh"
-log "Web installer kopyalandı"
+# 3b. TUI installer kopyala (curses tabanlı, X11/GTK gerektirmez)
+mkdir -p "$SQUASHFS_ROOT/opt/oxware-installer"
+[ -f "$SCRIPT_DIR/tui-installer/installer.py" ] && \
+    cp "$SCRIPT_DIR/tui-installer/installer.py" "$SQUASHFS_ROOT/opt/oxware-installer/installer.py"
+chmod +x "$SQUASHFS_ROOT/opt/oxware-installer/installer.py"
+
+# Logo kopyala (gelecekte framebuffer kullanımı için)
+[ -f "$REPO_ROOT/oxware/frontend/static/img/oxware2.png" ] && \
+    cp "$REPO_ROOT/oxware/frontend/static/img/oxware2.png" "$SQUASHFS_ROOT/opt/oxware-installer/oxware2.png"
+
+log "TUI installer kopyalandı"
 
 # 4. OXware kaynak kopyala (offline fallback için)
 mkdir -p "$SQUASHFS_ROOT/opt/oxware"
@@ -231,9 +234,13 @@ Conflicts=console-conf@tty1.service
 
 [Service]
 Type=simple
-ExecStart=/bin/bash /opt/oxware-installer/web/start.sh
-StandardOutput=journal+console
-StandardError=journal+console
+ExecStart=/usr/bin/python3 /opt/oxware-installer/installer.py
+StandardInput=tty
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
 KillMode=process
 IgnoreSIGPIPE=no
 Restart=on-failure
@@ -296,13 +303,12 @@ mount --bind /dev/pts "$SQUASHFS_ROOT/dev/pts"
 chroot "$SQUASHFS_ROOT" /bin/bash << 'CHROOT'
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq 2>/dev/null || true
+# TUI installer: sadece curses (stdlib) + disk/ağ araçları gerekli
+# X11/GTK/webkit GEREKMEZ — curses terminal üzerinde çalışır
 apt-get install -y -qq --no-install-recommends \
-    python3 python3-curses git \
-    parted dosfstools e2fsprogs util-linux \
-    xorg xserver-xorg-video-all xinit \
-    python3-gi python3-gi-cairo gir1.2-gtk-3.0 \
-    gir1.2-webkit2-4.0 \
-    libwebkit2gtk-4.0-37 \
+    python3 python3-curses \
+    git parted dosfstools e2fsprogs util-linux \
+    iproute2 dhclient \
     2>/dev/null || true
 CHROOT
 
