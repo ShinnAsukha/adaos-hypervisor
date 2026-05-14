@@ -153,14 +153,14 @@
         });
 
         const { host, websocket_port, vnc_port } = info;
-        const proto = location.protocol === "https:" ? "wss" : "ws";
+        const isHttps = location.protocol === "https:";
 
-        // noVNC iframe URL
+        // noVNC iframe URL — websockify SSL varsa encrypt=1
         const novncUrl = `/novnc/vnc.html?` +
           `host=${host}&` +
           `port=${websocket_port}&` +
           `path=websockify&` +
-          `encrypt=0&` +
+          `encrypt=${isHttps ? 1 : 0}&` +
           `autoconnect=1&` +
           `resize=scale&` +
           `show_dot=1`;

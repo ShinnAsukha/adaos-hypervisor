@@ -761,6 +761,25 @@ def setup_page():
 def console_page(vm_id):
     return render_template("console.html", vm_id=vm_id)
 
+@app.route("/novnc/")
+@app.route("/novnc/<path:filename>")
+def serve_novnc(filename="vnc.html"):
+    """noVNC statik dosyalarını Flask üzerinden serve et (same-origin, X-Frame-Options yok)."""
+    novnc_dir = config.NOVNC_DIR
+    if not os.path.isdir(novnc_dir):
+        # Fallback: yaygın kurulum yerleri
+        for d in ["/usr/share/novnc", "/opt/novnc", "/usr/share/novnc/app"]:
+            if os.path.isdir(d):
+                novnc_dir = d
+                break
+        else:
+            return "noVNC bulunamadı. Lütfen sunucuya novnc kurun.", 404
+    resp = send_from_directory(novnc_dir, filename)
+    # iframe içinde gösterim için X-Frame-Options kaldır
+    resp.headers.pop("X-Frame-Options", None)
+    resp.headers["X-Frame-Options"] = "SAMEORIGIN"
+    return resp
+
 # ── İlk Kurulum ───────────────────────────────────────────────────────────────
 @app.route("/api/setup/status")
 def api_setup_status():
@@ -1344,16 +1363,16 @@ def api_start_console(vm_id):
         ws_port = config.WS_PORT
         client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1").split(",")[0].strip()
         def _start():
-            subprocess.Popen(
-                [
-                    "websockify",
-                    "--listen", "127.0.0.1",   # bind localhost only — CVE-2022-35508
-                    "--web", config.NOVNC_DIR,
-                    str(ws_port),
-                    f"127.0.0.1:{vnc_port}",   # VNC also localhost
-                ],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            )
+            cmd = [
+                "websockify",
+                "--web", config.NOVNC_DIR,
+                str(ws_port),
+                f"127.0.0.1:{vnc_port}",
+            ]
+            # SSL varsa WSS olarak başlat (HTTPS sayfasından mixed-content sorunu olmaz)
+            if config.SSL_ENABLED and os.path.exists(config.SSL_CERT) and os.path.exists(config.SSL_KEY):
+                cmd += ["--cert", config.SSL_CERT, "--key", config.SSL_KEY]
+            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         threading.Thread(target=_start, daemon=True).start()
 
         # Generate short-lived noVNC session token
