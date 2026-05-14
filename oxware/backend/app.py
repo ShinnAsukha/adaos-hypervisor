@@ -17,7 +17,7 @@ from datetime import timedelta
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from flask import Flask, request, jsonify, send_from_directory, render_template, make_response
+from flask import Flask, request, jsonify, send_from_directory, render_template, make_response, send_file
 from flask_socketio import SocketIO, emit
 from flask_jwt_extended import (
     JWTManager, create_access_token, get_jwt_identity, verify_jwt_in_request
@@ -244,6 +244,58 @@ def index():
 @app.route("/docs")
 def docs_page():
     return render_template("docs.html")
+
+# ── ISO Download ──────────────────────────────────────────────────────────────
+_ISO_SEARCH_PATHS = [
+    "/opt/oxware/OXware-Hypervisor-2.0.0-amd64.iso",
+    "/root/OXware-Hypervisor-2.0.0-amd64.iso",
+    "/tmp/OXware-Hypervisor-2.0.0-amd64.iso",
+]
+
+@app.route("/download/iso")
+def download_iso():
+    import glob as _glob
+    # Dynamic search — any OXware ISO
+    candidates = _iso_find()
+    if not candidates:
+        return jsonify({"error": "ISO bulunamadı. Önce build/build-iso.sh çalıştırın."}), 404
+    iso_path = candidates[0]
+    return send_file(iso_path, as_attachment=True,
+                     download_name=os.path.basename(iso_path),
+                     mimetype="application/x-iso9660-image")
+
+@app.route("/api/iso/info")
+def api_iso_info():
+    candidates = _iso_find()
+    if not candidates:
+        return ok(available=False, message="ISO bulunamadı")
+    iso_path = candidates[0]
+    size = os.path.getsize(iso_path)
+    mtime = os.path.getmtime(iso_path)
+    return ok(available=True, path=iso_path,
+              name=os.path.basename(iso_path),
+              size=size,
+              size_human=f"{size / (1024**3):.2f} GB",
+              built_at=mtime)
+
+def _iso_find():
+    import glob as _glob
+    found = []
+    for p in _ISO_SEARCH_PATHS:
+        if os.path.isfile(p):
+            found.append(p)
+    # Also glob common build output dirs
+    for pattern in ["/opt/oxware/*.iso", "/root/*.iso", "/tmp/oxware*/*.iso"]:
+        found.extend(_glob.glob(pattern))
+    # Deduplicate, sort by mtime newest first
+    seen = set()
+    result = []
+    for p in found:
+        if p not in seen and os.path.isfile(p):
+            seen.add(p)
+            result.append(p)
+    result.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+    return result
 
 @app.route("/login")
 def login_page():

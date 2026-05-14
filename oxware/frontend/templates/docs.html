@@ -228,6 +228,31 @@
     .home-card .hc-icon { font-size:32px; margin-bottom:12px; }
     .home-card h3 { font-size:15px; color:var(--text); margin-bottom:6px; }
     .home-card p  { font-size:12px; color:var(--muted); line-height:1.5; margin:0; }
+
+    /* ── ISO Download Banner ── */
+    .iso-banner {
+      background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(63,185,80,.06));
+      border:1px solid rgba(0,212,255,.25); border-radius:14px;
+      padding:24px 28px; margin:28px 0; display:flex;
+      align-items:center; gap:20px; flex-wrap:wrap;
+    }
+    .iso-banner-icon { font-size:42px; flex-shrink:0; }
+    .iso-banner-info { flex:1; min-width:200px; }
+    .iso-banner-info h3 { color:var(--text); font-size:17px; margin:0 0 6px; }
+    .iso-banner-info p  { color:var(--muted); font-size:13px; margin:0; }
+    .iso-banner-meta { font-size:12px; color:var(--accent); margin-top:4px; }
+    .btn-download {
+      background:var(--accent); color:#000; border:none;
+      border-radius:8px; padding:10px 22px; font-size:14px;
+      font-weight:700; cursor:pointer; text-decoration:none;
+      display:inline-flex; align-items:center; gap:8px;
+      transition:opacity .15s; white-space:nowrap;
+    }
+    .btn-download:hover { opacity:.85; }
+    .btn-download.unavailable {
+      background:var(--surface2); color:var(--muted);
+      border:1px solid var(--border); cursor:not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -375,6 +400,27 @@
             <div class="hc-icon">🔧</div>
             <h3>Sorun Giderme</h3>
             <p>Sık karşılaşılan hataların çözüm yöntemleri.</p>
+          </div>
+        </div>
+
+        <!-- ISO Download Banner -->
+        <h2>ISO İndirme</h2>
+        <div class="iso-banner" id="iso-banner">
+          <div class="iso-banner-icon">💿</div>
+          <div class="iso-banner-info">
+            <h3>OXware Hypervisor ISO</h3>
+            <p>Doğrudan USB'ye yazıp boot edin — Proxmox tarzı TUI installer ile kurulum.</p>
+            <div class="iso-banner-meta" id="iso-meta">ISO bilgisi yükleniyor…</div>
+          </div>
+          <a id="iso-download-btn" href="/download/iso" class="btn-download">
+            ⬇ ISO İndir
+          </a>
+        </div>
+        <div class="alert alert-info">
+          <span>ℹ️</span>
+          <div>
+            USB'ye yazmak için: <code>dd if=OXware-Hypervisor-*.iso of=/dev/sdX bs=4M status=progress</code><br>
+            Windows'ta <strong>Rufus</strong> veya <strong>Ventoy</strong> kullanın.
           </div>
         </div>
 
@@ -1815,6 +1861,30 @@ ip link set eth0.100 up</code></pre>
       document.getElementById("search-results").style.display = "none";
     }
   });
+
+  // ISO download banner
+  (async function loadIsoInfo() {
+    const meta = document.getElementById("iso-meta");
+    const btn  = document.getElementById("iso-download-btn");
+    try {
+      const r = await fetch("/api/iso/info");
+      const d = await r.json();
+      if (d.available) {
+        const built = d.built_at ? new Date(d.built_at * 1000).toLocaleDateString("tr-TR") : "—";
+        meta.textContent = `📦 ${d.name}  ·  ${d.size_human}  ·  Build: ${built}`;
+        btn.classList.remove("unavailable");
+        btn.href = "/download/iso";
+        btn.innerHTML = "⬇ ISO İndir";
+      } else {
+        meta.textContent = "ISO bulunamadı — sunucuda build/build-iso.sh çalıştırın.";
+        btn.classList.add("unavailable");
+        btn.removeAttribute("href");
+        btn.innerHTML = "⬇ ISO Yok";
+      }
+    } catch(e) {
+      meta.textContent = "ISO bilgisi alınamadı.";
+    }
+  })();
 </script>
 </body>
 </html>
