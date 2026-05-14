@@ -726,7 +726,7 @@ def do_install(progress_cb):
     run_chroot(
         "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "
         "linux-image-generic linux-headers-generic "
-        "grub-pc grub-efi-amd64 grub2-common shim-signed "
+        "grub-pc grub-efi-amd64 grub-common shim-signed "
         "python3 python3-pip python3-flask python3-flask-socketio "
         "qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virtinst "
         "nginx parted dosfstools e2fsprogs "
@@ -832,8 +832,12 @@ def do_install(progress_cb):
     setup_done.write_text(f"setup_completed={time.time()}\n")
     os.chmod(str(setup_done), 0o600)
 
-    # root password in chroot
-    run_chroot(f"echo 'root:{state.password}' | chpasswd")
+    # root password in chroot — pass via stdin to avoid shell injection with special chars
+    subprocess.run(
+        ["chroot", TARGET_MOUNT, "/bin/bash", "-c", "chpasswd"],
+        input=f"root:{state.password}\n",
+        text=True, check=True
+    )
 
     progress_cb(78, "Installing GRUB bootloader …")
 
@@ -909,7 +913,11 @@ server {
         f"useradd -m -s /bin/bash -G sudo,libvirt,kvm {safe_user}",
         check=False
     )
-    run_chroot(f"echo '{safe_user}:{state.password}' | chpasswd", check=False)
+    subprocess.run(
+        ["chroot", TARGET_MOUNT, "/bin/bash", "-c", "chpasswd"],
+        input=f"{safe_user}:{state.password}\n",
+        text=True, check=False
+    )
 
     progress_cb(87, "Enabling services …")
     run_chroot("systemctl enable libvirtd",   check=False)
