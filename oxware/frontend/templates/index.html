@@ -5870,9 +5870,10 @@ async function vmForceStop(id) {
 // Websockify / ayrı port YOK. Mevcut SocketIO bağlantısı (port 8006) üzerinden
 // VNC TCP verisi binary proxy olarak aktarılır. Mixed-content sorunu yok.
 
-let _vncRfb        = null;
-let _vncBridge     = null;
+let _vncRfb         = null;
+let _vncBridge      = null;
 let _vncCurrentVmId = null;
+let _vncSocket      = null;   // ayrı SocketIO bağlantısı (_shellSocket gibi)
 
 async function openConsole(vmId) {
   try {
@@ -5913,7 +5914,11 @@ function closeVNCConsole() {
     _vncBridge._cleanup();
     _vncBridge = null;
   }
-  socket.emit("vnc_proxy_close", {});
+  if (_vncSocket) {
+    try { _vncSocket.emit("vnc_proxy_close", {}); } catch(e) {}
+    try { _vncSocket.disconnect(); } catch(e) {}
+    _vncSocket = null;
+  }
   _vncCurrentVmId = null;
 }
 
@@ -5974,13 +5979,16 @@ async function _initVNC(vmId) {
       this.dispatchEvent(new Event("error"));
     }
     _cleanup() {
-      socket.off("vnc_proxy_ready");
-      socket.off("vnc_proxy_data");
-      socket.off("vnc_proxy_closed");
-      socket.off("vnc_proxy_error");
+      if (_vncSocket) {
+        _vncSocket.off("vnc_proxy_ready");
+        _vncSocket.off("vnc_proxy_data");
+        _vncSocket.off("vnc_proxy_closed");
+        _vncSocket.off("vnc_proxy_error");
+      }
     }
 
     send(data) {
+      if (!_vncSocket) return;
       let b64;
       try {
         if (data instanceof ArrayBuffer) {
@@ -5991,34 +5999,48 @@ async function _initVNC(vmId) {
         } else {
           b64 = btoa(String.fromCharCode(...new Uint8Array(data)));
         }
-        socket.emit("vnc_proxy_send", { b: b64 });
+        _vncSocket.emit("vnc_proxy_send", { b: b64 });
       } catch(e) {}
     }
 
     close() {
       this.readyState = WebSocket.CLOSED;
-      socket.emit("vnc_proxy_close", {});
+      if (_vncSocket) _vncSocket.emit("vnc_proxy_close", {});
       this._cleanup();
       this.dispatchEvent(new CloseEvent("close"));
     }
   }
 
-  // Eski listeners temizle
-  socket.off("vnc_proxy_ready");
-  socket.off("vnc_proxy_data");
-  socket.off("vnc_proxy_closed");
-  socket.off("vnc_proxy_error");
+  // Eski bağlantıyı temizle
+  if (_vncSocket) {
+    try { _vncSocket.emit("vnc_proxy_close", {}); } catch(e) {}
+    try { _vncSocket.disconnect(); } catch(e) {}
+    _vncSocket = null;
+  }
+
+  // Yeni SocketIO bağlantısı aç (_shellSocket gibi)
+  _vncSocket = io({
+    transports: ["polling", "websocket"],
+    reconnection: false,
+    timeout: 30000,
+    upgrade: true,
+  });
 
   const bridge = new VNCBridge();
   _vncBridge   = bridge;
 
-  socket.on("vnc_proxy_ready",  ()      => bridge._onReady());
-  socket.on("vnc_proxy_data",   (d)     => bridge._onData(d.b));
-  socket.on("vnc_proxy_closed", ()      => bridge._onClosed());
-  socket.on("vnc_proxy_error",  (d)     => bridge._onError(d.msg || "bilinmeyen"));
+  _vncSocket.on("connect", () => {
+    _vncSocket.on("vnc_proxy_ready",  ()  => bridge._onReady());
+    _vncSocket.on("vnc_proxy_data",   (d) => bridge._onData(d.b));
+    _vncSocket.on("vnc_proxy_closed", ()  => bridge._onClosed());
+    _vncSocket.on("vnc_proxy_error",  (d) => bridge._onError(d.msg || "bilinmeyen"));
+    // SocketIO bağlandıktan sonra VNC TCP bağlantısını aç
+    _vncSocket.emit("vnc_proxy_connect", { token, vm_id: vmId });
+  });
 
-  // SocketIO üzerinden VNC TCP bağlantısı aç
-  socket.emit("vnc_proxy_connect", { token, vm_id: vmId });
+  _vncSocket.on("connect_error", (e) => {
+    bridge._onError("SocketIO bağlanamadı: " + e.message);
+  });
 
   // ── noVNC RFB yükle ───────────────────────────────────────────────────────
   try {
