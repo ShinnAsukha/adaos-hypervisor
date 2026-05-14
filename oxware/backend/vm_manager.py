@@ -215,7 +215,7 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
   <currentMemory unit='MiB'>{memory_mb}</currentMemory>
   <vcpu placement='static'>{vcpus}</vcpu>
   <os>
-    <type arch='x86_64' machine='pc-q35-8.2'>hvm</type>
+    <type arch='x86_64' machine='pc-q35-6.2'>hvm</type>
     {boot_xml}
   </os>
   <features>
