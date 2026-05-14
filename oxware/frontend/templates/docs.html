@@ -320,6 +320,7 @@
       <div class="nav-link" onclick="showPage('api-keys')"><div class="dot"></div>API Keys</div>
       <div class="nav-link" onclick="showPage('audit')"><div class="dot"></div>Audit Log</div>
       <div class="nav-link" onclick="showPage('ldap')"><div class="dot"></div>LDAP</div>
+      <div class="nav-link" onclick="showPage('resolved-cves')"><div class="dot"></div>🛡️ Çözülen Zaafiyetler</div>
     </div>
 
     <div class="nav-group">
@@ -1771,6 +1772,96 @@ ip link set eth0.100 up</code></pre>
       </div>
     </div>
 
+    <div class="doc-page" id="page-resolved-cves">
+      <div class="doc-hero"><h1>Çözülen <span>Zaafiyetler</span></h1><p>OXware sisteminde tespit edilip kapatılan güvenlik açıklarının kaydı.</p></div>
+      <div class="doc-body">
+
+        <h2>🛡️ Güvenlik Yaması Politikası</h2>
+        <p>OXware; CVE Tracker modülü ile stack'ini sürekli izler. Tespit edilen zaafiyetler <strong>requirements.txt</strong> minimum sürüm güncellemesi + <strong>servis başlatma sırasında otomatik pip upgrade</strong> ile kapatılır.</p>
+        <pre><code># /var/log/oxware/pip-upgrade.log — her servis restartında çalışır
+/opt/oxware/venv/bin/pip install --quiet --upgrade urllib3 jinja2 cryptography requests</code></pre>
+
+        <h2>📋 Kapatılan CVE'ler</h2>
+
+        <div style="display:flex;flex-direction:column;gap:16px;margin-top:8px">
+
+          <!-- urllib3 -->
+          <div style="border:1px solid var(--border);border-left:4px solid #22c55e;border-radius:8px;padding:16px 18px;background:var(--surface2)">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span style="background:#22c55e22;color:#22c55e;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px">ÇÖZÜLDÜ</span>
+              <span style="font-weight:700;color:var(--text)">CVE-2026-44431</span>
+              <span style="font-size:11px;color:var(--text-muted)">🟠 HIGH · urllib3</span>
+            </div>
+            <p style="margin:0 0 6px"><strong>Sorun:</strong> urllib3 cross-origin redirect sırasında <code>Authorization</code>, <code>Cookie</code> ve <code>Proxy-Authorization</code> headerlarını yeni hedefe iletiyordu. Credentials sızması riski.</p>
+            <p style="margin:0;font-size:12px;color:#22c55e"><strong>Çözüm:</strong> <code>urllib3&gt;=2.3.0</code> requirements.txt'e eklendi. Servis başlatmada otomatik upgrade.</p>
+          </div>
+
+          <div style="border:1px solid var(--border);border-left:4px solid #22c55e;border-radius:8px;padding:16px 18px;background:var(--surface2)">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span style="background:#22c55e22;color:#22c55e;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px">ÇÖZÜLDÜ</span>
+              <span style="font-weight:700;color:var(--text)">CVE-2026-44432</span>
+              <span style="font-size:11px;color:var(--text-muted)">🟠 HIGH · urllib3</span>
+            </div>
+            <p style="margin:0 0 6px"><strong>Sorun:</strong> urllib3 streaming API'de bellek sorununa yol açan hata. Büyük yanıtlarda hafıza sızıntısı riski.</p>
+            <p style="margin:0;font-size:12px;color:#22c55e"><strong>Çözüm:</strong> <code>urllib3&gt;=2.3.0</code> — aynı güncelleme ile kapatıldı.</p>
+          </div>
+
+          <!-- Jinja2 -->
+          <div style="border:1px solid var(--border);border-left:4px solid #22c55e;border-radius:8px;padding:16px 18px;background:var(--surface2)">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span style="background:#22c55e22;color:#22c55e;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px">ÇÖZÜLDÜ</span>
+              <span style="font-weight:700;color:var(--text)">CVE-2026-45017</span>
+              <span style="font-size:11px;color:var(--text-muted)">🟠 HIGH · Jinja2</span>
+            </div>
+            <p style="margin:0 0 6px"><strong>Sorun:</strong> Jinja2 <code>FileSystemLoader</code> / <code>CachingFileSystemLoader</code> mutlak path verildiğinde arama dizini dışındaki dosyaları okuyabiliyordu. <code>{% include %}</code> / <code>{% render %}</code> üzerinden path traversal.</p>
+            <p style="margin:0;font-size:12px;color:#22c55e"><strong>Çözüm:</strong> <code>Jinja2&gt;=3.1.6</code> requirements.txt'e eklendi. Servis başlatmada otomatik upgrade.</p>
+          </div>
+
+          <!-- cryptography -->
+          <div style="border:1px solid var(--border);border-left:4px solid #22c55e;border-radius:8px;padding:16px 18px;background:var(--surface2)">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span style="background:#22c55e22;color:#22c55e;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px">ÇÖZÜLDÜ</span>
+              <span style="font-weight:700;color:var(--text)">cryptography paketi</span>
+              <span style="font-size:11px;color:var(--text-muted)">Önleyici güncelleme</span>
+            </div>
+            <p style="margin:0 0 6px"><strong>Sorun:</strong> Eski <code>cryptography==42.0.8</code> pinlenmiş sürümde bilinen çeşitli zayıflıklar.</p>
+            <p style="margin:0;font-size:12px;color:#22c55e"><strong>Çözüm:</strong> <code>cryptography&gt;=43.0.0</code> minimum versiyona yükseltildi.</p>
+          </div>
+
+          <!-- chpasswd shell injection -->
+          <div style="border:1px solid var(--border);border-left:4px solid #22c55e;border-radius:8px;padding:16px 18px;background:var(--surface2)">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span style="background:#22c55e22;color:#22c55e;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px">ÇÖZÜLDÜ</span>
+              <span style="font-weight:700;color:var(--text)">ISO Installer — Shell Injection</span>
+              <span style="font-size:11px;color:var(--text-muted)">🔴 CRITICAL · build/installer/install.py</span>
+            </div>
+            <p style="margin:0 0 6px"><strong>Sorun:</strong> <code>echo 'user:pass' | chpasswd</code> komutu şifrede tek tırnak (<code>'</code>) karakteri olduğunda shell injection'a açıktı. Özel karakterli şifreler kurulumu bozuyor ya da komut enjeksiyonuna yol açabiliyordu.</p>
+            <p style="margin:0;font-size:12px;color:#22c55e"><strong>Çözüm:</strong> <code>subprocess.run(["chroot", ..., "chpasswd"], input="user:pass\n", text=True)</code> — shell üzerinden geçmeden doğrudan stdin ile besleme.</p>
+          </div>
+
+          <!-- grub2-common -->
+          <div style="border:1px solid var(--border);border-left:4px solid #22c55e;border-radius:8px;padding:16px 18px;background:var(--surface2)">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span style="background:#22c55e22;color:#22c55e;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px">ÇÖZÜLDÜ</span>
+              <span style="font-weight:700;color:var(--text)">ISO Installer — Yanlış GRUB Paketi</span>
+              <span style="font-size:11px;color:var(--text-muted)">🟠 HIGH · build/installer/install.py</span>
+            </div>
+            <p style="margin:0 0 6px"><strong>Sorun:</strong> Ubuntu 22.04 kurulumunda <code>grub2-common</code> paketi aranıyordu; bu paket Debian'a özgüdür, Ubuntu'da yoktur. Kurulum boot yükleyicisi olmadan tamamlanıyordu.</p>
+            <p style="margin:0;font-size:12px;color:#22c55e"><strong>Çözüm:</strong> <code>grub-common</code> (Ubuntu) olarak düzeltildi. <code>grub-pc</code>, <code>grub-efi-amd64</code>, <code>shim-signed</code> de eklendi.</p>
+          </div>
+
+        </div>
+
+        <h2 style="margin-top:32px">🔄 Otomatik Koruma Mekanizması</h2>
+        <p>OXware servisi başlarken Python bağımlılıklarını otomatik günceller:</p>
+        <pre><code># oxware-hypervisor.service içinde ExecStartPre
+/opt/oxware/venv/bin/pip install --quiet --upgrade urllib3 jinja2 cryptography requests</code></pre>
+        <p>Güncelleme logu: <code>/var/log/oxware/pip-upgrade.log</code></p>
+        <p>CVE Tracker → <strong>⚡ OXware Stack</strong> filtresi ile yeni zaafiyetleri anlık takip edebilirsiniz.</p>
+
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /app -->
 
@@ -1815,6 +1906,7 @@ ip link set eth0.100 up</code></pre>
     { page:"api",           title:"API Referansı",          keywords:"api endpoint rest jwt bearer token" },
     { page:"config",        title:"Yapılandırma Dosyaları", keywords:"conf config oxware.conf ai_agents notifications" },
     { page:"troubleshoot",  title:"Sorun Giderme",          keywords:"hata error sorun debug log libvirt ssl" },
+    { page:"resolved-cves", title:"Çözülen Zaafiyetler",    keywords:"cve güvenlik zafiyet urllib3 jinja2 cryptography shell injection grub installer patch" },
   ];
 
   function showPage(name) {
