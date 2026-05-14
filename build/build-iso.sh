@@ -203,6 +203,15 @@ cp "$SCRIPT_DIR/installer/install.py" "$SQUASHFS_ROOT/opt/oxware-installer/insta
 chmod +x "$SQUASHFS_ROOT/opt/oxware-installer/install.py"
 log "install.py kopyalandı"
 
+# 3b. Web installer kopyala
+mkdir -p "$SQUASHFS_ROOT/opt/oxware-installer/web"
+for f in server.py launcher.py start.sh index.html style.css app.js; do
+    [ -f "$SCRIPT_DIR/web-installer/$f" ] && \
+        cp "$SCRIPT_DIR/web-installer/$f" "$SQUASHFS_ROOT/opt/oxware-installer/web/$f"
+done
+chmod +x "$SQUASHFS_ROOT/opt/oxware-installer/web/start.sh"
+log "Web installer kopyalandı"
+
 # 4. OXware kaynak kopyala (offline fallback için)
 mkdir -p "$SQUASHFS_ROOT/opt/oxware"
 rsync -a --exclude='.git' --exclude='*.pyc' --exclude='__pycache__' \
@@ -222,14 +231,9 @@ Conflicts=console-conf@tty1.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 /opt/oxware-installer/install.py
-StandardInput=tty
-StandardOutput=tty
+ExecStart=/bin/bash /opt/oxware-installer/web/start.sh
+StandardOutput=journal+console
 StandardError=journal+console
-TTYPath=/dev/tty1
-TTYReset=yes
-TTYVHangup=yes
-TTYVTDisallocate=yes
 KillMode=process
 IgnoreSIGPIPE=no
 Restart=on-failure
@@ -291,11 +295,14 @@ mount --bind /dev/pts "$SQUASHFS_ROOT/dev/pts"
 
 chroot "$SQUASHFS_ROOT" /bin/bash << 'CHROOT'
 export DEBIAN_FRONTEND=noninteractive
-# python3-curses, git, parted — debootstrap build host'tan kopyalandı
 apt-get update -qq 2>/dev/null || true
 apt-get install -y -qq --no-install-recommends \
     python3 python3-curses git \
     parted dosfstools e2fsprogs util-linux \
+    xorg xserver-xorg-video-all xinit \
+    python3-gi python3-gi-cairo gir1.2-gtk-3.0 \
+    gir1.2-webkit2-4.0 \
+    libwebkit2gtk-4.0-37 \
     2>/dev/null || true
 CHROOT
 

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OXware Hypervisor Installer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────────── -->
+<header id="hdr">
+  <div id="hdr-logo">
+    <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <rect width="48" height="48" rx="6" fill="#00d4ff"/>
+      <text x="5" y="34" font-family="Arial Black,sans-serif" font-size="26" font-weight="900" fill="#0d1117">OX</text>
+    </svg>
+    <span id="hdr-brand">ware</span>
+  </div>
+  <div id="hdr-title">OXware Hypervisor Installer</div>
+</header>
+
+<!-- ── Main ───────────────────────────────────────────────────────────── -->
+<main id="main">
+
+  <!-- Left sidebar -->
+  <aside id="sidebar">
+    <div id="sidebar-inner">
+      <div id="step-indicator">
+        <div class="step-item active" data-step="0">
+          <div class="step-dot"></div>
+          <span>Lisans</span>
+        </div>
+        <div class="step-item" data-step="1">
+          <div class="step-dot"></div>
+          <span>Disk</span>
+        </div>
+        <div class="step-item" data-step="2">
+          <div class="step-dot"></div>
+          <span>Ağ</span>
+        </div>
+        <div class="step-item" data-step="3">
+          <div class="step-dot"></div>
+          <span>Yönetim</span>
+        </div>
+        <div class="step-item" data-step="4">
+          <div class="step-dot"></div>
+          <span>Özet</span>
+        </div>
+        <div class="step-item" data-step="5">
+          <div class="step-dot"></div>
+          <span>Kurulum</span>
+        </div>
+      </div>
+
+      <div id="sidebar-desc">
+        <p id="step-desc-text">Lütfen lisans sözleşmesini okuyun ve kabul edin.</p>
+      </div>
+
+      <div id="sidebar-info">
+        <div class="info-row"><span class="info-label">Sürüm</span><span class="info-val">2.0</span></div>
+        <div class="info-row"><span class="info-label">Temel</span><span class="info-val">Ubuntu 22.04</span></div>
+        <div class="info-row"><span class="info-label">Çekirdek</span><span class="info-val">KVM + libvirt</span></div>
+        <div class="info-row"><span class="info-label">Arayüz</span><span class="info-val">Flask + nginx</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Right content -->
+  <section id="content">
+
+    <!-- Step 0: License -->
+    <div class="step-page active" id="page-0">
+      <h2>Lisans Sözleşmesi</h2>
+      <div id="license-box">
+        <pre>MIT License
+
+Copyright (c) 2024-2026 OXware Project
+
+OXware Hypervisor Management Platform
+Enterprise-grade KVM virtualization management.
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+
+KURULUM UYARISI:
+Bu yazılımı kurarak aşağıdaki koşulları kabul etmiş sayılırsınız:
+
+  • Seçilen diskteki TÜM VERİLER kalıcı olarak silinecektir.
+  • Geri dönüşü olmayan bir işlem başlatılacaktır.
+  • Devam etmeden önce önemli verilerinizi yedeklediğinizden
+    emin olunuz.
+
+Devam etmek için "Kabul Et ve Devam Et" butonuna basın.</pre>
+      </div>
+    </div>
+
+    <!-- Step 1: Disk -->
+    <div class="step-page" id="page-1">
+      <h2>Hedef Disk</h2>
+      <p class="step-intro">OXware'in kurulacağı diski seçin. <strong>Seçilen diskteki tüm veriler silinecektir.</strong></p>
+
+      <div class="field-group">
+        <label>Hedef Disk</label>
+        <div class="select-row">
+          <select id="disk-select" class="inp-select">
+            <option value="">Yükleniyor…</option>
+          </select>
+          <button class="btn-opts" onclick="openDiskOpts()">Seçenekler</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Dosya Sistemi</label>
+        <select id="fs-select" class="inp-select" style="max-width:200px">
+          <option value="ext4">ext4  (Önerilen)</option>
+          <option value="xfs">xfs</option>
+        </select>
+      </div>
+
+      <div id="disk-info-bar" class="info-bar" style="display:none">
+        <span id="disk-info-text"></span>
+      </div>
+    </div>
+
+    <!-- Step 2: Network -->
+    <div class="step-page" id="page-2">
+      <h2>Ağ Yapılandırması</h2>
+      <p class="step-intro">Kurulum tamamlandıktan sonra OXware web arayüzüne erişim için ağ ayarlarını yapın.</p>
+
+      <div class="field-group">
+        <label>Ağ Arayüzü</label>
+        <select id="iface-select" class="inp-select" style="max-width:240px">
+          <option value="">Yükleniyor…</option>
+        </select>
+      </div>
+
+      <div class="radio-row">
+        <label class="radio-label">
+          <input type="radio" name="net-mode" value="dhcp" checked onchange="toggleNet(this.value)">
+          <span>DHCP  (Otomatik)</span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="net-mode" value="static" onchange="toggleNet(this.value)">
+          <span>Statik IP</span>
+        </label>
+      </div>
+
+      <div id="static-fields" style="display:none">
+        <div class="field-group">
+          <label>IP Adresi / Prefix</label>
+          <input id="net-ip" class="inp" placeholder="192.168.1.100/24" style="max-width:240px">
+        </div>
+        <div class="field-group">
+          <label>Varsayılan Ağ Geçidi</label>
+          <input id="net-gw" class="inp" placeholder="192.168.1.1" style="max-width:240px">
+        </div>
+        <div class="field-group">
+          <label>DNS Sunucusu</label>
+          <input id="net-dns" class="inp" value="8.8.8.8" style="max-width:240px">
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Administration -->
+    <div class="step-page" id="page-3">
+      <h2>Yönetim Ayarları</h2>
+      <p class="step-intro">Sunucu kimliği ve yönetici hesap bilgilerini girin.</p>
+
+      <div class="field-group">
+        <label>Sunucu Adı (Hostname)</label>
+        <input id="inp-hostname" class="inp" value="oxware" placeholder="oxware" style="max-width:280px">
+      </div>
+      <div class="field-group">
+        <label>Yönetici Kullanıcı Adı</label>
+        <input id="inp-username" class="inp" value="oxadmin" placeholder="oxadmin" style="max-width:280px">
+      </div>
+      <div class="field-group">
+        <label>Şifre</label>
+        <input id="inp-password" class="inp" type="password" placeholder="••••••••" style="max-width:280px">
+      </div>
+      <div class="field-group">
+        <label>Şifre (Tekrar)</label>
+        <input id="inp-password2" class="inp" type="password" placeholder="••••••••" style="max-width:280px">
+      </div>
+      <div id="pw-err" class="err-msg" style="display:none">Şifreler eşleşmiyor.</div>
+    </div>
+
+    <!-- Step 4: Summary -->
+    <div class="step-page" id="page-4">
+      <h2>Kurulum Özeti</h2>
+      <p class="step-intro">Aşağıdaki ayarları kontrol edin. <strong>Devam ettiğinizde geri dönüş yoktur.</strong></p>
+
+      <table class="summary-table">
+        <tr><th>Hedef Disk</th><td id="sum-disk">—</td></tr>
+        <tr><th>Dosya Sistemi</th><td id="sum-fs">ext4</td></tr>
+        <tr><th>Ağ Modu</th><td id="sum-net">—</td></tr>
+        <tr><th>Hostname</th><td id="sum-hostname">—</td></tr>
+        <tr><th>Kullanıcı</th><td id="sum-user">—</td></tr>
+      </table>
+
+      <div class="warn-box">
+        ⚠  Kurulum başladığında seçilen diskteki tüm veriler kalıcı olarak silinecektir.
+      </div>
+    </div>
+
+    <!-- Step 5: Installation -->
+    <div class="step-page" id="page-5">
+      <h2>Kurulum</h2>
+      <div id="install-status">
+        <div id="install-pct-label">0%</div>
+        <div id="install-bar-wrap">
+          <div id="install-bar"></div>
+        </div>
+        <div id="install-msg">Hazırlanıyor…</div>
+      </div>
+      <div id="install-log"></div>
+      <div id="install-done" style="display:none">
+        <div class="done-icon">✔</div>
+        <h3>Kurulum Tamamlandı!</h3>
+        <p>OXware başarıyla kuruldu. Sistemi yeniden başlatın.</p>
+      </div>
+      <div id="install-err" style="display:none">
+        <div class="err-icon">✖</div>
+        <h3>Kurulum Hatası</h3>
+        <p id="install-err-msg"></p>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────── -->
+<footer id="ftr">
+  <button class="btn btn-abort" id="btn-abort" onclick="doAbort()">Abort</button>
+  <div id="ftr-right">
+    <button class="btn btn-prev" id="btn-prev" onclick="prevStep()" disabled>Previous</button>
+    <button class="btn btn-next" id="btn-next" onclick="nextStep()">Next</button>
+  </div>
+</footer>
+
+<!-- ── Disk Options Modal ─────────────────────────────────────────────── -->
+<div id="modal-backdrop" style="display:none" onclick="closeDiskOpts()"></div>
+<div id="modal-disk" style="display:none">
+  <div id="modal-title">Disk Seçenekleri</div>
+  <div id="modal-body">
+    <div class="modal-tabs">
+      <button class="modal-tab active" onclick="modalTab(0,this)">Disk Yapılandırması</button>
+      <button class="modal-tab" onclick="modalTab(1,this)">Gelişmiş Seçenekler</button>
+    </div>
+    <div class="modal-tab-content active" id="modal-tab-0">
+      <div class="field-group">
+        <label>Dosya Sistemi</label>
+        <select id="modal-fs" class="inp-select" style="max-width:200px">
+          <option value="ext4">ext4  (Önerilen)</option>
+          <option value="xfs">xfs</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Disk</label>
+        <select id="modal-disk-sel" class="inp-select">
+          <option value="">Yükleniyor…</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-tab-content" id="modal-tab-1">
+      <div class="field-group">
+        <label>Swap boyutu (GB)</label>
+        <input id="modal-swap" class="inp" value="4" type="number" min="0" max="64" style="max-width:100px">
+      </div>
+      <div class="field-group">
+        <label>Bölüm tablosu</label>
+        <select id="modal-ptable" class="inp-select" style="max-width:200px">
+          <option value="gpt">GPT  (Önerilen)</option>
+          <option value="msdos">MBR</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div id="modal-footer">
+    <button class="btn btn-ok" onclick="closeDiskOpts()">OK</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

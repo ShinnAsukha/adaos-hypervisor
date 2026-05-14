@@ -1412,7 +1412,39 @@ def main(stdscr):
                 return
 
 
+# ── Headless mode (called from web installer via --headless config.json) ──
+def _headless_main(config_file: str):
+    """Run installation headless, output JSON progress lines to stdout."""
+    import json as _json
+    with open(config_file) as f:
+        cfg = _json.load(f)
+
+    state.disk      = cfg.get('disk', '')
+    state.hostname  = cfg.get('hostname', 'oxware')
+    state.username  = cfg.get('username', 'oxadmin')
+    state.password  = cfg.get('password', 'oxware123')
+    state.net_mode  = cfg.get('net_mode', 'dhcp')
+    state.net_iface = cfg.get('iface', '')
+    state.net_ip    = cfg.get('net_ip', '')
+    state.net_mask  = cfg.get('net_mask', '24')
+    state.gateway   = cfg.get('net_gw', '')
+    state.dns       = cfg.get('net_dns', '8.8.8.8')
+
+    def progress_cb(pct, msg):
+        print(_json.dumps({'pct': pct, 'msg': msg}), flush=True)
+
+    try:
+        do_install(progress_cb)
+        print(_json.dumps({'pct': 100, 'msg': 'Kurulum tamamlandı!', 'done': True}), flush=True)
+    except Exception as e:
+        print(_json.dumps({'error': str(e), 'done': True}), flush=True)
+        sys.exit(1)
+
+
 if __name__ == "__main__":
+    if len(sys.argv) >= 3 and sys.argv[1] == '--headless':
+        _headless_main(sys.argv[2])
+        sys.exit(0)
     if os.geteuid() != 0:
         print("ERROR: This installer must be run as root.", file=sys.stderr)
         sys.exit(1)
