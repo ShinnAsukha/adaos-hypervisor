@@ -25,7 +25,7 @@ ConfigurationDirectoryMode=0755
 ExecStartPre=/bin/bash -c 'mkdir -p /var/log/oxware /etc/oxware /var/lib/oxware/{isos,disks,backups,templates}'
 ExecStartPre=/bin/bash -c '/opt/oxware/venv/bin/pip install --quiet --upgrade urllib3 jinja2 cryptography requests >> /var/log/oxware/pip-upgrade.log 2>&1 || true'
 ExecStartPre=/bin/sleep 2
-ExecStart=/opt/oxware/venv/bin/python3 /opt/oxware/backend/app.py
+ExecStart=/opt/oxware/venv/bin/python3 /opt/oxware/oxware/backend/app.py
 ExecReload=/bin/kill -HUP $MAINPID
 
 Restart=always
