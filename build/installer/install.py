@@ -16,6 +16,7 @@ import hashlib
 import shutil
 import time
 import textwrap
+import threading
 from pathlib import Path
 
 # ── constants ──────────────────────────────────────────────────────────────────
@@ -880,70 +881,150 @@ server {
 
 
 def screen_progress(win):
-    """Screen 8: progress bar + live log."""
-    h, w  = win.getmaxyx()
-    top, left, ch, cw = content_area(win)
-    log_lines = []
-    pct_state = [0]
-    error_msg = [None]
+    """Screen 8: clean full-screen progress bar — install runs in background thread."""
+    h, w = win.getmaxyx()
 
-    draw_frame(win)
-    try:
-        win.addstr(top, left + 2,
-                   " Installing OXware … ",
-                   curses.color_pair(CP_HEADER) | curses.A_BOLD)
-    except curses.error:
-        pass
-    win.refresh()
-
-    bar_row  = top + 2
-    bar_col  = left + 2
-    bar_w    = cw - 4
-    log_top  = bar_row + 3
-    log_rows = ch - log_top - 1
-    max_log  = max(1, log_rows)
+    # Shared state between thread and UI
+    pct_state  = [0]
+    step_state = ["Hazırlanıyor…"]
+    error_msg  = [None]
+    done_flag  = [False]
+    lock       = threading.Lock()
 
     def progress_cb(pct, msg):
-        pct_state[0] = pct
-        log_lines.append(msg)
-        if len(log_lines) > max_log * 3:
-            log_lines.pop(0)
+        with lock:
+            pct_state[0]  = pct
+            step_state[0] = msg
 
-        # Redraw progress portion only (no full frame redraw to avoid flicker)
+    def install_thread():
         try:
-            draw_progress_bar(win, bar_row, bar_col, bar_w, pct)
-            visible = log_lines[-max_log:]
-            for i in range(max_log):
-                attr = curses.color_pair(CP_NORMAL)
-                text = visible[i] if i < len(visible) else ""
-                win.addstr(log_top + i, left + 1,
-                           ("  " + text)[:cw - 2].ljust(cw - 2), attr)
-        except curses.error:
-            pass
-        win.refresh()
+            do_install(progress_cb)
+        except Exception as e:
+            with lock:
+                error_msg[0] = str(e)
+        finally:
+            with lock:
+                done_flag[0] = True
 
-    win.nodelay(False)
+    t = threading.Thread(target=install_thread, daemon=True)
+    t.start()
 
-    try:
-        do_install(progress_cb)
-    except Exception as e:
-        error_msg[0] = str(e)
+    win.nodelay(True)
+    spinner = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏']
+    spin_i  = 0
 
-    if error_msg[0]:
-        return ("error", error_msg[0])
-
-    # wait for keypress
     while True:
+        with lock:
+            pct  = pct_state[0]
+            step = step_state[0]
+            done = done_flag[0]
+            err  = error_msg[0]
+
+        # ── draw ──────────────────────────────────────────────────────────
         try:
-            win.addstr(top + ch - 2, left + 2,
-                       "Installation finished! Press ENTER to continue.",
-                       curses.color_pair(CP_HEADER) | curses.A_BOLD)
+            win.erase()
+            # Title bar
+            win.attron(curses.color_pair(CP_HEADER) | curses.A_BOLD)
+            win.addstr(0, 0, " OXware Hypervisor ".center(w - 1))
+            win.attroff(curses.color_pair(CP_HEADER) | curses.A_BOLD)
+
+            # Big ASCII logo (mini)
+            logo = "OXWARE"
+            logo_col = max(0, (w - len(logo)) // 2)
+            try:
+                win.addstr(2, logo_col, logo,
+                           curses.color_pair(CP_BORDER) | curses.A_BOLD)
+            except curses.error:
+                pass
+
+            # Status line
+            spin = spinner[spin_i % len(spinner)] if not done else "✓"
+            status = f" {spin}  Kuruluyor…  —  %{pct}" if not done else " ✓  Kurulum tamamlandı!"
+            try:
+                win.addstr(4, (w - len(status)) // 2, status,
+                           curses.color_pair(CP_NORMAL) | curses.A_BOLD)
+            except curses.error:
+                pass
+
+            # Big progress bar (full width - 8 margin)
+            bar_col = 4
+            bar_w   = max(10, w - 8)
+            bar_row = 6
+            filled  = int(bar_w * pct / 100)
+            bar_str = "█" * filled + "░" * (bar_w - filled)
+            try:
+                win.addstr(bar_row, bar_col, bar_str,
+                           curses.color_pair(CP_PROGRESS) | curses.A_BOLD)
+            except curses.error:
+                pass
+
+            # Percentage centered below bar
+            pct_str = f"{pct}%"
+            try:
+                win.addstr(bar_row + 1, (w - len(pct_str)) // 2, pct_str,
+                           curses.color_pair(CP_INPUT) | curses.A_BOLD)
+            except curses.error:
+                pass
+
+            # Current step
+            step_short = step[:w - 6]
+            try:
+                win.addstr(bar_row + 3, (w - len(step_short)) // 2, step_short,
+                           curses.color_pair(CP_DIM))
+            except curses.error:
+                pass
+
+            # Estimated steps hint
+            steps_hint = "Disk bölümleniyor → Debian kuruluyor → Paketler → OXware → GRUB"
+            if len(steps_hint) < w - 4:
+                try:
+                    win.addstr(bar_row + 5, (w - len(steps_hint)) // 2, steps_hint,
+                               curses.color_pair(CP_DIM))
+                except curses.error:
+                    pass
+
+            # Done / error prompt
+            if done and not err:
+                msg = "[ ENTER — Devam ]"
+                try:
+                    win.addstr(h - 3, (w - len(msg)) // 2, msg,
+                               curses.color_pair(CP_HEADER) | curses.A_BOLD)
+                except curses.error:
+                    pass
+            elif err:
+                errl = f"HATA: {err}"[:w - 4]
+                try:
+                    win.addstr(h - 5, (w - len(errl)) // 2, errl,
+                               curses.color_pair(CP_ERROR) | curses.A_BOLD)
+                    hint = "[ Q — Çık ]   [ R — Disk Seçimine Dön ]"
+                    win.addstr(h - 3, (w - len(hint)) // 2, hint,
+                               curses.color_pair(CP_NORMAL))
+                except curses.error:
+                    pass
+
+            win.refresh()
         except curses.error:
             pass
-        win.refresh()
-        key = win.getch()
-        if key in (10, 13, curses.KEY_ENTER):
+
+        spin_i += 1
+        time.sleep(0.12)
+
+        # ── key handling ──────────────────────────────────────────────────
+        try:
+            key = win.getch()
+        except curses.error:
+            key = -1
+
+        if done and not err and key in (10, 13, curses.KEY_ENTER):
+            win.nodelay(False)
             return ("next", None)
+        if err:
+            if key in (ord('q'), ord('Q')):
+                win.nodelay(False)
+                return ("error", err)
+            if key in (ord('r'), ord('R')):
+                win.nodelay(False)
+                return ("restart", err)
 
 
 def screen_done(win):
