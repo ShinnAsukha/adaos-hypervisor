@@ -1363,12 +1363,15 @@ def api_start_console(vm_id):
         ws_port = config.WS_PORT
         client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1").split(",")[0].strip()
         def _start():
-            # SSL KULLANMA — websockify HTTP/WS olarak çalışır.
-            # Konsol yeni HTTP penceresinde açılır (window.open), mixed-content sorunu yok.
+            # Eski websockify'ı öldür (port çakışması önle)
+            subprocess.run(["pkill", "-f", f"websockify.*{ws_port}"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            import time as _t; _t.sleep(0.5)
+            # --web YOK: noVNC dosyaları Flask /novnc/ route'undan serve edilir
+            # Websockify sadece WS proxy olarak çalışır
             cmd = [
                 "websockify",
-                "--web", config.NOVNC_DIR,
-                str(ws_port),
+                f"0.0.0.0:{ws_port}",
                 f"127.0.0.1:{vnc_port}",
             ]
             subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

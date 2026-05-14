@@ -3959,7 +3959,7 @@ async function uploadIsoFile(input) {
   xhr.onload = () => {
     _activeIsoXhr = null;
     if (cancelBtn) cancelBtn.style.display = 'none';
-    if (xhr.status === 200) {
+    if (xhr.status >= 200 && xhr.status < 300) {
       barEl.style.width = '100%';
       pctEl.textContent = '100%';
       statusEl.textContent = 'Yükleme tamamlandı!';
@@ -5492,8 +5492,9 @@ async function openConsole(id) {
     const info = await api(`/vms/${id}/console`);
     const host = info.host || location.hostname;
     const wsPort = info.websocket_port || 6080;
-    // Fragment (#) kullan — server görmez, noVNC okur, websockify 404/405 yapmaz
-    const novncUrl = `http://${host}:${wsPort}/vnc.html#host=${host}&port=${wsPort}&autoconnect=1&resize=scale`;
+    // noVNC dosyaları Flask üzerinden serve edilir (/novnc/ route)
+    // WebSocket için websockify'a (6080) bağlanır — sadece WS proxy
+    const novncUrl = `${location.protocol}//${location.hostname}:${location.port}/novnc/vnc.html#host=${host}&port=${wsPort}&autoconnect=1&resize=scale`;
     setTimeout(() => window.open(novncUrl, "_blank", "width=1100,height=800"), 800);
   } catch (e) { toast(e.message, "error"); }
 }
@@ -5824,7 +5825,7 @@ async function deleteUser(username) {
 let _topoScale = 1, _topoPanX = 0, _topoPanY = 0;
 
 function loadTopology() {
-  api("/topology").then(d => renderTopology(d)).catch(e => toast("Topoloji: " + e.message, "error"));
+  api("/topology").then(d => renderTopology(d.topology || d)).catch(e => toast("Topoloji: " + e.message, "error"));
 }
 
 function renderTopology(data) {
