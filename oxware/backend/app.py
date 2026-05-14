@@ -1363,15 +1363,14 @@ def api_start_console(vm_id):
         ws_port = config.WS_PORT
         client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1").split(",")[0].strip()
         def _start():
+            # SSL KULLANMA — websockify HTTP/WS olarak çalışır.
+            # Konsol yeni HTTP penceresinde açılır (window.open), mixed-content sorunu yok.
             cmd = [
                 "websockify",
                 "--web", config.NOVNC_DIR,
                 str(ws_port),
                 f"127.0.0.1:{vnc_port}",
             ]
-            # SSL varsa WSS olarak başlat (HTTPS sayfasından mixed-content sorunu olmaz)
-            if config.SSL_ENABLED and os.path.exists(config.SSL_CERT) and os.path.exists(config.SSL_KEY):
-                cmd += ["--cert", config.SSL_CERT, "--key", config.SSL_KEY]
             subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         threading.Thread(target=_start, daemon=True).start()
 
