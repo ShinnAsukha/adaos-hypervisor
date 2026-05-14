@@ -2265,7 +2265,8 @@ def on_subscribe_stats(data):
 
 # ── PTY Shell WebSocket ────────────────────────────────────────────────────────
 _shell_sessions = {}
-_iso_fetch_jobs = {}  # job_id → {status, filename, progress, ...}
+_iso_fetch_jobs = {}   # job_id → {status, filename, progress, ...}
+_vnc_sessions   = {}   # sid    → tcp_socket
 
 @sock.on("shell_open")
 def ws_shell_open(data=None):
@@ -2379,6 +2380,119 @@ def ws_disconnect():
             pass
         try:
             os.close(sess["master_fd"])
+        except Exception:
+            pass
+    # VNC proxy temizle
+    tcp = _vnc_sessions.pop(session_id, None)
+    if tcp:
+        try:
+            tcp.close()
+        except Exception:
+            pass
+
+
+# ── VNC Console Proxy (SocketIO üzerinden — port 8006, SSL dahil) ─────────────
+
+@sock.on("vnc_proxy_connect")
+def ws_vnc_connect(data=None):
+    """VM'in VNC portuna TCP bağlantısı aç, veriyi SocketIO üzerinden aktar."""
+    import socket as _sock
+    import base64 as _b64
+    import xml.etree.ElementTree as _ET2
+
+    sid = request.sid
+    data = data or {}
+
+    # ── Kimlik doğrulama ──────────────────────────────────────────────────────
+    try:
+        from flask_jwt_extended import decode_token
+        token = data.get("token", "")
+        if not token:
+            emit("vnc_proxy_error", {"msg": "token eksik"})
+            return
+        decoded = decode_token(token)
+        identity = decoded.get("sub") or decoded.get("identity", "")
+        if not identity:
+            emit("vnc_proxy_error", {"msg": "geçersiz token"})
+            return
+    except Exception as ex:
+        emit("vnc_proxy_error", {"msg": f"auth: {ex}"})
+        return
+
+    # ── VNC portunu bul ───────────────────────────────────────────────────────
+    vm_id = data.get("vm_id", "")
+    try:
+        import libvirt as _lv2
+        conn = _lv2.open(config.LIBVIRT_URI)
+        dom  = conn.lookupByUUIDString(vm_id)
+        xml_str = dom.XMLDesc()
+        conn.close()
+        root    = _ET2.fromstring(xml_str)
+        vnc_el  = root.find(".//graphics[@type='vnc']")
+        vnc_port = int(vnc_el.get("port", -1)) if vnc_el is not None else -1
+        if vnc_port < 5900:
+            emit("vnc_proxy_error", {"msg": f"VM çalışmıyor veya VNC aktif değil (port={vnc_port})"})
+            return
+    except Exception as ex:
+        emit("vnc_proxy_error", {"msg": f"VM hatası: {ex}"})
+        return
+
+    # ── TCP bağlantısı ────────────────────────────────────────────────────────
+    try:
+        tcp = _sock.socket(_sock.AF_INET, _sock.SOCK_STREAM)
+        tcp.settimeout(5)
+        tcp.connect(("127.0.0.1", vnc_port))
+        tcp.settimeout(None)
+        _vnc_sessions[sid] = tcp
+    except Exception as ex:
+        emit("vnc_proxy_error", {"msg": f"VNC bağlanamadı (port {vnc_port}): {ex}"})
+        return
+
+    emit("vnc_proxy_ready", {"vnc_port": vnc_port})
+    log.info("VNC proxy başladı: sid=%s vm=%s port=%d", sid, vm_id, vnc_port)
+
+    # ── VNC → browser okuma thread'i ──────────────────────────────────────────
+    def _reader():
+        import base64 as _b64r
+        try:
+            while True:
+                chunk = tcp.recv(65536)
+                if not chunk:
+                    break
+                socketio.emit("vnc_proxy_data",
+                              {"b": _b64r.b64encode(chunk).decode()},
+                              room=sid)
+        except Exception:
+            pass
+        socketio.emit("vnc_proxy_closed", {}, room=sid)
+        _vnc_sessions.pop(sid, None)
+
+    threading.Thread(target=_reader, daemon=True).start()
+
+
+@sock.on("vnc_proxy_send")
+def ws_vnc_send(data=None):
+    """Browser'dan gelen VNC verisini TCP soketine yaz."""
+    import base64 as _b64
+    sid = request.sid
+    tcp = _vnc_sessions.get(sid)
+    if not tcp:
+        return
+    try:
+        raw = _b64.b64decode((data or {}).get("b", ""))
+        tcp.sendall(raw)
+    except Exception:
+        pass
+
+
+@sock.on("vnc_proxy_close")
+def ws_vnc_close(data=None):
+    """VNC bağlantısını kapat."""
+    sid = request.sid
+    tcp = _vnc_sessions.pop(sid, None)
+    if tcp:
+        try:
+            tcp.close()
         except Exception:
             pass
 

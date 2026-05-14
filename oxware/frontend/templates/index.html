@@ -1926,6 +1926,32 @@
           </div>
         </div>
 
+        <!-- ─── VNC Konsol Modalı (SocketIO proxy) ─── -->
+        <div class="modal-overlay" id="modal-vnc-console" style="z-index:10000;align-items:center;justify-content:center">
+          <div style="width:min(1140px,96vw);height:min(820px,92vh);background:var(--surface);border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px #000a">
+            <!-- Başlık çubuğu -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;user-select:none">
+              <div style="display:flex;align-items:center;gap:10px">
+                <i class="fa-solid fa-display" style="color:var(--accent-lt)"></i>
+                <span style="font-weight:700;font-size:13px">VM Konsol</span>
+                <span id="vnc-status-text" style="font-size:11px;color:var(--text-muted)">Bağlanılıyor...</span>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center">
+                <button onclick="vncSendCtrlAltDel()" title="Ctrl+Alt+Del gönder" style="background:var(--surface3);border:1px solid var(--border2);color:var(--text);padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px">Ctrl+Alt+Del</button>
+                <button onclick="vncToggleFullscreen()" title="Tam ekran" style="background:var(--surface3);border:1px solid var(--border2);color:var(--text);padding:3px 8px;border-radius:4px;cursor:pointer;font-size:11px"><i class="fa-solid fa-expand"></i></button>
+                <button onclick="closeVNCConsole()" style="background:#ef4444;border:none;color:white;padding:3px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">✕ Kapat</button>
+              </div>
+            </div>
+            <!-- VNC Canvas alanı -->
+            <div id="vnc-screen" style="flex:1;background:#1a1a2e;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center">
+              <div id="vnc-loading-msg" style="color:var(--text-muted);font-size:13px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none">
+                <i class="fa-solid fa-circle-notch fa-spin" style="font-size:22px;margin-bottom:10px;display:block;color:var(--accent-lt)"></i>
+                <span id="vnc-loading-detail">VNC bağlantısı kuruluyor...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- ─────── tab-proxy ─────── -->
         <div class="page" id="page-tab-proxy">
           <div class="section-header"><h2><i class="fa-solid fa-arrows-left-right" style="margin-right:8px;color:var(--accent-lt)"></i>Proxy &amp; Load Balancer</h2></div>
@@ -5840,18 +5866,197 @@ async function vmForceStop(id) {
   } catch (e) { toast(e.message, "error"); }
 }
 
-async function openConsole(id) {
+// ── VNC Console — SocketIO TCP Proxy ─────────────────────────────────────────
+// Websockify / ayrı port YOK. Mevcut SocketIO bağlantısı (port 8006) üzerinden
+// VNC TCP verisi binary proxy olarak aktarılır. Mixed-content sorunu yok.
+
+let _vncRfb        = null;
+let _vncBridge     = null;
+let _vncCurrentVmId = null;
+
+async function openConsole(vmId) {
   try {
     toast("Konsol başlatılıyor...", "info");
-    await api(`/vms/${id}/console/start`, { method: "POST" });
-    const info = await api(`/vms/${id}/console`);
-    const host = info.host || location.hostname;
-    const wsPort = info.websocket_port || 6080;
-    // noVNC dosyaları Flask üzerinden serve edilir (/novnc/ route)
-    // WebSocket için websockify'a (6080) bağlanır — sadece WS proxy
-    const novncUrl = `${location.protocol}//${location.hostname}:${location.port}/novnc/vnc.html#host=${host}&port=${wsPort}&encrypt=0&autoconnect=1&resize=scale`;
-    setTimeout(() => window.open(novncUrl, "_blank", "width=1100,height=800"), 800);
-  } catch (e) { toast(e.message, "error"); }
+    // VM'in VNC portunu etkinleştir (gerekirse)
+    await api(`/vms/${vmId}/console/start`, { method: "POST" }).catch(() => {});
+
+    _vncCurrentVmId = vmId;
+    const modal = document.getElementById("modal-vnc-console");
+    modal.classList.add("open");
+    _setVncStatus("Bağlanılıyor...", false);
+    document.getElementById("vnc-loading-msg").style.display = "flex";
+    document.getElementById("vnc-loading-msg").style.flexDirection = "column";
+
+    setTimeout(() => _initVNC(vmId), 300);
+  } catch (e) {
+    toast("Konsol hatası: " + e.message, "error");
+  }
+}
+
+function _setVncStatus(msg, ok) {
+  const el = document.getElementById("vnc-status-text");
+  if (el) {
+    el.textContent = msg;
+    el.style.color = ok ? "#22c55e" : "var(--text-muted)";
+  }
+  const det = document.getElementById("vnc-loading-detail");
+  if (det) det.textContent = msg;
+}
+
+function closeVNCConsole() {
+  document.getElementById("modal-vnc-console").classList.remove("open");
+  if (_vncRfb) {
+    try { _vncRfb.disconnect(); } catch(e) {}
+    _vncRfb = null;
+  }
+  if (_vncBridge) {
+    _vncBridge._cleanup();
+    _vncBridge = null;
+  }
+  socket.emit("vnc_proxy_close", {});
+  _vncCurrentVmId = null;
+}
+
+function vncSendCtrlAltDel() {
+  if (_vncRfb) { try { _vncRfb.sendCtrlAltDel(); } catch(e) {} }
+}
+
+function vncToggleFullscreen() {
+  const el = document.getElementById("modal-vnc-console");
+  if (!document.fullscreenElement) {
+    el.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+async function _initVNC(vmId) {
+  const screen  = document.getElementById("vnc-screen");
+  const loadMsg = document.getElementById("vnc-loading-msg");
+  const token   = localStorage.getItem("ox_token") || "";
+
+  // ── SocketIO ↔ WebSocket Bridge ──────────────────────────────────────────
+  // noVNC'nin attach() API'si EventTarget uyumlu nesne bekler.
+  // Biz SocketIO üzerinden TCP proxy yapıyoruz.
+  class VNCBridge extends EventTarget {
+    constructor() {
+      super();
+      this.binaryType = "arraybuffer";
+      this.readyState = WebSocket.CONNECTING;
+    }
+
+    _onReady() {
+      this.readyState = WebSocket.OPEN;
+      if (loadMsg) loadMsg.style.display = "none";
+      _setVncStatus("● Bağlı", true);
+      this.dispatchEvent(new Event("open"));
+    }
+    _onData(b64) {
+      try {
+        const bin = atob(b64);
+        const buf = new ArrayBuffer(bin.length);
+        const v   = new Uint8Array(buf);
+        for (let i = 0; i < bin.length; i++) v[i] = bin.charCodeAt(i);
+        this.dispatchEvent(new MessageEvent("message", { data: buf }));
+      } catch(e) {}
+    }
+    _onClosed() {
+      this.readyState = WebSocket.CLOSED;
+      _setVncStatus("Bağlantı kesildi", false);
+      this.dispatchEvent(new CloseEvent("close", { wasClean: true }));
+    }
+    _onError(msg) {
+      _setVncStatus("Hata: " + msg, false);
+      if (loadMsg) {
+        loadMsg.style.display = "flex";
+        document.getElementById("vnc-loading-detail").textContent = "Hata: " + msg;
+      }
+      this.dispatchEvent(new Event("error"));
+    }
+    _cleanup() {
+      socket.off("vnc_proxy_ready");
+      socket.off("vnc_proxy_data");
+      socket.off("vnc_proxy_closed");
+      socket.off("vnc_proxy_error");
+    }
+
+    send(data) {
+      let b64;
+      try {
+        if (data instanceof ArrayBuffer) {
+          const v = new Uint8Array(data);
+          let bin = "";
+          for (let i = 0; i < v.length; i++) bin += String.fromCharCode(v[i]);
+          b64 = btoa(bin);
+        } else {
+          b64 = btoa(String.fromCharCode(...new Uint8Array(data)));
+        }
+        socket.emit("vnc_proxy_send", { b: b64 });
+      } catch(e) {}
+    }
+
+    close() {
+      this.readyState = WebSocket.CLOSED;
+      socket.emit("vnc_proxy_close", {});
+      this._cleanup();
+      this.dispatchEvent(new CloseEvent("close"));
+    }
+  }
+
+  // Eski listeners temizle
+  socket.off("vnc_proxy_ready");
+  socket.off("vnc_proxy_data");
+  socket.off("vnc_proxy_closed");
+  socket.off("vnc_proxy_error");
+
+  const bridge = new VNCBridge();
+  _vncBridge   = bridge;
+
+  socket.on("vnc_proxy_ready",  ()      => bridge._onReady());
+  socket.on("vnc_proxy_data",   (d)     => bridge._onData(d.b));
+  socket.on("vnc_proxy_closed", ()      => bridge._onClosed());
+  socket.on("vnc_proxy_error",  (d)     => bridge._onError(d.msg || "bilinmeyen"));
+
+  // SocketIO üzerinden VNC TCP bağlantısı aç
+  socket.emit("vnc_proxy_connect", { token, vm_id: vmId });
+
+  // ── noVNC RFB yükle ───────────────────────────────────────────────────────
+  try {
+    // Screen div temizle — RFB kendi canvas'ını ekleyecek
+    screen.innerHTML = "";
+    screen.appendChild(loadMsg); // loading mesajını koru
+
+    const mod = await import("/novnc/core/rfb.js");
+    const RFB = mod.default;
+
+    // RFB'ye string URL değil, bridge nesnesi ver → attach() kullanır
+    const rfb = new RFB(screen, bridge, { credentials: { password: "" } });
+    rfb.viewOnly      = false;
+    rfb.scaleViewport = true;
+    rfb.resizeSession = false;
+    rfb.background    = "#1a1a2e";
+
+    rfb.addEventListener("connect",    ()  => { _setVncStatus("● Bağlı", true); });
+    rfb.addEventListener("disconnect", (e) => {
+      const reason = e.detail?.reason || "";
+      _setVncStatus("Bağlantı kesildi" + (reason ? ": " + reason : ""), false);
+    });
+    rfb.addEventListener("credentialsrequired", () => {
+      rfb.sendCredentials({ password: "" });
+    });
+    rfb.addEventListener("desktopname", (e) => {
+      _setVncStatus("● " + (e.detail?.name || "Bağlı"), true);
+    });
+
+    _vncRfb = rfb;
+  } catch(e) {
+    _setVncStatus("noVNC yüklenemedi: " + e.message, false);
+    if (loadMsg) {
+      loadMsg.style.display = "flex";
+      document.getElementById("vnc-loading-detail").textContent = "noVNC yüklenemedi: " + e.message;
+    }
+    console.error("noVNC load error:", e);
+  }
 }
 
 /* ══════════════════ Networks ══════════════════ */
