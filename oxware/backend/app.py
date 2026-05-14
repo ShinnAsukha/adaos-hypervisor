@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from flask import Flask, request, jsonify, send_from_directory, render_template, make_response, send_file
 from flask_socketio import SocketIO, emit
+from flask_sock import Sock as FlaskSock
 from flask_jwt_extended import (
     JWTManager, create_access_token, get_jwt_identity, verify_jwt_in_request
 )
@@ -103,8 +104,11 @@ app.config["JWT_ALGORITHM"]            = "HS256"
 app.config["JWT_DECODE_ALGORITHMS"]    = ["HS256"]
 
 CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
-jwt  = JWTManager(app)
-sock = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet", logger=False)
+jwt     = JWTManager(app)
+sock    = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet", logger=False)
+# Plain WebSocket support — noVNC connects here, same port+cert as Flask (no mixed-content)
+# Must be created AFTER SocketIO per flask-sock docs
+plain_ws = FlaskSock(app)
 
 # ── CSRF Token store (stateless double-submit pattern) ────────────────────────
 _csrf_exempt_paths = {"/api/auth/login", "/api/auth/2fa/verify-login",
@@ -2402,6 +2406,77 @@ def ws_disconnect():
             tcp.close()
         except Exception:
             pass
+
+
+# ── VNC Console — Plain WebSocket proxy (flask-sock, port 8006, same SSL cert) ───
+# noVNC bağlanır: wss://host:8006/ws/vnc/<vm_id>?token=JWT
+# SocketIO protocol yok — raw binary; mixed-content sorunu yok (same-origin TLS).
+
+@plain_ws.route("/ws/vnc/<vm_id>")
+def ws_vnc_plain(ws, vm_id):
+    """noVNC ↔ VNC TCP plain WebSocket proxy."""
+    import socket as _sk
+    import eventlet
+
+    # ── Auth ──────────────────────────────────────────────────────────────────
+    raw_token = request.args.get("token", "")
+    try:
+        from flask_jwt_extended import decode_token
+        decode_token(raw_token)
+    except Exception:
+        ws.close(message=b"Unauthorized")
+        return
+
+    # ── VNC port ──────────────────────────────────────────────────────────────
+    try:
+        vm = vm_manager.get_vm(vm_id)
+        vnc_port = int(vm.get("vnc_port", -1))
+        if vnc_port < 5900:
+            ws.close(message=b"VNC not available")
+            return
+    except Exception:
+        ws.close(message=b"VM not found")
+        return
+
+    # ── TCP socket to local VNC ───────────────────────────────────────────────
+    try:
+        tcp = _sk.create_connection(("127.0.0.1", vnc_port), timeout=5)
+    except Exception as e:
+        ws.close(message=f"VNC connect failed: {e}".encode())
+        return
+
+    log.info("WS-VNC proxy: vm=%s port=%d", vm_id, vnc_port)
+
+    # ── VNC → WebSocket (green thread) ───────────────────────────────────────
+    def _vnc_to_ws():
+        try:
+            while True:
+                chunk = tcp.recv(65536)
+                if not chunk:
+                    break
+                ws.send(chunk)
+        except Exception:
+            pass
+        finally:
+            try: ws.close()
+            except Exception: pass
+
+    eventlet.spawn(_vnc_to_ws)
+
+    # ── WebSocket → VNC (main green thread) ──────────────────────────────────
+    try:
+        while True:
+            data = ws.receive()
+            if data is None:
+                break
+            if isinstance(data, str):
+                data = data.encode("latin-1")
+            tcp.sendall(data)
+    except Exception:
+        pass
+    finally:
+        try: tcp.close()
+        except Exception: pass
 
 
 # ── VNC Console Proxy (SocketIO üzerinden — port 8006, SSL dahil) ─────────────
