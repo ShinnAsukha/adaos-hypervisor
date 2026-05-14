@@ -5004,7 +5004,8 @@ async function loadVMs() {
           <div class="action-btns">
             ${v.state !== "running"
               ? `<button class="btn sm success" onclick="vmAction('${v.id}','start')" title="Başlat">▶</button>`
-              : `<button class="btn sm danger" onclick="vmAction('${v.id}','stop')" title="Durdur">■</button>`}
+              : `<button class="btn sm danger" onclick="vmAction('${v.id}','stop')" title="Durdur (Graceful)">■</button>
+                 <button class="btn sm danger" onclick="vmForceStop('${v.id}')" title="Zorla Durdur" style="opacity:.7;font-size:10px">⏻</button>`}
             <button class="btn sm" onclick="vmAction('${v.id}','reboot')" title="Yeniden Başlat">↺</button>
             ${v.state === "running" ? `<button class="btn sm" onclick="openConsole('${v.id}')" title="Konsol">▣</button>` : ""}
             <button class="btn sm" onclick="openLiveMigrate('${v.id}','${escHtml(v.name)}')" title="Canlı Geçiş">🚀</button>
@@ -5467,8 +5468,20 @@ async function deleteVM(id, name) {
 async function vmAction(id, action) {
   try {
     await api(`/vms/${id}/${action}`, { method: "POST" });
-    toast(`İşlem: ${action}`, "success");
-    setTimeout(() => { loadVMs(); refreshTreeVMs(); if (currentVmId === id) loadVMDetail(id); }, 500);
+    const labels = { start: "Başlatılıyor", stop: "Durduruluyor (graceful)", reboot: "Yeniden başlatılıyor" };
+    toast(labels[action] || `İşlem: ${action}`, "success");
+    // stop/reboot daha uzun sürebilir
+    const delay = (action === "stop" || action === "reboot") ? 2500 : 800;
+    setTimeout(() => { loadVMs(); refreshTreeVMs(); if (currentVmId === id) loadVMDetail(id); }, delay);
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function vmForceStop(id) {
+  if (!confirm("VM zorla durdurulsun mu? Kaydedilmemiş veriler kaybolabilir.")) return;
+  try {
+    await api(`/vms/${id}/stop?force=true`, { method: "POST" });
+    toast("VM zorla durduruldu", "success");
+    setTimeout(() => { loadVMs(); refreshTreeVMs(); if (currentVmId === id) loadVMDetail(id); }, 1000);
   } catch (e) { toast(e.message, "error"); }
 }
 
