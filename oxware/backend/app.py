@@ -278,17 +278,50 @@ _OXWARE_DESC_KEYWORDS = [
 
 _OXWARE_STACK_PRODUCT_IDS = {pid for pid, p in CVE_PRODUCTS.items() if p.get("in_oxware_stack")}
 
+# Ubuntu 22.04 (Jammy) software versions — CVEs affecting OLDER versions are not relevant.
+# Anything patched before these versions is already fixed on a standard jammy install.
+_OXWARE_MIN_VERSIONS = {
+    # published year cutoff per product (CVEs before this year very unlikely to affect Ubuntu 22.04)
+    "linux":   2021,   # kernel 5.15+
+    "kvm":     2021,   # QEMU 6.2+
+    "libvirt": 2021,   # libvirt 8.0+
+    "nginx":   2018,   # nginx 1.18+
+    "openssh": 2020,   # OpenSSH 8.9+
+    "openssl": 2020,   # OpenSSL 3.0+
+    "python":  2020,   # Python 3.10+, Flask 2+
+}
+
 def _mark_affects_oxware(cve_item: dict, product_id: str) -> dict:
-    """Add affects_oxware=True if this CVE is relevant to OXware's runtime stack."""
+    """Add affects_oxware=True if this CVE is relevant to OXware's runtime stack.
+
+    Rules:
+    1. Must be published on or after the min-year for that product (old patched versions filtered out)
+    2. Product in OXware stack AND severity MEDIUM/HIGH/CRITICAL
+    3. OR: description mentions stack components AND severity HIGH/CRITICAL
+    """
     severity = cve_item.get("severity", "UNKNOWN")
     desc_lower = cve_item.get("description", "").lower()
+    published = cve_item.get("published", "")
 
-    # Product is part of OXware stack AND severity is not LOW/UNKNOWN
-    if product_id in _OXWARE_STACK_PRODUCT_IDS and severity not in ("LOW", "UNKNOWN"):
+    # Extract publish year (format: YYYY-MM-DD)
+    try:
+        pub_year = int(published[:4])
+    except (ValueError, TypeError):
+        pub_year = 0
+
+    # Version cutoff: skip very old CVEs that don't affect current Ubuntu 22.04 packages
+    min_year = _OXWARE_MIN_VERSIONS.get(product_id, 2020)
+    if pub_year > 0 and pub_year < min_year:
+        cve_item["affects_oxware"] = False
+        cve_item["filtered_old_version"] = True
+        return cve_item
+
+    # Product is part of OXware stack AND severity is MEDIUM/HIGH/CRITICAL
+    if product_id in _OXWARE_STACK_PRODUCT_IDS and severity in ("MEDIUM", "HIGH", "CRITICAL"):
         cve_item["affects_oxware"] = True
         return cve_item
 
-    # Description mentions OXware stack components → flag regardless of product category
+    # Description mentions OXware stack components AND severity HIGH/CRITICAL
     if any(kw in desc_lower for kw in _OXWARE_DESC_KEYWORDS) and severity in ("HIGH", "CRITICAL"):
         cve_item["affects_oxware"] = True
         return cve_item
@@ -299,14 +332,22 @@ def _mark_affects_oxware(cve_item: dict, product_id: str) -> dict:
 _CVE_CACHE: dict = {}   # product_id → {data, fetched_at}
 _CVE_TTL = 1800         # 30 dk cache
 
-def _fetch_nvd_cves(keyword: str, limit: int = 20, product_id: str = "") -> tuple:
-    """NVD API v2 üzerinden CVE çek. Returns (items, error_str|None)."""
+def _fetch_nvd_cves(keyword: str, limit: int = 20, product_id: str = "", years_back: int = 3) -> tuple:
+    """NVD API v2 üzerinden CVE çek. Returns (items, error_str|None).
+    years_back: only fetch CVEs published in the last N years (reduces noise from ancient CVEs).
+    """
     import json as _json
     import ssl as _ssl
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone.utc)
+    pub_start = (now - timedelta(days=365 * years_back)).strftime("%Y-%m-%dT00:00:00.000")
+    pub_end   = now.strftime("%Y-%m-%dT23:59:59.999")
     params = urllib.parse.urlencode({
         "keywordSearch": keyword,
         "resultsPerPage": limit,
         "startIndex": 0,
+        "pubStartDate": pub_start,
+        "pubEndDate":   pub_end,
     })
     url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?{params}"
     headers = {
@@ -365,7 +406,12 @@ def api_cve_products():
 @app.route("/api/cve/search")
 def api_cve_search():
     product_id = request.args.get("product", "").lower()
-    force = request.args.get("force", "0") == "1"
+    force      = request.args.get("force", "0") == "1"
+    try:
+        years_back = int(request.args.get("years_back", "3"))
+        years_back = max(0, min(years_back, 10))  # clamp 0–10
+    except ValueError:
+        years_back = 3
 
     if product_id and product_id not in CVE_PRODUCTS:
         return err(f"Bilinmeyen ürün: {product_id}", 400)
@@ -381,7 +427,9 @@ def api_cve_search():
     fetch_count = 0
 
     for pid, pinfo in targets.items():
-        cached = _CVE_CACHE.get(pid)
+        # Cache key includes years_back so different time ranges don't collide
+        cache_key = f"{pid}:{years_back}"
+        cached = _CVE_CACHE.get(cache_key)
         if not force and cached and (time.time() - cached["fetched_at"]) < _CVE_TTL:
             results[pid] = cached["data"]
             continue
@@ -389,13 +437,13 @@ def api_cve_search():
         if fetch_count > 0:
             time.sleep(req_delay)
         fetch_count += 1
-        cves, fetch_err = _fetch_nvd_cves(pinfo["keyword"], product_id=pid)
+        cves, fetch_err = _fetch_nvd_cves(pinfo["keyword"], product_id=pid, years_back=years_back)
         if fetch_err:
             fetch_errors.append(f"{pinfo['label']}: {fetch_err}")
             # Use stale cache rather than empty on error
             if cached:
                 cves = cached["data"]
-        _CVE_CACHE[pid] = {"data": cves, "fetched_at": time.time()}
+        _CVE_CACHE[cache_key] = {"data": cves, "fetched_at": time.time()}
         results[pid] = cves
 
     # Count OXware-affecting CVEs across all products

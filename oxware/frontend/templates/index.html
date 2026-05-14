@@ -1913,14 +1913,23 @@
             </button>
           </div>
 
-          <!-- Severity filtresi -->
-          <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
-            <span style="font-size:11px;color:var(--text-dim);align-self:center">Seviye:</span>
-            <button class="cve-sev-btn active" data-sev="ALL"  onclick="cveSevFilter('ALL')">Tümü</button>
-            <button class="cve-sev-btn" data-sev="CRITICAL" onclick="cveSevFilter('CRITICAL')">🔴 Critical</button>
-            <button class="cve-sev-btn" data-sev="HIGH"     onclick="cveSevFilter('HIGH')">🟠 High</button>
-            <button class="cve-sev-btn" data-sev="MEDIUM"   onclick="cveSevFilter('MEDIUM')">🟡 Medium</button>
-            <button class="cve-sev-btn" data-sev="LOW"      onclick="cveSevFilter('LOW')">🟢 Low</button>
+          <!-- Severity + Zaman filtresi -->
+          <div style="display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <span style="font-size:11px;color:var(--text-dim)">Seviye:</span>
+              <button class="cve-sev-btn active" data-sev="ALL"  onclick="cveSevFilter('ALL')">Tümü</button>
+              <button class="cve-sev-btn" data-sev="CRITICAL" onclick="cveSevFilter('CRITICAL')">🔴 Critical</button>
+              <button class="cve-sev-btn" data-sev="HIGH"     onclick="cveSevFilter('HIGH')">🟠 High</button>
+              <button class="cve-sev-btn" data-sev="MEDIUM"   onclick="cveSevFilter('MEDIUM')">🟡 Medium</button>
+              <button class="cve-sev-btn" data-sev="LOW"      onclick="cveSevFilter('LOW')">🟢 Low</button>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <span style="font-size:11px;color:var(--text-dim)">Dönem:</span>
+              <button class="cve-sev-btn" data-year="1"  onclick="cveYearFilter(1)">Son 1 yıl</button>
+              <button class="cve-sev-btn active" data-year="3" id="cve-year-default" onclick="cveYearFilter(3)">Son 3 yıl</button>
+              <button class="cve-sev-btn" data-year="5"  onclick="cveYearFilter(5)">Son 5 yıl</button>
+              <button class="cve-sev-btn" data-year="0"  onclick="cveYearFilter(0)">Tümü</button>
+            </div>
           </div>
 
           <!-- CVE Listesi -->
@@ -7950,6 +7959,7 @@ let _cveData        = {};    // { productId: [cve,...] }
 let _cveProducts    = {};    // { productId: {label,keyword,in_oxware_stack} }
 let _cveFilter      = 'all'; // active product filter: 'all' | 'oxware' | productId
 let _cveSev         = 'ALL'; // severity filter
+let _cveYear        = 3;     // years_back filter (0=all, 1/3/5=last N years)
 let _cveLoaded      = false;
 let _cveOxwareStack = [];    // product IDs in OXware's runtime stack
 let _cveOxwareCount = 0;     // total CVEs flagged as affects_oxware
@@ -7965,7 +7975,10 @@ async function cveLoad(force = false) {
   const btn = document.getElementById('cve-refresh-btn');
   if (btn) btn.disabled = true;
   try {
-    const url = `/api/cve/search${force ? '?force=1' : ''}`;
+    const params = new URLSearchParams();
+    if (force) params.set('force', '1');
+    if (_cveYear > 0) params.set('years_back', _cveYear);
+    const url = `/api/cve/search${params.toString() ? '?' + params.toString() : ''}`;
     const r = await fetch(url, { headers: { Authorization: `Bearer ${TOKEN()}` } });
     const d = await r.json();
     // d.ok may be true even with partial errors — always use what we got
@@ -8005,6 +8018,14 @@ async function cveLoad(force = false) {
 }
 
 async function cveRefresh() { await cveLoad(true); }
+
+function cveYearFilter(years) {
+  _cveYear   = years;
+  _cveLoaded = false; // force reload with new date range
+  document.querySelectorAll('[data-year]').forEach(b =>
+    b.classList.toggle('active', parseInt(b.dataset.year) === years));
+  cveLoad(true);
+}
 
 function cveRenderTags() {
   const bar = document.getElementById('cve-tag-bar');
