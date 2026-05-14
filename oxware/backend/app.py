@@ -268,8 +268,8 @@ CVE_PRODUCTS = {
 _CVE_CACHE: dict = {}   # product_id → {data, fetched_at}
 _CVE_TTL = 1800         # 30 dk cache
 
-def _fetch_nvd_cves(keyword: str, limit: int = 20) -> list:
-    """NVD API v2 üzerinden CVE çek."""
+def _fetch_nvd_cves(keyword: str, limit: int = 20) -> tuple:
+    """NVD API v2 üzerinden CVE çek. Returns (items, error_str|None)."""
     import json as _json
     import ssl as _ssl
     params = urllib.parse.urlencode({
@@ -278,16 +278,21 @@ def _fetch_nvd_cves(keyword: str, limit: int = 20) -> list:
         "startIndex": 0,
     })
     url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?{params}"
-    req = urllib.request.Request(url, headers={
+    headers = {
         "User-Agent": "OXware-CVE-Tracker/1.0",
         "Accept": "application/json",
-    })
+    }
+    # Add API key if configured (higher rate limits: 50 req/30s)
+    nvd_api_key = os.environ.get("NVD_API_KEY", "")
+    if nvd_api_key:
+        headers["apiKey"] = nvd_api_key
+    req = urllib.request.Request(url, headers=headers)
     # SSL verify bypass — bazı VPS'lerde CA bundle eksik olabilir
     ctx = _ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = _ssl.CERT_NONE
     try:
-        with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+        with urllib.request.urlopen(req, timeout=30, context=ctx) as resp:
             raw = _json.loads(resp.read())
         items = []
         for vuln in raw.get("vulnerabilities", []):
@@ -336,19 +341,36 @@ def api_cve_search():
     fetch_errors = []
     targets = {product_id: CVE_PRODUCTS[product_id]} if product_id else CVE_PRODUCTS
 
+    # NVD rate limit: 5 req/30s (no key) or 50 req/30s (with key).
+    # Add 0.7s delay between uncached fetches to avoid 429s.
+    has_api_key = bool(os.environ.get("NVD_API_KEY", ""))
+    req_delay = 0.2 if has_api_key else 0.7
+    fetch_count = 0
+
     for pid, pinfo in targets.items():
         cached = _CVE_CACHE.get(pid)
         if not force and cached and (time.time() - cached["fetched_at"]) < _CVE_TTL:
             results[pid] = cached["data"]
             continue
+        # Respect rate limit between live API calls
+        if fetch_count > 0:
+            time.sleep(req_delay)
+        fetch_count += 1
         cves, fetch_err = _fetch_nvd_cves(pinfo["keyword"])
         if fetch_err:
             fetch_errors.append(f"{pinfo['label']}: {fetch_err}")
+            # Use stale cache rather than empty on error
+            if cached:
+                cves = cached["data"]
         _CVE_CACHE[pid] = {"data": cves, "fetched_at": time.time()}
         results[pid] = cves
 
+    # Always return 200 — frontend shows warning banner if fetch_errors present.
+    # Only hard-fail if completely empty AND we had errors (NVD totally unreachable).
     if fetch_errors and not any(results.values()):
-        return err(f"NVD API erişim hatası: {fetch_errors[0]}", 503)
+        return ok(results=results, products=CVE_PRODUCTS,
+                  fetch_errors=fetch_errors,
+                  warning="NVD API geçici olarak erişilemiyor. Lütfen daha sonra tekrar deneyin.")
 
     return ok(results=results, products=CVE_PRODUCTS,
               fetch_errors=fetch_errors if fetch_errors else None)

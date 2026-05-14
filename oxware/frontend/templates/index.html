@@ -7945,25 +7945,40 @@ async function cveInit() {
 
 async function cveLoad(force = false) {
   const wrap = document.getElementById('cve-list-wrap');
-  wrap.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim)"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px"></i><br><br>NVD veritabanından CVE\'ler alınıyor…</div>';
+  wrap.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim)"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px"></i><br><br>NVD veritabanından CVE\'ler alınıyor… <span style="font-size:12px;opacity:.6">(bu işlem ~30 sn sürebilir)</span></div>';
   const btn = document.getElementById('cve-refresh-btn');
   if (btn) btn.disabled = true;
   try {
     const url = `/api/cve/search${force ? '?force=1' : ''}`;
     const r = await fetch(url, { headers: { Authorization: `Bearer ${TOKEN()}` } });
     const d = await r.json();
-    if (!d.ok) throw new Error(d.error || 'Hata');
+    // d.ok may be true even with partial errors — always use what we got
     _cveData     = d.results || {};
     _cveProducts = d.products || {};
     _cveLoaded   = true;
     cveRenderTags();
     cveRender();
-    document.getElementById('cve-last-update').textContent =
-      'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR');
+    const lastUpd = document.getElementById('cve-last-update');
+    if (lastUpd) lastUpd.textContent = 'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR');
+    // Show non-blocking warning if some products failed
+    if (d.fetch_errors && d.fetch_errors.length) {
+      const warn = document.createElement('div');
+      warn.style.cssText = 'background:var(--yellow,.8);color:#000;padding:8px 14px;border-radius:6px;margin-bottom:12px;font-size:13px';
+      warn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Bazı ürünler alınamadı (NVD oran limiti). Önbellekteki veriler gösteriliyor. <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;float:right">✕</button>`;
+      wrap.prepend(warn);
+    }
+    if (d.warning) {
+      wrap.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-dim)">
+        <i class="fa-solid fa-triangle-exclamation" style="font-size:24px;color:var(--yellow)"></i><br><br>
+        ${d.warning}<br>
+        <button onclick="cveLoad(true)" class="btn btn-sm btn-secondary" style="margin-top:12px">Tekrar Dene</button>
+      </div>`;
+    }
   } catch(e) {
     wrap.innerHTML = `<div style="text-align:center;padding:40px;color:var(--red)">
       <i class="fa-solid fa-circle-exclamation" style="font-size:24px"></i><br><br>
       CVE verileri alınamadı: ${e.message}<br>
+      <small style="opacity:.7">NVD API geçici erişilemez olabilir. Birkaç dakika sonra tekrar deneyin.</small><br>
       <button onclick="cveLoad(true)" class="btn btn-sm btn-secondary" style="margin-top:12px">Tekrar Dene</button>
     </div>`;
   } finally {
