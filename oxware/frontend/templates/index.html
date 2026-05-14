@@ -425,6 +425,17 @@
     .cve-refs{margin-top:6px;display:flex;gap:8px;flex-wrap:wrap}
     .cve-ref{font-size:10px;color:var(--accent-lt);text-decoration:none}
     .cve-ref:hover{text-decoration:underline}
+    /* OXware Stack filter button — cyan accent */
+    .cve-tag.oxware-stack-tag{border-color:rgba(0,200,255,.35);color:var(--cyan)}
+    .cve-tag.oxware-stack-tag:hover,.cve-tag.oxware-stack-tag.active{background:rgba(0,200,255,.15);border-color:var(--cyan);color:var(--cyan)}
+    .oxware-badge{background:#ef4444;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:3px}
+    /* Stack product tags — subtle cyan dot */
+    .cve-tag.stack-product{border-color:rgba(0,200,255,.2)}
+    /* CVE card highlighted when affects OXware */
+    .cve-card-oxware{border-color:rgba(0,200,255,.3)!important;background:rgba(0,200,255,.03)}
+    .cve-card-oxware:hover{border-color:rgba(0,200,255,.55)!important}
+    /* OXware badge on individual CVE cards */
+    .cve-oxware-badge{padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(0,200,255,.12);color:var(--cyan);border:1px solid rgba(0,200,255,.3);white-space:nowrap}
 
     /* page scroll fix */
     .page{flex:1;overflow-y:auto;padding:16px;display:none}
@@ -7932,11 +7943,13 @@ async function doChangeMac() {
 }
 
 /* ══════════════════ CVE TRACKER ══════════════════ */
-let _cveData     = {};    // { productId: [cve,...] }
-let _cveProducts = {};    // { productId: {label,keyword} }
-let _cveFilter   = 'all'; // active product filter
-let _cveSev      = 'ALL'; // severity filter
-let _cveLoaded   = false;
+let _cveData        = {};    // { productId: [cve,...] }
+let _cveProducts    = {};    // { productId: {label,keyword,in_oxware_stack} }
+let _cveFilter      = 'all'; // active product filter: 'all' | 'oxware' | productId
+let _cveSev         = 'ALL'; // severity filter
+let _cveLoaded      = false;
+let _cveOxwareStack = [];    // product IDs in OXware's runtime stack
+let _cveOxwareCount = 0;     // total CVEs flagged as affects_oxware
 
 async function cveInit() {
   if (_cveLoaded) { cveRender(); return; }
@@ -7953,9 +7966,11 @@ async function cveLoad(force = false) {
     const r = await fetch(url, { headers: { Authorization: `Bearer ${TOKEN()}` } });
     const d = await r.json();
     // d.ok may be true even with partial errors — always use what we got
-    _cveData     = d.results || {};
-    _cveProducts = d.products || {};
-    _cveLoaded   = true;
+    _cveData        = d.results || {};
+    _cveProducts    = d.products || {};
+    _cveOxwareStack = d.oxware_stack || [];
+    _cveOxwareCount = d.oxware_count || 0;
+    _cveLoaded      = true;
     cveRenderTags();
     cveRender();
     const lastUpd = document.getElementById('cve-last-update');
@@ -7990,14 +8005,23 @@ async function cveRefresh() { await cveLoad(true); }
 
 function cveRenderTags() {
   const bar = document.getElementById('cve-tag-bar');
+  // "OXware Stack" special filter — shows only CVEs flagged affects_oxware=true
+  const oxActive = _cveFilter === 'oxware' ? 'active' : '';
   let html = `<button class="cve-tag ${_cveFilter==='all'?'active':''}" data-product="all" onclick="cveSetFilter('all')">
     <i class="fa-solid fa-globe"></i> Tümü
+  </button>`;
+  html += `<button class="cve-tag oxware-stack-tag ${oxActive}" data-product="oxware" onclick="cveSetFilter('oxware')"
+    title="OXware'de doğrudan çalışan bileşenleri etkileyen güvenlik açıkları (Linux Kernel, KVM/QEMU, libvirt, Nginx, OpenSSH, OpenSSL, Python/Flask)">
+    <i class="fa-solid fa-shield-halved"></i> ⚡ OXware Stack
+    ${_cveOxwareCount > 0 ? `<span class="oxware-badge">${_cveOxwareCount}</span>` : ''}
   </button>`;
   for (const [pid, pinfo] of Object.entries(_cveProducts)) {
     const cnt = (_cveData[pid] || []).length;
     const active = _cveFilter === pid ? 'active' : '';
-    html += `<button class="cve-tag ${active}" data-product="${pid}" onclick="cveSetFilter('${pid}')">
-      ${pinfo.label} <span style="opacity:.6">(${cnt})</span>
+    const isStack = (pinfo.in_oxware_stack || _cveOxwareStack.includes(pid));
+    html += `<button class="cve-tag ${active}${isStack ? ' stack-product' : ''}" data-product="${pid}" onclick="cveSetFilter('${pid}')"
+      ${isStack ? 'title="OXware Stack bileşeni"' : ''}>
+      ${isStack ? '<i class="fa-solid fa-shield-halved" style="color:var(--cyan);font-size:10px;margin-right:3px"></i>' : ''}${pinfo.label} <span style="opacity:.6">(${cnt})</span>
     </button>`;
   }
   bar.innerHTML = html;
@@ -8018,13 +8042,25 @@ function cveSevFilter(sev) {
 function cveRender() {
   const wrap = document.getElementById('cve-list-wrap');
 
-  // Hangi ürünlerin CVE'leri gösterilecek
+  // Collect items based on filter
   let items = [];
-  const products = _cveFilter === 'all' ? Object.keys(_cveData) : [_cveFilter];
-  for (const pid of products) {
-    const pinfo = _cveProducts[pid] || {};
-    for (const cve of (_cveData[pid] || [])) {
-      items.push({ ...cve, _pid: pid, _plabel: pinfo.label || pid });
+  if (_cveFilter === 'oxware') {
+    // Special: show only CVEs flagged affects_oxware=true across ALL products
+    for (const [pid, cves] of Object.entries(_cveData)) {
+      const pinfo = _cveProducts[pid] || {};
+      for (const cve of cves) {
+        if (cve.affects_oxware) {
+          items.push({ ...cve, _pid: pid, _plabel: pinfo.label || pid });
+        }
+      }
+    }
+  } else {
+    const products = _cveFilter === 'all' ? Object.keys(_cveData) : [_cveFilter];
+    for (const pid of products) {
+      const pinfo = _cveProducts[pid] || {};
+      for (const cve of (_cveData[pid] || [])) {
+        items.push({ ...cve, _pid: pid, _plabel: pinfo.label || pid });
+      }
     }
   }
 
@@ -8033,30 +8069,52 @@ function cveRender() {
     items = items.filter(c => c.severity === _cveSev);
   }
 
-  // Score'a göre sırala (yüksekten düşüğe)
-  items.sort((a, b) => (b.score || 0) - (a.score || 0));
+  // Score'a göre sırala (yüksekten düşüğe); affects_oxware önce gelsin
+  items.sort((a, b) => {
+    if (a.affects_oxware !== b.affects_oxware) return a.affects_oxware ? -1 : 1;
+    return (b.score || 0) - (a.score || 0);
+  });
 
   if (!items.length) {
-    wrap.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-dim)">Bu filtreye uygun CVE bulunamadı.</div>';
+    const emptyMsg = _cveFilter === 'oxware'
+      ? 'OXware Stack\'i etkileyen CVE bulunamadı. (Veriler yüklenince güncellenir)'
+      : 'Bu filtreye uygun CVE bulunamadı.';
+    wrap.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-dim)">${emptyMsg}</div>`;
     return;
   }
 
   const SEV_ICON = { CRITICAL: '🔴', HIGH: '🟠', MEDIUM: '🟡', LOW: '🟢', UNKNOWN: '⚪' };
   let html = '';
+
+  // Show info banner when in OXware filter mode
+  if (_cveFilter === 'oxware') {
+    html += `<div style="background:rgba(0,200,255,.08);border:1px solid var(--cyan);border-radius:8px;padding:10px 16px;margin-bottom:14px;font-size:13px;color:var(--cyan)">
+      <i class="fa-solid fa-shield-halved"></i>
+      <strong>OXware Stack Güvenlik Açıkları</strong> — Linux Kernel, KVM/QEMU, libvirt, Nginx, OpenSSH, OpenSSL ve Python/Flask bileşenlerini doğrudan etkileyen CVE'ler.
+      Toplam <strong>${items.length}</strong> zafiyet tespit edildi.
+    </div>`;
+  }
+
   for (const c of items) {
     const icon = SEV_ICON[c.severity] || '⚪';
     const scoreStr = c.score != null ? `${icon} ${c.score}` : icon;
-    const refs = (c.refs || []).slice(0, 2).map(u =>
-      `<a class="cve-ref" href="${u}" target="_blank" rel="noopener">${new URL(u).hostname}</a>`
-    ).join('');
+    const refs = (c.refs || []).slice(0, 2).map(u => {
+      try { return `<a class="cve-ref" href="${u}" target="_blank" rel="noopener">${new URL(u).hostname}</a>`; }
+      catch { return ''; }
+    }).join('');
+    // OXware-affecting badge
+    const oxBadge = c.affects_oxware
+      ? `<span class="cve-oxware-badge" title="OXware'i etkileyebilir"><i class="fa-solid fa-shield-halved"></i> OXware</span>`
+      : '';
     html += `
-    <div class="cve-card">
+    <div class="cve-card${c.affects_oxware ? ' cve-card-oxware' : ''}">
       <div class="cve-card-head">
         <span class="cve-id">
           <a href="https://nvd.nist.gov/vuln/detail/${c.id}" target="_blank" rel="noopener">${c.id}</a>
         </span>
         <span class="cve-score ${c.severity}">${scoreStr} ${c.severity}</span>
         <span class="cve-product-tag">${c._plabel}</span>
+        ${oxBadge}
         <span class="cve-date">${c.published}</span>
       </div>
       <div class="cve-desc">${c.description || '–'}</div>

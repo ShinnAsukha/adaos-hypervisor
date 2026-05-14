@@ -249,26 +249,57 @@ def docs_page():
 import urllib.request
 import urllib.parse
 
-# Takip edilen ürünler: id → NVD keyword
+# Takip edilen ürünler: id → {label, keyword, in_oxware_stack}
+# in_oxware_stack=True → OXware'de doğrudan çalışıyor (Ubuntu 22.04 + KVM tabanlı)
 CVE_PRODUCTS = {
-    "vmware":    {"label": "VMware",    "keyword": "vmware"},
-    "proxmox":   {"label": "Proxmox",   "keyword": "proxmox"},
-    "nginx":     {"label": "Nginx",     "keyword": "nginx"},
-    "cpanel":    {"label": "cPanel",    "keyword": "cpanel"},
-    "plesk":     {"label": "Plesk",     "keyword": "plesk"},
-    "kvm":       {"label": "KVM/QEMU",  "keyword": "qemu kvm"},
-    "libvirt":   {"label": "libvirt",   "keyword": "libvirt"},
-    "openssl":   {"label": "OpenSSL",   "keyword": "openssl"},
-    "linux":     {"label": "Linux Kernel", "keyword": "linux kernel"},
-    "openssh":   {"label": "OpenSSH",   "keyword": "openssh"},
-    "docker":    {"label": "Docker",    "keyword": "docker"},
-    "wordpress": {"label": "WordPress", "keyword": "wordpress"},
+    "linux":     {"label": "Linux Kernel", "keyword": "linux kernel",    "in_oxware_stack": True},
+    "kvm":       {"label": "KVM/QEMU",     "keyword": "qemu kvm",        "in_oxware_stack": True},
+    "libvirt":   {"label": "libvirt",      "keyword": "libvirt",         "in_oxware_stack": True},
+    "nginx":     {"label": "Nginx",        "keyword": "nginx",           "in_oxware_stack": True},
+    "openssh":   {"label": "OpenSSH",      "keyword": "openssh",         "in_oxware_stack": True},
+    "openssl":   {"label": "OpenSSL",      "keyword": "openssl",         "in_oxware_stack": True},
+    "python":    {"label": "Python/Flask", "keyword": "python flask",    "in_oxware_stack": True},
+    "vmware":    {"label": "VMware",       "keyword": "vmware",          "in_oxware_stack": False},
+    "proxmox":   {"label": "Proxmox",      "keyword": "proxmox",         "in_oxware_stack": False},
+    "cpanel":    {"label": "cPanel",       "keyword": "cpanel",          "in_oxware_stack": False},
+    "plesk":     {"label": "Plesk",        "keyword": "plesk",           "in_oxware_stack": False},
+    "docker":    {"label": "Docker",       "keyword": "docker",          "in_oxware_stack": False},
+    "wordpress": {"label": "WordPress",    "keyword": "wordpress",       "in_oxware_stack": False},
 }
+
+# Keywords in CVE descriptions that indicate OXware relevance even outside stack products
+_OXWARE_DESC_KEYWORDS = [
+    "qemu", "kvm", "libvirt", "nginx", "openssl", "openssh",
+    "python", "flask", "jwt", "socket.io", "socketio",
+    "ubuntu", "debian", "linux kernel", "privilege escalation",
+    "remote code execution", "rce", "authentication bypass",
+    "container escape", "hypervisor", "virtual machine",
+]
+
+_OXWARE_STACK_PRODUCT_IDS = {pid for pid, p in CVE_PRODUCTS.items() if p.get("in_oxware_stack")}
+
+def _mark_affects_oxware(cve_item: dict, product_id: str) -> dict:
+    """Add affects_oxware=True if this CVE is relevant to OXware's runtime stack."""
+    severity = cve_item.get("severity", "UNKNOWN")
+    desc_lower = cve_item.get("description", "").lower()
+
+    # Product is part of OXware stack AND severity is not LOW/UNKNOWN
+    if product_id in _OXWARE_STACK_PRODUCT_IDS and severity not in ("LOW", "UNKNOWN"):
+        cve_item["affects_oxware"] = True
+        return cve_item
+
+    # Description mentions OXware stack components → flag regardless of product category
+    if any(kw in desc_lower for kw in _OXWARE_DESC_KEYWORDS) and severity in ("HIGH", "CRITICAL"):
+        cve_item["affects_oxware"] = True
+        return cve_item
+
+    cve_item["affects_oxware"] = False
+    return cve_item
 
 _CVE_CACHE: dict = {}   # product_id → {data, fetched_at}
 _CVE_TTL = 1800         # 30 dk cache
 
-def _fetch_nvd_cves(keyword: str, limit: int = 20) -> tuple:
+def _fetch_nvd_cves(keyword: str, limit: int = 20, product_id: str = "") -> tuple:
     """NVD API v2 üzerinden CVE çek. Returns (items, error_str|None)."""
     import json as _json
     import ssl as _ssl
@@ -312,14 +343,16 @@ def _fetch_nvd_cves(keyword: str, limit: int = 20) -> tuple:
                     break
             published = cve.get("published", "")[:10]
             refs = [r.get("url","") for r in cve.get("references", [])[:3]]
-            items.append({
+            item = {
                 "id": cve_id,
                 "description": desc[:300],
                 "score": score,
                 "severity": severity.upper(),
                 "published": published,
                 "refs": refs,
-            })
+                "product_id": product_id,
+            }
+            items.append(_mark_affects_oxware(item, product_id))
         return items, None
     except Exception as e:
         log.warning("NVD fetch hata (%s): %s", keyword, e)
@@ -356,7 +389,7 @@ def api_cve_search():
         if fetch_count > 0:
             time.sleep(req_delay)
         fetch_count += 1
-        cves, fetch_err = _fetch_nvd_cves(pinfo["keyword"])
+        cves, fetch_err = _fetch_nvd_cves(pinfo["keyword"], product_id=pid)
         if fetch_err:
             fetch_errors.append(f"{pinfo['label']}: {fetch_err}")
             # Use stale cache rather than empty on error
@@ -365,14 +398,23 @@ def api_cve_search():
         _CVE_CACHE[pid] = {"data": cves, "fetched_at": time.time()}
         results[pid] = cves
 
+    # Count OXware-affecting CVEs across all products
+    oxware_count = sum(
+        1 for pid_cves in results.values()
+        for c in pid_cves if c.get("affects_oxware")
+    )
+
     # Always return 200 — frontend shows warning banner if fetch_errors present.
-    # Only hard-fail if completely empty AND we had errors (NVD totally unreachable).
     if fetch_errors and not any(results.values()):
         return ok(results=results, products=CVE_PRODUCTS,
+                  oxware_stack=list(_OXWARE_STACK_PRODUCT_IDS),
+                  oxware_count=oxware_count,
                   fetch_errors=fetch_errors,
                   warning="NVD API geçici olarak erişilemiyor. Lütfen daha sonra tekrar deneyin.")
 
     return ok(results=results, products=CVE_PRODUCTS,
+              oxware_stack=list(_OXWARE_STACK_PRODUCT_IDS),
+              oxware_count=oxware_count,
               fetch_errors=fetch_errors if fetch_errors else None)
 
 # ── ISO Download ──────────────────────────────────────────────────────────────
