@@ -37,9 +37,10 @@ jobs:
       - name: Locate ISO file
         id: iso
         run: |
-          ISO_FILE=$(ls oxware-*.iso 2>/dev/null | head -1)
+          ISO_FILE=$(ls [Oo][Xx][Ww]are*.iso 2>/dev/null | head -1)
           if [[ -z "$ISO_FILE" ]]; then
             echo "ERROR: No ISO file found after build." >&2
+            ls -la *.iso 2>/dev/null || echo "No .iso files at all"
             exit 1
           fi
           echo "path=${ISO_FILE}" >> "$GITHUB_OUTPUT"
@@ -69,14 +70,14 @@ jobs:
                Or use Rufus / Ventoy on Windows.
             3. Boot from USB — the installer launches automatically.
             4. Follow the on-screen TUI installer (Proxmox-style).
-            5. After reboot, access the web UI at `http://<server-ip>:8080`
+            5. After reboot, access the web UI at `https://<server-ip>:8006`
 
             ### Requirements
             - x86_64 server with VT-x/AMD-V enabled in BIOS
             - 4 GB RAM minimum (8 GB+ recommended)
             - 40 GB disk minimum
 
-            ### Default credentials
-            Set during installation. Username: `admin`
+            ### Credentials
+            Username and password are set during the TUI installation process.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
