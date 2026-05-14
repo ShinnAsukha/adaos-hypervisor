@@ -402,6 +402,30 @@
     .ctx-item.active{background:rgba(42,109,217,.12);color:var(--accent-lt)}
     .ctx-item i.fa-fw{width:16px;flex-shrink:0;text-align:center}
 
+    /* ── CVE Tracker ── */
+    .cve-tag{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border2);background:var(--surface2);color:var(--text-muted);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px}
+    .cve-tag:hover,.cve-tag.active{background:rgba(249,115,22,.15);border-color:rgba(249,115,22,.4);color:#f97316}
+    .cve-sev-btn{padding:3px 10px;border-radius:4px;font-size:11px;font-weight:600;border:1px solid var(--border2);background:var(--surface2);color:var(--text-muted);cursor:pointer;transition:all .15s}
+    .cve-sev-btn.active{background:rgba(249,115,22,.15);border-color:#f97316;color:#f97316}
+    .cve-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:8px;transition:border-color .15s}
+    .cve-card:hover{border-color:#484f58}
+    .cve-card-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+    .cve-id{font-family:monospace;font-size:13px;font-weight:700;color:var(--accent-lt)}
+    .cve-id a{color:inherit;text-decoration:none}
+    .cve-id a:hover{text-decoration:underline}
+    .cve-score{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700}
+    .cve-score.CRITICAL{background:rgba(239,68,68,.18);color:#ef4444;border:1px solid rgba(239,68,68,.3)}
+    .cve-score.HIGH{background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.3)}
+    .cve-score.MEDIUM{background:rgba(234,179,8,.12);color:#eab308;border:1px solid rgba(234,179,8,.3)}
+    .cve-score.LOW{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.3)}
+    .cve-score.UNKNOWN{background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)}
+    .cve-product-tag{padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600;background:rgba(42,109,217,.12);color:var(--accent-lt);border:1px solid rgba(42,109,217,.2)}
+    .cve-date{margin-left:auto;font-size:11px;color:var(--text-dim)}
+    .cve-desc{font-size:12px;color:var(--text-muted);line-height:1.6}
+    .cve-refs{margin-top:6px;display:flex;gap:8px;flex-wrap:wrap}
+    .cve-ref{font-size:10px;color:var(--accent-lt);text-decoration:none}
+    .cve-ref:hover{text-decoration:underline}
+
     /* page scroll fix */
     .page{flex:1;overflow-y:auto;padding:16px;display:none}
     .page.active{display:block}
@@ -1852,6 +1876,44 @@
                 <div style="margin-left:auto;font-size:10px;color:var(--text-muted)" id="pt-duration"></div>
               </div>
               <div id="pentest-findings"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─────── tab-cve ─────── -->
+        <div class="page" id="page-tab-cve">
+          <div class="section-header" style="display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap">
+            <h2><i class="fa-solid fa-bug" style="margin-right:8px;color:#f97316"></i>CVE Güvenlik Açıkları</h2>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <button onclick="cveRefresh()" class="btn btn-sm btn-secondary" id="cve-refresh-btn">
+                <i class="fa-solid fa-rotate"></i> Yenile
+              </button>
+              <span id="cve-last-update" style="font-size:11px;color:var(--text-dim)"></span>
+            </div>
+          </div>
+
+          <!-- Ürün filtreleme etiketleri -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="cve-tag-bar">
+            <button class="cve-tag active" data-product="all" onclick="cveSetFilter('all')">
+              <i class="fa-solid fa-globe"></i> Tümü
+            </button>
+          </div>
+
+          <!-- Severity filtresi -->
+          <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--text-dim);align-self:center">Seviye:</span>
+            <button class="cve-sev-btn active" data-sev="ALL"  onclick="cveSevFilter('ALL')">Tümü</button>
+            <button class="cve-sev-btn" data-sev="CRITICAL" onclick="cveSevFilter('CRITICAL')">🔴 Critical</button>
+            <button class="cve-sev-btn" data-sev="HIGH"     onclick="cveSevFilter('HIGH')">🟠 High</button>
+            <button class="cve-sev-btn" data-sev="MEDIUM"   onclick="cveSevFilter('MEDIUM')">🟡 Medium</button>
+            <button class="cve-sev-btn" data-sev="LOW"      onclick="cveSevFilter('LOW')">🟢 Low</button>
+          </div>
+
+          <!-- CVE Listesi -->
+          <div id="cve-list-wrap">
+            <div style="text-align:center;padding:40px;color:var(--text-dim)">
+              <i class="fa-solid fa-spinner fa-spin" style="font-size:24px;margin-bottom:12px"></i><br>
+              CVE verileri yükleniyor…
             </div>
           </div>
         </div>
@@ -3782,6 +3844,9 @@ function buildContextNav(type) {
     </div>
     <div class="ctx-item" data-page="tab-security" onclick="navigate('tab-security');closeMobileNav()">
       <i class="fa-solid fa-user-shield fa-fw"></i>${t('security')}
+    </div>
+    <div class="ctx-item" data-page="tab-cve" onclick="navigate('tab-cve');closeMobileNav()">
+      <i class="fa-solid fa-bug fa-fw"></i>CVE Tracker
     </div>
     <div class="ctx-item" data-page="tab-integrations" onclick="navigate('tab-integrations');closeMobileNav()">
       <i class="fa-solid fa-plug fa-fw"></i>${t('integrations')}
@@ -6535,6 +6600,7 @@ async function loadTabData(tabId) {
     case 'tab-monitoring':   loadPerfHistory('1h'); loadSmartData(); loadUptimes(); loadIdsStatus(); loadTrendAnalysis(); loadHAStatus(); break;
     case 'tab-ai':           loadAiRecommendations(); loadAnomalies(); loadAIAgents(); break;
     case 'tab-security':     load2faStatus(); loadAuditLog(); loadApiKeys(); loadLdapConfig(); checkLicenseStatus(); loadAutoSnapConfig(); loadSessions(); loadSecurityLockouts(); loadIpAllowlist(); break;
+    case 'tab-cve':          cveInit(); break;
     case 'tab-integrations': loadWebhooks(); loadS3Config(); loadEmailConfig(); loadVlans(); break;
     case 'tab-settings':     loadSdnStatus(); loadSslStatus(); loadScalerPolicies(); loadQuotas(); loadVmSchedules(); break;
   }
@@ -7858,6 +7924,126 @@ async function doChangeMac() {
     await loadMacList();
     document.getElementById('mac-new-input').value = '';
   } catch(e) { toast('Hata: ' + e.message, 'error'); }
+}
+
+/* ══════════════════ CVE TRACKER ══════════════════ */
+let _cveData     = {};    // { productId: [cve,...] }
+let _cveProducts = {};    // { productId: {label,keyword} }
+let _cveFilter   = 'all'; // active product filter
+let _cveSev      = 'ALL'; // severity filter
+let _cveLoaded   = false;
+
+async function cveInit() {
+  if (_cveLoaded) { cveRender(); return; }
+  await cveLoad();
+}
+
+async function cveLoad(force = false) {
+  const wrap = document.getElementById('cve-list-wrap');
+  wrap.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim)"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px"></i><br><br>NVD veritabanından CVE\'ler alınıyor…</div>';
+  const btn = document.getElementById('cve-refresh-btn');
+  if (btn) btn.disabled = true;
+  try {
+    const url = `/api/cve/search${force ? '?force=1' : ''}`;
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${TOKEN()}` } });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Hata');
+    _cveData     = d.results || {};
+    _cveProducts = d.products || {};
+    _cveLoaded   = true;
+    cveRenderTags();
+    cveRender();
+    document.getElementById('cve-last-update').textContent =
+      'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR');
+  } catch(e) {
+    wrap.innerHTML = `<div style="text-align:center;padding:40px;color:var(--red)">
+      <i class="fa-solid fa-circle-exclamation" style="font-size:24px"></i><br><br>
+      CVE verileri alınamadı: ${e.message}<br>
+      <button onclick="cveLoad(true)" class="btn btn-sm btn-secondary" style="margin-top:12px">Tekrar Dene</button>
+    </div>`;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function cveRefresh() { await cveLoad(true); }
+
+function cveRenderTags() {
+  const bar = document.getElementById('cve-tag-bar');
+  let html = `<button class="cve-tag ${_cveFilter==='all'?'active':''}" data-product="all" onclick="cveSetFilter('all')">
+    <i class="fa-solid fa-globe"></i> Tümü
+  </button>`;
+  for (const [pid, pinfo] of Object.entries(_cveProducts)) {
+    const cnt = (_cveData[pid] || []).length;
+    const active = _cveFilter === pid ? 'active' : '';
+    html += `<button class="cve-tag ${active}" data-product="${pid}" onclick="cveSetFilter('${pid}')">
+      ${pinfo.label} <span style="opacity:.6">(${cnt})</span>
+    </button>`;
+  }
+  bar.innerHTML = html;
+}
+
+function cveSetFilter(pid) {
+  _cveFilter = pid;
+  document.querySelectorAll('.cve-tag').forEach(b => b.classList.toggle('active', b.dataset.product === pid));
+  cveRender();
+}
+
+function cveSevFilter(sev) {
+  _cveSev = sev;
+  document.querySelectorAll('.cve-sev-btn').forEach(b => b.classList.toggle('active', b.dataset.sev === sev));
+  cveRender();
+}
+
+function cveRender() {
+  const wrap = document.getElementById('cve-list-wrap');
+
+  // Hangi ürünlerin CVE'leri gösterilecek
+  let items = [];
+  const products = _cveFilter === 'all' ? Object.keys(_cveData) : [_cveFilter];
+  for (const pid of products) {
+    const pinfo = _cveProducts[pid] || {};
+    for (const cve of (_cveData[pid] || [])) {
+      items.push({ ...cve, _pid: pid, _plabel: pinfo.label || pid });
+    }
+  }
+
+  // Severity filtresi
+  if (_cveSev !== 'ALL') {
+    items = items.filter(c => c.severity === _cveSev);
+  }
+
+  // Score'a göre sırala (yüksekten düşüğe)
+  items.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+  if (!items.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-dim)">Bu filtreye uygun CVE bulunamadı.</div>';
+    return;
+  }
+
+  const SEV_ICON = { CRITICAL: '🔴', HIGH: '🟠', MEDIUM: '🟡', LOW: '🟢', UNKNOWN: '⚪' };
+  let html = '';
+  for (const c of items) {
+    const icon = SEV_ICON[c.severity] || '⚪';
+    const scoreStr = c.score != null ? `${icon} ${c.score}` : icon;
+    const refs = (c.refs || []).slice(0, 2).map(u =>
+      `<a class="cve-ref" href="${u}" target="_blank" rel="noopener">${new URL(u).hostname}</a>`
+    ).join('');
+    html += `
+    <div class="cve-card">
+      <div class="cve-card-head">
+        <span class="cve-id">
+          <a href="https://nvd.nist.gov/vuln/detail/${c.id}" target="_blank" rel="noopener">${c.id}</a>
+        </span>
+        <span class="cve-score ${c.severity}">${scoreStr} ${c.severity}</span>
+        <span class="cve-product-tag">${c._plabel}</span>
+        <span class="cve-date">${c.published}</span>
+      </div>
+      <div class="cve-desc">${c.description || '–'}</div>
+      ${refs ? `<div class="cve-refs">${refs}</div>` : ''}
+    </div>`;
+  }
+  wrap.innerHTML = html;
 }
 
 </script>

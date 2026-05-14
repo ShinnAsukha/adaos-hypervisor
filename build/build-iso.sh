@@ -96,23 +96,53 @@ log "Squashfs açıldı: $(du -sh "$SQUASHFS_ROOT" | cut -f1)"
 # ── Squashfs Düzenle ──────────────────────────────────────────────────────────
 step "Subiquity Devre Dışı + OXware TUI Ekleniyor"
 
-# 1. Subiquity ve console-conf maskele (tty1'i bunlar ele geçiriyor)
+# 1. TÜM Ubuntu live installer servislerini maskele
+# (subiquity normal + snap variant, console-conf snap, cloud-init, getty)
 MASK_SVCS=(
-    subiquity
+    # Subiquity — normal ve snap variants
+    "subiquity.service"
+    "snap.subiquity.subiquity.service"
+    "snap.subiquity.subiquity-server.service"
+    "snap.subiquity.subiquity-service.service"
+    # console-conf snap — dil/klavye ekranını açan bu
+    "snap.console-conf.console-conf.service"
     "console-conf@tty1.service"
     "console-conf@.service"
+    "console-conf.service"
+    # cloud-init — "waiting for cloud-init" mesajı bundan
+    "cloud-init.service"
+    "cloud-init-local.service"
+    "cloud-config.service"
+    "cloud-final.service"
+    "cloud-init.target"
+    # Ubuntu misc live services
     "ubuntu-advantage.service"
+    "ubuntu-advantage-timer.service"
     "pollinate.service"
     "ua-reloader.service"
+    "apport.service"
+    "landscape-client.service"
+    "snapd.seeded.service"
+    # getty — bizim servis tty1'i alacak
+    "getty@tty1.service"
+    "autovt@tty1.service"
 )
+mkdir -p "$SQUASHFS_ROOT/etc/systemd/system"
 for svc in "${MASK_SVCS[@]}"; do
     ln -sf /dev/null "$SQUASHFS_ROOT/etc/systemd/system/$svc" 2>/dev/null || true
 done
-log "Subiquity maskelendi"
 
-# 2. getty@tty1 maskele — bizim servis tty1'i alacak
-ln -sf /dev/null "$SQUASHFS_ROOT/etc/systemd/system/getty@tty1.service"
-log "getty@tty1 maskelendi"
+# Squashfs içindeki tüm subiquity/console-conf snap servislerini dinamik bul ve maskele
+for svc_file in \
+    "$SQUASHFS_ROOT/lib/systemd/system"/snap.subiquity.*.service \
+    "$SQUASHFS_ROOT/lib/systemd/system"/snap.console-conf.*.service \
+    "$SQUASHFS_ROOT/usr/lib/systemd/system"/snap.subiquity.*.service \
+    "$SQUASHFS_ROOT/usr/lib/systemd/system"/snap.console-conf.*.service; do
+    [ -f "$svc_file" ] && \
+        ln -sf /dev/null "$SQUASHFS_ROOT/etc/systemd/system/$(basename "$svc_file")" 2>/dev/null || true
+done
+
+log "Tüm Ubuntu live servisler maskelendi (subiquity/console-conf/cloud-init)"
 
 # 3. OXware installer script kopyala
 mkdir -p "$SQUASHFS_ROOT/opt/oxware-installer"
@@ -130,21 +160,27 @@ log "OXware kaynakları kopyalandı"
 cat > "$SQUASHFS_ROOT/etc/systemd/system/oxware-installer.service" << 'SVC'
 [Unit]
 Description=OXware Hypervisor Installer
-After=systemd-remount-fs.service systemd-udevd.service
+After=systemd-remount-fs.service systemd-udevd.service local-fs.target
 DefaultDependencies=no
 Conflicts=getty@tty1.service
+Conflicts=snap.subiquity.subiquity.service
+Conflicts=snap.console-conf.console-conf.service
+Conflicts=console-conf@tty1.service
 
 [Service]
-Type=idle
+Type=simple
 ExecStart=/usr/bin/python3 /opt/oxware-installer/install.py
 StandardInput=tty
 StandardOutput=tty
-StandardError=tty
+StandardError=journal+console
 TTYPath=/dev/tty1
 TTYReset=yes
 TTYVHangup=yes
+TTYVTDisallocate=yes
 KillMode=process
 IgnoreSIGPIPE=no
+Restart=on-failure
+RestartSec=3
 
 [Install]
 WantedBy=multi-user.target

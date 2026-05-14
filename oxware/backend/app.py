@@ -245,6 +245,100 @@ def index():
 def docs_page():
     return render_template("docs.html")
 
+# ── CVE Tracker ───────────────────────────────────────────────────────────────
+import urllib.request
+import urllib.parse
+
+# Takip edilen ürünler: id → NVD keyword
+CVE_PRODUCTS = {
+    "vmware":    {"label": "VMware",    "keyword": "vmware"},
+    "proxmox":   {"label": "Proxmox",   "keyword": "proxmox"},
+    "nginx":     {"label": "Nginx",     "keyword": "nginx"},
+    "cpanel":    {"label": "cPanel",    "keyword": "cpanel"},
+    "plesk":     {"label": "Plesk",     "keyword": "plesk"},
+    "kvm":       {"label": "KVM/QEMU",  "keyword": "qemu kvm"},
+    "libvirt":   {"label": "libvirt",   "keyword": "libvirt"},
+    "openssl":   {"label": "OpenSSL",   "keyword": "openssl"},
+    "linux":     {"label": "Linux Kernel", "keyword": "linux kernel"},
+    "openssh":   {"label": "OpenSSH",   "keyword": "openssh"},
+    "docker":    {"label": "Docker",    "keyword": "docker"},
+    "wordpress": {"label": "WordPress", "keyword": "wordpress"},
+}
+
+_CVE_CACHE: dict = {}   # product_id → {data, fetched_at}
+_CVE_TTL = 1800         # 30 dk cache
+
+def _fetch_nvd_cves(keyword: str, limit: int = 20) -> list:
+    """NVD API v2 üzerinden CVE çek."""
+    import json as _json
+    params = urllib.parse.urlencode({
+        "keywordSearch": keyword,
+        "resultsPerPage": limit,
+        "startIndex": 0,
+    })
+    url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?{params}"
+    req = urllib.request.Request(url, headers={"User-Agent": "OXware-CVE-Tracker/1.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            raw = _json.loads(resp.read())
+        items = []
+        for vuln in raw.get("vulnerabilities", []):
+            cve = vuln.get("cve", {})
+            cve_id = cve.get("id", "")
+            descs = cve.get("descriptions", [])
+            desc = next((d["value"] for d in descs if d.get("lang") == "en"), "")
+            metrics = cve.get("metrics", {})
+            score = None
+            severity = "UNKNOWN"
+            # CVSS v3.1 önce, sonra v3.0, sonra v2
+            for key in ("cvssMetricV31", "cvssMetricV30", "cvssMetricV2"):
+                if key in metrics and metrics[key]:
+                    m = metrics[key][0]
+                    cvss_data = m.get("cvssData", {})
+                    score = cvss_data.get("baseScore")
+                    severity = cvss_data.get("baseSeverity") or m.get("baseSeverity", "UNKNOWN")
+                    break
+            published = cve.get("published", "")[:10]
+            refs = [r.get("url","") for r in cve.get("references", [])[:3]]
+            items.append({
+                "id": cve_id,
+                "description": desc[:300],
+                "score": score,
+                "severity": severity.upper(),
+                "published": published,
+                "refs": refs,
+            })
+        return items
+    except Exception as e:
+        log.warning("NVD fetch hata (%s): %s", keyword, e)
+        return []
+
+@app.route("/api/cve/products")
+def api_cve_products():
+    return ok(products=CVE_PRODUCTS)
+
+@app.route("/api/cve/search")
+def api_cve_search():
+    product_id = request.args.get("product", "").lower()
+    force = request.args.get("force", "0") == "1"
+
+    if product_id and product_id not in CVE_PRODUCTS:
+        return err(f"Bilinmeyen ürün: {product_id}", 400)
+
+    results = {}
+    targets = {product_id: CVE_PRODUCTS[product_id]} if product_id else CVE_PRODUCTS
+
+    for pid, pinfo in targets.items():
+        cached = _CVE_CACHE.get(pid)
+        if not force and cached and (time.time() - cached["fetched_at"]) < _CVE_TTL:
+            results[pid] = cached["data"]
+            continue
+        cves = _fetch_nvd_cves(pinfo["keyword"])
+        _CVE_CACHE[pid] = {"data": cves, "fetched_at": time.time()}
+        results[pid] = cves
+
+    return ok(results=results, products=CVE_PRODUCTS)
+
 # ── ISO Download ──────────────────────────────────────────────────────────────
 _ISO_SEARCH_PATHS = [
     "/opt/oxware/OXware-Hypervisor-2.0.0-amd64.iso",
