@@ -457,26 +457,120 @@ def _fetch_from_circl(product_id: str, years_back: int) -> list:
         })
     return items
 
+def _fetch_from_github(product_id: str, keyword: str, years_back: int) -> list:
+    """GitHub Advisory Database API — uses api.github.com (always reachable). Raises on failure."""
+    import json as _json
+    from datetime import datetime, timezone, timedelta
+    # Map product to GitHub ecosystem + package query
+    _GH_ECOSYSTEM = {
+        "python":  "pip",
+        "nginx":   None,
+        "linux":   None,
+        "kvm":     None,
+        "libvirt": None,
+        "openssh": None,
+        "openssl": None,
+        "vmware":  None,
+        "docker":  "go",
+        "wordpress": "composer",
+    }
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=365 * years_back)).strftime("%Y-%m-%dT00:00:00Z") if years_back > 0 else None
+    params = {"per_page": 30, "type": "reviewed"}
+    if keyword:
+        params["keyword"] = keyword.split()[0]   # GitHub only takes 1 keyword
+    if cutoff:
+        params["published"] = f">={cutoff}"
+    eco = _GH_ECOSYSTEM.get(product_id)
+    if eco:
+        params["ecosystem"] = eco
+    url = "https://api.github.com/advisories?" + urllib.parse.urlencode(params)
+    gh_token = os.environ.get("GITHUB_TOKEN", "")
+    headers = {
+        "User-Agent": "OXware-CVE-Tracker/1.0",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    if gh_token:
+        headers["Authorization"] = f"Bearer {gh_token}"
+    raw = _json.loads(_http_get(url, headers=headers, timeout=20))
+    items = []
+    for adv in raw:
+        cids = adv.get("cve_id") or ""
+        if not cids:
+            continue  # skip non-CVE advisories
+        cid   = cids if isinstance(cids, str) else cids[0]
+        desc  = adv.get("description", "") or adv.get("summary", "")
+        pub   = (adv.get("published_at") or "")[:10]
+        score = None
+        severity = (adv.get("severity") or "UNKNOWN").upper()
+        cvss = adv.get("cvss", {}) or {}
+        if isinstance(cvss, dict):
+            score = cvss.get("score")
+        if score is None:
+            score = adv.get("cvss_score")
+        try:
+            score = float(score) if score is not None else None
+        except (ValueError, TypeError):
+            score = None
+        if severity == "UNKNOWN" and score is not None:
+            severity = _score_to_severity(score)
+        refs = [adv.get("html_url", "")] if adv.get("html_url") else []
+        items.append({
+            "id": cid, "description": str(desc)[:300],
+            "score": score, "severity": severity,
+            "published": pub, "refs": refs[:3],
+            "source": "github",
+        })
+    return items
+
 def _fetch_cves(keyword: str, product_id: str, limit: int = 20, years_back: int = 3) -> tuple:
-    """Fetch CVEs: NVD primary → CIRCL fallback. Returns (items, error_str|None)."""
-    last_err = None
-    # 1. Try NVD
+    """Fetch CVEs: NVD → CIRCL → GitHub Advisory. Returns (items, error_str|None)."""
+    errors = {}
+    # 1. NVD
     try:
         items = _fetch_from_nvd(keyword, limit, years_back)
-        log.debug("CVE NVD OK: %s (%d results)", keyword, len(items))
+        log.debug("CVE NVD OK: %s (%d)", keyword, len(items))
         return [_mark_affects_oxware({**i, "product_id": product_id}, product_id) for i in items], None
     except Exception as e:
-        last_err = str(e)
-        log.warning("NVD hata (%s): %s — CIRCL fallback deneniyor", keyword, e)
-    # 2. Try CIRCL
+        errors["nvd"] = str(e)
+        log.warning("NVD hata (%s): %s", keyword, e)
+    # 2. CIRCL
     try:
         items = _fetch_from_circl(product_id, years_back)
-        log.debug("CVE CIRCL OK: %s (%d results)", product_id, len(items))
+        log.debug("CVE CIRCL OK: %s (%d)", product_id, len(items))
         return [_mark_affects_oxware({**i, "product_id": product_id}, product_id) for i in items], None
     except Exception as e:
-        last_err2 = str(e)
+        errors["circl"] = str(e)
         log.warning("CIRCL hata (%s): %s", product_id, e)
-    return [], f"NVD: {last_err} | CIRCL: {last_err2}"
+    # 3. GitHub Advisory
+    try:
+        items = _fetch_from_github(product_id, keyword, years_back)
+        log.debug("CVE GitHub OK: %s (%d)", product_id, len(items))
+        return [_mark_affects_oxware({**i, "product_id": product_id}, product_id) for i in items], None
+    except Exception as e:
+        errors["github"] = str(e)
+        log.warning("GitHub Advisory hata (%s): %s", product_id, e)
+    err_summary = " | ".join(f"{k}: {v[:80]}" for k, v in errors.items())
+    return [], err_summary
+
+@app.route("/api/cve/debug")
+def api_cve_debug():
+    """Test connectivity to each CVE source. Returns reachability status."""
+    import json as _json
+    results = {}
+    tests = [
+        ("nvd",    "https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=nginx&resultsPerPage=1"),
+        ("circl",  "https://cve.circl.lu/api/last/1"),
+        ("github", "https://api.github.com/advisories?per_page=1&type=reviewed"),
+    ]
+    for name, url in tests:
+        try:
+            data = _http_get(url, timeout=10)
+            parsed = _json.loads(data)
+            results[name] = {"ok": True, "bytes": len(data), "sample": str(parsed)[:80]}
+        except Exception as e:
+            results[name] = {"ok": False, "error": str(e)[:200]}
+    return ok(connectivity=results)
 
 @app.route("/api/cve/products")
 def api_cve_products():
