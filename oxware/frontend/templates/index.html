@@ -5494,7 +5494,7 @@ async function openConsole(id) {
     const wsPort = info.websocket_port || 6080;
     // noVNC dosyaları Flask üzerinden serve edilir (/novnc/ route)
     // WebSocket için websockify'a (6080) bağlanır — sadece WS proxy
-    const novncUrl = `${location.protocol}//${location.hostname}:${location.port}/novnc/vnc.html#host=${host}&port=${wsPort}&autoconnect=1&resize=scale`;
+    const novncUrl = `${location.protocol}//${location.hostname}:${location.port}/novnc/vnc.html#host=${host}&port=${wsPort}&encrypt=0&autoconnect=1&resize=scale`;
     setTimeout(() => window.open(novncUrl, "_blank", "width=1100,height=800"), 800);
   } catch (e) { toast(e.message, "error"); }
 }
