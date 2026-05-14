@@ -271,15 +271,23 @@ _CVE_TTL = 1800         # 30 dk cache
 def _fetch_nvd_cves(keyword: str, limit: int = 20) -> list:
     """NVD API v2 üzerinden CVE çek."""
     import json as _json
+    import ssl as _ssl
     params = urllib.parse.urlencode({
         "keywordSearch": keyword,
         "resultsPerPage": limit,
         "startIndex": 0,
     })
     url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?{params}"
-    req = urllib.request.Request(url, headers={"User-Agent": "OXware-CVE-Tracker/1.0"})
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "OXware-CVE-Tracker/1.0",
+        "Accept": "application/json",
+    })
+    # SSL verify bypass — bazı VPS'lerde CA bundle eksik olabilir
+    ctx = _ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = _ssl.CERT_NONE
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
             raw = _json.loads(resp.read())
         items = []
         for vuln in raw.get("vulnerabilities", []):
@@ -290,7 +298,6 @@ def _fetch_nvd_cves(keyword: str, limit: int = 20) -> list:
             metrics = cve.get("metrics", {})
             score = None
             severity = "UNKNOWN"
-            # CVSS v3.1 önce, sonra v3.0, sonra v2
             for key in ("cvssMetricV31", "cvssMetricV30", "cvssMetricV2"):
                 if key in metrics and metrics[key]:
                     m = metrics[key][0]
@@ -308,10 +315,10 @@ def _fetch_nvd_cves(keyword: str, limit: int = 20) -> list:
                 "published": published,
                 "refs": refs,
             })
-        return items
+        return items, None
     except Exception as e:
         log.warning("NVD fetch hata (%s): %s", keyword, e)
-        return []
+        return [], str(e)
 
 @app.route("/api/cve/products")
 def api_cve_products():
@@ -326,6 +333,7 @@ def api_cve_search():
         return err(f"Bilinmeyen ürün: {product_id}", 400)
 
     results = {}
+    fetch_errors = []
     targets = {product_id: CVE_PRODUCTS[product_id]} if product_id else CVE_PRODUCTS
 
     for pid, pinfo in targets.items():
@@ -333,11 +341,17 @@ def api_cve_search():
         if not force and cached and (time.time() - cached["fetched_at"]) < _CVE_TTL:
             results[pid] = cached["data"]
             continue
-        cves = _fetch_nvd_cves(pinfo["keyword"])
+        cves, fetch_err = _fetch_nvd_cves(pinfo["keyword"])
+        if fetch_err:
+            fetch_errors.append(f"{pinfo['label']}: {fetch_err}")
         _CVE_CACHE[pid] = {"data": cves, "fetched_at": time.time()}
         results[pid] = cves
 
-    return ok(results=results, products=CVE_PRODUCTS)
+    if fetch_errors and not any(results.values()):
+        return err(f"NVD API erişim hatası: {fetch_errors[0]}", 503)
+
+    return ok(results=results, products=CVE_PRODUCTS,
+              fetch_errors=fetch_errors if fetch_errors else None)
 
 # ── ISO Download ──────────────────────────────────────────────────────────────
 _ISO_SEARCH_PATHS = [
