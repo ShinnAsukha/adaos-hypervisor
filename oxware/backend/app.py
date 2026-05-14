@@ -457,33 +457,41 @@ def _fetch_from_circl(product_id: str, years_back: int) -> list:
         })
     return items
 
+# GitHub Advisory only works reliably for package-manager ecosystems.
+# Infrastructure C libs (linux, kvm, libvirt, nginx, openssh, openssl) are NOT
+# in pip/npm/cargo — GitHub Advisory keyword search returns completely unrelated
+# advisories for those. Skip GitHub Advisory for these products.
+_GH_SKIP_PRODUCTS = {"linux", "kvm", "libvirt", "nginx", "openssh", "openssl"}
+
+# GitHub ecosystem + exact package name per product (strict match, not keyword)
+_GH_PACKAGES = {
+    "python":    [("pip", "flask"), ("pip", "werkzeug"), ("pip", "jinja2"),
+                  ("pip", "cryptography"), ("pip", "urllib3"), ("pip", "requests")],
+    "docker":    [("go", "github.com/docker/docker")],
+    "wordpress": [("composer", "wordpress/wordpress")],
+    "vmware":    [],   # no package manager — skip
+    "proxmox":   [],   # no package manager — skip
+    "cpanel":    [],   # no package manager — skip
+    "plesk":     [],   # no package manager — skip
+}
+
 def _fetch_from_github(product_id: str, keyword: str, years_back: int) -> list:
-    """GitHub Advisory Database API — uses api.github.com (always reachable). Raises on failure."""
+    """GitHub Advisory Database API — ONLY for package-manager-based products.
+    Uses /advisories?ecosystem=X&package=Y (strict match) instead of keyword search
+    to avoid returning completely unrelated advisories.
+    Raises ValueError for infrastructure products (use CIRCL/NVD instead).
+    """
     import json as _json
     from datetime import datetime, timezone, timedelta
-    # Map product to GitHub ecosystem + package query
-    _GH_ECOSYSTEM = {
-        "python":  "pip",
-        "nginx":   None,
-        "linux":   None,
-        "kvm":     None,
-        "libvirt": None,
-        "openssh": None,
-        "openssl": None,
-        "vmware":  None,
-        "docker":  "go",
-        "wordpress": "composer",
-    }
+
+    if product_id in _GH_SKIP_PRODUCTS:
+        raise ValueError(f"{product_id} is infrastructure — GitHub Advisory not applicable")
+
+    packages = _GH_PACKAGES.get(product_id, [])
+    if not packages:
+        raise ValueError(f"No GitHub package mapping for {product_id}")
+
     cutoff = (datetime.now(timezone.utc) - timedelta(days=365 * years_back)).strftime("%Y-%m-%dT00:00:00Z") if years_back > 0 else None
-    params = {"per_page": 30, "type": "reviewed"}
-    if keyword:
-        params["keyword"] = keyword.split()[0]   # GitHub only takes 1 keyword
-    if cutoff:
-        params["published"] = f">={cutoff}"
-    eco = _GH_ECOSYSTEM.get(product_id)
-    if eco:
-        params["ecosystem"] = eco
-    url = "https://api.github.com/advisories?" + urllib.parse.urlencode(params)
     gh_token = os.environ.get("GITHUB_TOKEN", "")
     headers = {
         "User-Agent": "OXware-CVE-Tracker/1.0",
@@ -492,36 +500,48 @@ def _fetch_from_github(product_id: str, keyword: str, years_back: int) -> list:
     }
     if gh_token:
         headers["Authorization"] = f"Bearer {gh_token}"
-    raw = _json.loads(_http_get(url, headers=headers, timeout=20))
-    items = []
-    for adv in raw:
-        cids = adv.get("cve_id") or ""
-        if not cids:
-            continue  # skip non-CVE advisories
-        cid   = cids if isinstance(cids, str) else cids[0]
-        desc  = adv.get("description", "") or adv.get("summary", "")
-        pub   = (adv.get("published_at") or "")[:10]
-        score = None
-        severity = (adv.get("severity") or "UNKNOWN").upper()
-        cvss = adv.get("cvss", {}) or {}
-        if isinstance(cvss, dict):
-            score = cvss.get("score")
-        if score is None:
-            score = adv.get("cvss_score")
+
+    all_items = []
+    seen_ids = set()
+    for eco, pkg in packages:
+        params = {"per_page": 20, "type": "reviewed", "ecosystem": eco, "package": pkg}
+        if cutoff:
+            params["published"] = f">={cutoff}"
+        url = "https://api.github.com/advisories?" + urllib.parse.urlencode(params)
         try:
-            score = float(score) if score is not None else None
-        except (ValueError, TypeError):
+            raw = _json.loads(_http_get(url, headers=headers, timeout=20))
+        except Exception:
+            continue
+        for adv in raw:
+            cid = adv.get("cve_id") or ""
+            if not cid or cid in seen_ids:
+                continue
+            seen_ids.add(cid)
+            desc  = adv.get("description", "") or adv.get("summary", "")
+            pub   = (adv.get("published_at") or "")[:10]
             score = None
-        if severity == "UNKNOWN" and score is not None:
-            severity = _score_to_severity(score)
-        refs = [adv.get("html_url", "")] if adv.get("html_url") else []
-        items.append({
-            "id": cid, "description": str(desc)[:300],
-            "score": score, "severity": severity,
-            "published": pub, "refs": refs[:3],
-            "source": "github",
-        })
-    return items
+            severity = (adv.get("severity") or "UNKNOWN").upper()
+            cvss = adv.get("cvss", {}) or {}
+            if isinstance(cvss, dict):
+                score = cvss.get("score")
+            if score is None:
+                score = adv.get("cvss_score")
+            try:
+                score = float(score) if score is not None else None
+            except (ValueError, TypeError):
+                score = None
+            if severity == "UNKNOWN" and score is not None:
+                severity = _score_to_severity(score)
+            refs = [adv.get("html_url", "")] if adv.get("html_url") else []
+            all_items.append({
+                "id": cid, "description": str(desc)[:300],
+                "score": score, "severity": severity,
+                "published": pub, "refs": refs[:3],
+                "source": "github",
+            })
+    if not all_items:
+        raise ValueError(f"No GitHub advisories found for {product_id}")
+    return all_items
 
 def _fetch_cves(keyword: str, product_id: str, limit: int = 20, years_back: int = 3) -> tuple:
     """Fetch CVEs: NVD → CIRCL → GitHub Advisory. Returns (items, error_str|None)."""
@@ -618,6 +638,37 @@ def api_cve_search():
                 cves = cached["data"]
         _CVE_CACHE[cache_key] = {"data": cves, "fetched_at": time.time()}
         results[pid] = cves
+
+    # Global deduplication: same CVE ID must not appear under multiple products.
+    # Priority: OXware-stack products first, then alphabetical. Keep first seen.
+    _PRIORITY_ORDER = ["linux", "kvm", "libvirt", "nginx", "openssh", "openssl",
+                       "python", "docker", "wordpress", "vmware", "proxmox", "cpanel", "plesk"]
+    seen_cve_ids: set = set()
+    for pid in _PRIORITY_ORDER:
+        if pid not in results:
+            continue
+        deduped = []
+        for c in results[pid]:
+            cid = c.get("id") or c.get("cve_id") or ""
+            if cid and cid in seen_cve_ids:
+                continue
+            if cid:
+                seen_cve_ids.add(cid)
+            deduped.append(c)
+        results[pid] = deduped
+    # Also dedup any products not in priority list
+    for pid in results:
+        if pid in _PRIORITY_ORDER:
+            continue
+        deduped = []
+        for c in results[pid]:
+            cid = c.get("id") or c.get("cve_id") or ""
+            if cid and cid in seen_cve_ids:
+                continue
+            if cid:
+                seen_cve_ids.add(cid)
+            deduped.append(c)
+        results[pid] = deduped
 
     # Count OXware-affecting CVEs across all products
     oxware_count = sum(
