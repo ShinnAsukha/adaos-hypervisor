@@ -72,6 +72,8 @@ CP_ERROR    = 5   # white on red
 CP_BORDER   = 6   # cyan on black
 CP_DIM      = 7   # dark white on black
 CP_INPUT    = 8   # yellow on black
+CP_ACCENT   = 9   # yellow on black
+CP_GREEN    = 10  # green on black
 
 # ── installer state ────────────────────────────────────────────────────────────
 class State:
@@ -119,6 +121,8 @@ def init_colors():
     curses.init_pair(CP_BORDER,   curses.COLOR_CYAN,    curses.COLOR_BLACK)
     curses.init_pair(CP_DIM,      curses.COLOR_WHITE,   curses.COLOR_BLACK)
     curses.init_pair(CP_INPUT,    curses.COLOR_YELLOW,  curses.COLOR_BLACK)
+    curses.init_pair(CP_ACCENT,   curses.COLOR_YELLOW,  curses.COLOR_BLACK)
+    curses.init_pair(CP_GREEN,    curses.COLOR_GREEN,   curses.COLOR_BLACK)
 
 
 def draw_frame(win):
@@ -198,34 +202,151 @@ def draw_progress_bar(win, row, col, width, pct, label=""):
 # ── screens ────────────────────────────────────────────────────────────────────
 
 def screen_welcome(win):
-    """Screen 1: welcome + ASCII logo."""
+    """Screen 1: rich welcome with two-column layout."""
     while True:
-        draw_frame(win)
+        win.erase()
+        win.bkgd(' ', curses.color_pair(CP_NORMAL))
         h, w = win.getmaxyx()
-        top, left, ch, cw = content_area(win)
 
-        row = top + 1
-        battr = curses.color_pair(CP_BORDER) | curses.A_BOLD
+        # ── Top header bar ──────────────────────────────────────────────────
+        hattr = curses.color_pair(CP_HEADER) | curses.A_BOLD
+        try:
+            win.addstr(0, 0, " " * w, hattr)
+            hdr = f"  OXware Hypervisor {VERSION}  —  Professional Hypervisor Management Platform  "
+            win.addstr(0, max(1, (w - len(hdr)) // 2), hdr[:w - 2], hattr)
+        except curses.error:
+            pass
+
+        # ── ASCII logo centered ──────────────────────────────────────────────
+        battr  = curses.color_pair(CP_BORDER) | curses.A_BOLD
+        logo_w = max((len(l) for l in BANNER), default=0)
+        lx     = max(1, (w - logo_w) // 2)
+        row    = 2
         for line in BANNER:
-            center_str(win, row, line, battr)
+            try:
+                win.addstr(row, lx, line, battr)
+            except curses.error:
+                pass
             row += 1
 
+        # ── Tagline + version ───────────────────────────────────────────────
         row += 1
-        center_str(win, row,
-                   f"Hypervisor Installation — Version {VERSION}",
-                   curses.color_pair(CP_NORMAL) | curses.A_BOLD)
+        tagline = "Enterprise-Grade Hypervisor Yönetim Platformu"
+        try:
+            win.addstr(row, max(1, (w - len(tagline)) // 2), tagline,
+                       curses.color_pair(CP_NORMAL) | curses.A_BOLD)
+        except curses.error:
+            pass
+        row += 1
+        sub = f"v{VERSION}  ·  Ubuntu 22.04 LTS Jammy  ·  KVM + libvirt + nginx + Flask"
+        try:
+            win.addstr(row, max(1, (w - len(sub)) // 2), sub,
+                       curses.color_pair(CP_DIM) | curses.A_DIM)
+        except curses.error:
+            pass
         row += 2
-        center_str(win, row,
-                   "This wizard will guide you through installing OXware",
-                   curses.color_pair(CP_DIM))
+
+        # ── Horizontal divider ──────────────────────────────────────────────
+        div_attr = curses.color_pair(CP_BORDER)
+        try:
+            win.addch(row, 0, curses.ACS_LTEE, div_attr)
+            win.hline(row, 1, curses.ACS_HLINE, w - 2, div_attr)
+            win.addch(row, w - 1, curses.ACS_RTEE, div_attr)
+        except curses.error:
+            pass
         row += 1
-        center_str(win, row,
-                   "on your server. All data on the selected disk will be erased.",
-                   curses.color_pair(CP_DIM))
-        row += 3
-        center_str(win, row,
-                   "[ Press ENTER to start installation ]",
-                   curses.color_pair(CP_HEADER) | curses.A_BOLD)
+
+        # ── Two-column layout ───────────────────────────────────────────────
+        mid     = w // 2
+        col1_x  = 3
+        col2_x  = mid + 3
+        col_w   = mid - 5
+
+        # Column headers
+        lhattr = curses.color_pair(CP_HEADER) | curses.A_BOLD
+        try:
+            win.addstr(row, col1_x, " OXware Nedir? ", lhattr)
+            win.addstr(row, col2_x, " Bu Kurulum Neleri Yapılandırır? ", lhattr)
+        except curses.error:
+            pass
+
+        # Vertical separator between columns
+        sep_col = mid
+        for r in range(row, min(row + 12, h - 5)):
+            try:
+                win.addch(r, sep_col, curses.ACS_VLINE, div_attr)
+            except curses.error:
+                pass
+
+        row += 2
+
+        left_lines = [
+            "OXware; KVM sanallaştırma teknolojisi",
+            "üzerine inşa edilmiş, web tabanlı",
+            "profesyonel hypervisor yönetim",
+            "platformudur.",
+            "",
+            "Sanal makine yaşam döngüsü,  ağ",
+            "yönetimi, snapshot, yedekleme,",
+            "CVE takibi ve AI asistan özelliklerini",
+            "tek çatı altında sunar.",
+        ]
+
+        right_items = [
+            ("Ubuntu 22.04 LTS", "temel işletim sistemi"),
+            ("KVM + QEMU + libvirt", "sanallaştırma katmanı"),
+            ("OXware web arayüzü", "Flask + nginx reverse proxy"),
+            ("GRUB önyükleyici", "BIOS + UEFI desteği"),
+            ("netplan", "ağ yapılandırması"),
+            ("systemd servisi", "otomatik başlatma"),
+            ("ufw güvenlik duvarı", "port yönetimi"),
+        ]
+
+        nattr   = curses.color_pair(CP_NORMAL)
+        dimattr = curses.color_pair(CP_DIM) | curses.A_DIM
+        gattr   = curses.color_pair(CP_GREEN) | curses.A_BOLD
+        yattr   = curses.color_pair(CP_ACCENT) | curses.A_BOLD
+
+        for i, line in enumerate(left_lines):
+            try:
+                win.addstr(row + i, col1_x, line[:col_w], nattr)
+            except curses.error:
+                pass
+
+        for i, (name, desc) in enumerate(right_items):
+            try:
+                win.addstr(row + i, col2_x,     "✔ ", gattr)
+                win.addstr(row + i, col2_x + 2, (name + " "), yattr)
+                win.addstr("— " + desc, dimattr)
+            except curses.error:
+                pass
+
+        row += max(len(left_lines), len(right_items)) + 1
+
+        # ── Warning bar ─────────────────────────────────────────────────────
+        try:
+            win.addch(row, 0, curses.ACS_LTEE, div_attr)
+            win.hline(row, 1, curses.ACS_HLINE, w - 2, div_attr)
+            win.addch(row, w - 1, curses.ACS_RTEE, div_attr)
+        except curses.error:
+            pass
+        row += 1
+
+        warn = "⚠  DİKKAT: Kurulum sırasında seçilen diskteki TÜM VERİLER kalıcı olarak SİLİNECEKTİR.  ⚠"
+        wattr = curses.color_pair(CP_ERROR) | curses.A_BOLD
+        try:
+            win.addstr(row, max(1, (w - len(warn)) // 2), warn[:w - 2], wattr)
+        except curses.error:
+            pass
+        row += 2
+
+        # ── Action prompt ────────────────────────────────────────────────────
+        prompt = "[ ENTER — Kurulumu Başlat ]          [ Q — Çıkış ]"
+        pattr  = curses.color_pair(CP_HEADER) | curses.A_BOLD
+        try:
+            win.addstr(row, max(1, (w - len(prompt)) // 2), prompt, pattr)
+        except curses.error:
+            pass
 
         win.refresh()
         key = win.getch()
