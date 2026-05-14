@@ -900,12 +900,25 @@ def do_install(progress_cb):
     )
 
     progress_cb(65, "Installing Python dependencies …")
-    run_chroot(
-        "pip3 install --no-cache-dir --break-system-packages "
-        "flask flask-socketio flask-jwt-extended flask-cors "
-        "eventlet cryptography requests psutil",
-        check=False
-    )
+    # requirements.txt repoyla gelir — önce oradan kur
+    _req_path = f"{TARGET_MOUNT}/opt/oxware/oxware/backend/requirements.txt"
+    if Path(_req_path).exists():
+        run_chroot(
+            "pip3 install --no-cache-dir --break-system-packages "
+            f"-r /opt/oxware/oxware/backend/requirements.txt",
+            check=False
+        )
+    else:
+        # Fallback: temel paketleri elle kur
+        run_chroot(
+            "pip3 install --no-cache-dir --break-system-packages "
+            "flask==3.0.3 flask-socketio==5.3.6 flask-jwt-extended==4.6.0 flask-cors==4.0.1 "
+            "eventlet==0.35.2 cryptography>=43.0.0 requests>=2.32.3 psutil==5.9.8 "
+            "libvirt-python==10.3.0 paramiko==3.4.0 pyOpenSSL==24.2.1 "
+            "urllib3>=2.3.0 Jinja2>=3.1.6 python-dotenv==1.0.1 "
+            "pyotp==2.9.0 qrcode[pil]==8.0 anthropic==0.32.0",
+            check=False
+        )
 
     progress_cb(70, "Installing OXware from GitHub …")
     target_oxware = Path(f"{TARGET_MOUNT}/opt/oxware")
@@ -1033,6 +1046,8 @@ def do_install(progress_cb):
     run_chroot("update-grub")
 
     progress_cb(83, "Writing oxware systemd service …")
+    # Repo yapısı: git clone → /opt/oxware/  içinde oxware/backend/app.py var
+    # Yani gerçek yol: /opt/oxware/oxware/backend/app.py
     svc = """\
 [Unit]
 Description=OXware Hypervisor Backend
@@ -1042,11 +1057,16 @@ Wants=libvirtd.service
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/oxware/backend
-ExecStart=/usr/bin/python3 /opt/oxware/backend/app.py
+WorkingDirectory=/opt/oxware/oxware/backend
+ExecStartPre=/bin/bash -c 'mkdir -p /var/log/oxware /etc/oxware /var/lib/oxware'
+ExecStartPre=/bin/bash -c 'pip3 install --quiet --no-cache-dir --break-system-packages urllib3 Jinja2 cryptography >> /var/log/oxware/pip.log 2>&1 || true'
+ExecStart=/usr/bin/python3 /opt/oxware/oxware/backend/app.py
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
+Environment=OXWARE_CONFIG=/etc/oxware/oxware.conf
+StandardOutput=append:/var/log/oxware/oxware.log
+StandardError=append:/var/log/oxware/oxware-error.log
 
 [Install]
 WantedBy=multi-user.target

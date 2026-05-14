@@ -203,7 +203,15 @@ def require_role(*allowed_roles):
             except Exception:
                 return err("Kimlik doğrulama gerekli", 401)
             try:
-                role = cred_mgr.get_role(username) if hasattr(cred_mgr, "get_role") else "admin"
+                # Primary admin check (credentials.py sadece tek admin tutar)
+                _primary_admin = cred_mgr.get_username() if hasattr(cred_mgr, "get_username") else ""
+                if username == _primary_admin:
+                    role = "admin"
+                elif hasattr(cred_mgr, "get_role"):
+                    role = cred_mgr.get_role(username) or "viewer"
+                else:
+                    # user_manager secondary user — gerçek rolünü al
+                    role = user_manager.get_user_role(username)
             except Exception:
                 role = "viewer"
             if role not in allowed_roles:
@@ -792,7 +800,16 @@ def api_login():
         if locked:
             ev.warn(f"Kilitli hesaba giriş denemesi: {username} / {request.remote_addr}", category="auth")
             return err(f"Hesap kilitli. {secs} saniye bekleyin.", 429)
-    if not cred_mgr.verify_credentials(username, password):
+    # ── Kimlik doğrulama: önce primary admin (credentials.py), sonra user_manager ──
+    _auth_ok = cred_mgr.verify_credentials(username, password)
+    _is_primary_admin = _auth_ok  # cred_mgr = primary (tek) admin hesabı
+    if not _auth_ok:
+        # Secondary users (user_manager / users.json)
+        try:
+            _auth_ok = user_manager.verify_user(username, password)
+        except Exception:
+            _auth_ok = False
+    if not _auth_ok:
         if sec_hard:
             sec_hard.record_failed_login(username)
         ev.warn(f"Başarısız giriş: {username} / {request.remote_addr}", category="auth")
