@@ -329,75 +329,154 @@ def _mark_affects_oxware(cve_item: dict, product_id: str) -> dict:
     cve_item["affects_oxware"] = False
     return cve_item
 
-_CVE_CACHE: dict = {}   # product_id → {data, fetched_at}
+_CVE_CACHE: dict = {}   # cache_key → {data, fetched_at}
 _CVE_TTL = 1800         # 30 dk cache
 
-def _fetch_nvd_cves(keyword: str, limit: int = 20, product_id: str = "", years_back: int = 3) -> tuple:
-    """NVD API v2 üzerinden CVE çek. Returns (items, error_str|None).
-    years_back: only fetch CVEs published in the last N years (reduces noise from ancient CVEs).
-    """
-    import json as _json
+# CIRCL vendor/product mapping for fallback API
+_CIRCL_MAPPING = {
+    "linux":   ("linux", "linux_kernel"),
+    "kvm":     ("qemu", "qemu"),
+    "libvirt": ("redhat", "libvirt"),
+    "nginx":   ("nginx", "nginx"),
+    "openssh": ("openbsd", "openssh"),
+    "openssl": ("openssl", "openssl"),
+    "python":  ("python", "python"),
+    "vmware":  ("vmware", "esx"),
+    "proxmox": ("proxmox", "virtual_environment"),
+    "docker":  ("docker", "docker"),
+}
+
+def _ssl_ctx():
     import ssl as _ssl
-    from datetime import datetime, timezone, timedelta
-    now = datetime.now(timezone.utc)
-    pub_start = (now - timedelta(days=365 * years_back)).strftime("%Y-%m-%dT00:00:00.000")
-    pub_end   = now.strftime("%Y-%m-%dT23:59:59.999")
-    params = urllib.parse.urlencode({
-        "keywordSearch": keyword,
-        "resultsPerPage": limit,
-        "startIndex": 0,
-        "pubStartDate": pub_start,
-        "pubEndDate":   pub_end,
-    })
-    url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?{params}"
-    headers = {
-        "User-Agent": "OXware-CVE-Tracker/1.0",
-        "Accept": "application/json",
-    }
-    # Add API key if configured (higher rate limits: 50 req/30s)
-    nvd_api_key = os.environ.get("NVD_API_KEY", "")
-    if nvd_api_key:
-        headers["apiKey"] = nvd_api_key
-    req = urllib.request.Request(url, headers=headers)
-    # SSL verify bypass — bazı VPS'lerde CA bundle eksik olabilir
     ctx = _ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = _ssl.CERT_NONE
-    try:
-        with urllib.request.urlopen(req, timeout=30, context=ctx) as resp:
-            raw = _json.loads(resp.read())
-        items = []
-        for vuln in raw.get("vulnerabilities", []):
-            cve = vuln.get("cve", {})
-            cve_id = cve.get("id", "")
-            descs = cve.get("descriptions", [])
-            desc = next((d["value"] for d in descs if d.get("lang") == "en"), "")
-            metrics = cve.get("metrics", {})
+    return ctx
+
+def _http_get(url: str, headers: dict = None, timeout: int = 20) -> bytes:
+    """Simple GET with SSL bypass."""
+    req = urllib.request.Request(url, headers=headers or {
+        "User-Agent": "OXware-CVE-Tracker/1.0",
+        "Accept": "application/json",
+    })
+    with urllib.request.urlopen(req, timeout=timeout, context=_ssl_ctx()) as r:
+        return r.read()
+
+def _score_to_severity(score) -> str:
+    if score is None: return "UNKNOWN"
+    s = float(score)
+    if s >= 9.0: return "CRITICAL"
+    if s >= 7.0: return "HIGH"
+    if s >= 4.0: return "MEDIUM"
+    return "LOW"
+
+def _fetch_from_nvd(keyword: str, limit: int, years_back: int) -> list:
+    """Try NVD API v2. Raises on failure."""
+    import json as _json
+    from datetime import datetime, timezone, timedelta
+    # NVD date format: yyyy-MM-ddTHH:mm:ss.sss (no timezone suffix — NVD assumes UTC)
+    now = datetime.now(timezone.utc)
+    params: dict = {
+        "keywordSearch": keyword,
+        "resultsPerPage": limit,
+        "startIndex": 0,
+    }
+    if years_back > 0:
+        params["pubStartDate"] = (now - timedelta(days=365 * years_back)).strftime("%Y-%m-%dT00:00:00.000")
+        params["pubEndDate"]   = now.strftime("%Y-%m-%dT23:59:59.999")
+    url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?{urllib.parse.urlencode(params)}"
+    headers = {"User-Agent": "OXware-CVE-Tracker/1.0", "Accept": "application/json"}
+    nvd_key = os.environ.get("NVD_API_KEY", "")
+    if nvd_key:
+        headers["apiKey"] = nvd_key
+    raw = _json.loads(_http_get(url, headers=headers, timeout=25))
+    items = []
+    for vuln in raw.get("vulnerabilities", []):
+        cve  = vuln.get("cve", {})
+        cid  = cve.get("id", "")
+        desc = next((d["value"] for d in cve.get("descriptions", []) if d.get("lang") == "en"), "")
+        metrics = cve.get("metrics", {})
+        score, severity = None, "UNKNOWN"
+        for key in ("cvssMetricV31", "cvssMetricV30", "cvssMetricV2"):
+            if key in metrics and metrics[key]:
+                m  = metrics[key][0]
+                cd = m.get("cvssData", {})
+                score    = cd.get("baseScore")
+                severity = cd.get("baseSeverity") or m.get("baseSeverity", "UNKNOWN")
+                break
+        items.append({
+            "id": cid, "description": desc[:300],
+            "score": score, "severity": severity.upper(),
+            "published": cve.get("published", "")[:10],
+            "refs": [r.get("url","") for r in cve.get("references", [])[:3]],
+            "source": "nvd",
+        })
+    return items
+
+def _fetch_from_circl(product_id: str, years_back: int) -> list:
+    """CIRCL CVE Search API (cve.circl.lu) — EU-hosted, no auth needed. Raises on failure."""
+    import json as _json
+    from datetime import datetime, timezone, timedelta
+    mapping = _CIRCL_MAPPING.get(product_id)
+    if not mapping:
+        raise ValueError(f"No CIRCL mapping for {product_id}")
+    vendor, product = mapping
+    url = f"https://cve.circl.lu/api/search/{vendor}/{product}"
+    raw = _json.loads(_http_get(url, timeout=20))
+    # CIRCL returns list directly
+    vulns = raw if isinstance(raw, list) else raw.get("results", [])
+    cutoff_year = (datetime.now(timezone.utc).year - years_back) if years_back > 0 else 0
+    items = []
+    for v in vulns[:30]:
+        cid  = v.get("id", "") or v.get("cve_id", "")
+        desc = v.get("summary", "") or v.get("description", "")
+        pub  = (v.get("Published") or v.get("published", ""))[:10]
+        # Year filter
+        try:
+            if cutoff_year and int(pub[:4]) < cutoff_year:
+                continue
+        except (ValueError, TypeError):
+            pass
+        score = v.get("cvss3") or v.get("cvss")
+        if isinstance(score, dict):
+            score = score.get("score") or score.get("baseScore")
+        try:
+            score = float(score) if score is not None else None
+        except (ValueError, TypeError):
             score = None
-            severity = "UNKNOWN"
-            for key in ("cvssMetricV31", "cvssMetricV30", "cvssMetricV2"):
-                if key in metrics and metrics[key]:
-                    m = metrics[key][0]
-                    cvss_data = m.get("cvssData", {})
-                    score = cvss_data.get("baseScore")
-                    severity = cvss_data.get("baseSeverity") or m.get("baseSeverity", "UNKNOWN")
-                    break
-            published = cve.get("published", "")[:10]
-            refs = [r.get("url","") for r in cve.get("references", [])[:3]]
-            item = {
-                "id": cve_id,
-                "description": desc[:300],
-                "score": score,
-                "severity": severity.upper(),
-                "published": published,
-                "refs": refs,
-                "product_id": product_id,
-            }
-            items.append(_mark_affects_oxware(item, product_id))
-        return items, None
+        severity = v.get("severity", "") or _score_to_severity(score)
+        refs = v.get("references", [])
+        if isinstance(refs, str):
+            refs = [refs]
+        items.append({
+            "id": cid, "description": str(desc)[:300],
+            "score": score, "severity": severity.upper(),
+            "published": pub,
+            "refs": refs[:3],
+            "source": "circl",
+        })
+    return items
+
+def _fetch_cves(keyword: str, product_id: str, limit: int = 20, years_back: int = 3) -> tuple:
+    """Fetch CVEs: NVD primary → CIRCL fallback. Returns (items, error_str|None)."""
+    last_err = None
+    # 1. Try NVD
+    try:
+        items = _fetch_from_nvd(keyword, limit, years_back)
+        log.debug("CVE NVD OK: %s (%d results)", keyword, len(items))
+        return [_mark_affects_oxware({**i, "product_id": product_id}, product_id) for i in items], None
     except Exception as e:
-        log.warning("NVD fetch hata (%s): %s", keyword, e)
-        return [], str(e)
+        last_err = str(e)
+        log.warning("NVD hata (%s): %s — CIRCL fallback deneniyor", keyword, e)
+    # 2. Try CIRCL
+    try:
+        items = _fetch_from_circl(product_id, years_back)
+        log.debug("CVE CIRCL OK: %s (%d results)", product_id, len(items))
+        return [_mark_affects_oxware({**i, "product_id": product_id}, product_id) for i in items], None
+    except Exception as e:
+        last_err2 = str(e)
+        log.warning("CIRCL hata (%s): %s", product_id, e)
+    return [], f"NVD: {last_err} | CIRCL: {last_err2}"
 
 @app.route("/api/cve/products")
 def api_cve_products():
@@ -437,7 +516,7 @@ def api_cve_search():
         if fetch_count > 0:
             time.sleep(req_delay)
         fetch_count += 1
-        cves, fetch_err = _fetch_nvd_cves(pinfo["keyword"], product_id=pid, years_back=years_back)
+        cves, fetch_err = _fetch_cves(pinfo["keyword"], product_id=pid, years_back=years_back)
         if fetch_err:
             fetch_errors.append(f"{pinfo['label']}: {fetch_err}")
             # Use stale cache rather than empty on error
