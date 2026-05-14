@@ -146,24 +146,42 @@ log "oxware-installer.service etkinleştirildi"
 
 # 7. Chroot: gerekli paketleri kur (debootstrap, python3-curses, git)
 log "Chroot: paketler kuruluyor..."
-mount --bind /proc "$SQUASHFS_ROOT/proc"
-mount --bind /sys  "$SQUASHFS_ROOT/sys"
-mount --bind /dev  "$SQUASHFS_ROOT/dev"
 
+# Mount noktaları squashfs içinde yoksa oluştur
+mkdir -p "$SQUASHFS_ROOT/proc" "$SQUASHFS_ROOT/sys" \
+         "$SQUASHFS_ROOT/dev"  "$SQUASHFS_ROOT/dev/pts"
+
+# Network: resolv.conf kopyala (apt-get için internet erişimi)
+cp /etc/resolv.conf "$SQUASHFS_ROOT/etc/resolv.conf" 2>/dev/null || true
+
+# Trap ÖNCE kur — herhangi bir mount failse cleanup çalışsın
 cleanup_mounts() {
-    umount "$SQUASHFS_ROOT/proc" 2>/dev/null || true
-    umount "$SQUASHFS_ROOT/sys"  2>/dev/null || true
-    umount "$SQUASHFS_ROOT/dev"  2>/dev/null || true
+    umount "$SQUASHFS_ROOT/dev/pts" 2>/dev/null || true
+    umount "$SQUASHFS_ROOT/dev"     2>/dev/null || true
+    umount "$SQUASHFS_ROOT/sys"     2>/dev/null || true
+    umount "$SQUASHFS_ROOT/proc"    2>/dev/null || true
 }
 trap cleanup_mounts EXIT
 
+mount --bind /proc    "$SQUASHFS_ROOT/proc"
+mount --bind /sys     "$SQUASHFS_ROOT/sys"
+mount --bind /dev     "$SQUASHFS_ROOT/dev"
+mount --bind /dev/pts "$SQUASHFS_ROOT/dev/pts"
+
 chroot "$SQUASHFS_ROOT" /bin/bash << 'CHROOT'
 export DEBIAN_FRONTEND=noninteractive
+# Debootstrap genelde Ubuntu server squashfs'te yok — kur
 apt-get update -qq 2>/dev/null || true
 apt-get install -y -qq --no-install-recommends \
     python3 python3-curses debootstrap git \
     parted dosfstools e2fsprogs util-linux \
     2>/dev/null || true
+# Debootstrap hala yoksa direkt indir (sadece shell script)
+if ! command -v debootstrap &>/dev/null; then
+    wget -qO /usr/sbin/debootstrap \
+        https://salsa.debian.org/installer-team/debootstrap/-/raw/master/debootstrap \
+        2>/dev/null && chmod +x /usr/sbin/debootstrap || true
+fi
 CHROOT
 
 cleanup_mounts
@@ -198,12 +216,12 @@ set timeout=3
 set default=0
 
 menuentry "OXware Hypervisor Installer" {
-    linux   $VMLINUZ_PATH boot=casper quiet splash ---
+    linux   $VMLINUZ_PATH boot=casper quiet console=tty1 net.ifnames=0 biosdevname=0 ---
     initrd  $INITRD_PATH
 }
 
 menuentry "OXware Installer (Debug)" {
-    linux   $VMLINUZ_PATH boot=casper nomodeset ---
+    linux   $VMLINUZ_PATH boot=casper console=tty1 net.ifnames=0 biosdevname=0 nomodeset ---
     initrd  $INITRD_PATH
 }
 GRUBEOF

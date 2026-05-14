@@ -748,18 +748,37 @@ def do_install(progress_cb):
         )
     Path(f"{TARGET_MOUNT}/etc/network/interfaces").write_text(net_cfg)
 
-    # admin password hash
-    pw_hash = hashlib.sha256(state.password.encode()).hexdigest()
+    # OXware credentials — write .passwd_reset so backend calls first_setup() on boot.
+    # Backend reads /etc/oxware/.auth (PBKDF2-encrypted), NOT admin.json.
+    # apply_reset_if_exists() is called at app.py startup and will populate .auth.
     oxware_cfg_dir = Path(f"{TARGET_MOUNT}/etc/oxware")
     oxware_cfg_dir.mkdir(parents=True, exist_ok=True)
-    admin_json = json.dumps({"username": "admin", "password_hash": pw_hash,
-                              "role": "admin"}, indent=2)
-    (oxware_cfg_dir / "admin.json").write_text(admin_json)
+    passwd_reset = oxware_cfg_dir / ".passwd_reset"
+    passwd_reset.write_text(f"USERNAME=admin\nPASSWORD={state.password}\n")
+    os.chmod(str(passwd_reset), 0o600)
+    # Pre-create .setup_done so the web UI shows dashboard (not setup wizard).
+    # Backend deletes .passwd_reset and populates .auth on first start.
+    setup_done = oxware_cfg_dir / ".setup_done"
+    setup_done.write_text(f"setup_completed={time.time()}\n")
+    os.chmod(str(setup_done), 0o600)
 
     # root password in chroot
     run_chroot(f"echo 'root:{state.password}' | chpasswd")
 
     progress_cb(78, "Installing GRUB bootloader …")
+
+    # Force traditional eth0 interface naming (predictable names break /etc/network/interfaces)
+    grub_default_file = Path(f"{TARGET_MOUNT}/etc/default/grub")
+    grub_default_content = (
+        'GRUB_DEFAULT=0\n'
+        'GRUB_TIMEOUT=5\n'
+        'GRUB_DISTRIBUTOR="OXware"\n'
+        'GRUB_CMDLINE_LINUX_DEFAULT="quiet net.ifnames=0 biosdevname=0"\n'
+        'GRUB_CMDLINE_LINUX=""\n'
+    )
+    grub_default_file.parent.mkdir(parents=True, exist_ok=True)
+    grub_default_file.write_text(grub_default_content)
+
     run_chroot(f"grub-install --target=i386-pc {disk}")
     run_chroot(f"grub-install --target=x86_64-efi --efi-directory=/boot/efi "
                f"--bootloader-id=OXware --removable", check=False)
