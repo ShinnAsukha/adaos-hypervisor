@@ -1233,6 +1233,9 @@
               <button class="btn primary" onclick="document.getElementById('iso-file-input').click()">
                 <i class="fa-solid fa-arrow-up-from-bracket"></i> ISO Yükle
               </button>
+              <button class="btn-secondary" onclick="openIsoFetchModal()" style="margin-left:6px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 12px;border-radius:5px;cursor:pointer;font-size:12px">
+                <i class="fa-solid fa-cloud-arrow-down"></i> Otomatik İndir
+              </button>
             </div>
             <div id="iso-upload-progress" style="display:none;margin-top:12px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
@@ -1684,6 +1687,8 @@
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">IP Atamaları</div>
             <div style="display:flex;gap:6px;align-items:center">
+              <button onclick="ipamOpenManualAdd()" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px"><i class="fa-solid fa-plus"></i> Manuel IP Ekle</button>
+              <button onclick="ipamOpenVMAssign()" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px"><i class="fa-solid fa-server"></i> VM'e IP Ata</button>
               <input id="ipam-filter" type="text" placeholder="Filtrele (IP, MAC, VM)..." style="padding:5px 10px;font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);width:200px" oninput="ipamFilter()">
             </div>
           </div>
@@ -1705,6 +1710,65 @@
                 <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted)">Yükleniyor...</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- ─── ISO Otomatik İndirme Modalı ─── -->
+        <div class="modal-overlay" id="modal-iso-fetch">
+          <div class="modal" style="width:520px">
+            <div class="modal-header">
+              <h3><i class="fa-solid fa-cloud-arrow-down" style="margin-right:8px;color:var(--accent-lt)"></i>ISO Otomatik İndir</h3>
+              <button class="modal-close" onclick="closeIsoFetchModal()">✕</button>
+            </div>
+            <div class="modal-body" style="padding:20px">
+              <div style="margin-bottom:14px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Hazır Ubuntu ISO Listesi</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="iso-preset-list">
+                  <button onclick="selectIsoPreset('https://releases.ubuntu.com/24.04/ubuntu-24.04.2-live-server-amd64.iso','ubuntu-24.04.2-live-server-amd64.iso')" class="iso-preset-btn" style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;cursor:pointer;text-align:left;color:var(--text)">
+                    <div style="font-weight:700;font-size:12px;margin-bottom:2px">Ubuntu 24.04 LTS</div>
+                    <div style="font-size:11px;color:var(--text-muted)">Noble Numbat · Server</div>
+                  </button>
+                  <button onclick="selectIsoPreset('https://releases.ubuntu.com/22.04/ubuntu-22.04.5-live-server-amd64.iso','ubuntu-22.04.5-live-server-amd64.iso')" class="iso-preset-btn" style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;cursor:pointer;text-align:left;color:var(--text)">
+                    <div style="font-weight:700;font-size:12px;margin-bottom:2px">Ubuntu 22.04 LTS</div>
+                    <div style="font-size:11px;color:var(--text-muted)">Jammy Jellyfish · Server</div>
+                  </button>
+                  <button onclick="selectIsoPreset('https://releases.ubuntu.com/20.04/ubuntu-20.04.6-live-server-amd64.iso','ubuntu-20.04.6-live-server-amd64.iso')" class="iso-preset-btn" style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;cursor:pointer;text-align:left;color:var(--text)">
+                    <div style="font-weight:700;font-size:12px;margin-bottom:2px">Ubuntu 20.04 LTS</div>
+                    <div style="font-size:11px;color:var(--text-muted)">Focal Fossa · Server</div>
+                  </button>
+                  <button onclick="selectIsoPreset('https://releases.ubuntu.com/24.04/ubuntu-24.04.2-desktop-amd64.iso','ubuntu-24.04.2-desktop-amd64.iso')" class="iso-preset-btn" style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;cursor:pointer;text-align:left;color:var(--text)">
+                    <div style="font-weight:700;font-size:12px;margin-bottom:2px">Ubuntu 24.04 Desktop</div>
+                    <div style="font-size:11px;color:var(--text-muted)">Noble Numbat · Desktop</div>
+                  </button>
+                  <button onclick="selectIsoPreset('https://cdimage.ubuntu.com/releases/24.04/release/ubuntu-24.04.2-live-server-arm64.iso','ubuntu-24.04.2-live-server-arm64.iso')" class="iso-preset-btn" style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;cursor:pointer;text-align:left;color:var(--text)">
+                    <div style="font-weight:700;font-size:12px;margin-bottom:2px">Ubuntu 24.04 ARM64</div>
+                    <div style="font-size:11px;color:var(--text-muted)">Noble Numbat · Server ARM</div>
+                  </button>
+                  <button onclick="selectIsoPreset('https://releases.ubuntu.com/18.04/ubuntu-18.04.6-live-server-amd64.iso','ubuntu-18.04.6-live-server-amd64.iso')" class="iso-preset-btn" style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;cursor:pointer;text-align:left;color:var(--text)">
+                    <div style="font-weight:700;font-size:12px;margin-bottom:2px">Ubuntu 18.04 LTS</div>
+                    <div style="font-size:11px;color:var(--text-muted)">Bionic Beaver · Server</div>
+                  </button>
+                </div>
+              </div>
+              <div style="margin-bottom:14px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Veya özel URL girin</label>
+                <input id="iso-fetch-url" type="text" placeholder="https://releases.ubuntu.com/..." style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:12px;box-sizing:border-box">
+              </div>
+              <div id="iso-fetch-progress-wrap" style="display:none;margin-bottom:14px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                  <span id="iso-fetch-fname" style="font-size:12px;color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+                  <span id="iso-fetch-pct" style="font-size:12px;font-weight:700;color:var(--accent-lt);margin-left:8px">0%</span>
+                </div>
+                <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden">
+                  <div id="iso-fetch-bar" style="background:var(--accent);height:100%;width:0%;transition:width .5s;border-radius:4px"></div>
+                </div>
+                <div id="iso-fetch-status" style="font-size:11px;color:var(--text-muted);margin-top:4px">İndiriliyor...</div>
+              </div>
+            </div>
+            <div class="modal-footer" style="padding:14px 20px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border)">
+              <button class="btn-secondary" onclick="closeIsoFetchModal()" style="padding:6px 14px;border-radius:5px;cursor:pointer;background:var(--surface2);border:1px solid var(--border2);color:var(--text)">İptal</button>
+              <button class="btn-primary" onclick="startIsoFetch()" id="iso-fetch-start-btn" style="padding:6px 14px;border-radius:5px;cursor:pointer;background:var(--accent);border:none;color:white;font-weight:600"><i class="fa-solid fa-download"></i> İndir</button>
+            </div>
           </div>
         </div>
 
@@ -1747,6 +1811,117 @@
             <div class="modal-footer">
               <button class="btn-secondary" onclick="ipamCloseCreatePool()">İptal</button>
               <button class="btn-primary" onclick="ipamConfirmCreatePool()"><i class="fa-solid fa-plus"></i> Oluştur</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── IPAM Havuz IP Listesi Modalı ─── -->
+        <div class="modal-overlay" id="modal-ipam-pool-ips">
+          <div class="modal" style="width:620px;max-height:80vh;display:flex;flex-direction:column">
+            <div class="modal-header" style="flex-shrink:0">
+              <h3 id="ipam-pool-ips-title">Havuz IP'leri</h3>
+              <button class="modal-close" onclick="document.getElementById('modal-ipam-pool-ips').classList.remove('open')">✕</button>
+            </div>
+            <div class="modal-body" style="padding:16px;overflow-y:auto;flex:1">
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead><tr style="border-bottom:1px solid var(--border)">
+                  <th style="text-align:left;padding:6px 8px;color:var(--text-muted)">IP Adresi</th>
+                  <th style="text-align:left;padding:6px 8px;color:var(--text-muted)">Durum</th>
+                  <th style="text-align:left;padding:6px 8px;color:var(--text-muted)">VM</th>
+                  <th style="text-align:left;padding:6px 8px;color:var(--text-muted)">MAC</th>
+                </tr></thead>
+                <tbody id="ipam-pool-ips-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── IPAM Havuz Düzenle Modalı ─── -->
+        <div class="modal-overlay" id="modal-ipam-edit">
+          <div class="modal" style="width:460px">
+            <div class="modal-header">
+              <h3><i class="fa-solid fa-pen" style="margin-right:8px;color:var(--accent-lt)"></i>Havuz Düzenle: <span id="ipam-edit-pool-name"></span></h3>
+              <button class="modal-close" onclick="document.getElementById('modal-ipam-edit').classList.remove('open')">✕</button>
+            </div>
+            <div class="modal-body" style="padding:20px">
+              <input type="hidden" id="ipam-edit-pool-name-hidden">
+              <div class="form-group" style="margin-bottom:12px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Gateway</label>
+                <input id="ipam-edit-gw" type="text" placeholder="192.168.100.1" style="width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:12px">
+              </div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Başlangıç IP</label>
+                <input id="ipam-edit-start" type="text" placeholder="192.168.100.10" style="width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:12px">
+              </div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Bitiş IP</label>
+                <input id="ipam-edit-end" type="text" placeholder="192.168.100.254" style="width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:12px">
+              </div>
+            </div>
+            <div class="modal-footer" style="padding:14px 20px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border)">
+              <button onclick="document.getElementById('modal-ipam-edit').classList.remove('open')" style="padding:6px 14px;border-radius:5px;cursor:pointer;background:var(--surface2);border:1px solid var(--border2);color:var(--text)">İptal</button>
+              <button onclick="ipamConfirmEditPool()" style="padding:6px 14px;border-radius:5px;cursor:pointer;background:var(--accent);border:none;color:white;font-weight:600"><i class="fa-solid fa-check"></i> Kaydet</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── IPAM Manuel IP Ekle Modalı ─── -->
+        <div class="modal-overlay" id="modal-ipam-manual">
+          <div class="modal" style="width:460px">
+            <div class="modal-header">
+              <h3><i class="fa-solid fa-plus" style="margin-right:8px;color:var(--accent-lt)"></i>Manuel IP Ekle</h3>
+              <button class="modal-close" onclick="document.getElementById('modal-ipam-manual').classList.remove('open')">✕</button>
+            </div>
+            <div class="modal-body" style="padding:20px">
+              <div class="form-group" style="margin-bottom:12px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">IP Adresi *</label>
+                <input id="ipam-manual-ip" type="text" placeholder="192.168.100.50" style="width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:12px">
+              </div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">MAC Adresi *</label>
+                <input id="ipam-manual-mac" type="text" placeholder="52:54:00:xx:xx:xx" style="width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:12px">
+              </div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">VM Adı</label>
+                <input id="ipam-manual-vm" type="text" placeholder="my-vm" style="width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:12px">
+              </div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Havuz</label>
+                <input id="ipam-manual-pool" type="text" placeholder="lan-pool" style="width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:12px">
+              </div>
+            </div>
+            <div class="modal-footer" style="padding:14px 20px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border)">
+              <button onclick="document.getElementById('modal-ipam-manual').classList.remove('open')" style="padding:6px 14px;border-radius:5px;cursor:pointer;background:var(--surface2);border:1px solid var(--border2);color:var(--text)">İptal</button>
+              <button onclick="ipamConfirmManualAdd()" style="padding:6px 14px;border-radius:5px;cursor:pointer;background:var(--accent);border:none;color:white;font-weight:600"><i class="fa-solid fa-check"></i> Ekle</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── IPAM VM'e IP Ata Modalı ─── -->
+        <div class="modal-overlay" id="modal-ipam-vmassign">
+          <div class="modal" style="width:480px">
+            <div class="modal-header">
+              <h3><i class="fa-solid fa-server" style="margin-right:8px;color:var(--accent-lt)"></i>VM'e IP Ata</h3>
+              <button class="modal-close" onclick="document.getElementById('modal-ipam-vmassign').classList.remove('open')">✕</button>
+            </div>
+            <div class="modal-body" style="padding:20px">
+              <div class="form-group" style="margin-bottom:12px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Sanal Makine *</label>
+                <select id="ipam-vmassign-vm" style="width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:12px"><option value="">Yükleniyor...</option></select>
+              </div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">IP Havuzu *</label>
+                <select id="ipam-vmassign-pool" style="width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:12px"><option value="">Yükleniyor...</option></select>
+              </div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Manuel IP (isteğe bağlı — boş = havuzdan otomatik)</label>
+                <input id="ipam-vmassign-ip" type="text" placeholder="192.168.100.50" style="width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:12px">
+              </div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:8px"><i class="fa-solid fa-circle-info" style="margin-right:4px"></i>Atama sonrası VM yeniden başlatılmalıdır.</div>
+            </div>
+            <div class="modal-footer" style="padding:14px 20px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border)">
+              <button onclick="document.getElementById('modal-ipam-vmassign').classList.remove('open')" style="padding:6px 14px;border-radius:5px;cursor:pointer;background:var(--surface2);border:1px solid var(--border2);color:var(--text)">İptal</button>
+              <button onclick="ipamConfirmVMAssign()" style="padding:6px 14px;border-radius:5px;cursor:pointer;background:var(--accent);border:none;color:white;font-weight:600"><i class="fa-solid fa-check"></i> Ata</button>
             </div>
           </div>
         </div>
@@ -3906,6 +4081,70 @@ async function deactivateLicense() {
   } catch {}
 }
 
+/* ══════════════════ ISO Auto Fetch ══════════════════ */
+let _isoFetchJobId = null;
+let _isoFetchTimer = null;
+
+function openIsoFetchModal() {
+  document.getElementById('modal-iso-fetch').classList.add('open');
+  document.getElementById('iso-fetch-url').value = '';
+  document.getElementById('iso-fetch-progress-wrap').style.display = 'none';
+  document.getElementById('iso-fetch-start-btn').disabled = false;
+}
+function closeIsoFetchModal() {
+  document.getElementById('modal-iso-fetch').classList.remove('open');
+  if (_isoFetchTimer) { clearInterval(_isoFetchTimer); _isoFetchTimer = null; }
+}
+function selectIsoPreset(url, fname) {
+  document.getElementById('iso-fetch-url').value = url;
+  // Highlight selected
+  document.querySelectorAll('.iso-preset-btn').forEach(b => b.style.borderColor = 'var(--border2)');
+  event.currentTarget.style.borderColor = 'var(--accent-lt)';
+}
+async function startIsoFetch() {
+  const url = document.getElementById('iso-fetch-url').value.trim();
+  if (!url) { toast('URL girin', 'error'); return; }
+  const btn = document.getElementById('iso-fetch-start-btn');
+  btn.disabled = true;
+  document.getElementById('iso-fetch-progress-wrap').style.display = 'block';
+  document.getElementById('iso-fetch-pct').textContent = '0%';
+  document.getElementById('iso-fetch-bar').style.width = '0%';
+  document.getElementById('iso-fetch-status').textContent = 'Başlatılıyor...';
+  try {
+    const d = await _api('/api/storage/iso/fetch', 'POST', { url });
+    if (d.error) { toast(d.error, 'error'); btn.disabled = false; return; }
+    _isoFetchJobId = d.job_id;
+    const fname = d.filename || url.split('/').pop();
+    document.getElementById('iso-fetch-fname').textContent = fname;
+    toast(`İndirme başlatıldı: ${fname}`, 'info');
+    _isoFetchTimer = setInterval(async () => {
+      try {
+        const s = await _api(`/api/storage/iso/fetch/${_isoFetchJobId}`);
+        const pct = s.progress || '0%';
+        document.getElementById('iso-fetch-pct').textContent = pct;
+        const num = parseInt(pct) || 0;
+        document.getElementById('iso-fetch-bar').style.width = num + '%';
+        document.getElementById('iso-fetch-status').textContent = s.status === 'done' ? '✓ Tamamlandı' : s.status === 'error' ? `Hata: ${s.error}` : 'İndiriliyor...';
+        if (s.status === 'done') {
+          clearInterval(_isoFetchTimer); _isoFetchTimer = null;
+          document.getElementById('iso-fetch-bar').style.width = '100%';
+          document.getElementById('iso-fetch-pct').textContent = '100%';
+          toast(`ISO indirildi: ${fname}`, 'success');
+          btn.disabled = false;
+          setTimeout(() => { closeIsoFetchModal(); loadISOList(); }, 1500);
+        } else if (s.status === 'error') {
+          clearInterval(_isoFetchTimer); _isoFetchTimer = null;
+          toast(`İndirme hatası: ${s.error}`, 'error');
+          btn.disabled = false;
+        }
+      } catch(e) { /* ignore poll error */ }
+    }, 2000);
+  } catch(e) {
+    toast('İndirme başlatılamadı: ' + e.message, 'error');
+    btn.disabled = false;
+  }
+}
+
 /* ══════════════════ ISO Upload ══════════════════ */
 
 let _activeIsoXhr = null;  // aktif yükleme XHR referansı
@@ -4289,6 +4528,8 @@ async function loadIpamPools() {
           <div style="display:flex;align-items:center;gap:14px">
             <span style="font-size:12px"><span style="color:#22c55e;font-weight:700">${p.used_ips}</span><span style="color:var(--text-muted)"> / ${p.total_ips} kullanıldı</span></span>
             <span style="font-size:12px;color:var(--text-muted)">${p.free_ips} boş</span>
+            <button onclick="ipamShowPoolIPs('${escHtml(p.name)}')" title="Tüm IP'leri Gör" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 8px;cursor:pointer;color:#60a5fa;font-size:11px"><i class="fa-solid fa-list-ul"></i></button>
+            <button onclick="ipamEditPool('${escHtml(p.name)}','${escHtml(p.gateway)}','${escHtml(p.network)}','${escHtml(p.start_ip)}','${escHtml(p.end_ip)}')" title="Düzenle" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 8px;cursor:pointer;color:#a78bfa;font-size:11px"><i class="fa-solid fa-pen"></i></button>
             <button onclick="ipamDeletePool('${escHtml(p.name)}')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 8px;cursor:pointer;color:#f87171;font-size:11px"><i class="fa-solid fa-trash"></i></button>
           </div>
         </div>
@@ -4361,6 +4602,120 @@ async function ipamReassign(mac, currentIp) {
   if (!newIp || newIp === currentIp) return;
   const d = await _api(`/api/ipam/leases/${encodeURIComponent(mac)}/reassign`, 'POST', {ip: newIp});
   if (d && !d.error) { toast(`IP değiştirildi: ${currentIp} → ${newIp}`, 'success'); loadIpamLeases(); }
+}
+
+// ── IPAM Ek Fonksiyonlar ────────────────────────────────────────────────────────
+
+async function ipamShowPoolIPs(poolName) {
+  const modal = document.getElementById('modal-ipam-pool-ips');
+  if (!modal) return;
+  document.getElementById('ipam-pool-ips-title').textContent = poolName + ' — Tüm IP\'ler';
+  const tbody = document.getElementById('ipam-pool-ips-tbody');
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--text-muted)">Yükleniyor...</td></tr>';
+  modal.classList.add('open');
+  try {
+    const [poolResp, leasesResp] = await Promise.all([
+      _api('/api/ipam/pools'),
+      _api('/api/ipam/leases')
+    ]);
+    const pool = (poolResp.pools || []).find(p => p.name === poolName);
+    const leases = leasesResp.leases || [];
+    if (!pool) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#f87171">Havuz bulunamadı</td></tr>'; return; }
+
+    // IP aralığını oluştur
+    function ipToInt(ip) { return ip.split('.').reduce((acc, o) => acc * 256 + parseInt(o), 0); }
+    function intToIp(n) { return [(n>>>24)&255,(n>>>16)&255,(n>>>8)&255,n&255].join('.'); }
+
+    const start = ipToInt(pool.start_ip);
+    const end = ipToInt(pool.end_ip);
+    const leasemap = {};
+    leases.forEach(l => { if (l.pool === poolName) leasemap[l.ip] = l; });
+
+    const rows = [];
+    for (let i = start; i <= end && rows.length < 500; i++) {
+      const ip = intToIp(i);
+      const lease = leasemap[ip];
+      const used = !!lease;
+      rows.push(`<tr>
+        <td style="font-family:monospace;color:${used ? '#22c55e' : 'var(--text-muted)'};font-size:12px">${ip}</td>
+        <td>${used ? `<span style="background:#166534;color:#bbf7d0;padding:1px 7px;border-radius:999px;font-size:11px">● kullanımda</span>` : `<span style="background:var(--surface3);color:var(--text-muted);padding:1px 7px;border-radius:999px;font-size:11px">○ boş</span>`}</td>
+        <td style="font-size:12px">${lease ? escHtml(lease.vm || '—') : '—'}</td>
+        <td style="font-family:monospace;font-size:11px;color:var(--text-muted)">${lease ? escHtml(lease.mac || '—') : '—'}</td>
+      </tr>`);
+    }
+    tbody.innerHTML = rows.join('') || '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--text-muted)">IP bulunamadı</td></tr>';
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:16px;color:#f87171">Hata: ${escHtml(String(e))}</td></tr>`;
+  }
+}
+
+function ipamEditPool(name, gateway, network, startIp, endIp) {
+  document.getElementById('ipam-edit-pool-name').textContent = name;
+  document.getElementById('ipam-edit-pool-name-hidden').value = name;
+  document.getElementById('ipam-edit-gw').value = gateway || '';
+  document.getElementById('ipam-edit-start').value = startIp || '';
+  document.getElementById('ipam-edit-end').value = endIp || '';
+  document.getElementById('modal-ipam-edit').classList.add('open');
+}
+async function ipamConfirmEditPool() {
+  const name = document.getElementById('ipam-edit-pool-name-hidden').value;
+  const gateway = document.getElementById('ipam-edit-gw').value.trim();
+  const startIp = document.getElementById('ipam-edit-start').value.trim();
+  const endIp = document.getElementById('ipam-edit-end').value.trim();
+  if (!gateway) { toast('Gateway zorunlu', 'error'); return; }
+  const d = await _api(`/api/ipam/pools/${encodeURIComponent(name)}`, 'PATCH', { gateway, start_ip: startIp, end_ip: endIp });
+  if (d && !d.error) {
+    toast(`Havuz güncellendi: ${name}`, 'success');
+    document.getElementById('modal-ipam-edit').classList.remove('open');
+    loadIpamPage();
+  }
+}
+
+function ipamOpenManualAdd() {
+  document.getElementById('modal-ipam-manual').classList.add('open');
+}
+async function ipamConfirmManualAdd() {
+  const ip  = document.getElementById('ipam-manual-ip').value.trim();
+  const mac = document.getElementById('ipam-manual-mac').value.trim();
+  const vm  = document.getElementById('ipam-manual-vm').value.trim();
+  const pool = document.getElementById('ipam-manual-pool').value.trim();
+  if (!ip || !mac) { toast('IP ve MAC zorunlu', 'error'); return; }
+  const d = await _api('/api/ipam/leases', 'POST', { ip, mac, vm, pool, source: 'oxware', state: 'bound' });
+  if (d && !d.error) {
+    toast(`IP eklendi: ${ip}`, 'success');
+    document.getElementById('modal-ipam-manual').classList.remove('open');
+    loadIpamLeases();
+  }
+}
+
+async function ipamOpenVMAssign() {
+  document.getElementById('modal-ipam-vmassign').classList.add('open');
+  // Load VMs and pools
+  try {
+    const [vmsResp, poolsResp] = await Promise.all([_api('/api/vms'), _api('/api/ipam/pools')]);
+    const vms = vmsResp.vms || vmsResp || [];
+    const pools = poolsResp.pools || [];
+    const vmSel = document.getElementById('ipam-vmassign-vm');
+    vmSel.innerHTML = '<option value="">-- VM Seç --</option>' + (Array.isArray(vms) ? vms : Object.values(vms)).map(v => `<option value="${escHtml(v.id||v.uuid||'')}|${escHtml(v.name||'')}|${escHtml(v.nics?.[0]?.mac||'')}">${escHtml(v.name||v.id)}</option>`).join('');
+    const poolSel = document.getElementById('ipam-vmassign-pool');
+    poolSel.innerHTML = '<option value="">-- Havuz Seç --</option>' + pools.map(p => `<option value="${escHtml(p.name)}">${escHtml(p.name)} (${p.free_ips} boş)</option>`).join('');
+  } catch(e) { toast('VM/Havuz yüklenemedi', 'error'); }
+}
+async function ipamConfirmVMAssign() {
+  const vmVal  = document.getElementById('ipam-vmassign-vm').value;
+  const pool   = document.getElementById('ipam-vmassign-pool').value;
+  const manualIp = document.getElementById('ipam-vmassign-ip').value.trim();
+  if (!vmVal || !pool) { toast('VM ve Havuz seçin', 'error'); return; }
+  const [vmId, vmName, vmMac] = vmVal.split('|');
+  const mac = vmMac || '00:00:00:00:00:00';
+  const body = { pool, mac, vm: vmName };
+  if (manualIp) body.ip = manualIp;
+  const d = await _api('/api/ipam/assign', 'POST', body);
+  if (d && !d.error) {
+    toast(`IP atandı: ${d.ip || ''} → ${vmName}`, 'success');
+    document.getElementById('modal-ipam-vmassign').classList.remove('open');
+    loadIpamLeases();
+  }
 }
 
 /* ══ Navigate ══ */
@@ -7571,10 +7926,23 @@ async function loadUptimes() {
 async function loadIdsStatus() {
   const d = await _api('/api/ids/status');
   const el = document.getElementById('idsStatusCard');
-  if (el) el.innerHTML = `
-    <span class="badge-${d.available?'success':'danger'}">${d.available?'Suricata Kurulu':'Kurulu Değil'}</span>
-    ${d.available ? `<span class="badge-${d.active?'success':'muted'}" style="margin-left:8px">${d.active?'Çalışıyor':'Durdu'}</span>` : ''}
-    ${d.alerts_today != null ? `<span class="text-muted" style="margin-left:8px">${d.alerts_today} bugün alert</span>` : ''}
+  if (el) el.innerHTML = d.available ? `
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span class="badge-success">✓ Suricata Kurulu</span>
+      <span class="badge-${d.active?'success':'muted'}">${d.active?'● Çalışıyor':'○ Durdu'}</span>
+      ${d.version ? `<span style="font-size:11px;color:var(--text-muted)">v${escHtml(d.version)}</span>` : ''}
+      ${d.alerts_today != null ? `<span style="font-size:12px;color:var(--text-muted)">${d.alerts_today} bugün alert</span>` : ''}
+      ${!d.active ? `<button onclick="idsStart()" style="background:var(--accent);border:none;color:white;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px">Başlat</button>` : ''}
+    </div>
+  ` : `
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="badge-danger">✗ Suricata Kurulu Değil</span>
+      <span style="font-size:12px;color:var(--text-muted)">IDS/IPS için Suricata gereklidir.</span>
+    </div>
+    <div style="margin-top:10px;background:var(--surface3);border-radius:5px;padding:10px 14px">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Sunucuya SSH ile bağlanarak kurun:</div>
+      <code style="font-size:12px;color:#86efac;display:block">apt-get install -y suricata &amp;&amp; suricata-update &amp;&amp; systemctl enable --now suricata</code>
+    </div>
   `;
   if (d.available) {
     const da = await _api('/api/ids/alerts?limit=20');
@@ -7589,6 +7957,11 @@ async function loadIdsStatus() {
       </tr>
     `).join('') || '<tr><td colspan="5" class="text-center text-muted" style="padding:12px">Alert yok</td></tr>';
   }
+}
+
+async function idsStart() {
+  const d = await _api('/api/ids/start', 'POST');
+  if (d && !d.error) { toast('Suricata başlatıldı', 'success'); loadIdsStatus(); }
 }
 
 /* ══════════════════ AI ══════════════════ */

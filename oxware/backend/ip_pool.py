@@ -243,6 +243,46 @@ def reassign_ip(mac: str, new_ip: str) -> dict:
     return {"old_ip": old_ip, "new_ip": new_ip}
 
 
+def update_pool(name: str, gateway: str = None, start_ip: str = None, end_ip: str = None, dns: list = None) -> dict:
+    """Mevcut havuzu güncelle."""
+    with _lock:
+        data = _load()
+        pool = data["pools"].get(name)
+        if not pool:
+            raise KeyError(f"Havuz bulunamadı: {name}")
+        if gateway:
+            pool["gateway"] = gateway
+        if start_ip:
+            pool["start_ip"] = start_ip
+        if end_ip:
+            pool["end_ip"] = end_ip
+        if dns:
+            pool["dns"] = dns if isinstance(dns, list) else dns.split(",")
+        _save(data)
+    return pool
+
+
+def manual_assign(ip: str, mac: str, vm_name: str = "", pool_name: str = "") -> dict:
+    """Manuel IP ataması ekle."""
+    with _lock:
+        data = _load()
+        pool = data["pools"].get(pool_name, {})
+        data["assignments"][ip] = {
+            "vm_id":       mac,
+            "vm_name":     vm_name,
+            "pool":        pool_name,
+            "mac":         mac,
+            "assigned_at": time.time(),
+            "source":      "oxware",
+            "state":       "bound",
+            "gateway":     pool.get("gateway", ""),
+            "dns":         pool.get("dns", []),
+            "network":     pool.get("network", ""),
+        }
+        _save(data)
+    return {"ip": ip, "mac": mac, "vm": vm_name, "pool": pool_name}
+
+
 def get_all_stats() -> dict:
     """Tüm havuzlar toplamı istatistik."""
     data = _load()

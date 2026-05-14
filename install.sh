@@ -223,6 +223,8 @@ install_packages() {
         cpu-checker htop lsof curl wget git jq smartmontools
         ufw fail2ban
         nftables wireguard
+        openvswitch-switch openvswitch-common
+        suricata
     )
     for pkg in "${PKGS[@]}"; do
         dpkg -l "$pkg" &>/dev/null || apt-get install -y -qq "$pkg" 2>/dev/null \
@@ -622,6 +624,51 @@ F2BFILTER
     log "Fail2ban yapılandırıldı"
 }
 
+# ── OpenVSwitch ───────────────────────────────────────────────
+install_ovs() {
+    step "OpenVSwitch (SDN)"
+    if ! command -v ovs-vsctl &>/dev/null; then
+        warn "openvswitch-switch kurulu değil — paket kurulumu atlandı"
+    else
+        systemctl enable --now openvswitch-switch 2>/dev/null || true
+        ovs-vsctl show &>/dev/null || true
+        log "OpenVSwitch etkinleştirildi"
+    fi
+}
+
+# ── Suricata IDS/IPS ──────────────────────────────────────────
+install_suricata() {
+    step "Suricata IDS/IPS"
+    if ! command -v suricata &>/dev/null; then
+        warn "Suricata kurulu değil — paket kurulumu atlandı"
+        return
+    fi
+
+    # Varsayılan konfigürasyonu etkinleştir
+    SURICATA_CONF="/etc/suricata/suricata.yaml"
+    if [ -f "$SURICATA_CONF" ]; then
+        # Ağ arayüzünü tespit et
+        DEFAULT_IFACE=$(ip route | grep default | awk '{print $5}' | head -1)
+        if [ -n "$DEFAULT_IFACE" ]; then
+            sed -i "s/interface: eth0/interface: ${DEFAULT_IFACE}/g" "$SURICATA_CONF" 2>/dev/null || true
+            log "Suricata arayüzü: $DEFAULT_IFACE"
+        fi
+    fi
+
+    # Kural güncellemesi
+    suricata-update 2>/dev/null || true
+
+    # Servisi etkinleştir
+    systemctl enable suricata 2>/dev/null || true
+    systemctl start suricata 2>/dev/null || true
+
+    if systemctl is-active --quiet suricata; then
+        log "Suricata IDS/IPS çalışıyor"
+    else
+        warn "Suricata başlatılamadı — ox --logs ile kontrol edin"
+    fi
+}
+
 # ── Servisleri Başlat ─────────────────────────────────────────
 start_services() {
     step "Servisler Başlatılıyor"
@@ -731,6 +778,8 @@ main() {
     create_service
     configure_firewall
     configure_fail2ban
+    install_ovs
+    install_suricata
     install_cli_tools
     start_services
     activate_license

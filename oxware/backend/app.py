@@ -582,6 +582,7 @@ def _fetch_cves(keyword: str, product_id: str, limit: int = 20, years_back: int 
     return [], err_summary
 
 @app.route("/api/cve/debug")
+@require_auth
 def api_cve_debug():
     """Test connectivity to each CVE source. Returns reachability status."""
     import json as _json
@@ -1795,6 +1796,62 @@ def api_ipam_reassign(mac):
         return err(e, 500)
 
 
+@app.route("/api/ipam/pools/<name>", methods=["PATCH"])
+@require_auth
+def api_ipam_update_pool(name):
+    """IP havuzu güncelle (gateway, start_ip, end_ip)."""
+    data = request.get_json(force=True, silent=True) or {}
+    try:
+        pool = ip_pool_mgr.update_pool(name, **{k: v for k, v in data.items() if k in ("gateway", "start_ip", "end_ip", "dns")})
+        return ok(pool=pool)
+    except Exception as e:
+        return err(e, 500)
+
+
+@app.route("/api/ipam/leases", methods=["POST"])
+@require_auth
+def api_ipam_add_lease():
+    """Manuel IP ataması ekle."""
+    data = request.get_json(force=True, silent=True) or {}
+    ip   = data.get("ip", "")
+    mac  = data.get("mac", "")
+    if not ip or not mac:
+        return err("ip ve mac zorunlu")
+    try:
+        entry = ip_pool_mgr.manual_assign(
+            ip=ip,
+            mac=mac,
+            vm_name=data.get("vm", ""),
+            pool_name=data.get("pool", ""),
+        )
+        return ok(entry=entry), 201
+    except Exception as e:
+        return err(e, 500)
+
+
+@app.route("/api/ipam/assign", methods=["POST"])
+@require_auth
+def api_ipam_assign_vm():
+    """VM'e havuzdan IP ata."""
+    data     = request.get_json(force=True, silent=True) or {}
+    pool     = data.get("pool", "")
+    mac      = data.get("mac", "")
+    vm_name  = data.get("vm", "")
+    manual_ip = data.get("ip", "")
+    if not pool or not mac:
+        return err("pool ve mac zorunlu")
+    try:
+        if manual_ip:
+            entry = ip_pool_mgr.manual_assign(ip=manual_ip, mac=mac, vm_name=vm_name, pool_name=pool)
+        else:
+            # vm_id olarak mac kullan (yeterli benzersizlik)
+            entry = ip_pool_mgr.allocate_ip(pool_name=pool, vm_id=mac, vm_name=vm_name, mac=mac)
+        ev.info(f"IP atandı: {entry.get('ip')} → {vm_name}", category="network")
+        return ok(ip=entry.get("ip"), mac=mac, vm=vm_name, pool=pool)
+    except Exception as e:
+        return err(e, 500)
+
+
 # ── Otomatik Kurulum ──────────────────────────────────────────────────────────
 @app.route("/api/provision", methods=["POST"])
 @require_auth
@@ -2208,6 +2265,7 @@ def on_subscribe_stats(data):
 
 # ── PTY Shell WebSocket ────────────────────────────────────────────────────────
 _shell_sessions = {}
+_iso_fetch_jobs = {}  # job_id → {status, filename, progress, ...}
 
 @sock.on("shell_open")
 def ws_shell_open(data=None):
@@ -2219,7 +2277,11 @@ def ws_shell_open(data=None):
             emit("shell_output", {"data": "\r\n[Hata: token gönderilmedi]\r\n"})
             return
         decoded = decode_token(token)
-        log.info("Shell açıldı: %s", decoded.get("sub", "?"))
+        identity = decoded.get("sub") or decoded.get("identity", "")
+        if not identity:
+            emit("shell_output", {"data": "\r\n[Hata: geçersiz token kimliği]\r\n"})
+            return
+        log.info("Shell açıldı: %s", identity)
     except Exception as e:
         log.error("Shell token hatası: %s", e)
         emit("shell_output", {"data": f"\r\n[Yetkilendirme hatası: {e}]\r\n"})
@@ -3470,6 +3532,75 @@ def upload_iso():
         except Exception:
             pass
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/storage/iso/fetch", methods=["POST"])
+@require_auth
+def fetch_iso_url():
+    """URL'den ISO indir (arka planda wget). Ubuntu ISO'ları için."""
+    import re as _re, threading, uuid
+
+    data = request.get_json(force=True, silent=True) or {}
+    url = (data.get("url") or "").strip()
+    if not url:
+        return jsonify({"error": "url zorunlu"}), 400
+
+    # Yalnızca http/https izin ver
+    if not url.startswith(("http://", "https://")):
+        return jsonify({"error": "Yalnızca http/https URL desteklenir"}), 400
+
+    # Dosya adını URL'den çıkar
+    fname = url.split("?")[0].split("/")[-1]
+    if not fname.lower().endswith(".iso"):
+        fname = fname + ".iso"
+    safe_name = _re.sub(r"[^a-zA-Z0-9_\-\.]", "_", fname)
+
+    iso_dir = config.ISO_DIR
+    os.makedirs(iso_dir, exist_ok=True)
+    dest = os.path.join(iso_dir, safe_name)
+
+    job_id = str(uuid.uuid4())[:8]
+    _iso_fetch_jobs[job_id] = {"status": "downloading", "filename": safe_name, "url": url, "progress": "0%"}
+
+    def _do_fetch():
+        try:
+            cmd = ["wget", "-O", dest, "--progress=dot:mega", url]
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            for line in proc.stdout:
+                line = line.strip()
+                if "%" in line:
+                    parts = line.split()
+                    for p in parts:
+                        if "%" in p:
+                            _iso_fetch_jobs[job_id]["progress"] = p
+                            break
+            proc.wait()
+            if proc.returncode == 0:
+                size = os.path.getsize(dest) if os.path.exists(dest) else 0
+                _iso_fetch_jobs[job_id]["status"] = "done"
+                _iso_fetch_jobs[job_id]["size"] = size
+                log.info("ISO indirildi: %s (%d bytes)", safe_name, size)
+            else:
+                _iso_fetch_jobs[job_id]["status"] = "error"
+                _iso_fetch_jobs[job_id]["error"] = f"wget çıkış kodu: {proc.returncode}"
+                if os.path.exists(dest):
+                    os.unlink(dest)
+        except Exception as ex:
+            _iso_fetch_jobs[job_id]["status"] = "error"
+            _iso_fetch_jobs[job_id]["error"] = str(ex)
+
+    threading.Thread(target=_do_fetch, daemon=True).start()
+    return jsonify({"ok": True, "job_id": job_id, "filename": safe_name}), 202
+
+
+@app.route("/api/storage/iso/fetch/<job_id>", methods=["GET"])
+@require_auth
+def fetch_iso_status(job_id):
+    """ISO indirme işi durumu."""
+    job = _iso_fetch_jobs.get(job_id)
+    if not job:
+        return jsonify({"error": "İş bulunamadı"}), 404
+    return jsonify(job)
 
 
 # ── Lisans ──────────────────────────────────────────────────────────────────────
