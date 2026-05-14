@@ -688,7 +688,11 @@ def do_install(progress_cb):
     run(f"mount {blk(2)} {TARGET_MOUNT}/boot/efi")
 
     progress_cb(16, "Running debootstrap (this may take several minutes) …")
-    run(f"debootstrap bookworm {TARGET_MOUNT} http://deb.debian.org/debian")
+    run(
+        f"debootstrap --no-check-gpg --arch=amd64 "
+        f"--components=main,restricted,universe "
+        f"jammy {TARGET_MOUNT} http://archive.ubuntu.com/ubuntu/"
+    )
 
     progress_cb(45, "Mounting virtual filesystems …")
     for fs in ("proc", "sys", "dev", "dev/pts"):
@@ -700,16 +704,43 @@ def do_install(progress_cb):
         else:
             run(f"mount -t {fs} {fs} {TARGET_MOUNT}/{fs}", check=False)
 
+    # Copy resolv.conf so apt/pip can reach internet from chroot
+    _resolv = Path(f"{TARGET_MOUNT}/etc/resolv.conf")
+    _resolv.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        shutil.copy("/etc/resolv.conf", str(_resolv))
+    except Exception:
+        _resolv.write_text("nameserver 8.8.8.8\nnameserver 1.1.1.1\n")
+
+    progress_cb(46, "Writing Ubuntu apt sources …")
+    sources = (
+        "deb http://archive.ubuntu.com/ubuntu/ jammy main restricted universe multiverse\n"
+        "deb http://archive.ubuntu.com/ubuntu/ jammy-updates main restricted universe multiverse\n"
+        "deb http://archive.ubuntu.com/ubuntu/ jammy-security main restricted universe multiverse\n"
+        "deb http://archive.ubuntu.com/ubuntu/ jammy-backports main restricted universe multiverse\n"
+    )
+    Path(f"{TARGET_MOUNT}/etc/apt/sources.list").write_text(sources)
+
     progress_cb(48, "Installing system packages …")
     run_chroot("apt-get update -qq")
     run_chroot(
         "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "
-        "linux-image-amd64 grub-pc grub-efi-amd64 grub2-common os-prober "
-        "python3 python3-pip python3-flask python3-flask-jwt-extended "
-        "qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils "
+        "linux-image-generic linux-headers-generic "
+        "grub-pc grub-efi-amd64 grub2-common shim-signed "
+        "python3 python3-pip python3-flask python3-flask-socketio "
+        "qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virtinst "
         "nginx parted dosfstools e2fsprogs "
         "curl wget git systemd openssh-server "
-        "iproute2 iputils-ping net-tools sudo"
+        "iproute2 iputils-ping net-tools sudo "
+        "netplan.io cloud-utils"
+    )
+
+    progress_cb(65, "Installing Python dependencies …")
+    run_chroot(
+        "pip3 install --no-cache-dir --break-system-packages "
+        "flask flask-socketio flask-jwt-extended flask-cors "
+        "eventlet cryptography requests psutil",
+        check=False
     )
 
     progress_cb(70, "Installing OXware from GitHub …")
@@ -721,7 +752,7 @@ def do_install(progress_cb):
     GITHUB_REPO = "https://github.com/ShinnAsukha/oxware-hypervisor.git"
     clone_result = subprocess.run(
         ["git", "clone", "--depth=1", GITHUB_REPO, str(target_oxware)],
-        capture_output=True, text=True, timeout=120
+        capture_output=True, text=True, timeout=300
     )
     if clone_result.returncode != 0:
         # Fallback: copy from ISO if no internet
@@ -749,23 +780,43 @@ def do_install(progress_cb):
     )
     Path(f"{TARGET_MOUNT}/etc/hosts").write_text(hosts)
 
-    # network interfaces
+    # Network — use netplan (Ubuntu 22.04 standard).
+    # net.ifnames=0 in GRUB cmdline forces eth0 naming so match works reliably.
+    netplan_dir = Path(f"{TARGET_MOUNT}/etc/netplan")
+    netplan_dir.mkdir(parents=True, exist_ok=True)
     if state.net_mode == "dhcp":
-        net_cfg = (
-            "auto lo\niface lo inet loopback\n\n"
-            "auto eth0\niface eth0 inet dhcp\n"
+        netplan_cfg = (
+            "network:\n"
+            "  version: 2\n"
+            "  ethernets:\n"
+            "    eth0:\n"
+            "      dhcp4: true\n"
+            "      dhcp6: false\n"
         )
     else:
-        net_cfg = (
-            "auto lo\niface lo inet loopback\n\n"
-            f"auto eth0\n"
-            f"iface eth0 inet static\n"
-            f"    address {state.ip}\n"
-            f"    netmask {state.netmask}\n"
-            f"    gateway {state.gateway}\n"
-            f"    dns-nameservers {state.dns}\n"
+        # Convert netmask to CIDR
+        def _mask_to_prefix(mask):
+            try:
+                return sum(bin(int(o)).count('1') for o in mask.split('.'))
+            except Exception:
+                return 24
+        prefix = _mask_to_prefix(state.netmask)
+        netplan_cfg = (
+            "network:\n"
+            "  version: 2\n"
+            "  ethernets:\n"
+            "    eth0:\n"
+            "      dhcp4: false\n"
+            f"      addresses: [{state.ip}/{prefix}]\n"
+            f"      routes:\n"
+            f"        - to: default\n"
+            f"          via: {state.gateway}\n"
+            f"      nameservers:\n"
+            f"        addresses: [{state.dns}]\n"
         )
-    Path(f"{TARGET_MOUNT}/etc/network/interfaces").write_text(net_cfg)
+    netplan_file = netplan_dir / "01-oxware.yaml"
+    netplan_file.write_text(netplan_cfg)
+    os.chmod(str(netplan_file), 0o600)
 
     # OXware credentials — write .passwd_reset so backend calls first_setup() on boot.
     # Backend reads /etc/oxware/.auth (PBKDF2-encrypted), NOT admin.json.
@@ -786,21 +837,31 @@ def do_install(progress_cb):
 
     progress_cb(78, "Installing GRUB bootloader …")
 
-    # Force traditional eth0 interface naming (predictable names break /etc/network/interfaces)
+    # Force traditional eth0 interface naming (predictable names break netplan match)
     grub_default_file = Path(f"{TARGET_MOUNT}/etc/default/grub")
     grub_default_content = (
         'GRUB_DEFAULT=0\n'
         'GRUB_TIMEOUT=5\n'
         'GRUB_DISTRIBUTOR="OXware"\n'
-        'GRUB_CMDLINE_LINUX_DEFAULT="quiet net.ifnames=0 biosdevname=0"\n'
+        'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash=0 loglevel=3 '
+        'net.ifnames=0 biosdevname=0 apparmor=0 plymouth.enable=0"\n'
         'GRUB_CMDLINE_LINUX=""\n'
+        'GRUB_TERMINAL=console\n'
     )
     grub_default_file.parent.mkdir(parents=True, exist_ok=True)
     grub_default_file.write_text(grub_default_content)
 
-    run_chroot(f"grub-install --target=i386-pc {disk}")
-    run_chroot(f"grub-install --target=x86_64-efi --efi-directory=/boot/efi "
-               f"--bootloader-id=OXware --removable", check=False)
+    # Set locale/timezone to avoid apt dpkg errors
+    run_chroot("locale-gen en_US.UTF-8", check=False)
+    run_chroot("update-locale LANG=en_US.UTF-8", check=False)
+    run_chroot("ln -sf /usr/share/zoneinfo/UTC /etc/localtime", check=False)
+
+    run_chroot(f"grub-install --target=i386-pc --recheck {disk}")
+    run_chroot(
+        f"grub-install --target=x86_64-efi --efi-directory=/boot/efi "
+        f"--bootloader-id=OXware --removable --recheck",
+        check=False
+    )
     run_chroot("update-grub")
 
     progress_cb(83, "Writing oxware systemd service …")
@@ -841,11 +902,21 @@ server {
     nginx_sites.mkdir(parents=True, exist_ok=True)
     (nginx_sites / "oxware").write_text(nginx_cfg)
 
+    progress_cb(85, "Creating system user …")
+    safe_user = re.sub(r'[^a-z0-9_-]', '', state.username.lower()) or "oxadmin"
+    run_chroot(
+        f"id -u {safe_user} &>/dev/null || "
+        f"useradd -m -s /bin/bash -G sudo,libvirt,kvm {safe_user}",
+        check=False
+    )
+    run_chroot(f"echo '{safe_user}:{state.password}' | chpasswd", check=False)
+
     progress_cb(87, "Enabling services …")
-    run_chroot("systemctl enable libvirtd", check=False)
-    run_chroot("systemctl enable nginx",    check=False)
-    run_chroot("systemctl enable oxware",   check=False)
-    run_chroot("systemctl enable ssh",      check=False)
+    run_chroot("systemctl enable libvirtd",   check=False)
+    run_chroot("systemctl enable nginx",      check=False)
+    run_chroot("systemctl enable oxware",     check=False)
+    run_chroot("systemctl enable ssh",        check=False)
+    run_chroot("systemctl enable netplan-wpa-supplicant", check=False)
     run_chroot(
         "cd /etc/nginx/sites-enabled && "
         "ln -sf ../sites-available/oxware oxware && "

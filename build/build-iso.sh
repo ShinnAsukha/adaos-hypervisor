@@ -331,7 +331,7 @@ set timeout=3
 set default=0
 
 menuentry "OXware Hypervisor Installer" {
-    linux   $VMLINUZ_PATH boot=casper quiet loglevel=0 console=tty1 net.ifnames=0 biosdevname=0 systemd.show_status=false ---
+    linux   $VMLINUZ_PATH boot=casper quiet loglevel=0 console=tty1 net.ifnames=0 biosdevname=0 systemd.show_status=false systemd.unit=multi-user.target ---
     initrd  $INITRD_PATH
 }
 
@@ -432,7 +432,7 @@ echo -e "${CYAN}║${NC}  Boyut  : ${WHITE}${ISO_SIZE}${NC}"
 echo -e "${CYAN}║${NC}  SHA256 : ${WHITE}$(head -c 32 "${OUTPUT_ISO}.sha256")...${NC}"
 echo -e "${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
 echo -e "${CYAN}║${NC}  Boot edince: OXware TUI installer açılır                  ${CYAN}║${NC}"
-echo -e "${CYAN}║${NC}  Kullanıcı: oxware  /  Şifre: oxware                       ${CYAN}║${NC}"
+echo -e "${CYAN}║${NC}  Kurulum: TUI'de kullanıcı adı ve şifre belirle            ${CYAN}║${NC}"
 echo -e "${CYAN}║${NC}  Web UI  : https://<ip>:8006 (kurulum sonrası)             ${CYAN}║${NC}"
 echo -e "${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
 echo -e "${CYAN}║${NC}  USB: sudo dd if=$(basename "$OUTPUT_ISO") of=/dev/sdX bs=4M${NC}"
