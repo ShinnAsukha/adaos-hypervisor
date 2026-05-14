@@ -82,6 +82,7 @@ class State:
         self.gateway     = ""
         self.dns         = "8.8.8.8"
         self.hostname    = "oxware-node"
+        self.username    = ""
         self.password    = ""
         self.confirm_pw  = ""
 
@@ -516,10 +517,11 @@ def screen_hostname(win):
 
 
 def screen_password(win):
-    """Screen 6: admin password."""
-    pw1 = ""
-    pw2 = ""
-    msg = ""
+    """Screen 6: admin username + password."""
+    uname = state.username or ""
+    pw1   = ""
+    pw2   = ""
+    msg   = ""
 
     while True:
         draw_frame(win)
@@ -528,29 +530,43 @@ def screen_password(win):
 
         try:
             win.addstr(top, left + 2,
-                       " Admin Password ",
+                       " Admin Account ",
                        curses.color_pair(CP_HEADER) | curses.A_BOLD)
             win.addstr(top + 2, left + 4,
-                       "Set the root / web-admin password:",
+                       "Create the administrator account for OXware web UI:",
                        curses.color_pair(CP_NORMAL))
-            win.addstr(top + 4, left + 4, "Password:        ",
+            win.addstr(top + 4, left + 4, "Username:        ",
                        curses.color_pair(CP_NORMAL) | curses.A_BOLD)
-            win.addstr(top + 6, left + 4, "Confirm Password:",
+            win.addstr(top + 6, left + 4, "Password:        ",
+                       curses.color_pair(CP_NORMAL) | curses.A_BOLD)
+            win.addstr(top + 8, left + 4, "Confirm Password:",
                        curses.color_pair(CP_NORMAL) | curses.A_BOLD)
         except curses.error:
             pass
 
         if msg:
             try:
-                win.addstr(top + 9, left + 4, msg,
+                win.addstr(top + 11, left + 4, msg,
                            curses.color_pair(CP_ERROR) | curses.A_BOLD)
             except curses.error:
                 pass
 
         win.refresh()
 
-        pw1 = read_input(win, top + 4, left + 22, 30, secret=True)
-        pw2 = read_input(win, top + 6, left + 22, 30, secret=True)
+        uname = read_input(win, top + 4, left + 22, 30, initial=uname)
+        if not uname.strip():
+            msg = "Username cannot be empty."
+            continue
+        if len(uname.strip()) < 3:
+            msg = "Username must be at least 3 characters."
+            continue
+        if not uname.strip().replace("-", "").replace("_", "").isalnum():
+            msg = "Username: only letters, numbers, - and _ allowed."
+            uname = ""
+            continue
+
+        pw1 = read_input(win, top + 6, left + 22, 30, secret=True)
+        pw2 = read_input(win, top + 8, left + 22, 30, secret=True)
 
         if not pw1:
             msg = "Password cannot be empty."
@@ -564,6 +580,7 @@ def screen_password(win):
             pw2 = ""
             continue
 
+        state.username    = uname.strip()
         state.password    = pw1
         state.confirm_pw  = pw2
         return "next"
@@ -596,7 +613,8 @@ def screen_summary(win):
             ]
         rows += [
             ("Hostname",    state.hostname),
-            ("Admin Pass",  "*" * len(state.password)),
+            ("Admin User",  state.username  or "(not set)"),
+            ("Admin Pass",  "*" * len(state.password) if state.password else "(not set)"),
         ]
 
         for i, (lbl, val) in enumerate(rows):
@@ -754,7 +772,7 @@ def do_install(progress_cb):
     oxware_cfg_dir = Path(f"{TARGET_MOUNT}/etc/oxware")
     oxware_cfg_dir.mkdir(parents=True, exist_ok=True)
     passwd_reset = oxware_cfg_dir / ".passwd_reset"
-    passwd_reset.write_text(f"USERNAME=admin\nPASSWORD={state.password}\n")
+    passwd_reset.write_text(f"USERNAME={state.username}\nPASSWORD={state.password}\n")
     os.chmod(str(passwd_reset), 0o600)
     # Pre-create .setup_done so the web UI shows dashboard (not setup wizard).
     # Backend deletes .passwd_reset and populates .auth on first start.
@@ -948,7 +966,7 @@ def screen_done(win):
                    f"  https://<server-ip>:8006  ",
                    curses.color_pair(CP_INPUT) | curses.A_BOLD)
         center_str(win, top + 10,
-                   "Default credentials: admin / (password you set)",
+                   f"Credentials: {state.username} / (password you set)",
                    curses.color_pair(CP_DIM))
         center_str(win, top + 13,
                    "[ Press ENTER to reboot ]",
