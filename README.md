@@ -1,8 +1,6 @@
 # OXware Hypervisor — Kurulum Kılavuzu
 
 > Sürüm: 2.2 · Hazırlayan: Ada Gürsoy
-> Test URL: http://oxware.top
-Test için Issues kısmından ulaşabilirsiniz, adınıza hesap açalım.
 
 ---
 
