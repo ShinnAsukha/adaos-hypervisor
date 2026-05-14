@@ -5938,20 +5938,26 @@ function vncToggleFullscreen() {
 async function _initVNC(vmId) {
   const screen  = document.getElementById("vnc-screen");
   const loadMsg = document.getElementById("vnc-loading-msg");
-  const token   = localStorage.getItem("ox_token") || "";
+  // TOKEN() helper — oxware_token veya adaos_token
+  const token = TOKEN();
+  if (!token) { _setVncStatus("Hata: oturum token bulunamadı", false); return; }
 
   // ── SocketIO ↔ WebSocket Bridge ──────────────────────────────────────────
-  // noVNC'nin attach() API'si EventTarget uyumlu nesne bekler.
-  // Biz SocketIO üzerinden TCP proxy yapıyoruz.
+  // noVNC içinde new WebSocket(url) çağrısını yakalarız — window.WebSocket
+  // override ederek kendi EventTarget bridge'imizi döndürürüz.
   class VNCBridge extends EventTarget {
     constructor() {
       super();
       this.binaryType = "arraybuffer";
-      this.readyState = WebSocket.CONNECTING;
+      this.readyState  = 0; // CONNECTING
+      this.bufferedAmount = 0;
+      this.extensions  = "";
+      this.protocol    = "";
+      this.url         = "ws://vnc-proxy/";
     }
 
     _onReady() {
-      this.readyState = WebSocket.OPEN;
+      this.readyState = 1; // OPEN
       if (loadMsg) loadMsg.style.display = "none";
       _setVncStatus("● Bağlı", true);
       this.dispatchEvent(new Event("open"));
@@ -5966,7 +5972,7 @@ async function _initVNC(vmId) {
       } catch(e) {}
     }
     _onClosed() {
-      this.readyState = WebSocket.CLOSED;
+      this.readyState = 3; // CLOSED
       _setVncStatus("Bağlantı kesildi", false);
       this.dispatchEvent(new CloseEvent("close", { wasClean: true }));
     }
@@ -5989,22 +5995,21 @@ async function _initVNC(vmId) {
 
     send(data) {
       if (!_vncSocket) return;
-      let b64;
       try {
+        let view;
         if (data instanceof ArrayBuffer) {
-          const v = new Uint8Array(data);
-          let bin = "";
-          for (let i = 0; i < v.length; i++) bin += String.fromCharCode(v[i]);
-          b64 = btoa(bin);
-        } else {
-          b64 = btoa(String.fromCharCode(...new Uint8Array(data)));
-        }
-        _vncSocket.emit("vnc_proxy_send", { b: b64 });
+          view = new Uint8Array(data);
+        } else if (ArrayBuffer.isView(data)) {
+          view = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+        } else { return; }
+        let bin = "";
+        for (let i = 0; i < view.length; i++) bin += String.fromCharCode(view[i]);
+        _vncSocket.emit("vnc_proxy_send", { b: btoa(bin) });
       } catch(e) {}
     }
 
     close() {
-      this.readyState = WebSocket.CLOSED;
+      this.readyState = 3;
       if (_vncSocket) _vncSocket.emit("vnc_proxy_close", {});
       this._cleanup();
       this.dispatchEvent(new CloseEvent("close"));
@@ -6018,57 +6023,59 @@ async function _initVNC(vmId) {
     _vncSocket = null;
   }
 
-  // Yeni SocketIO bağlantısı aç (_shellSocket gibi)
-  _vncSocket = io({
-    transports: ["polling", "websocket"],
-    reconnection: false,
-    timeout: 30000,
-    upgrade: true,
-  });
-
+  // Bridge oluştur (WebSocket override'dan ÖNCE)
   const bridge = new VNCBridge();
   _vncBridge   = bridge;
+
+  // SocketIO bağlantısı aç
+  _vncSocket = io({ transports: ["polling", "websocket"], reconnection: false, timeout: 30000, upgrade: true });
 
   _vncSocket.on("connect", () => {
     _vncSocket.on("vnc_proxy_ready",  ()  => bridge._onReady());
     _vncSocket.on("vnc_proxy_data",   (d) => bridge._onData(d.b));
     _vncSocket.on("vnc_proxy_closed", ()  => bridge._onClosed());
     _vncSocket.on("vnc_proxy_error",  (d) => bridge._onError(d.msg || "bilinmeyen"));
-    // SocketIO bağlandıktan sonra VNC TCP bağlantısını aç
     _vncSocket.emit("vnc_proxy_connect", { token, vm_id: vmId });
   });
-
-  _vncSocket.on("connect_error", (e) => {
-    bridge._onError("SocketIO bağlanamadı: " + e.message);
-  });
+  _vncSocket.on("connect_error", (e) => bridge._onError("SocketIO: " + e.message));
 
   // ── noVNC RFB yükle ───────────────────────────────────────────────────────
   try {
-    // Screen div temizle — RFB kendi canvas'ını ekleyecek
     screen.innerHTML = "";
-    screen.appendChild(loadMsg); // loading mesajını koru
+    screen.appendChild(loadMsg);
 
     const mod = await import("/novnc/core/rfb.js");
     const RFB = mod.default;
 
-    // RFB'ye string URL değil, bridge nesnesi ver → attach() kullanır
-    const rfb = new RFB(screen, bridge, { credentials: { password: "" } });
+    // window.WebSocket override — noVNC new WebSocket(url) çağırınca bridge döner
+    // Senkron çağrı (constructor içinde) olduğu için override/restore çalışır
+    const _origWS = window.WebSocket;
+    const _bridgeRef = bridge;
+    window.WebSocket = function VNCProxyWS(url, protocols) { return _bridgeRef; };
+    window.WebSocket.CONNECTING = 0;
+    window.WebSocket.OPEN       = 1;
+    window.WebSocket.CLOSING    = 2;
+    window.WebSocket.CLOSED     = 3;
+
+    let rfb;
+    try {
+      rfb = new RFB(screen, "ws://vnc-proxy/", { credentials: { password: "" } });
+    } finally {
+      // noVNC constructor içinde new WebSocket() senkron çalışır → hemen geri al
+      window.WebSocket = _origWS;
+    }
+
     rfb.viewOnly      = false;
     rfb.scaleViewport = true;
     rfb.resizeSession = false;
     rfb.background    = "#1a1a2e";
 
-    rfb.addEventListener("connect",    ()  => { _setVncStatus("● Bağlı", true); });
+    rfb.addEventListener("connect",    ()  => { _setVncStatus("● Bağlı", true); if (loadMsg) loadMsg.style.display = "none"; });
     rfb.addEventListener("disconnect", (e) => {
-      const reason = e.detail?.reason || "";
-      _setVncStatus("Bağlantı kesildi" + (reason ? ": " + reason : ""), false);
+      _setVncStatus("Bağlantı kesildi" + (e.detail?.reason ? ": " + e.detail.reason : ""), false);
     });
-    rfb.addEventListener("credentialsrequired", () => {
-      rfb.sendCredentials({ password: "" });
-    });
-    rfb.addEventListener("desktopname", (e) => {
-      _setVncStatus("● " + (e.detail?.name || "Bağlı"), true);
-    });
+    rfb.addEventListener("credentialsrequired", () => rfb.sendCredentials({ password: "" }));
+    rfb.addEventListener("desktopname", (e) => _setVncStatus("● " + (e.detail?.name || "Bağlı"), true));
 
     _vncRfb = rfb;
   } catch(e) {
@@ -7103,9 +7110,10 @@ function switchTaskTab(tab) {
 /* ══════════════════ Confirm shutdown / reboot ══════════════════ */
 
 function confirmShutdown(action) {
+  if (!currentVmId) { toast("Önce VM seçin", "error"); return; }
   const lbl = action === "reboot" ? "yeniden başlatılsın" : "kapatılsın";
-  if (!confirm(`Sunucu ${lbl} mı?`)) return;
-  toast("Bu özellik yakında eklenecek", "info");
+  if (!confirm(`VM ${lbl} mı?`)) return;
+  vmAction(currentVmId, action === "reboot" ? "reboot" : "stop");
 }
 
 /* ══════════════════ Shell Console ══════════════════ */
