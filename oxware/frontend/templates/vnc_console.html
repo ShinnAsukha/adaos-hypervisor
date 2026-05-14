@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OXware – VNC Konsol</title>
+  <link rel="icon" type="image/png" href="/static/img/sadeceikon.png">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background:#0d1117;
+      color:#e6edf3;
+      font-family:'Segoe UI',system-ui,sans-serif;
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+    .header {
+      background:#161b22;
+      border-bottom:1px solid #30363d;
+      padding:8px 16px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-shrink:0;
+      height:44px;
+    }
+    .logo {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:13px;
+      font-weight:700;
+      color:#00d4ff;
+    }
+    .logo img { width:28px; height:28px; object-fit:contain; filter:drop-shadow(0 0 6px rgba(0,212,255,.5)); }
+    .vm-name { font-size:12px; color:#8b949e; }
+    .vm-name span { color:#e6edf3; font-weight:600; }
+    .spacer { flex:1; }
+    .status-bar {
+      font-size:11px;
+      padding:3px 10px;
+      border-radius:10px;
+      background:rgba(0,0,0,.4);
+      border:1px solid #30363d;
+    }
+    .status-bar.ok  { color:#3fb950; border-color:rgba(63,185,80,.4); }
+    .status-bar.err { color:#f85149; border-color:rgba(248,81,73,.4); }
+    .btn {
+      padding:4px 11px;
+      border-radius:5px;
+      border:1px solid #30363d;
+      background:#21262d;
+      color:#e6edf3;
+      font-size:12px;
+      cursor:pointer;
+      transition:all .12s;
+      white-space:nowrap;
+    }
+    .btn:hover { background:#30363d; }
+    .btn.danger { border-color:rgba(248,81,73,.4); color:#f85149; }
+    .btn.danger:hover { background:rgba(248,81,73,.1); }
+    #screen {
+      flex:1;
+      background:#000;
+      position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+    #screen canvas { display:block; }
+    #loading {
+      position:absolute;
+      inset:0;
+      background:#000;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:14px;
+      z-index:10;
+    }
+    .spinner {
+      width:42px;height:42px;
+      border:3px solid rgba(0,212,255,.2);
+      border-top-color:#00d4ff;
+      border-radius:50%;
+      animation:spin 1s linear infinite;
+    }
+    #loading p { color:#8b949e; font-size:13px; }
+    #loading small { color:#484f58; font-size:11px; max-width:320px; text-align:center; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <img src="/static/img/oxware2.png" alt="" onerror="this.style.display='none'">
+    OXware
+  </div>
+  <div class="vm-name">VNC Konsol › <span id="vm-label">Yükleniyor…</span></div>
+  <div class="spacer"></div>
+  <span id="status-bar" class="status-bar">Bağlanıyor…</span>
+  <button class="btn" onclick="sendCtrlAltDel()">Ctrl+Alt+Del</button>
+  <button class="btn" onclick="toggleFullscreen()">⛶ Tam Ekran</button>
+  <button class="btn danger" onclick="window.close()">✕ Kapat</button>
+</div>
+
+<div id="screen">
+  <div id="loading">
+    <div class="spinner"></div>
+    <p id="loading-msg">VNC bağlantısı kuruluyor…</p>
+    <small id="loading-detail"></small>
+  </div>
+</div>
+
+<!-- Socket.IO — same port as backend -->
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ── Params ─────────────────────────────────────────────────────────────────
+const _vmId  = "{{ vm_id }}";
+const _token = (new URLSearchParams(location.search)).get("token") ||
+               localStorage.getItem("oxware_token") ||
+               localStorage.getItem("adaos_token");
+
+if (!_token) {
+  document.getElementById("loading-msg").textContent = "Token bulunamadı — lütfen tekrar giriş yapın.";
+  throw new Error("no token");
+}
+
+// ── UI helpers ──────────────────────────────────────────────────────────────
+function setStatus(msg, ok) {
+  const el = document.getElementById("status-bar");
+  el.textContent = msg;
+  el.className   = "status-bar " + (ok ? "ok" : "err");
+}
+function setLoading(msg, detail) {
+  document.getElementById("loading-msg").textContent    = msg;
+  document.getElementById("loading-detail").textContent = detail || "";
+}
+function hideLoading() {
+  document.getElementById("loading").style.display = "none";
+}
+
+// ── VNC Bridge (WebSocket-compatible EventTarget) ──────────────────────────
+// noVNC calls: new WebSocket(url, protocols)
+// We intercept that call and return this bridge instead.
+// Binary data flows: noVNC.send() → SocketIO → VNC TCP → SocketIO → noVNC listener
+let _bridge = null;
+let _rfb    = null;
+let _sock   = null;  // SocketIO connection
+
+class VNCBridge extends EventTarget {
+  constructor() {
+    super();
+    this.binaryType     = "arraybuffer";
+    this.readyState     = 0;   // CONNECTING
+    this.bufferedAmount = 0;
+    this.extensions     = "";
+    this.protocol       = "";
+    this.url            = "ws://vnc-proxy/";
+  }
+
+  // Called by SocketIO listener when TCP tunnel is ready
+  _onReady() {
+    this.readyState = 1;  // OPEN
+    hideLoading();
+    setStatus("● Bağlı", true);
+    this.dispatchEvent(new Event("open"));
+  }
+
+  // Called with base64-encoded VNC data from backend
+  _onData(b64) {
+    try {
+      const bin = atob(b64);
+      const buf = new ArrayBuffer(bin.length);
+      const u8  = new Uint8Array(buf);
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      this.dispatchEvent(new MessageEvent("message", { data: buf }));
+    } catch (e) { /* ignore decode errors */ }
+  }
+
+  _onClosed() {
+    this.readyState = 3;
+    setStatus("Bağlantı kesildi", false);
+    this.dispatchEvent(new CloseEvent("close", { wasClean: true }));
+  }
+
+  _onError(msg) {
+    this.readyState = 3;
+    setStatus("Hata: " + msg, false);
+    setLoading("Bağlantı hatası", msg);
+    document.getElementById("loading").style.display = "flex";
+    this.dispatchEvent(new Event("error"));
+  }
+
+  // noVNC calls send() with ArrayBuffer data
+  send(data) {
+    if (!_sock || this.readyState !== 1) return;
+    try {
+      let u8;
+      if (data instanceof ArrayBuffer) {
+        u8 = new Uint8Array(data);
+      } else if (ArrayBuffer.isView(data)) {
+        u8 = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+      } else { return; }
+      let bin = "";
+      for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+      _sock.emit("vnc_proxy_send", { b: btoa(bin) });
+    } catch (e) {}
+  }
+
+  close() {
+    this.readyState = 3;
+    if (_sock) _sock.emit("vnc_proxy_close", {});
+    this.dispatchEvent(new CloseEvent("close"));
+  }
+}
+
+// ── window.WebSocket override ───────────────────────────────────────────────
+// Override BEFORE importing noVNC so the cached module also sees our fn.
+// noVNC calls new WebSocket(url, protocols) asynchronously (via setTimeout)
+// so we must keep override active until connection established.
+_bridge = new VNCBridge();
+const _origWS = window.WebSocket;
+
+window.WebSocket = function VNCProxyWS(url, protocols) {
+  // Any WebSocket call from noVNC returns our bridge
+  return _bridge;
+};
+window.WebSocket.CONNECTING = 0;
+window.WebSocket.OPEN       = 1;
+window.WebSocket.CLOSING    = 2;
+window.WebSocket.CLOSED     = 3;
+
+// Restore after connection establishes (so other page APIs are unaffected)
+function _restoreWS() { window.WebSocket = _origWS; }
+
+// ── SocketIO connection ─────────────────────────────────────────────────────
+_sock = io({
+  transports: ["polling", "websocket"],
+  reconnection: false,
+  timeout: 30000,
+  upgrade: true
+});
+
+_sock.on("connect", () => {
+  setLoading("TCP tüneli açılıyor…");
+
+  _sock.on("vnc_proxy_ready",  ()  => {
+    _bridge._onReady();
+    _restoreWS();  // safe to restore — connection is up
+  });
+  _sock.on("vnc_proxy_data",   (d) => _bridge._onData(d.b));
+  _sock.on("vnc_proxy_closed", ()  => _bridge._onClosed());
+  _sock.on("vnc_proxy_error",  (d) => _bridge._onError(d.msg || "bilinmeyen hata"));
+
+  _sock.emit("vnc_proxy_connect", { token: _token, vm_id: _vmId });
+});
+
+_sock.on("connect_error", (e) => {
+  setStatus("SocketIO bağlantı hatası", false);
+  setLoading("SocketIO bağlanamadı", e.message);
+});
+
+// ── Load noVNC and create RFB ───────────────────────────────────────────────
+// Dynamic import after override so rfb.js module sees our window.WebSocket.
+// Note: noVNC defers new WebSocket() via setTimeout, but since we keep the
+// override alive until _onReady(), the actual WebSocket construction is intercepted.
+(async () => {
+  try {
+    setLoading("noVNC modülü yükleniyor…");
+
+    const mod = await import("/novnc/core/rfb.js");
+    const RFB = mod.default;
+
+    const screen = document.getElementById("screen");
+    setLoading("RFB bağlantısı başlatılıyor…");
+
+    _rfb = new RFB(screen, "ws://vnc-proxy/", {
+      credentials: { password: "" }
+    });
+
+    _rfb.viewOnly      = false;
+    _rfb.scaleViewport = true;
+    _rfb.resizeSession = false;
+    _rfb.background    = "#000000";
+
+    _rfb.addEventListener("connect",    ()  => {
+      hideLoading();
+      setStatus("● Bağlı", true);
+    });
+    _rfb.addEventListener("disconnect", (e) => {
+      setStatus("Bağlantı kesildi" + (e.detail?.reason ? ": " + e.detail.reason : ""), false);
+    });
+    _rfb.addEventListener("credentialsrequired", () => {
+      _rfb.sendCredentials({ password: "" });
+    });
+    _rfb.addEventListener("desktopname", (e) => {
+      if (e.detail?.name) {
+        document.getElementById("vm-label").textContent = e.detail.name;
+        setStatus("● " + e.detail.name, true);
+      }
+    });
+
+  } catch (e) {
+    setStatus("noVNC yüklenemedi", false);
+    setLoading("noVNC yüklenemedi", e.message);
+    console.error("noVNC load error:", e);
+  }
+})();
+
+// ── VM adını yükle ──────────────────────────────────────────────────────────
+(async () => {
+  try {
+    const r = await fetch(`/api/vms/${_vmId}`, {
+      headers: { Authorization: "Bearer " + _token }
+    });
+    if (r.ok) {
+      const d = await r.json();
+      const name = (d.vm || d).name || _vmId;
+      document.getElementById("vm-label").textContent = name;
+      document.title = "VNC – " + name;
+    }
+  } catch (e) {}
+})();
+
+// ── Ctrl+Alt+Del ─────────────────────────────────────────────────────────────
+function sendCtrlAltDel() {
+  if (_rfb) _rfb.sendCtrlAltDel();
+}
+
+// ── Fullscreen ───────────────────────────────────────────────────────────────
+function toggleFullscreen() {
+  const el = document.getElementById("screen");
+  if (!document.fullscreenElement) {
+    el.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+// ── Cleanup on close ─────────────────────────────────────────────────────────
+window.addEventListener("beforeunload", () => {
+  try { _sock && _sock.emit("vnc_proxy_close", {}); } catch (e) {}
+  try { _sock && _sock.disconnect(); } catch (e) {}
+});
+</script>
+</body>
+</html>

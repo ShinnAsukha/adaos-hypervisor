@@ -762,6 +762,11 @@ def setup_page():
 def console_page(vm_id):
     return render_template("console.html", vm_id=vm_id)
 
+@app.route("/vnc_console/<vm_id>")
+def vnc_console_page(vm_id):
+    """Dedicated VNC console page — SocketIO TCP proxy, no websockify needed."""
+    return render_template("vnc_console.html", vm_id=vm_id)
+
 @app.route("/novnc/")
 @app.route("/novnc/<path:filename>")
 def serve_novnc(filename="vnc.html"):

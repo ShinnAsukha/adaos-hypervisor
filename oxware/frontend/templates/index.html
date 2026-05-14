@@ -5093,7 +5093,7 @@ async function loadVMDetail(vmId) {
     if (v.state !== "running") {
       actHtml += `<button class="btn sm success" onclick="vmAction('${v.id}','start')">▶ Başlat</button>`;
     } else {
-      actHtml += `<button class="btn sm danger" onclick="vmAction('${v.id}','stop')">■ Durdur</button>`;
+      actHtml += `<button class="btn sm danger" onclick="vmForceStop('${v.id}')">⏻ Zorla Durdur</button>`;
       actHtml += `<button class="btn sm" onclick="vmAction('${v.id}','reboot')">↺ Yeniden Başlat</button>`;
       actHtml += `<button class="btn sm" onclick="openConsole('${v.id}')">▣ Konsol</button>`;
     }
@@ -5385,8 +5385,7 @@ async function loadVMs() {
           <div class="action-btns">
             ${v.state !== "running"
               ? `<button class="btn sm success" onclick="vmAction('${v.id}','start')" title="Başlat">▶</button>`
-              : `<button class="btn sm danger" onclick="vmAction('${v.id}','stop')" title="Durdur (Graceful)">■</button>
-                 <button class="btn sm danger" onclick="vmForceStop('${v.id}')" title="Zorla Durdur" style="opacity:.7;font-size:10px">⏻</button>`}
+              : `<button class="btn sm danger" onclick="vmForceStop('${v.id}')" title="Zorla Durdur">⏻</button>`}
             <button class="btn sm" onclick="vmAction('${v.id}','reboot')" title="Yeniden Başlat">↺</button>
             ${v.state === "running" ? `<button class="btn sm" onclick="openConsole('${v.id}')" title="Konsol">▣</button>` : ""}
             <button class="btn sm" onclick="openLiveMigrate('${v.id}','${escHtml(v.name)}')" title="Canlı Geçiş">🚀</button>
@@ -5877,18 +5876,15 @@ let _vncSocket      = null;   // ayrı SocketIO bağlantısı (_shellSocket gibi
 
 async function openConsole(vmId) {
   try {
-    toast("Konsol başlatılıyor...", "info");
-    // VM'in VNC portunu etkinleştir (gerekirse)
+    // VNC portunu etkinleştir
     await api(`/vms/${vmId}/console/start`, { method: "POST" }).catch(() => {});
-
-    _vncCurrentVmId = vmId;
-    const modal = document.getElementById("modal-vnc-console");
-    modal.classList.add("open");
-    _setVncStatus("Bağlanılıyor...", false);
-    document.getElementById("vnc-loading-msg").style.display = "flex";
-    document.getElementById("vnc-loading-msg").style.flexDirection = "column";
-
-    setTimeout(() => _initVNC(vmId), 300);
+    const tok = TOKEN();
+    // Ayrı pencerede aç — temiz JS bağlamı, no mixed-content, no module cache
+    window.open(
+      `/vnc_console/${vmId}?token=${encodeURIComponent(tok)}`,
+      `vnc_${vmId}`,
+      "width=1200,height=820,resizable=yes,menubar=no,toolbar=no"
+    );
   } catch (e) {
     toast("Konsol hatası: " + e.message, "error");
   }
@@ -7111,9 +7107,13 @@ function switchTaskTab(tab) {
 
 function confirmShutdown(action) {
   if (!currentVmId) { toast("Önce VM seçin", "error"); return; }
-  const lbl = action === "reboot" ? "yeniden başlatılsın" : "kapatılsın";
-  if (!confirm(`VM ${lbl} mı?`)) return;
-  vmAction(currentVmId, action === "reboot" ? "reboot" : "stop");
+  if (action === "reboot") {
+    if (!confirm("VM yeniden başlatılsın mı?")) return;
+    vmAction(currentVmId, "reboot");
+  } else {
+    // Graceful stop kaldırıldı — force stop kullan
+    vmForceStop(currentVmId);
+  }
 }
 
 /* ══════════════════ Shell Console ══════════════════ */
