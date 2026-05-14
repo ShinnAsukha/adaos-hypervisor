@@ -4262,7 +4262,7 @@ def api_vm_nic_remove(vm_id, mac):
 # ── Disk Hot-Add ──────────────────────────────────────────────────────────────
 @app.route("/api/vms/<vm_id>/disks/attach", methods=["POST"])
 @require_auth
-def api_vm_disk_attach(vm_id):
+def api_vm_disk_attach_v2(vm_id):
     d = request.get_json() or {}
     size_gb = int(d.get("size_gb", 10))
     fmt = d.get("format", "qcow2")

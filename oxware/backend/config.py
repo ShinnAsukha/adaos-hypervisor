@@ -37,7 +37,8 @@ _cfg = _load()
 
 
 def get(section, key, fallback=None):
-    default = _defaults.get(key, fallback)
+    # Try plain key first, then "section_key" compound form
+    default = _defaults.get(key, _defaults.get(f"{section}_{key}", fallback))
     try:
         return _cfg.get(section, key)
     except (configparser.NoSectionError, configparser.NoOptionError):

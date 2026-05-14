@@ -215,6 +215,7 @@ install_packages() {
     PKGS=(
         qemu-kvm qemu-utils libvirt-daemon-system libvirt-clients libvirt-dev
         python3 python3-pip python3-venv python3-dev python3-libvirt
+        pkg-config gcc build-essential
         bridge-utils net-tools iptables iptables-persistent socat
         lvm2 parted gdisk
         openssl ca-certificates
@@ -238,11 +239,15 @@ clone_repo() {
         apt-get install -y -qq git
     fi
 
+    # Mevcut dizin silinmiş olabilir (purge sonrası) — güvenli dizine geç
+    cd / 2>/dev/null || true
+
+    rm -rf "$INSTALL_DIR"
     mkdir -p "$INSTALL_DIR"
 
-    # Git clone — en son master
-    git clone "$REPO_URL" "$INSTALL_DIR" --branch main --depth=1 -q 2>/dev/null \
-        || git clone "$REPO_URL" "$INSTALL_DIR" --depth=1 -q
+    # Git clone — en son main
+    git clone "$REPO_URL" "$INSTALL_DIR" --branch main --depth=1 \
+        || git clone "$REPO_URL" "$INSTALL_DIR" --depth=1
 
     log "Repo klonlandı → $INSTALL_DIR"
     log "Uygulama dizini → $APP_DIR"
@@ -286,13 +291,13 @@ setup_python() {
         # Temel bağımlılıklar
         pip install -q \
             flask flask-jwt-extended flask-socketio \
-            eventlet python-libvirt \
+            eventlet libvirt-python \
             cryptography paramiko \
             psutil requests
     fi
 
     # Lisans şifrelemesi için (kritik)
-    pip install cryptography -q
+    pip install cryptography libvirt-python -q
     deactivate
     log "Python ortamı hazır: $VENV_DIR"
 }
