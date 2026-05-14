@@ -115,7 +115,7 @@ autoinstall:
     hostname: oxware-hypervisor
     username: oxware
     # Varsayılan şifre: oxware2024 (ilk girişte değiştirilir)
-    password: "$6$rounds=4096$saltsalt$Dd4KpxVUGGWW3AkFh5PXzX4TgGQFBfDv9rKV8VWL5F2MfFl0G1BSKt6XeA.UJJtVsqpIlPnpuYD2c1dX6U0"
+    password: "$6$randomsalt99$aUswDq4puWnTkkzHPTBM14Zmdcm5FrdDYZF5r2TC7Idb7huFCD07ZXw7MuwkSpG/72dXfKILhO3CEafrtKBBv0"
 
   # SSH
   ssh:
