@@ -8,16 +8,27 @@ set -euo pipefail
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; WHITE='\033[1;37m'; NC='\033[0m'
 
-OXWARE_VERSION="2.0.0"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# ── Versiyon: build/VERSION dosyasından oku, patch++ yap, geri yaz ────────────
+VERSION_FILE="$SCRIPT_DIR/VERSION"
+[ -f "$VERSION_FILE" ] || echo "2.0.0" > "$VERSION_FILE"
+_PREV_VER="$(cat "$VERSION_FILE" | tr -d '[:space:]')"
+_MAJOR="$(echo "$_PREV_VER" | cut -d. -f1)"
+_MINOR="$(echo "$_PREV_VER" | cut -d. -f2)"
+_PATCH="$(echo "$_PREV_VER" | cut -d. -f3)"
+_PATCH=$(( _PATCH + 1 ))
+OXWARE_VERSION="${_MAJOR}.${_MINOR}.${_PATCH}"
+echo "$OXWARE_VERSION" > "$VERSION_FILE"
+
 UBUNTU_VERSION="22.04.5"
 UBUNTU_ISO_URL="https://releases.ubuntu.com/22.04/ubuntu-${UBUNTU_VERSION}-live-server-amd64.iso"
 UBUNTU_ISO_FALLBACK="https://old-releases.ubuntu.com/releases/22.04/ubuntu-${UBUNTU_VERSION}-live-server-amd64.iso"
 ISO_CACHE="/tmp/ubuntu-${UBUNTU_VERSION}-server.iso"
 WORK_DIR="/tmp/oxware-iso-build"
 SQUASHFS_ROOT="$WORK_DIR/squashfs-root"
-OUTPUT_ISO="${PWD}/OXware-Hypervisor-${OXWARE_VERSION}-amd64.iso"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+OUTPUT_ISO="$REPO_ROOT/OXware-Hypervisor-${OXWARE_VERSION}-amd64.iso"
 
 log()  { echo -e "${GREEN}[BUILD]${NC}  $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC}   $1"; }
@@ -298,6 +309,11 @@ _make_iso() {
 }
 
 _make_iso "$_TMP_ISO" || err "ISO oluşturma tamamen başarısız!"
+
+# Eski versiyonları temizle (docs'ta tek ISO görünsün)
+log "Eski ISO'lar temizleniyor..."
+find "$REPO_ROOT" -maxdepth 1 -name "OXware-Hypervisor-*.iso" ! -name "$(basename "$OUTPUT_ISO")" -delete 2>/dev/null || true
+find "$REPO_ROOT" -maxdepth 1 -name "OXware-Hypervisor-*.sha256" ! -name "$(basename "$OUTPUT_ISO").sha256" -delete 2>/dev/null || true
 
 log "ISO taşınıyor..."
 mv "$_TMP_ISO" "$OUTPUT_ISO"
