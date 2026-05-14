@@ -1620,6 +1620,160 @@ def api_release_ip(vm_id):
     released = ip_pool_mgr.release_ip(vm_id)
     return ok(released=released)
 
+# ── IPAM Bridge (UI → ip_pool) ───────────────────────────────────────────────
+def _read_dnsmasq_leases() -> list:
+    """dnsmasq lease dosyasından DHCP kiralamalarını oku."""
+    lease_files = [
+        "/var/lib/misc/dnsmasq.leases",
+        "/var/lib/dnsmasq/dnsmasq.leases",
+        "/tmp/dnsmasq.leases",
+    ]
+    leases = []
+    for lf in lease_files:
+        if os.path.exists(lf):
+            try:
+                with open(lf) as f:
+                    for line in f:
+                        parts = line.strip().split()
+                        if len(parts) >= 4:
+                            import datetime as _dt
+                            ts = int(parts[0]) if parts[0].isdigit() else 0
+                            last_seen = _dt.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M") if ts else "—"
+                            leases.append({
+                                "ip": parts[2],
+                                "mac": parts[1],
+                                "vm": parts[3] if parts[3] != "*" else "—",
+                                "network": "dnsmasq",
+                                "state": "bound",
+                                "source": "dnsmasq",
+                                "last_seen": last_seen,
+                                "locked": False,
+                                "pool": "",
+                            })
+            except Exception:
+                pass
+    return leases
+
+
+@app.route("/api/ipam/leases")
+@require_auth
+def api_ipam_leases():
+    """Tüm havuzlardaki IP atamalarını + dnsmasq kiralamalarını döndür."""
+    try:
+        assignments = ip_pool_mgr.list_assignments()
+        pool_ips = {a["ip"] for a in assignments}
+        leases = []
+        for a in assignments:
+            import datetime as _dt
+            ts = a.get("assigned_at", 0)
+            last_seen = _dt.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M") if ts else "—"
+            leases.append({
+                "ip":        a["ip"],
+                "mac":       a.get("mac", ""),
+                "vm":        a.get("vm_name", "—"),
+                "network":   a.get("network", "—"),
+                "state":     "bound",
+                "source":    "oxware",
+                "last_seen": last_seen,
+                "locked":    a.get("locked", False),
+                "pool":      a.get("pool", ""),
+            })
+        # dnsmasq'tan gelen ama havuzda olmayan IP'leri de ekle
+        for l in _read_dnsmasq_leases():
+            if l["ip"] not in pool_ips:
+                leases.append(l)
+        # IP'ye göre sırala
+        leases.sort(key=lambda x: [int(p) for p in x["ip"].split(".") if p.isdigit()] if x["ip"].count(".") == 3 else [0])
+        return ok(leases=leases)
+    except Exception as e:
+        return err(e, 500)
+
+
+@app.route("/api/ipam/stats")
+@require_auth
+def api_ipam_stats():
+    """Tüm havuzlar toplamı istatistik."""
+    try:
+        return ok(**ip_pool_mgr.get_all_stats())
+    except Exception as e:
+        return err(e, 500)
+
+
+@app.route("/api/ipam/pools")
+@require_auth
+def api_ipam_pools():
+    return ok(pools=ip_pool_mgr.list_pools())
+
+
+@app.route("/api/ipam/pools", methods=["POST"])
+@require_auth
+def api_ipam_create_pool():
+    data = request.get_json() or {}
+    required = ["name", "network", "gateway"]
+    missing = [f for f in required if f not in data]
+    if missing:
+        return err(f"Zorunlu alanlar: {', '.join(missing)}")
+    try:
+        pool = ip_pool_mgr.create_pool(**data)
+        ev.info(f"IP havuzu oluşturuldu: {data['name']}", category="network")
+        return ok(pool=pool), 201
+    except Exception as e:
+        return err(e, 500)
+
+
+@app.route("/api/ipam/pools/<name>", methods=["DELETE"])
+@require_auth
+def api_ipam_delete_pool(name):
+    try:
+        ip_pool_mgr.delete_pool(name)
+        ev.info(f"IP havuzu silindi: {name}", category="network")
+        return ok(status="deleted")
+    except Exception as e:
+        return err(e, 500)
+
+
+@app.route("/api/ipam/leases/<path:mac>/lock", methods=["POST"])
+@require_auth
+def api_ipam_lock(mac):
+    try:
+        # MAC'e göre IP bul
+        assignments = ip_pool_mgr.list_assignments()
+        entry = next((a for a in assignments if a.get("mac") == mac), None)
+        if not entry:
+            return err("Atama bulunamadı", 404)
+        new_state = not entry.get("locked", False)
+        ip_pool_mgr.lock_ip(entry["ip"], new_state)
+        return ok(locked=new_state)
+    except Exception as e:
+        return err(e, 500)
+
+
+@app.route("/api/ipam/leases/<path:mac>", methods=["DELETE"])
+@require_auth
+def api_ipam_delete_lease(mac):
+    try:
+        released = ip_pool_mgr.release_by_mac(mac)
+        if not released:
+            return err("Atama bulunamadı", 404)
+        return ok(released=released)
+    except Exception as e:
+        return err(e, 500)
+
+
+@app.route("/api/ipam/leases/<path:mac>/reassign", methods=["POST"])
+@require_auth
+def api_ipam_reassign(mac):
+    data = request.get_json() or {}
+    new_ip = data.get("ip")
+    if not new_ip:
+        return err("ip alanı zorunlu")
+    try:
+        result = ip_pool_mgr.reassign_ip(mac, new_ip)
+        return ok(**result)
+    except Exception as e:
+        return err(e, 500)
+
+
 # ── Otomatik Kurulum ──────────────────────────────────────────────────────────
 @app.route("/api/provision", methods=["POST"])
 @require_auth

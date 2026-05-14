@@ -1813,7 +1813,7 @@ ip link set eth0.100 up</code></pre>
               <span style="font-weight:700;color:var(--text)">CVE-2026-45017</span>
               <span style="font-size:11px;color:var(--text-muted)">🟠 HIGH · Jinja2</span>
             </div>
-            <p style="margin:0 0 6px"><strong>Sorun:</strong> Jinja2 <code>FileSystemLoader</code> / <code>CachingFileSystemLoader</code> mutlak path verildiğinde arama dizini dışındaki dosyaları okuyabiliyordu. <code>{% include %}</code> / <code>{% render %}</code> üzerinden path traversal.</p>
+            <p style="margin:0 0 6px"><strong>Sorun:</strong> Jinja2 <code>FileSystemLoader</code> / <code>CachingFileSystemLoader</code> mutlak path verildiğinde arama dizini dışındaki dosyaları okuyabiliyordu. <code>{% raw %}{% include %}{% endraw %}</code> / <code>{% raw %}{% render %}{% endraw %}</code> üzerinden path traversal.</p>
             <p style="margin:0;font-size:12px;color:#22c55e"><strong>Çözüm:</strong> <code>Jinja2&gt;=3.1.6</code> requirements.txt'e eklendi. Servis başlatmada otomatik upgrade.</p>
           </div>
 

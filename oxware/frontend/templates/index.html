@@ -1637,41 +1637,67 @@
 
         <!-- ─────── tab-ipam ─────── -->
         <div class="page" id="page-tab-ipam">
+          <!-- Header -->
           <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
             <h2><i class="fa-solid fa-map fa-fw" style="margin-right:8px;color:var(--accent-lt)"></i>IPAM — IP Adres Yönetimi</h2>
             <div style="display:flex;gap:8px">
-              <button class="btn-secondary" onclick="loadIpamLeases()"><i class="fa-solid fa-rotate-right"></i> Yenile</button>
+              <button class="btn-primary" onclick="ipamOpenCreatePool()"><i class="fa-solid fa-plus"></i> Yeni Havuz</button>
+              <button class="btn-secondary" onclick="loadIpamPage()"><i class="fa-solid fa-rotate-right"></i> Yenile</button>
             </div>
           </div>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px" id="ipam-stats-row">
-            <div class="card" style="flex:1;min-width:120px;text-align:center;padding:14px 20px">
-              <div style="font-size:22px;font-weight:700;color:var(--accent-lt)" id="ipam-stat-total">—</div>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Toplam</div>
+
+          <!-- Stats -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+            <div class="card" style="flex:1;min-width:110px;text-align:center;padding:12px 16px">
+              <div style="font-size:24px;font-weight:700;color:var(--accent-lt)" id="ipam-stat-total">—</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Toplam IP</div>
             </div>
-            <div class="card" style="flex:1;min-width:120px;text-align:center;padding:14px 20px">
-              <div style="font-size:22px;font-weight:700;color:#22c55e" id="ipam-stat-bound">—</div>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Bağlı</div>
+            <div class="card" style="flex:1;min-width:110px;text-align:center;padding:12px 16px">
+              <div style="font-size:24px;font-weight:700;color:#22c55e" id="ipam-stat-bound">—</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Kullanılan</div>
             </div>
-            <div class="card" style="flex:1;min-width:120px;text-align:center;padding:14px 20px">
-              <div style="font-size:22px;font-weight:700;color:#f59e0b" id="ipam-stat-released">—</div>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Serbest</div>
+            <div class="card" style="flex:1;min-width:110px;text-align:center;padding:12px 16px">
+              <div style="font-size:24px;font-weight:700;color:#f59e0b" id="ipam-stat-released">—</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Boş</div>
             </div>
-            <div class="card" style="flex:1;min-width:120px;text-align:center;padding:14px 20px">
-              <div style="font-size:22px;font-weight:700;color:#a78bfa" id="ipam-stat-locked">—</div>
+            <div class="card" style="flex:1;min-width:110px;text-align:center;padding:12px 16px">
+              <div style="font-size:24px;font-weight:700;color:#a78bfa" id="ipam-stat-locked">—</div>
               <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Kilitli</div>
+            </div>
+            <div class="card" style="flex:1;min-width:110px;text-align:center;padding:12px 16px">
+              <div style="font-size:24px;font-weight:700;color:var(--text)" id="ipam-stat-pools">—</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Havuz</div>
+            </div>
+          </div>
+
+          <!-- Pool List -->
+          <div class="card" style="margin-bottom:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div class="card-title" style="margin:0;padding:0;border:none">IP Havuzları</div>
+            </div>
+            <div id="ipam-pools-container">
+              <div style="color:var(--text-muted);font-size:12px;padding:8px 0">Yükleniyor...</div>
+            </div>
+          </div>
+
+          <!-- Leases Table -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">IP Atamaları</div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input id="ipam-filter" type="text" placeholder="Filtrele (IP, MAC, VM)..." style="padding:5px 10px;font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);width:200px" oninput="ipamFilter()">
             </div>
           </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>IP</th>
+                  <th>IP ADRESİ</th>
                   <th>MAC</th>
-                  <th>VM</th>
-                  <th>AĞ</th>
+                  <th>VM / SUNUCU</th>
+                  <th>HAVUZ / AĞ</th>
                   <th>DURUM</th>
                   <th>KAYNAK</th>
-                  <th>SON GÖRÜLME</th>
+                  <th>ATANMA</th>
                   <th>İŞLEM</th>
                 </tr>
               </thead>
@@ -1679,6 +1705,49 @@
                 <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted)">Yükleniyor...</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Modal: Yeni IP Havuzu -->
+        <div class="modal-overlay" id="modal-ipam-pool">
+          <div class="modal" style="width:520px">
+            <div class="modal-header">
+              <h3><i class="fa-solid fa-network-wired" style="color:var(--accent-lt);margin-right:6px"></i>Yeni IP Havuzu Oluştur</h3>
+              <button class="modal-close" onclick="ipamCloseCreatePool()">✕</button>
+            </div>
+            <div class="modal-body">
+              <div class="form-grid">
+                <div class="form-row">
+                  <label>Havuz Adı *</label>
+                  <input id="ipam-pool-name" type="text" placeholder="örn: lan-pool">
+                  <div class="form-hint">Benzersiz bir isim (boşluk yok)</div>
+                </div>
+                <div class="form-row">
+                  <label>Ağ (CIDR) *</label>
+                  <input id="ipam-pool-network" type="text" placeholder="192.168.100.0/24">
+                </div>
+                <div class="form-row">
+                  <label>Gateway *</label>
+                  <input id="ipam-pool-gw" type="text" placeholder="192.168.100.1">
+                </div>
+                <div class="form-row">
+                  <label>DNS Sunucuları</label>
+                  <input id="ipam-pool-dns" type="text" placeholder="8.8.8.8,1.1.1.1">
+                </div>
+                <div class="form-row">
+                  <label>Başlangıç IP</label>
+                  <input id="ipam-pool-start" type="text" placeholder="192.168.100.10 (boş = otomatik)">
+                </div>
+                <div class="form-row">
+                  <label>Bitiş IP</label>
+                  <input id="ipam-pool-end" type="text" placeholder="192.168.100.254 (boş = otomatik)">
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn-secondary" onclick="ipamCloseCreatePool()">İptal</button>
+              <button class="btn-primary" onclick="ipamConfirmCreatePool()"><i class="fa-solid fa-plus"></i> Oluştur</button>
+            </div>
           </div>
         </div>
 
@@ -4114,6 +4183,13 @@ function buildContextNav(type) {
 }
 
 // ── IPAM ──────────────────────────────────────────────────────────────────────
+let _ipamAllLeases = [];
+
+async function loadIpamPage() {
+  loadIpamLeases();
+  loadIpamPools();
+}
+
 async function loadIpamLeases() {
   const tbody = document.getElementById('ipam-tbody');
   if (!tbody) return;
@@ -4123,63 +4199,168 @@ async function loadIpamLeases() {
       _api('/api/ipam/leases'),
       _api('/api/ipam/stats')
     ]);
-    // Stats
-    if (statsResp.ok !== false) {
+    if (statsResp && !statsResp.error) {
       const s = statsResp;
-      document.getElementById('ipam-stat-total').textContent   = s.total  ?? '—';
-      document.getElementById('ipam-stat-bound').textContent   = s.bound  ?? '—';
-      document.getElementById('ipam-stat-released').textContent= s.released ?? '—';
-      document.getElementById('ipam-stat-locked').textContent  = s.locked ?? '—';
+      document.getElementById('ipam-stat-total').textContent    = s.total    ?? '—';
+      document.getElementById('ipam-stat-bound').textContent    = s.bound    ?? '—';
+      document.getElementById('ipam-stat-released').textContent = s.released ?? '—';
+      document.getElementById('ipam-stat-locked').textContent   = s.locked   ?? '—';
+      document.getElementById('ipam-stat-pools').textContent    = s.pools    ?? '—';
     }
-    const leases = leasesResp.leases || leasesResp || [];
-    if (!leases.length) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted)">Kiralama kaydı bulunamadı</td></tr>';
-      return;
-    }
-    tbody.innerHTML = leases.map(l => {
-      const stateBadge = l.state === 'bound'
-        ? '<span style="background:#166534;color:#bbf7d0;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600">● bağlı</span>'
-        : '<span style="background:#78350f;color:#fde68a;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600">○ serbest</span>';
-      const lockIcon = l.locked
-        ? '<i class="fa-solid fa-lock" style="color:#a78bfa"></i>'
-        : '<i class="fa-solid fa-lock-open" style="color:var(--text-muted)"></i>';
-      const mac = escHtml(l.mac || '');
-      return `<tr>
-        <td><span style="font-family:monospace;color:var(--accent-lt)">${escHtml(l.ip||'')}</span></td>
-        <td><span style="font-family:monospace;font-size:12px">${mac}</span></td>
-        <td>${escHtml(l.vm || '—')}</td>
-        <td style="font-size:12px;color:var(--text-muted)">${escHtml(l.network||'—')}</td>
-        <td>${stateBadge}</td>
-        <td style="font-size:12px;color:var(--text-muted)">${escHtml(l.source||'dnsmasq')}</td>
-        <td style="font-size:12px;color:var(--text-muted)">${escHtml(l.last_seen||'—')}</td>
-        <td style="white-space:nowrap;display:flex;gap:6px;align-items:center">
-          <button onclick="ipamToggleLock('${mac}')" title="Kilitle/Aç" style="background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;color:var(--text)">${lockIcon}</button>
-          <button onclick="ipamReassign('${mac}','${escHtml(l.ip||'')}')" title="IP Değiştir" style="background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;color:#38bdf8"><i class="fa-solid fa-rotate"></i></button>
-          <button onclick="ipamRelease('${mac}')" title="Sil" style="background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;color:#f87171"><i class="fa-solid fa-trash"></i></button>
-        </td>
-      </tr>`;
-    }).join('');
+    _ipamAllLeases = leasesResp.leases || [];
+    ipamRenderLeases(_ipamAllLeases);
   } catch(e) {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:20px;color:#f87171">Hata: ${escHtml(String(e))}</td></tr>`;
   }
 }
 
+function ipamRenderLeases(leases) {
+  const tbody = document.getElementById('ipam-tbody');
+  if (!leases.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted)"><i class="fa-solid fa-circle-info" style="margin-right:6px"></i>Atama bulunamadı. Yeni bir IP havuzu oluşturun.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = leases.map(l => {
+    const stateBadge = l.state === 'bound'
+      ? '<span style="background:#166534;color:#bbf7d0;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600">● kullanımda</span>'
+      : '<span style="background:#78350f;color:#fde68a;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600">○ serbest</span>';
+    const lockIcon = l.locked
+      ? '<i class="fa-solid fa-lock" style="color:#a78bfa" title="Kilitli"></i>'
+      : '<i class="fa-solid fa-lock-open" style="color:var(--text-muted)" title="Kilitsiz"></i>';
+    const srcBadge = l.source === 'oxware'
+      ? '<span style="background:#1e3a5f;color:#60a5fa;padding:1px 6px;border-radius:3px;font-size:10px">oxware</span>'
+      : '<span style="background:#1a2d1a;color:#86efac;padding:1px 6px;border-radius:3px;font-size:10px">dnsmasq</span>';
+    const mac = escHtml(l.mac || '');
+    const poolBadge = l.pool
+      ? `<span style="background:var(--surface3);color:var(--accent-lt);padding:1px 6px;border-radius:3px;font-size:10px">${escHtml(l.pool)}</span>`
+      : `<span style="color:var(--text-muted);font-size:12px">${escHtml(l.network||'—')}</span>`;
+    return `<tr>
+      <td><span style="font-family:monospace;color:var(--accent-lt);font-size:13px">${escHtml(l.ip||'')}</span></td>
+      <td><span style="font-family:monospace;font-size:11px;color:var(--text-muted)">${mac||'—'}</span></td>
+      <td style="font-weight:500">${escHtml(l.vm||'—')}</td>
+      <td>${poolBadge}</td>
+      <td>${stateBadge}</td>
+      <td>${srcBadge}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${escHtml(l.last_seen||'—')}</td>
+      <td>
+        <div style="display:flex;gap:4px;align-items:center">
+          <button onclick="ipamToggleLock('${mac}')" title="Kilitle/Aç" style="background:none;border:none;cursor:pointer;padding:3px 7px;border-radius:4px;color:var(--text);border:1px solid var(--border)">${lockIcon}</button>
+          <button onclick="ipamReassign('${mac}','${escHtml(l.ip||'')}')" title="IP Değiştir" style="background:none;border:none;cursor:pointer;padding:3px 7px;border-radius:4px;color:#38bdf8;border:1px solid var(--border)"><i class="fa-solid fa-rotate"></i></button>
+          <button onclick="ipamRelease('${mac}')" title="Sil" style="background:none;border:none;cursor:pointer;padding:3px 7px;border-radius:4px;color:#f87171;border:1px solid var(--border)"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function ipamFilter() {
+  const q = (document.getElementById('ipam-filter').value || '').toLowerCase();
+  if (!q) { ipamRenderLeases(_ipamAllLeases); return; }
+  const filtered = _ipamAllLeases.filter(l =>
+    (l.ip||'').toLowerCase().includes(q) ||
+    (l.mac||'').toLowerCase().includes(q) ||
+    (l.vm||'').toLowerCase().includes(q) ||
+    (l.pool||'').toLowerCase().includes(q)
+  );
+  ipamRenderLeases(filtered);
+}
+
+async function loadIpamPools() {
+  const container = document.getElementById('ipam-pools-container');
+  if (!container) return;
+  try {
+    const resp = await _api('/api/ipam/pools');
+    const pools = resp.pools || [];
+    if (!pools.length) {
+      container.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0"><i class="fa-solid fa-circle-info" style="margin-right:6px"></i>Henüz IP havuzu yok. "Yeni Havuz" butonuna tıklayın.</div>';
+      return;
+    }
+    container.innerHTML = pools.map(p => {
+      const pct = p.total_ips ? Math.round(p.used_ips / p.total_ips * 100) : 0;
+      const barColor = pct > 85 ? '#ef4444' : pct > 60 ? '#f59e0b' : '#22c55e';
+      return `<div style="border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:8px;background:var(--surface2)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <i class="fa-solid fa-network-wired" style="color:var(--accent-lt)"></i>
+            <span style="font-weight:700;font-size:13px">${escHtml(p.name)}</span>
+            <span style="font-family:monospace;font-size:12px;color:var(--text-muted)">${escHtml(p.network)}</span>
+            <span style="font-size:11px;color:var(--text-muted)">GW: <span style="color:var(--text)">${escHtml(p.gateway)}</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px">
+            <span style="font-size:12px"><span style="color:#22c55e;font-weight:700">${p.used_ips}</span><span style="color:var(--text-muted)"> / ${p.total_ips} kullanıldı</span></span>
+            <span style="font-size:12px;color:var(--text-muted)">${p.free_ips} boş</span>
+            <button onclick="ipamDeletePool('${escHtml(p.name)}')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 8px;cursor:pointer;color:#f87171;font-size:11px"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </div>
+        <div style="height:6px;background:var(--surface3);border-radius:3px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;transition:width .4s"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--text-dim)">
+          <span>${escHtml(p.start_ip)} — ${escHtml(p.end_ip)}</span>
+          <span>${pct}% dolu</span>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    container.innerHTML = `<div style="color:#f87171;font-size:12px">Havuzlar yüklenemedi: ${escHtml(String(e))}</div>`;
+  }
+}
+
+function ipamOpenCreatePool() {
+  document.getElementById('modal-ipam-pool').classList.add('open');
+}
+function ipamCloseCreatePool() {
+  document.getElementById('modal-ipam-pool').classList.remove('open');
+}
+async function ipamConfirmCreatePool() {
+  const name    = document.getElementById('ipam-pool-name').value.trim();
+  const network = document.getElementById('ipam-pool-network').value.trim();
+  const gateway = document.getElementById('ipam-pool-gw').value.trim();
+  const dnsRaw  = document.getElementById('ipam-pool-dns').value.trim();
+  const startIp = document.getElementById('ipam-pool-start').value.trim();
+  const endIp   = document.getElementById('ipam-pool-end').value.trim();
+  if (!name || !network || !gateway) { toast('Ad, Ağ ve Gateway zorunlu', 'error'); return; }
+  const body = { name, network, gateway };
+  if (dnsRaw) body.dns = dnsRaw.split(',').map(s => s.trim()).filter(Boolean);
+  if (startIp) body.start_ip = startIp;
+  if (endIp) body.end_ip = endIp;
+  const d = await _api('/api/ipam/pools', 'POST', body);
+  if (d && !d.error) {
+    toast(`Havuz oluşturuldu: ${name}`, 'success');
+    ipamCloseCreatePool();
+    loadIpamPage();
+    // Alanları temizle
+    ['ipam-pool-name','ipam-pool-network','ipam-pool-gw','ipam-pool-dns','ipam-pool-start','ipam-pool-end'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+  }
+}
+
+async function ipamDeletePool(name) {
+  if (!confirm(`"${name}" havuzunu silmek istiyor musunuz?\nİçindeki atamalar temizlenmez.`)) return;
+  const d = await _api(`/api/ipam/pools/${encodeURIComponent(name)}`, 'DELETE');
+  if (d && !d.error) { toast(`Havuz silindi: ${name}`, 'success'); loadIpamPage(); }
+}
+
 async function ipamToggleLock(mac) {
+  if (!mac) return;
   const d = await _api(`/api/ipam/leases/${encodeURIComponent(mac)}/lock`, 'POST');
-  if (d) loadIpamLeases();
+  if (d && !d.error) loadIpamLeases();
 }
 
 async function ipamRelease(mac) {
-  if (!confirm(`${mac} adresli kaydı silmek istiyor musunuz?`)) return;
+  if (!mac) return;
+  if (!confirm(`${mac} adresli atamayı silmek istiyor musunuz?`)) return;
   await _api(`/api/ipam/leases/${encodeURIComponent(mac)}`, 'DELETE');
   loadIpamLeases();
 }
 
 async function ipamReassign(mac, currentIp) {
-  const newIp = prompt('Yeni IP adresi:', currentIp);
+  if (!mac) return;
+  const newIp = prompt('Yeni IP adresi girin:', currentIp);
   if (!newIp || newIp === currentIp) return;
   const d = await _api(`/api/ipam/leases/${encodeURIComponent(mac)}/reassign`, 'POST', {ip: newIp});
-  if (d) loadIpamLeases();
+  if (d && !d.error) { toast(`IP değiştirildi: ${currentIp} → ${newIp}`, 'success'); loadIpamLeases(); }
 }
 
 /* ══ Navigate ══ */
@@ -6974,7 +7155,7 @@ async function loadTabData(tabId) {
     case 'tab-firewall':     loadFirewallStatus(); loadFirewallRules(); break;
     case 'tab-vpn':          loadVpnStatus(); loadVpnPeers(); break;
     case 'tab-dns':          loadDnsHosts(); loadDhcpLeases(); break;
-    case 'tab-ipam':         loadIpamLeases(); break;
+    case 'tab-ipam':         loadIpamPage(); break;
     case 'tab-proxy':        loadNginxSites(); break;
     case 'tab-monitoring':   loadPerfHistory('1h'); loadSmartData(); loadUptimes(); loadIdsStatus(); loadTrendAnalysis(); loadHAStatus(); break;
     case 'tab-ai':           loadAiRecommendations(); loadAnomalies(); loadAIAgents(); break;

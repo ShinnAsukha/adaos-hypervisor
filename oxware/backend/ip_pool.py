@@ -200,6 +200,64 @@ def list_assignments(pool_name: str = None) -> list:
     return result
 
 
+def release_by_mac(mac: str) -> list:
+    """MAC adresine göre IP'yi serbest bırak."""
+    with _lock:
+        data = _load()
+        to_del = [ip for ip, a in data["assignments"].items() if a.get("mac") == mac]
+        for ip in to_del:
+            del data["assignments"][ip]
+        _save(data)
+    return to_del
+
+
+def lock_ip(ip: str, locked: bool = True) -> bool:
+    """IP atamasını kilitle veya kilidi aç."""
+    with _lock:
+        data = _load()
+        if ip not in data["assignments"]:
+            raise KeyError(f"Atama bulunamadı: {ip}")
+        data["assignments"][ip]["locked"] = locked
+        _save(data)
+    return locked
+
+
+def reassign_ip(mac: str, new_ip: str) -> dict:
+    """MAC adresine ait IP'yi yeni IP ile değiştir."""
+    with _lock:
+        data = _load()
+        old_ip = None
+        for ip, a in data["assignments"].items():
+            if a.get("mac") == mac:
+                old_ip = ip
+                break
+        if not old_ip:
+            raise KeyError(f"MAC bulunamadı: {mac}")
+        # Yeni IP zaten atanmış mı?
+        if new_ip in data["assignments"]:
+            raise ValueError(f"IP zaten kullanımda: {new_ip}")
+        entry = data["assignments"].pop(old_ip)
+        entry["ip"] = new_ip
+        data["assignments"][new_ip] = entry
+        _save(data)
+    return {"old_ip": old_ip, "new_ip": new_ip}
+
+
+def get_all_stats() -> dict:
+    """Tüm havuzlar toplamı istatistik."""
+    data = _load()
+    total_cap = sum(_pool_capacity(p) for p in data["pools"].values())
+    total_used = len(data["assignments"])
+    locked = sum(1 for a in data["assignments"].values() if a.get("locked", False))
+    return {
+        "total": total_cap,
+        "bound": total_used,
+        "released": total_cap - total_used,
+        "locked": locked,
+        "pools": len(data["pools"]),
+    }
+
+
 def get_pool_stats(pool_name: str) -> dict:
     data = _load()
     pool = data["pools"].get(pool_name)
