@@ -76,20 +76,73 @@ xorriso -osirrox on -indev "$ISO_CACHE" -extract / "$WORK_DIR/iso" 2>/dev/null \
 chmod -R u+w "$WORK_DIR/iso"
 log "ISO içeriği hazır"
 
-# ── Squashfs Bul ──────────────────────────────────────────────────────────────
+# ── Squashfs Bul — Ubuntu 22.04 birden fazla squashfs kullanır ───────────────
 step "Squashfs Aranıyor"
+
+# Ana squashfs (base sistem — chroot burada yapılır)
 SQUASHFS_FILE=""
 for f in \
     "$WORK_DIR/iso/casper/ubuntu-server-minimal.squashfs" \
-    "$WORK_DIR/iso/casper/ubuntu-server-minimal.ubuntu-server.installer.generic.squashfs" \
     "$WORK_DIR/iso/casper/filesystem.squashfs"; do
     [ -f "$f" ] && SQUASHFS_FILE="$f" && break
 done
-[ -z "$SQUASHFS_FILE" ] && err "Squashfs dosyası bulunamadı!"
-log "Squashfs: $SQUASHFS_FILE ($(du -sh "$SQUASHFS_FILE" | cut -f1))"
+[ -z "$SQUASHFS_FILE" ] && err "Ana squashfs dosyası bulunamadı!"
+log "Ana squashfs: $SQUASHFS_FILE"
 
-# ── Squashfs Aç ───────────────────────────────────────────────────────────────
-step "Squashfs Açılıyor (~5-10 dk)"
+# Installer squashfs (subiquity/console-conf/cloud-init bunun içinde)
+INSTALLER_SQUASHFS=""
+for f in \
+    "$WORK_DIR/iso/casper/ubuntu-server-minimal.ubuntu-server.installer.generic.squashfs" \
+    "$WORK_DIR/iso/casper/ubuntu-server-minimal.ubuntu-server.squashfs"; do
+    [ -f "$f" ] && INSTALLER_SQUASHFS="$f" && break
+done
+[ -n "$INSTALLER_SQUASHFS" ] && log "Installer squashfs: $INSTALLER_SQUASHFS"
+
+# Tüm squashfs'leri listele
+log "Bulunan tüm squashfs:"
+find "$WORK_DIR/iso/casper" -name "*.squashfs" 2>/dev/null | while read -r f; do
+    log "  $(basename "$f") ($(du -sh "$f" | cut -f1))"
+done
+
+# ── Installer squashfs içindeki servisleri maskele (overlay) ─────────────────
+# Ubuntu live'de installer squashfs, base squashfs'in üstüne overlay olarak biner.
+# Subiquity/console-conf/cloud-init INSTALLER squashfs içinde — orayı da patchle.
+if [ -n "$INSTALLER_SQUASHFS" ]; then
+    step "Installer Squashfs Maskeleniyor"
+    INST_ROOT="$WORK_DIR/squashfs-installer"
+    unsquashfs -d "$INST_ROOT" "$INSTALLER_SQUASHFS"
+
+    INST_MASK_DIR="$INST_ROOT/etc/systemd/system"
+    mkdir -p "$INST_MASK_DIR"
+    for svc in \
+        subiquity.service \
+        snap.subiquity.subiquity.service \
+        snap.subiquity.subiquity-server.service \
+        snap.console-conf.console-conf.service \
+        console-conf@tty1.service console-conf@.service console-conf.service \
+        cloud-init.service cloud-init-local.service \
+        cloud-config.service cloud-final.service \
+        getty@tty1.service autovt@tty1.service; do
+        ln -sf /dev/null "$INST_MASK_DIR/$svc" 2>/dev/null || true
+    done
+    # Dinamik — installer squashfs içindeki snap servislerini bul ve maskele
+    for sd in "$INST_ROOT/lib/systemd/system" "$INST_ROOT/usr/lib/systemd/system"; do
+        [ -d "$sd" ] || continue
+        for f in "$sd"/snap.subiquity.*.service "$sd"/snap.console-conf.*.service \
+                 "$sd"/cloud-init*.service "$sd"/cloud-config*.service; do
+            [ -f "$f" ] && ln -sf /dev/null "$INST_MASK_DIR/$(basename "$f")" 2>/dev/null || true
+        done
+    done
+
+    rm -f "$INSTALLER_SQUASHFS"
+    mksquashfs "$INST_ROOT" "$INSTALLER_SQUASHFS" \
+        -comp xz -noappend -b 1M -no-progress
+    rm -rf "$INST_ROOT"
+    log "Installer squashfs maskelendi ve yeniden paketlendi"
+fi
+
+# ── Ana Squashfs Aç ───────────────────────────────────────────────────────────
+step "Ana Squashfs Açılıyor (~5-10 dk)"
 unsquashfs -d "$SQUASHFS_ROOT" "$SQUASHFS_FILE"
 log "Squashfs açıldı: $(du -sh "$SQUASHFS_ROOT" | cut -f1)"
 
@@ -278,7 +331,7 @@ set timeout=3
 set default=0
 
 menuentry "OXware Hypervisor Installer" {
-    linux   $VMLINUZ_PATH boot=casper quiet console=tty1 net.ifnames=0 biosdevname=0 ---
+    linux   $VMLINUZ_PATH boot=casper quiet loglevel=0 console=tty1 net.ifnames=0 biosdevname=0 systemd.show_status=false ---
     initrd  $INITRD_PATH
 }
 
