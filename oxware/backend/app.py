@@ -1380,6 +1380,14 @@ def api_start_console(vm_id):
                 f"0.0.0.0:{ws_port}",
                 f"127.0.0.1:{vnc_port}",
             ]
+            # SSL aktifse websockify'a da aynı cert ver → wss:// (HTTPS mixed-content yok)
+            use_ssl = (
+                config.SSL_ENABLED
+                and os.path.exists(config.SSL_CERT)
+                and os.path.exists(config.SSL_KEY)
+            )
+            if use_ssl:
+                cmd += ["--cert", config.SSL_CERT, "--key", config.SSL_KEY, "--ssl-only"]
             subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         threading.Thread(target=_start, daemon=True).start()
 
