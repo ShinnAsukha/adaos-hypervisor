@@ -687,20 +687,34 @@ def do_install(progress_cb):
     Path(f"{TARGET_MOUNT}/boot/efi").mkdir(parents=True, exist_ok=True)
     run(f"mount {blk(2)} {TARGET_MOUNT}/boot/efi")
 
-    progress_cb(15, "Waiting for network …")
-    # Ensure a network interface is up. Try dhclient on any ethernet-like iface.
-    _net_ready = False
-    for _iface in ("eth0", "ens33", "ens3", "enp0s3", "enp3s0", "ens160"):
-        _r = subprocess.run(f"ip link show {_iface} 2>/dev/null", shell=True,
-                            capture_output=True)
-        if _r.returncode == 0:
-            subprocess.run(f"ip link set {_iface} up", shell=True, check=False)
-            subprocess.run(f"dhclient -v {_iface}", shell=True, check=False,
-                           timeout=30)
-            break
-    # Wait up to 20 s for default route / DNS
+    progress_cb(15, "Ağ yapılandırılıyor …")
     import time as _time
-    for _i in range(20):
+
+    # 1. Already connected? (live env may have auto-configured)
+    _already = subprocess.run(
+        "curl -sf --max-time 4 http://archive.ubuntu.com/ubuntu/dists/jammy/Release -o /dev/null",
+        shell=True, capture_output=True)
+
+    if _already.returncode != 0:
+        # 2. Find ALL physical ethernet interfaces (exclude lo, wl*, vir*, docker*, br*)
+        _ifaces_raw = subprocess.run(
+            "ip -o link show | awk -F': ' '{print $2}' | grep -Ev '^(lo|wl|vir|docker|br|veth|dummy)'",
+            shell=True, capture_output=True, text=True)
+        _ifaces = [i.strip() for i in _ifaces_raw.stdout.splitlines() if i.strip()]
+
+        for _iface in _ifaces:
+            subprocess.run(f"ip link set {_iface} up", shell=True, check=False)
+            subprocess.run(f"dhclient -v {_iface}", shell=True, check=False, timeout=30)
+            # Quick check after each iface
+            _chk = subprocess.run(
+                "curl -sf --max-time 4 http://archive.ubuntu.com/ubuntu/dists/jammy/Release -o /dev/null",
+                shell=True, capture_output=True)
+            if _chk.returncode == 0:
+                break
+
+    # 3. Final connectivity check — wait up to 30 s
+    _net_ready = False
+    for _i in range(30):
         _ping = subprocess.run(
             "curl -sf --max-time 3 http://archive.ubuntu.com/ubuntu/dists/jammy/Release -o /dev/null",
             shell=True, capture_output=True)
@@ -708,11 +722,12 @@ def do_install(progress_cb):
             _net_ready = True
             break
         _time.sleep(1)
+
     if not _net_ready:
         raise RuntimeError(
             "İnternet bağlantısı kurulamadı.\n"
-            "Lütfen VM ağ bağdaştırıcısının NAT/Bridged modunda olduğunu ve\n"
-            "DHCP'nin çalıştığını doğrulayın, sonra yeniden deneyin."
+            "VM ağ bağdaştırıcısını NAT veya Bridged moduna alıp\n"
+            "yeniden deneyin. (VMware: VM → Settings → Network Adapter → NAT)"
         )
 
     progress_cb(16, "Running debootstrap (this may take several minutes) …")
