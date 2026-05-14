@@ -292,14 +292,14 @@ setup_python() {
     else
         # Temel bağımlılıklar
         pip install -q \
-            flask flask-jwt-extended flask-socketio flask-sock \
+            flask flask-jwt-extended flask-socketio \
             eventlet libvirt-python \
             cryptography paramiko \
             psutil requests
     fi
 
     # Kritik ek paketler — requirements.txt güncel olmasa bile garantile
-    pip install cryptography libvirt-python flask-sock -q
+    pip install cryptography libvirt-python -q
     deactivate
     log "Python ortamı hazır: $VENV_DIR"
 }
@@ -561,7 +561,7 @@ source "\${VENV_DIR}/bin/activate"
 if [ -f "\${APP_DIR}/backend/requirements.txt" ]; then
     pip install -r "\${APP_DIR}/backend/requirements.txt" -q
 fi
-pip install cryptography flask-sock -q
+pip install cryptography -q
 deactivate
 
 echo -e "\${CYAN}[i]\${NC} OXware başlatılıyor..."

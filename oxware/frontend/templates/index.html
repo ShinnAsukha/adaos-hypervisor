@@ -201,16 +201,33 @@
     .chart-container{height:130px;position:relative}
 
     /* ── VM Detail ── */
-    .vm-detail-hdr{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
-    .vm-detail-hdr h2{font-size:15px;font-weight:700;color:var(--accent-lt)}
-    .vm-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
-    .vm-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:12px 14px;border-left:3px solid var(--accent)}
-    .vm-stat-card.green{border-left-color:var(--green-lt)}
-    .vm-stat-card.yellow{border-left-color:var(--yellow-lt)}
-    .vm-stat-card.red{border-left-color:var(--red-lt)}
-    .vm-stat-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);margin-bottom:5px}
-    .vm-stat-value{font-size:20px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.1}
-    .vm-stat-sub{font-size:11px;color:var(--text-muted);margin-top:3px}
+    /* ── VM Detail Header ── */
+    .vm-detail-hdr{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px}
+    .vm-detail-hdr-left{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
+    .vm-icon{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(0,212,255,.05));border:1px solid rgba(0,212,255,.25);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+    .vm-detail-hdr h2{font-size:16px;font-weight:700;color:var(--text);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .vm-detail-hdr-meta{font-size:11px;color:var(--text-muted);margin-top:2px}
+    .vd-action-group{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+    .vd-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-weight:500;cursor:pointer;transition:all .12s;white-space:nowrap}
+    .vd-btn:hover{background:var(--surface3);border-color:var(--border2)}
+    .vd-btn.success{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.35);color:#4ade80}
+    .vd-btn.success:hover{background:rgba(34,197,94,.2)}
+    .vd-btn.danger{background:rgba(248,81,73,.1);border-color:rgba(248,81,73,.35);color:#f87171}
+    .vd-btn.danger:hover{background:rgba(248,81,73,.18)}
+    .vd-btn.primary{background:rgba(0,212,255,.12);border-color:rgba(0,212,255,.35);color:var(--accent-lt)}
+    .vd-btn.primary:hover{background:rgba(0,212,255,.2)}
+    /* ── VM Stat Cards ── */
+    .vm-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+    .vm-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;position:relative;overflow:hidden;transition:border-color .15s}
+    .vm-stat-card::before{content:"";position:absolute;top:0;left:0;width:100%;height:3px;background:var(--accent);opacity:.5}
+    .vm-stat-card.green::before{background:var(--green-lt)}
+    .vm-stat-card.yellow::before{background:var(--yellow-lt)}
+    .vm-stat-card.red::before{background:var(--red-lt)}
+    .vm-stat-card:hover{border-color:var(--border2)}
+    .vm-stat-icon{font-size:18px;margin-bottom:6px;display:block}
+    .vm-stat-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim);margin-bottom:4px}
+    .vm-stat-value{font-size:22px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.1}
+    .vm-stat-sub{font-size:11px;color:var(--text-muted);margin-top:4px}
 
     /* ── Section header ── */
     .section-header{display:flex;align-items:flex-start;margin-bottom:12px;gap:10px}
@@ -279,10 +296,12 @@
     .sub-tab.active{color:var(--accent-lt);border-bottom-color:var(--accent)}
     .sub-tab:hover{color:var(--text)}
     /* ── Hardware Tuning Panel ── */
-    .hw-section{border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:12px;background:var(--surface2)}
-    .hw-section-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px}
-    .hw-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
-    .hw-label{width:170px;font-size:11px;color:var(--text-muted);flex-shrink:0}
+    .hw-section{border:1px solid var(--border);border-radius:8px;margin-bottom:10px;background:var(--surface);overflow:hidden}
+    .hw-section-title{font-size:12px;font-weight:700;color:var(--text);padding:11px 16px;display:flex;align-items:center;gap:8px;background:var(--surface2);border-bottom:1px solid var(--border)}
+    .hw-section-body{padding:14px 16px}
+    .hw-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+    .hw-row:last-child{margin-bottom:0}
+    .hw-label{width:180px;font-size:11px;color:var(--text-muted);flex-shrink:0;font-weight:500}
     .hw-ctrl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1}
     .hw-input{background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:4px 8px;font-size:12px}
     .hw-input:focus{outline:none;border-color:var(--accent)}
@@ -921,33 +940,47 @@
 
         <!-- ─────── VM Detail Page ─────── -->
         <div class="page" id="page-vm-detail">
+
+          <!-- Header card -->
           <div class="vm-detail-hdr">
-            <h2>VM '<span id="vd-name">—</span>'</h2>
-            <span id="vd-state-badge"></span>
-            <div class="spacer"></div>
-            <div class="action-btns" id="vd-actions"></div>
+            <div class="vm-detail-hdr-left">
+              <div class="vm-icon">🖥️</div>
+              <div>
+                <h2 id="vd-name">—</h2>
+                <div class="vm-detail-hdr-meta">
+                  <span id="vd-state-badge"></span>
+                  <span id="vd-uptime" style="margin-left:10px;opacity:.7"></span>
+                </div>
+              </div>
+            </div>
+            <div class="vd-action-group" id="vd-actions"></div>
           </div>
 
+          <!-- Stat cards -->
           <div class="vm-stat-grid">
             <div class="vm-stat-card green">
+              <span class="vm-stat-icon">⚡</span>
               <div class="vm-stat-label">Durum</div>
               <div class="vm-stat-value" id="vd-state">—</div>
-              <div class="vm-stat-sub" id="vd-uptime">—</div>
+              <div class="vm-stat-sub">VM durumu</div>
             </div>
             <div class="vm-stat-card">
+              <span class="vm-stat-icon">🔲</span>
               <div class="vm-stat-label">CPU</div>
               <div class="vm-stat-value" id="vd-cpu">—</div>
-              <div class="vm-stat-sub">vCPU</div>
+              <div class="vm-stat-sub">vCPU çekirdeği</div>
             </div>
             <div class="vm-stat-card yellow">
+              <span class="vm-stat-icon">🧠</span>
               <div class="vm-stat-label">Bellek</div>
               <div class="vm-stat-value" id="vd-mem">—</div>
-              <div class="vm-stat-sub">MB</div>
+              <div class="vm-stat-sub">MB RAM</div>
             </div>
             <div class="vm-stat-card">
+              <span class="vm-stat-icon">💾</span>
               <div class="vm-stat-label">Disk</div>
               <div class="vm-stat-value" id="vd-disk">—</div>
-              <div class="vm-stat-sub" id="vd-disk-sub">GB</div>
+              <div class="vm-stat-sub" id="vd-disk-sub">GB toplam</div>
             </div>
           </div>
 
@@ -962,36 +995,38 @@
             <!-- CPU -->
             <div class="hw-section">
               <div class="hw-section-title">⚙️ İşlemci (CPU)</div>
-              <div class="hw-row">
-                <div class="hw-label">vCPU Sayısı</div>
-                <div class="hw-ctrl">
-                  <input type="number" id="hw-vcpu-count" min="1" max="128" value="1" style="width:70px" class="hw-input">
-                  <span id="hw-vcpu-max" style="font-size:11px;color:var(--text-muted)">/ max —</span>
-                  <button class="btn-sm" onclick="hwApplyVcpu()" title="Uygula (VM çalışıyorsa canlı)">▶ Uygula</button>
-                  <span class="hw-live-badge">⚡ Live</span>
+              <div class="hw-section-body">
+                <div class="hw-row">
+                  <div class="hw-label">vCPU Sayısı</div>
+                  <div class="hw-ctrl">
+                    <input type="number" id="hw-vcpu-count" min="1" max="128" value="1" style="width:70px" class="hw-input">
+                    <span id="hw-vcpu-max" style="font-size:11px;color:var(--text-muted)">/ max —</span>
+                    <button class="btn-sm" onclick="hwApplyVcpu()">▶ Uygula</button>
+                    <span class="hw-live-badge">⚡ Live</span>
+                  </div>
                 </div>
-              </div>
-              <div class="hw-row">
-                <div class="hw-label">CPU Modu</div>
-                <div class="hw-ctrl">
-                  <select id="hw-cpu-mode" class="hw-input" style="width:180px">
-                    <option value="host-passthrough">host-passthrough (önerilen)</option>
-                    <option value="host-model">host-model</option>
-                    <option value="custom">custom (emüle)</option>
-                  </select>
-                  <button class="btn-sm" onclick="hwApplyCpuMode()">▶ Uygula</button>
-                  <span class="hw-restart-badge">🔄 Restart</span>
+                <div class="hw-row">
+                  <div class="hw-label">CPU Modu</div>
+                  <div class="hw-ctrl">
+                    <select id="hw-cpu-mode" class="hw-input" style="width:190px">
+                      <option value="host-passthrough">host-passthrough (önerilen)</option>
+                      <option value="host-model">host-model</option>
+                      <option value="custom">custom (emüle)</option>
+                    </select>
+                    <button class="btn-sm" onclick="hwApplyCpuMode()">▶ Uygula</button>
+                    <span class="hw-restart-badge">🔄 Restart</span>
+                  </div>
                 </div>
-              </div>
-              <div class="hw-row">
-                <div class="hw-label">Nested Virtualization</div>
-                <div class="hw-ctrl">
-                  <label class="hw-toggle">
-                    <input type="checkbox" id="hw-nested-virt" onchange="hwApplyNestedVirt(this.checked)">
-                    <span class="hw-toggle-slider"></span>
-                  </label>
-                  <span style="font-size:11px;color:var(--text-muted);margin-left:8px">VM içinde KVM çalıştır (vmx/svm)</span>
-                  <span class="hw-restart-badge">🔄 Restart</span>
+                <div class="hw-row">
+                  <div class="hw-label">Nested Virtualization</div>
+                  <div class="hw-ctrl">
+                    <label class="hw-toggle">
+                      <input type="checkbox" id="hw-nested-virt" onchange="hwApplyNestedVirt(this.checked)">
+                      <span class="hw-toggle-slider"></span>
+                    </label>
+                    <span style="font-size:11px;color:var(--text-muted)">VM içinde KVM çalıştır (vmx/svm)</span>
+                    <span class="hw-restart-badge">🔄 Restart</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -999,23 +1034,26 @@
             <!-- RAM -->
             <div class="hw-section">
               <div class="hw-section-title">🧠 Bellek (RAM)</div>
-              <div class="hw-row">
-                <div class="hw-label">Mevcut RAM</div>
-                <div class="hw-ctrl">
-                  <input type="number" id="hw-mem-mb" min="128" step="256" value="1024" style="width:90px" class="hw-input">
-                  <span style="font-size:11px;color:var(--text-muted)">MB &nbsp;/ max <span id="hw-mem-max">—</span> MB</span>
-                  <button class="btn-sm" onclick="hwApplyMemory()">▶ Uygula</button>
-                  <span class="hw-live-badge">⚡ Live (balloon)</span>
+              <div class="hw-section-body">
+                <div class="hw-row">
+                  <div class="hw-label">Mevcut RAM</div>
+                  <div class="hw-ctrl">
+                    <input type="number" id="hw-mem-mb" min="128" step="256" value="1024" style="width:90px" class="hw-input">
+                    <span style="font-size:11px;color:var(--text-muted)">MB &nbsp;/ max <span id="hw-mem-max">—</span> MB</span>
+                    <button class="btn-sm" onclick="hwApplyMemory()">▶ Uygula</button>
+                    <span class="hw-live-badge">⚡ Live (balloon)</span>
+                  </div>
                 </div>
               </div>
             </div>
 
             <!-- Disks -->
             <div class="hw-section">
-              <div class="hw-section-title">💾 Diskler
-                <button class="btn-sm" style="margin-left:10px" onclick="hwOpenAddDisk()">+ Disk Ekle</button>
+              <div class="hw-section-title">
+                💾 Diskler
+                <button class="btn-sm" style="margin-left:auto" onclick="hwOpenAddDisk()">+ Disk Ekle</button>
               </div>
-              <div class="table-wrap">
+              <div class="table-wrap" style="margin:0;border-radius:0">
                 <table>
                   <thead><tr><th>Aygıt</th><th>Yol</th><th>Bus</th><th>Format</th><th>İşlem</th></tr></thead>
                   <tbody id="hw-disk-tbody"></tbody>
@@ -1025,10 +1063,11 @@
 
             <!-- NICs -->
             <div class="hw-section">
-              <div class="hw-section-title">🌐 Ağ Arayüzleri
-                <button class="btn-sm" style="margin-left:10px" onclick="hwOpenAddNic()">+ NIC Ekle</button>
+              <div class="hw-section-title">
+                🌐 Ağ Arayüzleri
+                <button class="btn-sm" style="margin-left:auto" onclick="hwOpenAddNic()">+ NIC Ekle</button>
               </div>
-              <div class="table-wrap">
+              <div class="table-wrap" style="margin:0;border-radius:0">
                 <table>
                   <thead><tr><th>MAC</th><th>Ağ</th><th>Model</th><th>İşlem</th></tr></thead>
                   <tbody id="hw-nic-tbody"></tbody>
@@ -5088,16 +5127,16 @@ async function loadVMDetail(vmId) {
     document.getElementById("vd-disk").textContent = totalDisk.toFixed(1);
     document.getElementById("vd-disk-sub").textContent = `GB · ${(v.disks || []).length} disk`;
 
-    // Actions
+    // Actions — yeni vd-btn tasarımı
     let actHtml = "";
     if (v.state !== "running") {
-      actHtml += `<button class="btn sm success" onclick="vmAction('${v.id}','start')">▶ Başlat</button>`;
+      actHtml += `<button class="vd-btn success" onclick="vmAction('${v.id}','start')">▶ Başlat</button>`;
     } else {
-      actHtml += `<button class="btn sm danger" onclick="vmForceStop('${v.id}')">⏻ Zorla Durdur</button>`;
-      actHtml += `<button class="btn sm" onclick="vmAction('${v.id}','reboot')">↺ Yeniden Başlat</button>`;
-      actHtml += `<button class="btn sm" onclick="openConsole('${v.id}')">▣ Konsol</button>`;
+      actHtml += `<button class="vd-btn primary" onclick="openConsole('${v.id}')">▣ Konsol</button>`;
+      actHtml += `<button class="vd-btn" onclick="vmAction('${v.id}','reboot')">↺ Yeniden Başlat</button>`;
+      actHtml += `<button class="vd-btn danger" onclick="vmForceStop('${v.id}')">⏻ Zorla Durdur</button>`;
     }
-    actHtml += `<button class="btn sm danger" onclick="deleteVM('${v.id}','${escHtml(v.name)}')">✕ Sil</button>`;
+    actHtml += `<button class="vd-btn danger" onclick="deleteVM('${v.id}','${escHtml(v.name)}')">✕ Sil</button>`;
     document.getElementById("vd-actions").innerHTML = actHtml;
 
     // Load hardware tuning panel
