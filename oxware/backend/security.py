@@ -115,27 +115,33 @@ def rate_limit_middleware(app):
 def security_headers_middleware(app):
     @app.after_request
     def add_headers(response):
+        # /console/ ve /novnc/ sayfaları iframe embed gerektiriyor — frame kısıtlaması uygulanmaz
+        path = request.path
+        is_console_path = path.startswith("/console/") or path.startswith("/novnc/")
+
         response.headers["X-Content-Type-Options"]    = "nosniff"
-        response.headers["X-Frame-Options"]           = "DENY"
+        response.headers["X-Frame-Options"]           = "SAMEORIGIN" if is_console_path else "DENY"
         response.headers["X-XSS-Protection"]          = "1; mode=block"
         response.headers["Referrer-Policy"]           = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"]        = "geolocation=(), camera=(), microphone=()"
-        response.headers["Cache-Control"]             = "no-store, no-cache, must-revalidate"
-        response.headers["Pragma"]                    = "no-cache"
+        if not is_console_path:
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+            response.headers["Pragma"]        = "no-cache"
 
         # HSTS (yalnızca HTTPS'de)
         if request.is_secure:
             response.headers["Strict-Transport-Security"] = \
                 "max-age=31536000; includeSubDomains; preload"
 
-        # CSP — inline script'lere izin ver (gerekli), harici kaynakları kısıtla
+        # CSP — console/novnc için frame-ancestors 'self', diğerleri için 'none'
+        frame_ancestors = "'self'" if is_console_path else "'none'"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
             "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data:; "
+            "img-src 'self' data: blob:; "
             "connect-src 'self' wss: ws:; "
-            "frame-ancestors 'none';"
+            f"frame-ancestors {frame_ancestors};"
         )
         return response
 
