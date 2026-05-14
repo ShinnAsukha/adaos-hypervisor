@@ -5488,12 +5488,12 @@ async function vmForceStop(id) {
 async function openConsole(id) {
   try {
     toast("Konsol başlatılıyor...", "info");
-    const startResp = await api(`/vms/${id}/console/start`, { method: "POST" });
+    await api(`/vms/${id}/console/start`, { method: "POST" });
     const info = await api(`/vms/${id}/console`);
     const host = info.host || location.hostname;
     const wsPort = info.websocket_port || 6080;
-    // Websockify HTTP üzerinden noVNC serve ediyor — yeni pencerede aç
-    const novncUrl = `http://${host}:${wsPort}/vnc.html?autoconnect=1&resize=scale&reconnect=1`;
+    // Fragment (#) kullan — server görmez, noVNC okur, websockify 404/405 yapmaz
+    const novncUrl = `http://${host}:${wsPort}/vnc.html#host=${host}&port=${wsPort}&autoconnect=1&resize=scale`;
     setTimeout(() => window.open(novncUrl, "_blank", "width=1100,height=800"), 800);
   } catch (e) { toast(e.message, "error"); }
 }
