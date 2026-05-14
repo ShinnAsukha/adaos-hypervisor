@@ -6048,7 +6048,12 @@ function shellConnect() {
     try { _shellSocket.disconnect(); } catch(e) {}
   }
 
-  _shellSocket = io({ transports: ["websocket"], reconnection: false });
+  _shellSocket = io({
+    transports: ["polling", "websocket"],  // polling önce — daha güvenilir bağlantı
+    reconnection: false,
+    timeout: 30000,                        // 30s timeout (build sırasında sunucu yavaş)
+    upgrade: true,                         // polling'den WS'e upgrade dene
+  });
 
   _shellSocket.on("connect", () => {
     _shellConnected = true;
