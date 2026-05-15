@@ -396,13 +396,13 @@
     /* Card */
     .card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px 16px}
     .card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--accent-lt);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
-    .app-install-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:6px}
-    .app-install-card{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px 12px;border-radius:10px;border:2px solid var(--border);background:var(--surface2);cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s;text-align:center;min-height:90px;justify-content:center}
+    .app-install-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px}
+    .app-install-card{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 8px 10px;border-radius:10px;border:2px solid var(--border);background:var(--surface2);cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s;text-align:center;min-height:86px;justify-content:center;box-sizing:border-box;overflow:hidden}
     .app-install-card:hover{border-color:var(--accent);background:var(--surface3);box-shadow:0 2px 10px rgba(56,189,248,.12)}
     .app-install-card.selected{border-color:var(--accent-lt);background:rgba(56,189,248,.1);box-shadow:0 0 0 1px rgba(56,189,248,.25)}
-    .app-install-icon{font-size:26px;line-height:1;margin-bottom:2px}
-    .app-install-name{font-size:12px;font-weight:700;color:var(--text);line-height:1.2}
-    .app-install-desc{font-size:10px;color:var(--text-muted);line-height:1.4;margin-top:1px}
+    .app-install-icon{font-size:24px;line-height:1;margin-bottom:2px;flex-shrink:0}
+    .app-install-name{font-size:11px;font-weight:700;color:var(--text);line-height:1.2;word-break:break-word}
+    .app-install-desc{font-size:9.5px;color:var(--text-muted);line-height:1.3;margin-top:1px;word-break:break-word}
     .app-section-label{margin:14px 0 8px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:5px}
     .app-section-label i{font-size:12px}
 
@@ -636,7 +636,7 @@
       .tb-actions .tb-action span[data-i18n]{display:none!important}
       #oxy-btn>span:last-of-type{display:none}
       /* app-install grid */
-      .app-install-grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))!important}
+      .app-install-grid{grid-template-columns:repeat(2,1fr)!important}
     }
 
     /* ── 600px: çok küçük ekran ── */
@@ -6502,10 +6502,21 @@ function renderTopology(data) {
   const mkText = (txt, x, y) => { const e = mkEl("text", { x, y, "text-anchor": "middle", "font-size": "11", fill: "#c8d6e8" }); e.textContent = txt; return e; };
   const mkLine = (x1, y1, x2, y2, color = "#1e2d45") => mkEl("line", { x1, y1, x2, y2, stroke: color, "stroke-width": "1.5", "marker-end": "url(#arrow)" });
 
-  function mkNode(x, y, r, fill, stroke, filter, label, sub, clickData) {
+  function mkNode(x, y, r, fill, stroke, filter, label, sub, clickData, icon) {
     const g = mkEl("g", { style: "cursor:pointer" });
+    // Outer glow ring
+    g.appendChild(mkEl("circle", { cx: x, cy: y, r: r + 3, fill: "none", stroke: stroke, "stroke-width": "1", opacity: "0.25" }));
+    // Main circle
     g.appendChild(mkEl("circle", { cx: x, cy: y, r, fill, stroke, "stroke-width": "2", filter: filter ? `url(#${filter})` : "" }));
-    g.appendChild(mkText(label, x, y + r + 14));
+    // Icon inside circle
+    if (icon) {
+      const ic = mkEl("text", { x, y: y + 1, "text-anchor": "middle", "dominant-baseline": "central",
+        "font-size": Math.max(12, Math.floor(r * 0.72)), style: "user-select:none;pointer-events:none" });
+      ic.textContent = icon;
+      g.appendChild(ic);
+    }
+    // Label below
+    g.appendChild(mkText(label, x, y + r + 15));
     if (sub) { const s = mkText(sub, x, y + r + 27); s.setAttribute("font-size", "10"); s.setAttribute("fill", "#5a7494"); g.appendChild(s); }
     g.addEventListener("click", e => { e.stopPropagation(); showTopoDetail(clickData); });
     return g;
@@ -6513,7 +6524,7 @@ function renderTopology(data) {
 
   const hostLabel = (data.name || "oxware").slice(0, 18);
   const hostSub = `CPU ${(data.cpu_pct || 0).toFixed(0)}% · RAM ${(data.ram_pct || 0).toFixed(0)}%`;
-  root.appendChild(mkNode(HOST_X, HOST_Y, 38, "#0d1d3a", "#3d82f0", "glow-blue", hostLabel, hostSub, { type: "hypervisor", data }));
+  root.appendChild(mkNode(HOST_X, HOST_Y, 38, "#0d1d3a", "#3d82f0", "glow-blue", hostLabel, hostSub, { type: "hypervisor", data }, "🖥"));
 
   networks.forEach((net, ni) => {
     const nx = NET_START_X + ni * NET_SPACING;
@@ -6521,7 +6532,7 @@ function renderTopology(data) {
     const netFill = netActive ? "#0a3020" : "#141c2c";
     const netStroke = netActive ? "#22c55e" : "#5a7494";
     root.insertBefore(mkLine(HOST_X, HOST_Y + 38, nx, NET_Y - 28, netActive ? "#22c55e" : "#1e2d45"), root.firstChild);
-    root.appendChild(mkNode(nx, NET_Y, 28, netFill, netStroke, netActive ? "glow-green" : "", (net.name || "net").slice(0, 14), net.gateway || "", { type: "network", data: net }));
+    root.appendChild(mkNode(nx, NET_Y, 28, netFill, netStroke, netActive ? "glow-green" : "", (net.name || "net").slice(0, 14), net.gateway || "", { type: "network", data: net }, "🔗"));
 
     const vms = net.vms || [];
     const vmSpacing = 140;
@@ -6531,8 +6542,9 @@ function renderTopology(data) {
       const vmActive = vm.state === "running", vmPaused = vm.state === "paused";
       const vmFill = vmActive ? "#0a3020" : vmPaused ? "#2d2000" : "#141c2c";
       const vmStroke = vmActive ? "#22c55e" : vmPaused ? "#eab308" : "#ef4444";
+      const vmIcon = vmActive ? "💻" : vmPaused ? "⏸" : "⏹";
       root.insertBefore(mkLine(nx, NET_Y + 28, vx, VM_Y - 22, vmStroke), root.firstChild);
-      root.appendChild(mkNode(vx, VM_Y, 22, vmFill, vmStroke, vmActive ? "glow-green" : "", (vm.name || "vm").slice(0, 12), vm.ip || "", { type: "vm", data: vm }));
+      root.appendChild(mkNode(vx, VM_Y, 22, vmFill, vmStroke, vmActive ? "glow-green" : "", (vm.name || "vm").slice(0, 12), vm.ip || "", { type: "vm", data: vm }, vmIcon));
     });
   });
 }
