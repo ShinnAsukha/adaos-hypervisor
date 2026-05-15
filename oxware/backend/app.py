@@ -106,39 +106,89 @@ CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 jwt     = JWTManager(app)
 sock    = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet", logger=False)
 
-# ── VNC WebSocket proxy via eventlet.websocket (same port 8006, same SSL cert) ──
-# flask-sock incompatible with eventlet WSGI — use eventlet's native WebSocket.
-# Must be set up AFTER SocketIO so we wrap the full SocketIO middleware.
-import eventlet.websocket as _evws
+# ── VNC WebSocket proxy — manual RFC 6455 (binary-safe, no eventlet.websocket) ──
+# eventlet.websocket.ws.send(bytes) fails for binary VNC frames → replaced with
+# raw socket framing so binary data passes through correctly.
 import socket as _raw_sk, struct as _struct, hashlib as _hashlib, base64 as _b64
 from urllib.parse import unquote as _unquote
+import eventlet as _ev_vnc
 
-@_evws.WebSocketWSGI
-def _vnc_ws_handler(ws):
-    """eventlet WebSocket → VNC TCP proxy. noVNC connects via wss://host:8006/ws/vnc/<id>?token=JWT"""
-    import eventlet as _ev
-    environ = ws.environ
-    path = environ.get("PATH_INFO", "")
-    qs   = environ.get("QUERY_STRING", "")
+def _ws_build_frame(data: bytes) -> bytes:
+    """RFC 6455 binary frame (opcode 0x82, server→client, unmasked)."""
+    n = len(data)
+    if n < 126:
+        hdr = bytes([0x82, n])
+    elif n < 65536:
+        hdr = bytes([0x82, 126]) + _struct.pack(">H", n)
+    else:
+        hdr = bytes([0x82, 127]) + _struct.pack(">Q", n)
+    return hdr + data
 
-    parts  = path.strip("/").split("/")            # ['ws','vnc','<vm_id>']
-    vm_id  = parts[2] if len(parts) > 2 else ""
-    token  = ""
+def _ws_recvall(sock, n):
+    """Recv exactly n bytes; return None on EOF/error."""
+    buf = b""
+    while len(buf) < n:
+        try:
+            chunk = sock.recv(n - len(buf))
+        except Exception:
+            return None
+        if not chunk:
+            return None
+        buf += chunk
+    return buf
+
+def _ws_recv_frame(sock):
+    """Read one RFC 6455 frame. Returns (opcode, payload) or (None, None)."""
+    hdr = _ws_recvall(sock, 2)
+    if not hdr:
+        return None, None
+    opcode = hdr[0] & 0x0F
+    masked = bool(hdr[1] & 0x80)
+    length = hdr[1] & 0x7F
+    if length == 126:
+        b = _ws_recvall(sock, 2)
+        if not b: return None, None
+        length = _struct.unpack(">H", b)[0]
+    elif length == 127:
+        b = _ws_recvall(sock, 8)
+        if not b: return None, None
+        length = _struct.unpack(">Q", b)[0]
+    mask_key = _ws_recvall(sock, 4) if masked else b""
+    if mask_key is None: return None, None
+    payload  = _ws_recvall(sock, length) if length else b""
+    if payload is None: return None, None
+    if masked:
+        payload = bytes(b ^ mask_key[i & 3] for i, b in enumerate(payload))
+    return opcode, payload
+
+_socketio_wsgi = app.wsgi_app
+
+def _vnc_ws_middleware(environ, start_response):
+    if not environ.get("PATH_INFO", "").startswith("/ws/vnc/"):
+        return _socketio_wsgi(environ, start_response)
+
+    path  = environ.get("PATH_INFO", "")
+    qs    = environ.get("QUERY_STRING", "")
+    parts = path.strip("/").split("/")           # ['ws','vnc','<vm_id>']
+    vm_id = parts[2] if len(parts) > 2 else ""
+
+    token = ""
     for p in qs.split("&"):
         if p.startswith("token="):
             token = _unquote(p[6:])
             break
 
-    # Auth
+    # ── Auth ──
     try:
         with app.app_context():
             from flask_jwt_extended import decode_token
             decode_token(token)
     except Exception as _e:
         log.warning("VNC WS: auth failed vm=%s: %s", vm_id, _e)
-        return
+        start_response("401 Unauthorized", [("Content-Type", "text/plain")])
+        return [b"Unauthorized"]
 
-    # VNC port — query libvirt XML directly (stored vnc_port may be stale/absent)
+    # ── VNC port from libvirt XML ──
     try:
         import libvirt as _lv_vnc
         import xml.etree.ElementTree as _ET_vnc
@@ -151,56 +201,99 @@ def _vnc_ws_handler(ws):
         vnc_port = int(_vnc_el.get("port", -1)) if _vnc_el is not None else -1
         if vnc_port < 5900:
             log.warning("VNC WS: no VNC port for vm=%s (port=%d)", vm_id, vnc_port)
-            return
+            start_response("503 Service Unavailable", [("Content-Type", "text/plain")])
+            return [b"VNC not available"]
     except Exception as _e:
         log.warning("VNC WS: libvirt lookup failed vm=%s: %s", vm_id, _e)
-        return
+        start_response("503 Service Unavailable", [("Content-Type", "text/plain")])
+        return [b"VM not found"]
 
-    # TCP → VNC
+    # ── TCP connect to QEMU VNC ──
     try:
         tcp = _raw_sk.create_connection(("127.0.0.1", vnc_port), timeout=5)
-    except Exception as e:
-        log.warning("VNC WS: TCP connect failed vm=%s port=%d: %s", vm_id, vnc_port, e)
-        return
+    except Exception as _e:
+        log.warning("VNC WS: TCP connect failed vm=%s port=%d: %s", vm_id, vnc_port, _e)
+        start_response("503 Service Unavailable", [("Content-Type", "text/plain")])
+        return [b"VNC connect failed"]
+
+    # ── RFC 6455 handshake — write directly to raw socket ──
+    ws_key = environ.get("HTTP_SEC_WEBSOCKET_KEY", "")
+    accept = _b64.b64encode(
+        _hashlib.sha1((ws_key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode()).digest()
+    ).decode()
+    handshake = (
+        "HTTP/1.1 101 Switching Protocols\r\n"
+        "Upgrade: websocket\r\n"
+        "Connection: Upgrade\r\n"
+        f"Sec-WebSocket-Accept: {accept}\r\n"
+        "\r\n"
+    ).encode()
+
+    # Dig out the raw socket from eventlet's WSGI input wrapper
+    _wi = environ.get("wsgi.input")
+    raw_sock = None
+    for _attr_chain in [("raw", "_sock"), ("_sock",), ()]:
+        try:
+            _obj = _wi
+            for _a in _attr_chain:
+                _obj = getattr(_obj, _a)
+            if hasattr(_obj, "sendall"):
+                raw_sock = _obj
+                break
+        except AttributeError:
+            continue
+    if raw_sock is None:
+        log.error("VNC WS: cannot get raw socket from environ vm=%s", vm_id)
+        try: tcp.close()
+        except Exception: pass
+        start_response("500 Internal Server Error", [("Content-Type", "text/plain")])
+        return [b"Internal error"]
+
+    try:
+        raw_sock.sendall(handshake)
+    except Exception as _e:
+        log.warning("VNC WS: handshake failed vm=%s: %s", vm_id, _e)
+        try: tcp.close()
+        except Exception: pass
+        return []
 
     log.info("VNC WS proxy: vm=%s port=%d", vm_id, vnc_port)
 
+    # ── VNC → WebSocket (greenlet) ──
     def _vnc_to_ws():
         try:
             while True:
                 data = tcp.recv(65536)
                 if not data:
                     break
-                ws.send(data)
+                raw_sock.sendall(_ws_build_frame(data))
         except Exception:
             pass
         finally:
-            try: ws.close()
+            try: tcp.close()
+            except Exception: pass
+            try: raw_sock.sendall(bytes([0x88, 0x00]))   # WS close frame
             except Exception: pass
 
-    _ev.spawn(_vnc_to_ws)
+    _ev_vnc.spawn(_vnc_to_ws)
 
+    # ── WebSocket → VNC (this greenlet) ──
     try:
         while True:
-            data = ws.wait()
-            if data is None:
+            opcode, payload = _ws_recv_frame(raw_sock)
+            if opcode is None:
                 break
-            if isinstance(data, str):
-                data = data.encode("latin-1")
-            tcp.sendall(data)
+            if opcode == 0x8:          # close frame
+                break
+            if opcode in (0x1, 0x2) and payload:
+                tcp.sendall(payload)
     except Exception:
         pass
     finally:
         try: tcp.close()
         except Exception: pass
 
-# Wrap WSGI stack: /ws/vnc/* → eventlet WebSocket handler, rest → SocketIO/Flask
-_socketio_wsgi = app.wsgi_app
-
-def _vnc_ws_middleware(environ, start_response):
-    if environ.get("PATH_INFO", "").startswith("/ws/vnc/"):
-        return _vnc_ws_handler(environ, start_response)
-    return _socketio_wsgi(environ, start_response)
+    return []
 
 app.wsgi_app = _vnc_ws_middleware
 
