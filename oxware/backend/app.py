@@ -110,9 +110,10 @@ sock    = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet", logger=
 # @_evws.WebSocketWSGI fails in eventlet 0.35.x (returns 400, handler not called).
 # Manual handshake: write 101 directly to raw socket, then trampoline for reads.
 import socket as _raw_sk, struct as _struct, hashlib as _hashlib, base64 as _b64
-import select as _select_mod, time as _time_mod
+import time as _time_mod
 from urllib.parse import unquote as _unquote
 import eventlet as _ev_vnc
+import eventlet.green.select as _egreen_select   # cooperative select — hub yields properly
 
 def _ws_build_frame(data: bytes) -> bytes:
     """RFC 6455 binary frame (opcode 0x82, server→client, unmasked)."""
@@ -162,7 +163,9 @@ def _ws_recvall(sock, n):
         # ── Step 2: if no buffered SSL data, wait for the fd via select ───
         if pending == 0 and fd is not None:
             try:
-                r, _, _ = _select_mod.select([fd], [], [], min(remaining, 5.0))
+                # _egreen_select = eventlet.green.select → cooperative, yields to hub
+                # (plain select.select would block the OS thread and starve other greenlets)
+                r, _, _ = _egreen_select.select([fd], [], [], min(remaining, 5.0))
                 if not r:
                     # select timed out in 5-s slice; loop and recheck deadline
                     continue
