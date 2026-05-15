@@ -239,11 +239,16 @@ def _vnc_ws_middleware(environ, start_response):
     accept = _b64.b64encode(
         _hashlib.sha1((ws_key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode()).digest()
     ).decode()
+    # Echo Sec-WebSocket-Protocol: binary — noVNC requires this to enable
+    # arraybuffer binary mode; without it ws.protocol == '' and binary frames break
+    ws_proto = environ.get("HTTP_SEC_WEBSOCKET_PROTOCOL", "")
+    proto_line = f"Sec-WebSocket-Protocol: binary\r\n" if "binary" in ws_proto else ""
     handshake = (
         "HTTP/1.1 101 Switching Protocols\r\n"
         "Upgrade: websocket\r\n"
         "Connection: Upgrade\r\n"
         f"Sec-WebSocket-Accept: {accept}\r\n"
+        f"{proto_line}"
         "\r\n"
     ).encode()
 
@@ -288,13 +293,18 @@ def _vnc_ws_middleware(environ, start_response):
 
     # ── VNC → WebSocket (greenlet) ──
     def _vnc_to_ws():
+        pkt = 0
         try:
             while True:
                 data = tcp.recv(65536)
                 if not data:
+                    log.info("VNC WS: VNC closed connection vm=%s after %d pkts", vm_id, pkt)
                     break
+                pkt += 1
+                if pkt <= 5:
+                    log.info("VNC WS: vnc→ws pkt#%d len=%d first=%r vm=%s",
+                             pkt, len(data), data[:16], vm_id)
                 raw_sock.sendall(_ws_build_frame(data))
-                log.debug("VNC WS: vnc→ws %d bytes vm=%s", len(data), vm_id)
         except Exception as _e:
             log.warning("VNC WS: vnc→ws err vm=%s: %s", vm_id, _e)
         finally:
