@@ -169,7 +169,7 @@ function hideLoading() {
       throw new Error("Konsol başlatılamadı: " + t);
     }
     const startData = await startResp.json();
-    if (!startData.success) {
+    if (startData.status !== "ok") {
       throw new Error(startData.error || "Konsol başlatılamadı");
     }
     const wsPort = startData.ws_port;
