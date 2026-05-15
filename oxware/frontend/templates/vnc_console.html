@@ -154,6 +154,39 @@ function hideLoading() {
   } catch (_) {}
 })();
 
+// ── WebSocket debug interceptor — logs all WS events to console ──────────────
+(function() {
+  const _OrigWS = window.WebSocket;
+  window.WebSocket = function(url, protocols) {
+    const ws = new _OrigWS(url, protocols);
+    console.log('[WS] created url=' + url + ' protocols=' + JSON.stringify(protocols));
+    ws.addEventListener('open',    ()  => console.log('[WS] open  protocol=' + ws.protocol + ' binaryType=' + ws.binaryType));
+    ws.addEventListener('close',   (e) => console.log('[WS] close code=' + e.code + ' reason=' + e.reason + ' clean=' + e.wasClean));
+    ws.addEventListener('error',   ()  => console.error('[WS] error'));
+    ws.addEventListener('message', (e) => {
+      const info = e.data instanceof ArrayBuffer
+        ? e.data.byteLength + 'B binary first=' + Array.from(new Uint8Array(e.data).slice(0,6)).map(b=>b.toString(16).padStart(2,'0')).join(' ')
+        : '"' + String(e.data).slice(0,32) + '"';
+      console.log('[WS] message ' + info);
+    });
+    const _origSend = ws.send.bind(ws);
+    ws.send = function(data) {
+      const info = data instanceof ArrayBuffer || ArrayBuffer.isView(data)
+        ? (data.byteLength ?? data.buffer.byteLength) + 'B binary'
+        : '"' + String(data).slice(0, 32) + '"';
+      console.log('[WS] send ' + info);
+      return _origSend(data);
+    };
+    Object.defineProperty(ws, 'binaryType', {
+      get() { return this._binaryType || 'blob'; },
+      set(v) { this._binaryType = v; ws.__proto__.__lookupSetter__('binaryType').call(ws, v); }
+    });
+    return ws;
+  };
+  window.WebSocket.prototype = _OrigWS.prototype;
+  Object.assign(window.WebSocket, _OrigWS);
+})();
+
 // Main: connect noVNC via Flask WS proxy on same port (8006) — same cert, no TLS issues
 (async () => {
   try {
