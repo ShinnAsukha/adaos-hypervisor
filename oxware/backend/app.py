@@ -229,25 +229,35 @@ def _vnc_ws_middleware(environ, start_response):
         "\r\n"
     ).encode()
 
-    # Dig out the raw socket from eventlet's WSGI input wrapper
-    _wi = environ.get("wsgi.input")
+    # Get raw socket via eventlet's official API (works for both plain + SSL)
     raw_sock = None
-    for _attr_chain in [("raw", "_sock"), ("_sock",), ()]:
+    _ei = environ.get("eventlet.input")
+    if _ei is not None and hasattr(_ei, "get_socket"):
         try:
-            _obj = _wi
-            for _a in _attr_chain:
-                _obj = getattr(_obj, _a)
-            if hasattr(_obj, "sendall"):
-                raw_sock = _obj
-                break
-        except AttributeError:
-            continue
+            raw_sock = _ei.get_socket()
+        except Exception as _e:
+            log.warning("VNC WS: get_socket() failed vm=%s: %s", vm_id, _e)
+    # fallback: walk wsgi.input attribute chain
     if raw_sock is None:
-        log.error("VNC WS: cannot get raw socket from environ vm=%s", vm_id)
+        _wi = environ.get("wsgi.input")
+        for _chain in [("raw", "_sock"), ("_sock",), ("raw",)]:
+            try:
+                _obj = _wi
+                for _a in _chain:
+                    _obj = getattr(_obj, _a)
+                if hasattr(_obj, "sendall"):
+                    raw_sock = _obj
+                    break
+            except AttributeError:
+                continue
+    if raw_sock is None:
+        log.error("VNC WS: cannot get raw socket from environ vm=%s (keys=%s)",
+                  vm_id, list(environ.keys()))
         try: tcp.close()
         except Exception: pass
         start_response("500 Internal Server Error", [("Content-Type", "text/plain")])
         return [b"Internal error"]
+    log.info("VNC WS: got socket %s vm=%s", type(raw_sock).__name__, vm_id)
 
     try:
         raw_sock.sendall(handshake)
