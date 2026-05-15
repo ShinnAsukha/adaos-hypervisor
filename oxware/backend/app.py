@@ -106,14 +106,13 @@ CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 jwt     = JWTManager(app)
 sock    = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet", logger=False)
 
-# ── VNC WebSocket proxy ────────────────────────────────────────────────────────
-# Strategy: eventlet.websocket.WebSocketWSGI handles the HTTP→WS upgrade
-# (correct handshake, Sec-WebSocket-Accept, etc.), then we use ws.sock directly
-# for raw binary frame relay — bypassing ws.send/ws.wait which mangle binary data.
-import eventlet.websocket as _evws
-import socket as _raw_sk, struct as _struct
+# ── VNC WebSocket proxy — manual RFC 6455 + eventlet trampoline ───────────────
+# @_evws.WebSocketWSGI fails in eventlet 0.35.x (returns 400, handler not called).
+# Manual handshake: write 101 directly to raw socket, then trampoline for reads.
+import socket as _raw_sk, struct as _struct, hashlib as _hashlib, base64 as _b64
 from urllib.parse import unquote as _unquote
 import eventlet as _ev_vnc
+import eventlet.hubs as _ev_hubs
 
 def _ws_build_frame(data: bytes) -> bytes:
     """RFC 6455 binary frame (opcode 0x82, server→client, unmasked)."""
@@ -127,16 +126,21 @@ def _ws_build_frame(data: bytes) -> bytes:
     return hdr + data
 
 def _ws_recvall(sock, n):
-    """Recv exactly n bytes from socket; None on EOF/error."""
+    """Recv exactly n bytes; cooperative wait via trampoline before each recv."""
     buf = b""
     while len(buf) < n:
         try:
+            _ev_hubs.trampoline(sock, read=True, timeout=60)
+        except Exception as _te:
+            log.warning("VNC WS: trampoline err (%s): %s", type(_te).__name__, _te)
+            return None
+        try:
             chunk = sock.recv(n - len(buf))
         except Exception as _e:
-            log.warning("VNC WS: recvall err (%s): %s", type(_e).__name__, _e)
+            log.warning("VNC WS: recv err (%s): %s", type(_e).__name__, _e)
             return None
         if not chunk:
-            log.warning("VNC WS: recvall EOF (got %d of %d)", len(buf), n)
+            log.warning("VNC WS: recv EOF (got %d of %d bytes)", len(buf), n)
             return None
         buf += chunk
     return buf
@@ -165,14 +169,19 @@ def _ws_recv_frame(sock):
         payload = bytes(b ^ mask_key[i & 3] for i, b in enumerate(payload))
     return opcode, payload
 
-@_evws.WebSocketWSGI
-def _vnc_ws_handler(ws):
-    """eventlet WebSocket upgrade → VNC TCP proxy via raw ws.sock frame relay."""
-    environ = ws.environ
-    path  = environ.get("PATH_INFO", "")
+_socketio_wsgi = app.wsgi_app
+
+def _vnc_ws_middleware(environ, start_response):
+    path = environ.get("PATH_INFO", "")
+    if not path.startswith("/ws/vnc/"):
+        return _socketio_wsgi(environ, start_response)
+
     qs    = environ.get("QUERY_STRING", "")
-    parts = path.strip("/").split("/")        # ['ws','vnc','<vm_id>']
+    parts = path.strip("/").split("/")           # ['ws','vnc','<vm_id>']
     vm_id = parts[2] if len(parts) > 2 else ""
+    ws_key = environ.get("HTTP_SEC_WEBSOCKET_KEY", "")
+    log.info("VNC WS: request vm=%s upgrade=%s key=%s",
+             vm_id, environ.get("HTTP_UPGRADE", "NONE"), ws_key[:8] or "MISSING")
 
     token = ""
     for p in qs.split("&"):
@@ -187,7 +196,8 @@ def _vnc_ws_handler(ws):
             decode_token(token)
     except Exception as _e:
         log.warning("VNC WS: auth failed vm=%s: %s", vm_id, _e)
-        return
+        start_response("401 Unauthorized", [("Content-Type", "text/plain")])
+        return [b"Unauthorized"]
 
     # ── VNC port from libvirt XML ──
     try:
@@ -201,23 +211,79 @@ def _vnc_ws_handler(ws):
         _vnc_el = _root.find(".//graphics[@type='vnc']")
         vnc_port = int(_vnc_el.get("port", -1)) if _vnc_el is not None else -1
         if vnc_port < 5900:
-            log.warning("VNC WS: no VNC port for vm=%s (port=%d)", vm_id, vnc_port)
-            return
+            log.warning("VNC WS: no VNC port vm=%s port=%d", vm_id, vnc_port)
+            start_response("503 Service Unavailable", [("Content-Type", "text/plain")])
+            return [b"VNC not available"]
     except Exception as _e:
-        log.warning("VNC WS: libvirt lookup failed vm=%s: %s", vm_id, _e)
-        return
+        log.warning("VNC WS: libvirt failed vm=%s: %s", vm_id, _e)
+        start_response("503 Service Unavailable", [("Content-Type", "text/plain")])
+        return [b"VM not found"]
 
     # ── TCP connect to QEMU VNC ──
     try:
         tcp = _raw_sk.create_connection(("127.0.0.1", vnc_port), timeout=5)
     except Exception as _e:
-        log.warning("VNC WS: TCP connect failed vm=%s port=%d: %s", vm_id, vnc_port, _e)
-        return
+        log.warning("VNC WS: TCP failed vm=%s port=%d: %s", vm_id, vnc_port, _e)
+        start_response("503 Service Unavailable", [("Content-Type", "text/plain")])
+        return [b"VNC connect failed"]
 
-    # ws.sock = the actual GreenSSLSocket after upgrade — use it directly for
-    # binary frame relay instead of ws.send/ws.wait (which mangle binary data).
-    raw_sock = ws.sock
-    log.info("VNC WS proxy: vm=%s port=%d sock=%s", vm_id, vnc_port, type(raw_sock).__name__)
+    # ── RFC 6455 handshake — write directly to raw SSL socket ──
+    if not ws_key:
+        log.error("VNC WS: missing Sec-WebSocket-Key vm=%s", vm_id)
+        try: tcp.close()
+        except Exception: pass
+        start_response("400 Bad Request", [("Content-Type", "text/plain")])
+        return [b"Missing WebSocket key"]
+
+    accept = _b64.b64encode(
+        _hashlib.sha1((ws_key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode()).digest()
+    ).decode()
+    handshake = (
+        "HTTP/1.1 101 Switching Protocols\r\n"
+        "Upgrade: websocket\r\n"
+        "Connection: Upgrade\r\n"
+        f"Sec-WebSocket-Accept: {accept}\r\n"
+        "\r\n"
+    ).encode()
+
+    # Get raw socket via eventlet API
+    _ei = environ.get("eventlet.input")
+    raw_sock = None
+    if _ei is not None and hasattr(_ei, "get_socket"):
+        try:
+            raw_sock = _ei.get_socket()
+        except Exception as _e:
+            log.warning("VNC WS: get_socket() failed: %s", _e)
+    if raw_sock is None:
+        _wi = environ.get("wsgi.input")
+        for _chain in [("raw", "_sock"), ("_sock",), ("raw",)]:
+            try:
+                _o = _wi
+                for _a in _chain: _o = getattr(_o, _a)
+                if hasattr(_o, "sendall"):
+                    raw_sock = _o
+                    break
+            except AttributeError:
+                continue
+    if raw_sock is None:
+        log.error("VNC WS: cannot get raw socket vm=%s environ_keys=%s",
+                  vm_id, [k for k in environ if not k.startswith("wsgi.")])
+        try: tcp.close()
+        except Exception: pass
+        start_response("500 Internal Server Error", [("Content-Type", "text/plain")])
+        return [b"Internal error"]
+
+    log.info("VNC WS: socket=%s vm=%s", type(raw_sock).__name__, vm_id)
+
+    try:
+        raw_sock.sendall(handshake)
+    except Exception as _e:
+        log.warning("VNC WS: handshake send failed vm=%s: %s", vm_id, _e)
+        try: tcp.close()
+        except Exception: pass
+        return []
+
+    log.info("VNC WS proxy: vm=%s port=%d", vm_id, vnc_port)
 
     # ── VNC → WebSocket (greenlet) ──
     def _vnc_to_ws():
@@ -227,44 +293,39 @@ def _vnc_ws_handler(ws):
                 if not data:
                     break
                 raw_sock.sendall(_ws_build_frame(data))
+                log.debug("VNC WS: vnc→ws %d bytes vm=%s", len(data), vm_id)
         except Exception as _e:
-            log.warning("VNC WS: vnc→ws error vm=%s: %s", vm_id, _e)
+            log.warning("VNC WS: vnc→ws err vm=%s: %s", vm_id, _e)
         finally:
             try: tcp.close()
             except Exception: pass
-            try: raw_sock.sendall(bytes([0x88, 0x00]))  # WS close frame
+            try: raw_sock.sendall(bytes([0x88, 0x00]))
             except Exception: pass
 
     _ev_vnc.spawn(_vnc_to_ws)
 
-    # ── WebSocket → VNC (this greenlet) ──
+    # ── WebSocket → VNC (this greenlet, trampoline-based recv) ──
     first = True
     try:
         while True:
             opcode, payload = _ws_recv_frame(raw_sock)
             if opcode is None:
-                log.warning("VNC WS: recv returned None (disconnect) vm=%s", vm_id)
                 break
             if first:
                 log.info("VNC WS: first frame op=0x%02x len=%d vm=%s",
                          opcode, len(payload) if payload else 0, vm_id)
                 first = False
-            if opcode == 0x8:           # close frame
+            if opcode == 0x8:
                 break
             if opcode in (0x1, 0x2) and payload:
                 tcp.sendall(payload)
     except Exception as _e:
-        log.warning("VNC WS: ws→vnc error vm=%s: %s", vm_id, _e)
+        log.warning("VNC WS: ws→vnc err vm=%s: %s", vm_id, _e)
     finally:
         try: tcp.close()
         except Exception: pass
 
-_socketio_wsgi = app.wsgi_app
-
-def _vnc_ws_middleware(environ, start_response):
-    if environ.get("PATH_INFO", "").startswith("/ws/vnc/"):
-        return _vnc_ws_handler(environ, start_response)
-    return _socketio_wsgi(environ, start_response)
+    return []
 
 app.wsgi_app = _vnc_ws_middleware
 
