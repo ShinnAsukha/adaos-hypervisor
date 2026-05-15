@@ -178,8 +178,12 @@ update_mode() {
     # Python bağımlılıkları
     if [ -f "${VENV_DIR}/bin/activate" ]; then
         source "${VENV_DIR}/bin/activate"
-        pip install -r "${APP_DIR}/backend/requirements.txt" -q 2>/dev/null || true
-        pip install cryptography -q 2>/dev/null || true
+        if [ -f "${APP_DIR}/backend/requirements.txt" ]; then
+            _REQ_TMP=$(mktemp)
+            grep -viE "^libvirt-python" "${APP_DIR}/backend/requirements.txt" > "$_REQ_TMP"
+            pip install -r "$_REQ_TMP" -q 2>/dev/null || true
+            rm -f "$_REQ_TMP"
+        fi
         deactivate
         log "Python bağımlılıkları güncellendi"
     fi
@@ -282,24 +286,34 @@ EOF
 # ── Python Ortamı ─────────────────────────────────────────────
 setup_python() {
     step "Python Sanal Ortamı"
-    python3 -m venv "$VENV_DIR"
+    # --system-site-packages: venv python3-libvirt apt paketini görür
+    python3 -m venv "$VENV_DIR" --system-site-packages
     source "${VENV_DIR}/bin/activate"
-    pip install --upgrade pip -q
+    pip install --upgrade pip setuptools wheel -q
 
-    # requirements.txt'ten kur
     if [ -f "${APP_DIR}/backend/requirements.txt" ]; then
-        pip install -r "${APP_DIR}/backend/requirements.txt" -q
+        # libvirt-python pip ile derlenmez Ubuntu <24.04'te — sistem paketini kullan
+        _REQ_TMP=$(mktemp)
+        grep -viE "^libvirt-python" "${APP_DIR}/backend/requirements.txt" > "$_REQ_TMP"
+        log "Python bağımlılıkları yükleniyor..."
+        pip install -r "$_REQ_TMP" 2>&1 | grep -E "ERROR|error|Could not" | head -20 || true
+        pip install -r "$_REQ_TMP" --quiet && log "requirements.txt kuruldu" \
+            || warn "Bazı paketler kurulamadı — servis yine de deneniyor"
+        rm -f "$_REQ_TMP"
     else
-        # Temel bağımlılıklar
-        pip install -q \
-            flask flask-jwt-extended flask-socketio \
-            eventlet libvirt-python \
-            cryptography paramiko \
-            psutil requests
+        warn "requirements.txt bulunamadı — temel paketler kuruluyor"
+        pip install flask flask-jwt-extended flask-socketio flask-cors \
+                    eventlet cryptography paramiko psutil requests \
+                    python-dotenv -q
     fi
 
-    # Kritik ek paketler — requirements.txt güncel olmasa bile garantile
-    pip install cryptography libvirt-python -q
+    # libvirt Python binding kontrolü
+    if python3 -c "import libvirt" 2>/dev/null; then
+        log "libvirt Python modülü: OK"
+    else
+        warn "libvirt Python modülü bulunamadı — 'apt install python3-libvirt' gerekebilir"
+    fi
+
     deactivate
     log "Python ortamı hazır: $VENV_DIR"
 }
@@ -559,9 +573,11 @@ fi
 echo -e "\${CYAN}[i]\${NC} Python bağımlılıkları güncelleniyor..."
 source "\${VENV_DIR}/bin/activate"
 if [ -f "\${APP_DIR}/backend/requirements.txt" ]; then
-    pip install -r "\${APP_DIR}/backend/requirements.txt" -q
+    _REQ_TMP=\$(mktemp)
+    grep -viE "^libvirt-python" "\${APP_DIR}/backend/requirements.txt" > "\$_REQ_TMP"
+    pip install -r "\$_REQ_TMP" -q 2>/dev/null || true
+    rm -f "\$_REQ_TMP"
 fi
-pip install cryptography -q
 deactivate
 
 echo -e "\${CYAN}[i]\${NC} OXware başlatılıyor..."
@@ -675,12 +691,16 @@ start_services() {
     systemctl restart libvirtd
     sleep 2
     systemctl start oxware
-    sleep 4
+    sleep 5
 
     if systemctl is-active --quiet oxware; then
         log "OXware servisi çalışıyor"
     else
-        warn "OXware başlatılamadı — kontrol: journalctl -u oxware -n 30"
+        warn "OXware başlatılamadı — son hatalar:"
+        journalctl -u oxware -n 20 --no-pager 2>/dev/null || true
+        echo ""
+        warn "Manuel başlatmak için: systemctl start oxware"
+        warn "Log için: journalctl -u oxware -n 50 --no-pager"
     fi
 }
 
