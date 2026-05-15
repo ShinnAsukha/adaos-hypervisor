@@ -286,19 +286,40 @@ EOF
 # ── Python Ortamı ─────────────────────────────────────────────
 setup_python() {
     step "Python Sanal Ortamı"
-    # --system-site-packages: venv python3-libvirt apt paketini görür
-    python3 -m venv "$VENV_DIR" --system-site-packages
-    source "${VENV_DIR}/bin/activate"
+
+    # Ubuntu 22.04+ için versiyonlu python3.X-venv paketi gerekli
+    PYVER=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "")
+    if [ -n "$PYVER" ]; then
+        apt-get install -y -qq "python3.${PYVER}-venv" 2>/dev/null || true
+    fi
+    apt-get install -y -qq python3-venv python3-full 2>/dev/null || true
+
+    # Temiz venv oluştur — önceki başarısız deneme varsa sil
+    rm -rf "$VENV_DIR"
+    if ! python3 -m venv "$VENV_DIR" --system-site-packages 2>/dev/null; then
+        warn "venv --system-site-packages başarısız — system-packages olmadan deneniyor"
+        python3 -m venv "$VENV_DIR" \
+            || { warn "venv oluşturulamadı — kurulum pip olmadan devam edecek"; return; }
+    fi
+
+    # shellcheck disable=SC1091
+    source "${VENV_DIR}/bin/activate" \
+        || { warn "venv activate başarısız — $VENV_DIR kontrol et"; return; }
+
     pip install --upgrade pip setuptools wheel -q
 
     if [ -f "${APP_DIR}/backend/requirements.txt" ]; then
-        # libvirt-python pip ile derlenmez Ubuntu <24.04'te — sistem paketini kullan
+        # libvirt-python: apt paketi kullan (pip derlemesi Ubuntu <24.04'te bozuk)
+        # blinker: sistem distutils paketi varsa pip uninstall yapamaz — filtrele
         _REQ_TMP=$(mktemp)
-        grep -viE "^libvirt-python" "${APP_DIR}/backend/requirements.txt" > "$_REQ_TMP"
+        grep -viE "^(libvirt-python|blinker)" "${APP_DIR}/backend/requirements.txt" > "$_REQ_TMP"
         log "Python bağımlılıkları yükleniyor..."
-        pip install -r "$_REQ_TMP" 2>&1 | grep -E "ERROR|error|Could not" | head -20 || true
-        pip install -r "$_REQ_TMP" --quiet && log "requirements.txt kuruldu" \
-            || warn "Bazı paketler kurulamadı — servis yine de deneniyor"
+        if ! pip install -r "$_REQ_TMP" --quiet 2>&1; then
+            warn "İlk deneme başarısız — --ignore-installed ile yeniden deneniyor"
+            pip install -r "$_REQ_TMP" --quiet --ignore-installed 2>&1 \
+                | grep -E "^ERROR|Cannot" | head -10 || true
+        fi
+        log "requirements.txt kuruldu"
         rm -f "$_REQ_TMP"
     else
         warn "requirements.txt bulunamadı — temel paketler kuruluyor"
@@ -671,17 +692,21 @@ install_suricata() {
         fi
     fi
 
-    # Kural güncellemesi
-    suricata-update 2>/dev/null || true
+    # Kural güncellemesi — suricata -T (kural doğrulama) ağır makinede asılı kalabilir
+    # timeout 180s ile güvenli çalıştır
+    log "Suricata kuralları güncelleniyor (max 3 dakika)..."
+    timeout 180 suricata-update 2>/dev/null \
+        && log "Suricata kuralları güncellendi" \
+        || warn "suricata-update tamamlanamadı — atlanıyor (sonradan: suricata-update)"
 
-    # Servisi etkinleştir
+    # Servisi etkinleştir ama başlatmayı timeout ile sınırla
     systemctl enable suricata 2>/dev/null || true
-    systemctl start suricata 2>/dev/null || true
+    timeout 30 systemctl start suricata 2>/dev/null || true
 
     if systemctl is-active --quiet suricata; then
         log "Suricata IDS/IPS çalışıyor"
     else
-        warn "Suricata başlatılamadı — ox --logs ile kontrol edin"
+        warn "Suricata başlatılamadı — sonradan başlatmak için: systemctl start suricata"
     fi
 }
 
