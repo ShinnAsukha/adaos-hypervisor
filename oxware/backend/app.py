@@ -1455,52 +1455,59 @@ def api_vm_console(vm_id):
 @require_auth
 def api_start_console(vm_id):
     """
-    Start websockify for noVNC.
-    Security (CVE-2022-35508): websockify binds to 127.0.0.1 only.
-    Returns a short-lived session token — frontend must pass ?token=<t> to noVNC.
+    Start websockify for noVNC. VNC port queried live from libvirt XML.
+    Websockify binds 0.0.0.0:ws_port (6080). noVNC connects there directly.
     """
     try:
-        vm = vm_manager.get_vm(vm_id)
-        vnc_port = vm.get("vnc_port", -1)
-        if vnc_port < 0:
-            return err("VNC portu bulunamadı")
-        ws_port = config.WS_PORT
-        client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1").split(",")[0].strip()
-        def _start():
-            # Eski websockify'ı öldür (port çakışması önle)
-            subprocess.run(["pkill", "-f", f"websockify.*{ws_port}"],
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            import time as _t; _t.sleep(0.5)
-            # --web YOK: noVNC dosyaları Flask /novnc/ route'undan serve edilir
-            # Websockify sadece WS proxy olarak çalışır
-            cmd = [
-                "websockify",
-                f"0.0.0.0:{ws_port}",
-                f"127.0.0.1:{vnc_port}",
-            ]
-            # SSL aktifse websockify'a da aynı cert ver → wss:// (HTTPS mixed-content yok)
-            use_ssl = (
-                config.SSL_ENABLED
-                and os.path.exists(config.SSL_CERT)
-                and os.path.exists(config.SSL_KEY)
-            )
-            if use_ssl:
-                cmd += ["--cert", config.SSL_CERT, "--key", config.SSL_KEY, "--ssl-only"]
-            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        threading.Thread(target=_start, daemon=True).start()
+        # ── VNC port: query libvirt XML (stored vnc_port may be absent/stale) ──
+        import libvirt as _lv_cs
+        import xml.etree.ElementTree as _ET_cs
+        _conn = _lv_cs.open(config.LIBVIRT_URI)
+        _dom  = _conn.lookupByUUIDString(vm_id)
+        _xml  = _dom.XMLDesc()
+        _conn.close()
+        _root   = _ET_cs.fromstring(_xml)
+        _vnc_el = _root.find(".//graphics[@type='vnc']")
+        vnc_port = int(_vnc_el.get("port", -1)) if _vnc_el is not None else -1
+        if vnc_port < 5900:
+            return err("VM çalışmıyor veya VNC aktif değil (virsh vncdisplay ile kontrol edin)")
 
-        # Generate short-lived noVNC session token
-        _novnc_clean()
-        token = _secrets.token_urlsafe(32)
-        _novnc_sessions[token] = {
-            "vm_id":   vm_id,
-            "ws_port": ws_port,
-            "ip":      client_ip,
-            "expires": time.time() + _NOVNC_TOKEN_TTL,
-        }
-        return ok(vnc_port=vnc_port, ws_port=ws_port, novnc_token=token)
+        ws_port = getattr(config, 'WS_PORT', 6080)
+
+        # ── Kill old websockify on this port, start fresh ──────────────────────
+        subprocess.run(["pkill", "-f", f"websockify.*:{ws_port}"],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(0.4)
+
+        use_ssl = (
+            getattr(config, 'SSL_ENABLED', False)
+            and os.path.exists(getattr(config, 'SSL_CERT', ''))
+            and os.path.exists(getattr(config, 'SSL_KEY', ''))
+        )
+        cmd = ["websockify", f"0.0.0.0:{ws_port}", f"127.0.0.1:{vnc_port}"]
+        if use_ssl:
+            cmd += ["--cert", config.SSL_CERT, "--key", config.SSL_KEY, "--ssl-only"]
+
+        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Wait up to 2s for websockify to be ready
+        import socket as _sk2
+        for _ in range(20):
+            time.sleep(0.1)
+            try:
+                s = _sk2.create_connection(("127.0.0.1", ws_port), timeout=0.1)
+                s.close()
+                break
+            except Exception:
+                pass
+
+        if proc.poll() is not None:
+            return err(f"Websockify başlatılamadı (port={ws_port})")
+
+        log.info("Websockify başlatıldı: vm=%s vnc=%d ws=%d ssl=%s", vm_id, vnc_port, ws_port, use_ssl)
+        return ok(vnc_port=vnc_port, ws_port=ws_port)
     except Exception as e:
-        return err(e, 500)
+        log.exception("console/start hata: vm=%s", vm_id)
+        return err(str(e), 500)
 
 
 @app.route("/api/vms/<vm_id>/console/token", methods=["GET"])
