@@ -5,7 +5,10 @@ import os
 import time
 import json
 import uuid
+import logging
 import config
+
+_log = logging.getLogger("oxware.vm_manager")
 
 LIBVIRT_URI = config.LIBVIRT_URI
 
@@ -176,11 +179,62 @@ def get_vm(vm_id):
         conn.close()
 
 
+def _generate_mac() -> str:
+    """QEMU prefix (52:54:00) ile rastgele MAC üret."""
+    return '52:54:00:{:02x}:{:02x}:{:02x}'.format(*os.urandom(3))
+
+
+def add_dhcp_host(network: str, mac: str, ip: str, hostname: str = "") -> bool:
+    """Libvirt ağına static DHCP kaydı ekle (MAC→IP). dnsmasq anında görür."""
+    host_xml = f'<host mac="{mac}" ip="{ip}"'
+    if hostname:
+        host_xml += f' name="{hostname}"'
+    host_xml += '/>'
+    try:
+        r = subprocess.run(
+            ["virsh", "net-update", network, "add", "ip-dhcp-host",
+             host_xml, "--live", "--config"],
+            capture_output=True, text=True, timeout=10
+        )
+        if r.returncode == 0:
+            _log.info("DHCP host eklendi: %s → %s (%s)", mac, ip, network)
+            return True
+        # Already exists → not an error
+        if "already exists" in r.stderr.lower() or "already" in r.stdout.lower():
+            _log.info("DHCP host zaten mevcut: %s → %s", mac, ip)
+            return True
+        _log.warning("DHCP host eklenemedi: %s", r.stderr.strip())
+        return False
+    except Exception as e:
+        _log.warning("add_dhcp_host hata: %s", e)
+        return False
+
+
+def remove_dhcp_host(network: str, mac: str, ip: str) -> bool:
+    """Libvirt ağından static DHCP kaydını sil."""
+    host_xml = f'<host mac="{mac}" ip="{ip}"/>'
+    try:
+        r = subprocess.run(
+            ["virsh", "net-update", network, "delete", "ip-dhcp-host",
+             host_xml, "--live", "--config"],
+            capture_output=True, text=True, timeout=10
+        )
+        if r.returncode == 0:
+            _log.info("DHCP host silindi: %s → %s (%s)", mac, ip, network)
+            return True
+        _log.warning("DHCP host silinemedi: %s", r.stderr.strip())
+        return False
+    except Exception as e:
+        _log.warning("remove_dhcp_host hata: %s", e)
+        return False
+
+
 def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
               network="default", disk_format="qcow2", os_variant="generic",
-              boot_order="cdrom,hd"):
+              boot_order="cdrom,hd", mac: str = None):
 
-    vm_uuid = str(uuid.uuid4())
+    vm_uuid  = str(uuid.uuid4())
+    vm_mac   = mac or _generate_mac()          # stable MAC for DHCP static entry
     disk_path = os.path.join(config.DISK_DIR, f"{name}.qcow2")
     vnc_port = _next_vnc_port()
 
@@ -246,7 +300,7 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
       <target dev='vda' bus='virtio'/>
     </disk>{iso_block}
     <interface type='network'>
-      <mac address='52:54:00:{":".join([f"{b:02x}" for b in os.urandom(3)])}' />
+      <mac address='{vm_mac}' />
       <source network='{network}'/>
       <model type='virtio'/>
     </interface>
@@ -285,7 +339,7 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
         reg = _load_vnc_registry()
         reg[vm_uuid] = vnc_port
         _save_vnc_registry(reg)
-        return {"id": vm_uuid, "name": name, "vnc_port": vnc_port}
+        return {"id": vm_uuid, "name": name, "vnc_port": vnc_port, "mac": vm_mac}
     finally:
         conn.close()
 

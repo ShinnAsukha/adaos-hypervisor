@@ -190,6 +190,15 @@ def get_vm_ip(vm_id: str) -> str | None:
     return None
 
 
+def get_vm_assignment(vm_id: str) -> dict | None:
+    """VM'e ait tam IP atamasını döndür (ip, mac, network, gateway dahil)."""
+    data = _load()
+    for ip, a in data["assignments"].items():
+        if a.get("vm_id") == vm_id:
+            return {"ip": ip, **a}
+    return None
+
+
 def list_assignments(pool_name: str = None) -> list:
     data = _load()
     result = []

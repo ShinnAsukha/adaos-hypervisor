@@ -1413,10 +1413,29 @@ def api_create_vm():
             pass
 
         result = vm_manager.create_vm(**create_kwargs)
-        ev.vm_event(f"VM oluşturuldu: {name}", result["id"], level="INFO")
+        vm_id  = result["id"]
+        vm_mac = result.get("mac", "")
+
+        # ── Auto IP assignment via libvirt DHCP static entry ──────────────
+        auto_ip   = data.get("auto_ip", False)
+        pool_name = security.sanitize_str(data.get("ip_pool", ""), 64)
+        if auto_ip and pool_name and vm_mac:
+            try:
+                alloc = ip_pool_mgr.allocate_ip(pool_name, vm_id, name, vm_mac)
+                vm_manager.add_dhcp_host(network, vm_mac, alloc["ip"], name)
+                result["assigned_ip"] = alloc["ip"]
+                result["gateway"]     = alloc["gateway"]
+                result["dns"]         = alloc["dns"]
+                result["netmask"]     = alloc["netmask"]
+                ev.vm_event(f"IP atandı: {alloc['ip']} ({pool_name})", vm_id, level="INFO")
+            except Exception as _ip_e:
+                log.warning("Auto IP atama başarısız vm=%s: %s", vm_id, _ip_e)
+                result["auto_ip_error"] = str(_ip_e)
+
+        ev.vm_event(f"VM oluşturuldu: {name}", vm_id, level="INFO")
         if app_install:
-            ev.vm_event(f"App kurulum planlandı: {app_install}", result["id"], level="INFO")
-        if webhook_mgr: webhook_mgr.trigger("vm.created", {"vm_id": result.get("id"), "vm_name": name})
+            ev.vm_event(f"App kurulum planlandı: {app_install}", vm_id, level="INFO")
+        if webhook_mgr: webhook_mgr.trigger("vm.created", {"vm_id": vm_id, "vm_name": name})
         if resource_quota: resource_quota.check_quota(get_jwt_identity(), vcpus, memory_mb)
         resp = dict(result)
         if app_install:
@@ -1432,6 +1451,17 @@ def api_delete_vm(vm_id):
     delete_disk = request.args.get("delete_disk", "true").lower() == "true"
     try:
         vm = vm_manager.get_vm(vm_id)
+        # Remove DHCP static entry before deleting VM
+        try:
+            assignment = ip_pool_mgr.get_vm_assignment(vm_id)
+            if assignment and assignment.get("mac") and assignment.get("ip"):
+                vm_manager.remove_dhcp_host(
+                    assignment.get("network", "default"),
+                    assignment["mac"],
+                    assignment["ip"]
+                )
+        except Exception as _dhcp_e:
+            log.warning("DHCP host silinemedi vm=%s: %s", vm_id, _dhcp_e)
         result = vm_manager.delete_vm(vm_id, delete_disk=delete_disk)
         ip_pool_mgr.release_ip(vm_id)
         ev.vm_event(f"VM silindi: {vm.get('name')}", vm_id, level="WARNING")
