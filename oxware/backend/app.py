@@ -112,7 +112,6 @@ sock    = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet", logger=
 import socket as _raw_sk, struct as _struct, hashlib as _hashlib, base64 as _b64
 from urllib.parse import unquote as _unquote
 import eventlet as _ev_vnc
-import eventlet.hubs as _ev_hubs
 
 def _ws_build_frame(data: bytes) -> bytes:
     """RFC 6455 binary frame (opcode 0x82, server→client, unmasked)."""
@@ -126,14 +125,17 @@ def _ws_build_frame(data: bytes) -> bytes:
     return hdr + data
 
 def _ws_recvall(sock, n):
-    """Recv exactly n bytes; cooperative wait via trampoline before each recv."""
+    """Recv exactly n bytes from GreenSSLSocket.
+
+    DO NOT use trampoline() before recv() on SSL sockets:
+    OpenSSL may have already decrypted data into its internal buffer;
+    the underlying fd then shows no new kernel-level data so trampoline
+    blocks forever even though recv() would return immediately.
+    GreenSSLSocket.recv() handles SSL_WANT_READ / cooperative yielding
+    internally — just call it directly.
+    """
     buf = b""
     while len(buf) < n:
-        try:
-            _ev_hubs.trampoline(sock, read=True, timeout=60)
-        except Exception as _te:
-            log.warning("VNC WS: trampoline err (%s): %s", type(_te).__name__, _te)
-            return None
         try:
             chunk = sock.recv(n - len(buf))
         except Exception as _e:
