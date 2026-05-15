@@ -435,9 +435,10 @@ create_service() {
 [Unit]
 Description=OXware Hypervisor Management Service
 Documentation=https://github.com/ShinnAsukha/oxware-hypervisor
-After=network.target libvirtd.service
-Requires=libvirtd.service
-Wants=network-online.target
+# network-online.target: ağ gerçekten hazır (sadece yapılandırıldı değil)
+# libvirt-guests.service: libvirt hem başladı hem de ağları otomatik açtı
+After=network-online.target libvirtd.service libvirt-guests.service
+Wants=network-online.target libvirtd.service
 
 [Service]
 Type=simple
@@ -447,18 +448,29 @@ WorkingDirectory=${APP_DIR}
 Environment=OXWARE_CONFIG=${CONFIG_DIR}/oxware.conf
 Environment=PYTHONUNBUFFERED=1
 
-ExecStartPre=/bin/bash -c 'mkdir -p ${LOG_DIR} ${DATA_DIR}/{isos,disks,backups,templates}'
-ExecStartPre=/bin/sleep 2
+# Dizinleri oluştur
+ExecStartPre=/bin/bash -c 'mkdir -p ${LOG_DIR} ${DATA_DIR}/{isos,disks,backups,templates} /etc/oxware'
+# libvirtd soketini bekle (reboot sonrası geç hazır olabilir)
+ExecStartPre=/bin/bash -c 'for i in \$(seq 1 15); do virsh list >/dev/null 2>&1 && break; sleep 2; done; true'
+# default ağı başlat (autostart bazen reboot'ta çalışmıyor)
+ExecStartPre=/bin/bash -c 'virsh net-list --all 2>/dev/null | grep -q default && virsh net-start default 2>/dev/null || true'
 ExecStart=${VENV_DIR}/bin/python3 ${APP_DIR}/backend/app.py
 ExecReload=/bin/kill -HUP \$MAINPID
 
-Restart=always
-RestartSec=5
+Restart=on-failure
+RestartSec=10
+StartLimitIntervalSec=120
+StartLimitBurst=5
+TimeoutStartSec=60
 TimeoutStopSec=30
 KillMode=mixed
 StandardOutput=append:${LOG_DIR}/oxware.log
 StandardError=append:${LOG_DIR}/oxware-error.log
 SyslogIdentifier=oxware
+
+# Güvenlik
+NoNewPrivileges=false
+PrivateTmp=false
 
 [Install]
 WantedBy=multi-user.target
