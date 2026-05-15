@@ -114,6 +114,7 @@ import time as _time_mod
 from urllib.parse import unquote as _unquote
 import eventlet as _ev_vnc
 import eventlet.green.select as _egreen_select   # cooperative select — hub yields properly
+import eventlet.green.socket as _egreen_socket   # cooperative socket — tcp.recv() yields hub, not OS-blocks
 
 def _ws_build_frame(data: bytes) -> bytes:
     """RFC 6455 binary frame (opcode 0x82, server→client, unmasked)."""
@@ -265,9 +266,12 @@ def _vnc_ws_middleware(environ, start_response):
         return [b"VM not found"]
 
     # ── TCP connect to QEMU VNC ──
+    # Use eventlet.green.socket — cooperative recv/send, yields to hub instead of
+    # blocking the OS thread.  Plain socket.create_connection() without monkey_patch
+    # would block the entire eventlet hub whenever VNC has no data (idle screen).
     try:
-        tcp = _raw_sk.create_connection(("127.0.0.1", vnc_port), timeout=5)
-        tcp.settimeout(None)   # remove timeout — let eventlet cooperative-wait on recv
+        tcp = _egreen_socket.create_connection(("127.0.0.1", vnc_port), timeout=5)
+        tcp.settimeout(None)   # cooperative blocking — hub yields on recv
     except Exception as _e:
         log.warning("VNC WS: TCP failed vm=%s port=%d: %s", vm_id, vnc_port, _e)
         start_response("503 Service Unavailable", [("Content-Type", "text/plain")])
@@ -379,6 +383,11 @@ def _vnc_ws_middleware(environ, start_response):
         log.warning("VNC WS: ws→vnc err vm=%s: %s (%s)", vm_id, _e, type(_e).__name__)
     finally:
         try: tcp.close()
+        except Exception: pass
+        # Shut down SSL layer cleanly so eventlet WSGI finish() doesn't get SSLEOFError
+        try: raw_sock.shutdown(_raw_sk.SHUT_RDWR)
+        except Exception: pass
+        try: raw_sock.close()
         except Exception: pass
 
     return []
