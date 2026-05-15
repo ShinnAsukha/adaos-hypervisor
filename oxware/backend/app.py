@@ -222,6 +222,7 @@ def _vnc_ws_middleware(environ, start_response):
     # ── TCP connect to QEMU VNC ──
     try:
         tcp = _raw_sk.create_connection(("127.0.0.1", vnc_port), timeout=5)
+        tcp.settimeout(None)   # remove timeout — let eventlet cooperative-wait on recv
     except Exception as _e:
         log.warning("VNC WS: TCP failed vm=%s port=%d: %s", vm_id, vnc_port, _e)
         start_response("503 Service Unavailable", [("Content-Type", "text/plain")])
