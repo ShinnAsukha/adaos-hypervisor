@@ -110,6 +110,7 @@ sock    = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet", logger=
 # @_evws.WebSocketWSGI fails in eventlet 0.35.x (returns 400, handler not called).
 # Manual handshake: write 101 directly to raw socket, then trampoline for reads.
 import socket as _raw_sk, struct as _struct, hashlib as _hashlib, base64 as _b64
+import select as _select_mod, time as _time_mod
 from urllib.parse import unquote as _unquote
 import eventlet as _ev_vnc
 
@@ -124,36 +125,64 @@ def _ws_build_frame(data: bytes) -> bytes:
         hdr = bytes([0x82, 127]) + _struct.pack(">Q", n)
     return hdr + data
 
-_WS_RECV_TIMEOUT = 120  # seconds — generous; noVNC needs time for full RFB handshake
+_WS_RECV_TIMEOUT = 120  # seconds total wait for a complete read
 
 def _ws_recvall(sock, n):
-    """Recv exactly n bytes from the browser SSL socket.
-    Uses sock.settimeout() so GreenSSLSocket's trampoline uses socket-level
-    timeout — more reliable than eventlet.with_timeout wrapping an internal trampoline.
+    """Recv exactly n bytes from the browser SSL/GreenSSLSocket.
+
+    GreenSSLSocket problem: OpenSSL decrypts a TLS record into its internal
+    buffer.  The underlying fd is then NOT readable (TCP buffer empty), so
+    trampoline(fd, read=True) blocks forever even though recv() would succeed
+    immediately.  Fix: check ssl.pending() first (already-decoded bytes in SSL
+    buffer); only call select() if the buffer is empty.  select() is
+    eventlet-patched so it yields cooperatively to the hub.
     """
-    import socket as _sock_mod
-    buf = b""
-    # Apply socket-level timeout so recv doesn't block forever.
+    buf      = b""
+    deadline = _time_mod.time() + _WS_RECV_TIMEOUT
+    fd       = None
     try:
-        sock.settimeout(_WS_RECV_TIMEOUT)
+        fd = sock.fileno()
     except Exception:
         pass
+
     while len(buf) < n:
+        remaining = deadline - _time_mod.time()
+        if remaining <= 0:
+            log.warning("VNC WS: recv TIMEOUT %ds (need=%d have=%d sock=%s)",
+                        _WS_RECV_TIMEOUT, n, len(buf), type(sock).__name__)
+            return None
+
+        # ── Step 1: check SSL-layer buffer ────────────────────────────────
+        pending = 0
+        try:
+            pending = sock.pending()
+        except Exception:
+            pass
+
+        # ── Step 2: if no buffered SSL data, wait for the fd via select ───
+        if pending == 0 and fd is not None:
+            try:
+                r, _, _ = _select_mod.select([fd], [], [], min(remaining, 5.0))
+                if not r:
+                    # select timed out in 5-s slice; loop and recheck deadline
+                    continue
+            except Exception as _se:
+                log.warning("VNC WS: select error (need=%d have=%d): %s", n, len(buf), _se)
+                return None
+
+        # ── Step 3: recv — SSL buffer has data OR fd is readable ──────────
         try:
             chunk = sock.recv(n - len(buf))
-        except (_sock_mod.timeout, TimeoutError, OSError) as _te:
-            log.warning("VNC WS: recv TIMEOUT/ERR %s — browser sent nothing "
-                        "(need=%d have=%d sock=%s)",
-                        _te, n, len(buf), type(sock).__name__)
-            return None
         except Exception as _e:
             log.warning("VNC WS: recv exception (need=%d have=%d): %s (%s)",
                         n, len(buf), _e, type(_e).__name__)
             return None
+
         if not chunk:
             log.warning("VNC WS: recv EOF (got %d of %d bytes)", len(buf), n)
             return None
-        log.debug("VNC WS: recvall got %d bytes (total %d/%d)", len(chunk), len(buf)+len(chunk), n)
+        log.debug("VNC WS: recvall got %d bytes (total %d/%d)",
+                  len(chunk), len(buf) + len(chunk), n)
         buf += chunk
     return buf
 
