@@ -124,23 +124,31 @@ def _ws_build_frame(data: bytes) -> bytes:
         hdr = bytes([0x82, 127]) + _struct.pack(">Q", n)
     return hdr + data
 
-_WS_RECV_TIMEOUT = 30   # seconds browser has to send next frame
+_WS_RECV_TIMEOUT = 120  # seconds — generous; noVNC needs time for full RFB handshake
 
 def _ws_recvall(sock, n):
-    """Recv exactly n bytes from GreenSSLSocket.
-    Uses eventlet.with_timeout (NOT 'with Timeout()' context manager —
-    the context-manager form suppresses the exception via __exit__).
+    """Recv exactly n bytes from the browser SSL socket.
+    Uses sock.settimeout() so GreenSSLSocket's trampoline uses socket-level
+    timeout — more reliable than eventlet.with_timeout wrapping an internal trampoline.
     """
+    import socket as _sock_mod
     buf = b""
+    # Apply socket-level timeout so recv doesn't block forever.
+    try:
+        sock.settimeout(_WS_RECV_TIMEOUT)
+    except Exception:
+        pass
     while len(buf) < n:
-        chunk = _ev_vnc.with_timeout(
-            _WS_RECV_TIMEOUT, sock.recv, n - len(buf),
-            timeout_value=None
-        )
-        if chunk is None:
-            log.warning("VNC WS: recv TIMEOUT %ds — browser sent nothing "
+        try:
+            chunk = sock.recv(n - len(buf))
+        except (_sock_mod.timeout, TimeoutError, OSError) as _te:
+            log.warning("VNC WS: recv TIMEOUT/ERR %s — browser sent nothing "
                         "(need=%d have=%d sock=%s)",
-                        _WS_RECV_TIMEOUT, n, len(buf), type(sock).__name__)
+                        _te, n, len(buf), type(sock).__name__)
+            return None
+        except Exception as _e:
+            log.warning("VNC WS: recv exception (need=%d have=%d): %s (%s)",
+                        n, len(buf), _e, type(_e).__name__)
             return None
         if not chunk:
             log.warning("VNC WS: recv EOF (got %d of %d bytes)", len(buf), n)

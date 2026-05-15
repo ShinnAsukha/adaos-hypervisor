@@ -177,10 +177,8 @@ function hideLoading() {
       console.log('[WS] send ' + info);
       return _origSend(data);
     };
-    Object.defineProperty(ws, 'binaryType', {
-      get() { return this._binaryType || 'blob'; },
-      set(v) { this._binaryType = v; ws.__proto__.__lookupSetter__('binaryType').call(ws, v); }
-    });
+    // NOTE: binaryType must NOT be overridden — noVNC sets it to 'arraybuffer'
+    // and any broken setter causes RFB parsing failure (gets Blob instead of ArrayBuffer).
     return ws;
   };
   window.WebSocket.prototype = _OrigWS.prototype;
