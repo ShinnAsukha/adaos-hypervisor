@@ -4760,35 +4760,81 @@ def api_all_metadata():
 @app.route("/api/vms/<vm_id>/cdrom", methods=["PUT"])
 @require_auth
 def api_vm_cdrom(vm_id):
-    d = request.get_json() or {}
-    eject = d.get("eject", False)
-    iso_path = d.get("iso_path", "")
+    import libvirt as _lv_cd
+    import xml.etree.ElementTree as _ET_cd
 
-    # VM'deki CD-ROM cihaz adını bul
-    device = d.get("device", "hdc")  # varsayılan
+    d        = request.get_json() or {}
+    eject    = d.get("eject", False)
+    iso_path = d.get("iso_path", "")
+    device   = d.get("device", "")   # target dev name e.g. sdb, hdc
 
     try:
+        _conn = _lv_cd.open(config.LIBVIRT_URI)
+        _dom  = _conn.lookupByUUIDString(vm_id)
+        _xml  = _dom.XMLDesc()
+        _conn.close()
+
+        # Find the CDROM disk element in domain XML
+        _root = _ET_cd.fromstring(_xml)
+        _cdrom_el = None
+        for _disk in _root.findall(".//disk[@device='cdrom']"):
+            _tgt = _disk.find("target")
+            if _tgt is None:
+                continue
+            if not device or _tgt.get("dev") == device:
+                _cdrom_el = _disk
+                break
+
+        if _cdrom_el is None:
+            return err(f"CDROM cihazı bulunamadı: {device or 'herhangi bir cdrom'}")
+
+        # Build updated disk XML
         if eject:
-            r = subprocess.run(
-                ["virsh", "change-media", vm_id, device, "--eject", "--live", "--config"],
-                capture_output=True, text=True, timeout=30
-            )
+            # Remove <source> element (eject)
+            _src = _cdrom_el.find("source")
+            if _src is not None:
+                _cdrom_el.remove(_src)
+            # Remove readonly so libvirt doesn't complain on some configs
         else:
             if not iso_path or not os.path.exists(iso_path):
                 return err("ISO dosyası bulunamadı")
-            r = subprocess.run(
-                ["virsh", "change-media", vm_id, device, iso_path, "--insert", "--live", "--config"],
-                capture_output=True, text=True, timeout=30
-            )
-        if r.returncode != 0:
-            return err(r.stderr or "CD-ROM işlemi başarısız", 500)
+            # Set/replace <source> element
+            _src = _cdrom_el.find("source")
+            if _src is None:
+                _src = _ET_cd.SubElement(_cdrom_el, "source")
+            _src.set("file", iso_path)
+
+        _disk_xml = _ET_cd.tostring(_cdrom_el, encoding="unicode")
+
+        # Apply via libvirt updateDeviceFlags — tries live + config, falls back to config-only
+        _conn2 = _lv_cd.open(config.LIBVIRT_URI)
+        _dom2  = _conn2.lookupByUUIDString(vm_id)
+        _running = _dom2.isActive()
+        _flags = 0
+        try:
+            if _running:
+                # VIR_DOMAIN_DEVICE_MODIFY_LIVE | VIR_DOMAIN_DEVICE_MODIFY_CONFIG
+                _dom2.updateDeviceFlags(_disk_xml,
+                    _lv_cd.VIR_DOMAIN_DEVICE_MODIFY_LIVE |
+                    _lv_cd.VIR_DOMAIN_DEVICE_MODIFY_CONFIG)
+            else:
+                _dom2.updateDeviceFlags(_disk_xml,
+                    _lv_cd.VIR_DOMAIN_DEVICE_MODIFY_CONFIG)
+        except _lv_cd.libvirtError as _live_err:
+            log.warning("CDROM live update başarısız, config-only deneniyor: %s", _live_err)
+            # Fallback: config only
+            _dom2.updateDeviceFlags(_disk_xml,
+                _lv_cd.VIR_DOMAIN_DEVICE_MODIFY_CONFIG)
+        finally:
+            _conn2.close()
+
         action = "çıkarıldı" if eject else f"takıldı: {iso_path}"
         ev.info(f"CD-ROM {action}: {vm_id}", category="vm")
-        return ok({"status": "ok", "ejected": eject, "iso_path": iso_path if not eject else None})
-    except subprocess.TimeoutExpired:
-        return err("CD-ROM işlemi zaman aşımına uğradı", 504)
+        return ok({"status": "ok", "ejected": eject,
+                   "iso_path": iso_path if not eject else None})
     except Exception as e:
-        return err(e, 500)
+        log.exception("CDROM işlemi hatası vm=%s", vm_id)
+        return err(str(e), 500)
 
 # ── CPU Pinning ───────────────────────────────────────────────────────────────
 @app.route("/api/vms/<vm_id>/cpu-pinning", methods=["GET"])
