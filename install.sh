@@ -180,7 +180,7 @@ update_mode() {
         source "${VENV_DIR}/bin/activate"
         if [ -f "${APP_DIR}/backend/requirements.txt" ]; then
             _REQ_TMP=$(mktemp)
-            grep -viE "^libvirt-python" "${APP_DIR}/backend/requirements.txt" > "$_REQ_TMP"
+            grep -viE "^(libvirt-python|blinker)" "${APP_DIR}/backend/requirements.txt" > "$_REQ_TMP"
             pip install -r "$_REQ_TMP" -q 2>/dev/null || true
             rm -f "$_REQ_TMP"
         fi
@@ -607,7 +607,7 @@ echo -e "\${CYAN}[i]\${NC} Python bağımlılıkları güncelleniyor..."
 source "\${VENV_DIR}/bin/activate"
 if [ -f "\${APP_DIR}/backend/requirements.txt" ]; then
     _REQ_TMP=\$(mktemp)
-    grep -viE "^libvirt-python" "\${APP_DIR}/backend/requirements.txt" > "\$_REQ_TMP"
+    grep -viE "^(libvirt-python|blinker)" "\${APP_DIR}/backend/requirements.txt" > "\$_REQ_TMP"
     pip install -r "\$_REQ_TMP" -q 2>/dev/null || true
     rm -f "\$_REQ_TMP"
 fi
