@@ -124,23 +124,28 @@ def _ws_build_frame(data: bytes) -> bytes:
         hdr = bytes([0x82, 127]) + _struct.pack(">Q", n)
     return hdr + data
 
+_WS_RECV_TIMEOUT = 30   # seconds browser has to send next frame
+
 def _ws_recvall(sock, n):
-    """Recv exactly n bytes from GreenSSLSocket with diagnostic timeout."""
+    """Recv exactly n bytes from GreenSSLSocket.
+    Uses eventlet.with_timeout (NOT 'with Timeout()' context manager —
+    the context-manager form suppresses the exception via __exit__).
+    """
     buf = b""
     while len(buf) < n:
-        try:
-            with _ev_vnc.Timeout(15):
-                chunk = sock.recv(n - len(buf))
-        except _ev_vnc.Timeout:
-            log.warning("VNC WS: recv BLOCKED 15s — browser sent nothing "
-                        "(need=%d have=%d sock=%s)", n, len(buf), type(sock).__name__)
-            return None
-        except Exception as _e:
-            log.warning("VNC WS: recv err (%s): %s", type(_e).__name__, _e)
+        chunk = _ev_vnc.with_timeout(
+            _WS_RECV_TIMEOUT, sock.recv, n - len(buf),
+            timeout_value=None
+        )
+        if chunk is None:
+            log.warning("VNC WS: recv TIMEOUT %ds — browser sent nothing "
+                        "(need=%d have=%d sock=%s)",
+                        _WS_RECV_TIMEOUT, n, len(buf), type(sock).__name__)
             return None
         if not chunk:
             log.warning("VNC WS: recv EOF (got %d of %d bytes)", len(buf), n)
             return None
+        log.debug("VNC WS: recvall got %d bytes (total %d/%d)", len(chunk), len(buf)+len(chunk), n)
         buf += chunk
     return buf
 
@@ -289,7 +294,7 @@ def _vnc_ws_middleware(environ, start_response):
         except Exception: pass
         return []
 
-    log.info("VNC WS proxy: vm=%s port=%d", vm_id, vnc_port)
+    log.info("VNC WS proxy: vm=%s port=%d sock_fd=%d", vm_id, vnc_port, raw_sock.fileno())
 
     # ── VNC → WebSocket (greenlet) ──
     def _vnc_to_ws():
@@ -330,8 +335,8 @@ def _vnc_ws_middleware(environ, start_response):
                 break
             if opcode in (0x1, 0x2) and payload:
                 tcp.sendall(payload)
-    except Exception as _e:
-        log.warning("VNC WS: ws→vnc err vm=%s: %s", vm_id, _e)
+    except BaseException as _e:
+        log.warning("VNC WS: ws→vnc err vm=%s: %s (%s)", vm_id, _e, type(_e).__name__)
     finally:
         try: tcp.close()
         except Exception: pass
