@@ -5227,16 +5227,28 @@ async function loadHardwareConfig(vmId) {
 
     // Disks
     const dt = document.getElementById('hw-disk-tbody');
-    dt.innerHTML = (hw.disks || []).map(d => `
-      <tr>
-        <td><code>${escHtml(d.target)}</code></td>
-        <td style="font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(d.path)}">${escHtml(d.path)}</td>
+    dt.innerHTML = (hw.disks || []).map(d => {
+      const isCdrom  = d.device_type === 'cdrom';
+      const isBoot   = d.target === 'vda' || d.target === 'sda';
+      const pathDisp = d.path ? escHtml(d.path) : '<em style="color:var(--text-dim)">boş</em>';
+      let action;
+      if (isCdrom) {
+        action = d.path
+          ? `<button class="btn sm warning" onclick="hwEjectCdrom('${escHtml(d.target)}')">⏏ ISO Çıkar</button>`
+          : `<span style="color:var(--text-dim);font-size:10px">Boş CDROM</span>`;
+      } else if (isBoot) {
+        action = '<span style="color:var(--text-dim);font-size:10px">Ana disk</span>';
+      } else {
+        action = `<button class="btn sm danger" onclick="hwDetachDisk('${escHtml(d.target)}')">✕ Çıkar</button>`;
+      }
+      return `<tr>
+        <td><code>${escHtml(d.target)}</code>${isCdrom ? ' <span style="font-size:10px;color:var(--accent)">CD</span>' : ''}</td>
+        <td style="font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(d.path)}">${pathDisp}</td>
         <td>${escHtml(d.bus)}</td>
         <td>${escHtml(d.format)}</td>
-        <td>${d.target !== 'vda' && d.target !== 'sda'
-          ? `<button class="btn sm danger" onclick="hwDetachDisk('${escHtml(d.target)}')">✕ Çıkar</button>`
-          : '<span style="color:var(--text-dim);font-size:10px">Ana disk</span>'}</td>
-      </tr>`).join('') || `<tr><td colspan="5"><div class="empty-state"><p>Disk yok</p></div></td></tr>`;
+        <td>${action}</td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="5"><div class="empty-state"><p>Disk yok</p></div></td></tr>`;
 
     // NICs
     const nt = document.getElementById('hw-nic-tbody');
@@ -5302,6 +5314,19 @@ async function hwDetachDisk(targetDev) {
     loadHardwareConfig(_hwVmId);
     loadVMDetail(_hwVmId);
   } catch(e) { toast('Disk çıkarılamadı: ' + e.message, 'error'); }
+}
+
+async function hwEjectCdrom(targetDev) {
+  if (!_hwVmId) return;
+  if (!confirm(`ISO çıkarılacak (${targetDev}). VM çalışıyorsa live eject yapılır. Devam?`)) return;
+  try {
+    await api(`/vms/${_hwVmId}/cdrom`, {
+      method: 'PUT',
+      body: JSON.stringify({ eject: true, device: targetDev })
+    });
+    toast(`ISO çıkarıldı (${targetDev})`, 'success');
+    loadHardwareConfig(_hwVmId);
+  } catch(e) { toast('ISO çıkarılamadı: ' + e.message, 'error'); }
 }
 
 async function hwDetachNic(mac) {

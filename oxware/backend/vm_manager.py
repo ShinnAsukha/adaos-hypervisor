@@ -526,19 +526,21 @@ def get_hardware_config(vm_id: str) -> dict:
         cur_el     = root.find("currentMemory")
         mem_cur_kb = int(cur_el.text) if cur_el is not None else mem_max_kb
 
-        # Disks
+        # Disks (include cdrom so frontend can show eject button)
         disks = []
         for disk in root.findall(".//disk"):
-            if disk.get("device") != "disk":
+            dev_type = disk.get("device", "disk")   # "disk" or "cdrom"
+            if dev_type not in ("disk", "cdrom"):
                 continue
             src  = disk.find("source")
             tgt  = disk.find("target")
             drv  = disk.find("driver")
             disks.append({
-                "path":   src.get("file", "") if src is not None else "",
-                "target": tgt.get("dev", "")  if tgt is not None else "",
-                "bus":    tgt.get("bus", "")  if tgt is not None else "",
-                "format": drv.get("type", "qcow2") if drv is not None else "qcow2",
+                "path":        src.get("file", "") if src is not None else "",
+                "target":      tgt.get("dev", "")  if tgt is not None else "",
+                "bus":         tgt.get("bus", "")  if tgt is not None else "",
+                "format":      drv.get("type", "raw") if drv is not None else "raw",
+                "device_type": dev_type,
             })
 
         # NICs
