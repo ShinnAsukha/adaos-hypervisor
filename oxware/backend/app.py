@@ -125,19 +125,16 @@ def _ws_build_frame(data: bytes) -> bytes:
     return hdr + data
 
 def _ws_recvall(sock, n):
-    """Recv exactly n bytes from GreenSSLSocket.
-
-    DO NOT use trampoline() before recv() on SSL sockets:
-    OpenSSL may have already decrypted data into its internal buffer;
-    the underlying fd then shows no new kernel-level data so trampoline
-    blocks forever even though recv() would return immediately.
-    GreenSSLSocket.recv() handles SSL_WANT_READ / cooperative yielding
-    internally — just call it directly.
-    """
+    """Recv exactly n bytes from GreenSSLSocket with diagnostic timeout."""
     buf = b""
     while len(buf) < n:
         try:
-            chunk = sock.recv(n - len(buf))
+            with _ev_vnc.Timeout(15):
+                chunk = sock.recv(n - len(buf))
+        except _ev_vnc.Timeout:
+            log.warning("VNC WS: recv BLOCKED 15s — browser sent nothing "
+                        "(need=%d have=%d sock=%s)", n, len(buf), type(sock).__name__)
+            return None
         except Exception as _e:
             log.warning("VNC WS: recv err (%s): %s", type(_e).__name__, _e)
             return None
@@ -182,8 +179,9 @@ def _vnc_ws_middleware(environ, start_response):
     parts = path.strip("/").split("/")           # ['ws','vnc','<vm_id>']
     vm_id = parts[2] if len(parts) > 2 else ""
     ws_key = environ.get("HTTP_SEC_WEBSOCKET_KEY", "")
-    log.info("VNC WS: request vm=%s upgrade=%s key=%s",
-             vm_id, environ.get("HTTP_UPGRADE", "NONE"), ws_key[:8] or "MISSING")
+    log.info("VNC WS: request vm=%s upgrade=%s key=%s proto=%r",
+             vm_id, environ.get("HTTP_UPGRADE", "NONE"), ws_key[:8] or "MISSING",
+             environ.get("HTTP_SEC_WEBSOCKET_PROTOCOL", ""))
 
     token = ""
     for p in qs.split("&"):
