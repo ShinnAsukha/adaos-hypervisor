@@ -154,34 +154,16 @@ function hideLoading() {
   } catch (_) {}
 })();
 
-// Main: call console/start → get websockify port → connect noVNC
+// Main: connect noVNC via Flask WS proxy on same port (8006) — same cert, no TLS issues
 (async () => {
   try {
-    setLoad("Konsol başlatılıyor…");
-
-    // 1. Start websockify via backend
-    const startResp = await fetch(`/api/vms/${_vmId}/console/start`, {
-      method: "POST",
-      headers: { Authorization: "Bearer " + _token }
-    });
-    if (!startResp.ok) {
-      const t = await startResp.text();
-      throw new Error("Konsol başlatılamadı: " + t);
-    }
-    const startData = await startResp.json();
-    if (startData.status !== "ok") {
-      throw new Error(startData.error || "Konsol başlatılamadı");
-    }
-    const wsPort = startData.ws_port;
-
-    // 2. Load noVNC
     setLoad("noVNC yükleniyor…");
     const rfbMod = await import("/novnc/core/rfb.js");
     const RFB = rfbMod.default;
 
-    // 3. Connect to websockify (separate port — no Flask proxy needed)
+    // Same port as Flask → same cert already accepted by browser → no TLS issue
     const wsProto = (location.protocol === "https:") ? "wss" : "ws";
-    const wsUrl   = `${wsProto}://${location.hostname}:${wsPort}/`;
+    const wsUrl   = `${wsProto}://${location.host}/ws/vnc/${_vmId}?token=${encodeURIComponent(_token)}`;
 
     setLoad("VNC bağlanıyor…", wsUrl);
     setStatus("Bağlanıyor…");
