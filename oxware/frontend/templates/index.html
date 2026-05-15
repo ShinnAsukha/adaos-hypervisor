@@ -274,6 +274,20 @@
     .stat-item{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(30,45,69,.3);font-size:12px}
     .stat-item:last-child{border-bottom:none}
     .stat-label{color:var(--text-muted);min-width:100px}
+    /* ── Dashboard quick-stat cards ── */
+    .vm-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:2px;position:relative;overflow:hidden;transition:border-color .15s}
+    .vm-stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--border2);border-radius:8px 8px 0 0}
+    .vm-stat-card.green::before{background:var(--green-lt)}
+    .vm-stat-card.yellow::before{background:var(--yellow-lt)}
+    .vm-stat-card.red::before{background:var(--red-lt)}
+    .vm-stat-card.blue::before{background:var(--accent-lt)}
+    .vm-stat-card:hover{border-color:var(--border2)}
+    .vm-stat-label{font-size:11px;color:var(--text-muted);font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+    .vm-stat-value{font-size:26px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.1;margin:4px 0 2px}
+    .vm-stat-card.green .vm-stat-value{color:var(--green-lt)}
+    .vm-stat-card.yellow .vm-stat-value{color:var(--yellow-lt)}
+    .vm-stat-card.red .vm-stat-value{color:var(--red-lt)}
+    .vm-stat-sub{font-size:11px;color:var(--text-dim)}
     .text-muted{color:var(--text-muted)}
     .text-danger{color:#f85149}
     .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
