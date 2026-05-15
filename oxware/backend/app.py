@@ -134,23 +134,33 @@ def _vnc_ws_handler(ws):
         with app.app_context():
             from flask_jwt_extended import decode_token
             decode_token(token)
-    except Exception:
+    except Exception as _e:
+        log.warning("VNC WS: auth failed vm=%s: %s", vm_id, _e)
         return
 
-    # VNC port
+    # VNC port — query libvirt XML directly (stored vnc_port may be stale/absent)
     try:
-        vm = vm_manager.get_vm(vm_id)
-        vnc_port = int(vm.get("vnc_port", -1))
+        import libvirt as _lv_vnc
+        import xml.etree.ElementTree as _ET_vnc
+        _conn = _lv_vnc.open(config.LIBVIRT_URI)
+        _dom  = _conn.lookupByUUIDString(vm_id)
+        _xml  = _dom.XMLDesc()
+        _conn.close()
+        _root   = _ET_vnc.fromstring(_xml)
+        _vnc_el = _root.find(".//graphics[@type='vnc']")
+        vnc_port = int(_vnc_el.get("port", -1)) if _vnc_el is not None else -1
         if vnc_port < 5900:
+            log.warning("VNC WS: no VNC port for vm=%s (port=%d)", vm_id, vnc_port)
             return
-    except Exception:
+    except Exception as _e:
+        log.warning("VNC WS: libvirt lookup failed vm=%s: %s", vm_id, _e)
         return
 
     # TCP → VNC
     try:
         tcp = _raw_sk.create_connection(("127.0.0.1", vnc_port), timeout=5)
     except Exception as e:
-        log.warning("VNC WS: TCP connect failed vm=%s: %s", vm_id, e)
+        log.warning("VNC WS: TCP connect failed vm=%s port=%d: %s", vm_id, vnc_port, e)
         return
 
     log.info("VNC WS proxy: vm=%s port=%d", vm_id, vnc_port)
