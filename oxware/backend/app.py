@@ -1591,8 +1591,10 @@ def api_vm_console(vm_id):
 @require_auth
 def api_start_console(vm_id):
     """
-    Start websockify for noVNC. VNC port queried live from libvirt XML.
-    Websockify binds 0.0.0.0:ws_port (6080). noVNC connects there directly.
+    Flask VNC proxy (/ws/vnc/<vm_id>) tüm WebSocket→VNC köprüsünü kendi yapıyor.
+    Websockify artık kullanılmıyor — port 5900'e iki bağlantı açılırsa QEMU VNC
+    RFB handshake'i tamamlayamıyor.
+    Eski websockify varsa öldür, sadece VNC portunu dön.
     """
     try:
         # ── VNC port: query libvirt XML (stored vnc_port may be absent/stale) ──
@@ -1608,38 +1610,13 @@ def api_start_console(vm_id):
         if vnc_port < 5900:
             return err("VM çalışmıyor veya VNC aktif değil (virsh vncdisplay ile kontrol edin)")
 
+        # Eski websockify varsa öldür — port 5900'e rakip bağlantı açmasın
         ws_port = getattr(config, 'WS_PORT', 6080)
-
-        # ── Kill old websockify on this port, start fresh ──────────────────────
-        subprocess.run(["pkill", "-f", f"websockify.*:{ws_port}"],
+        subprocess.run(["pkill", "-f", "websockify"],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        time.sleep(0.4)
 
-        use_ssl = (
-            getattr(config, 'SSL_ENABLED', False)
-            and os.path.exists(getattr(config, 'SSL_CERT', ''))
-            and os.path.exists(getattr(config, 'SSL_KEY', ''))
-        )
-        cmd = ["websockify", f"0.0.0.0:{ws_port}", f"127.0.0.1:{vnc_port}"]
-        if use_ssl:
-            cmd += ["--cert", config.SSL_CERT, "--key", config.SSL_KEY, "--ssl-only"]
-
-        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        # Wait up to 2s for websockify to be ready
-        import socket as _sk2
-        for _ in range(20):
-            time.sleep(0.1)
-            try:
-                s = _sk2.create_connection(("127.0.0.1", ws_port), timeout=0.1)
-                s.close()
-                break
-            except Exception:
-                pass
-
-        if proc.poll() is not None:
-            return err(f"Websockify başlatılamadı (port={ws_port})")
-
-        log.info("Websockify başlatıldı: vm=%s vnc=%d ws=%d ssl=%s", vm_id, vnc_port, ws_port, use_ssl)
+        log.info("VNC console/start: vm=%s vnc_port=%d (Flask proxy kullanılıyor, websockify yok)",
+                 vm_id, vnc_port)
         return ok(vnc_port=vnc_port, ws_port=ws_port)
     except Exception as e:
         log.exception("console/start hata: vm=%s", vm_id)
