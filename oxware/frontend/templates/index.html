@@ -4958,7 +4958,7 @@ async function saveIpamDnsConfig() {
   if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:4px"></i>Kaydediliyor...';
   const body = { upstream_dns };
   if (domain) body.domain = domain;
-  const d = await _api('/api/dns/config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const d = await _api('/api/dns/config', 'POST', body);
   if (d && !d.error) {
     if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#22c55e;margin-right:4px"></i>DNS ayarları kaydedildi';
     toast('DNS nameserver güncellendi', 'success');
