@@ -102,6 +102,7 @@
   <div class="vm-label">VNC Konsol › <span id="vm-name">Yükleniyor…</span></div>
   <div class="spacer"></div>
   <span id="status" class="status">Bağlanıyor…</span>
+  <button id="lock-btn" class="btn" onclick="togglePointerLock()" title="Mouse'u konsola kilitle (veya konsola tıkla)">🖱 Mouse Kilitle</button>
   <button class="btn" onclick="sendCtrlAltDel()">Ctrl+Alt+Del</button>
   <button class="btn" onclick="toggleFS()">⛶ Tam Ekran</button>
   <button class="btn danger" onclick="window.close()">✕ Kapat</button>
@@ -246,6 +247,94 @@ function toggleFS() {
   if (!document.fullscreenElement) el.requestFullscreen().catch(() => {});
   else document.exitFullscreen();
 }
+
+// ── Pointer Lock ──────────────────────────────────────────────────────────────
+let _vX = 0, _vY = 0;
+let _plCanvas = null;
+
+function _updateLockBtn() {
+  const btn    = document.getElementById("lock-btn");
+  const locked = !!document.pointerLockElement;
+  if (!btn) return;
+  btn.textContent = locked ? "🔒 Ctrl+Alt = Serbest" : "🖱 Mouse Kilitle";
+  btn.style.color = locked ? "#3fb950" : "";
+  btn.style.borderColor = locked ? "rgba(63,185,80,.5)" : "";
+}
+
+function togglePointerLock() {
+  if (document.pointerLockElement) document.exitPointerLock();
+  else if (_plCanvas) _plCanvas.requestPointerLock();
+}
+
+function setupPointerLock(canvas) {
+  _plCanvas = canvas;
+  const getRect = () => canvas.getBoundingClientRect();
+
+  // Tıklayınca kilitle
+  canvas.addEventListener("click", () => {
+    if (!document.pointerLockElement) canvas.requestPointerLock();
+  });
+
+  // Pointer lock aktifken: relative movementX/Y → virtual absolute → noVNC'ye gönder
+  document.addEventListener("mousemove", (e) => {
+    if (document.pointerLockElement !== canvas) return;
+    const r = getRect();
+    _vX = Math.max(0, Math.min(r.width,  _vX + e.movementX));
+    _vY = Math.max(0, Math.min(r.height, _vY + e.movementY));
+    // noVNC absolute clientX/Y bekliyor — synthetic event gönder
+    canvas.dispatchEvent(new MouseEvent("mousemove", {
+      bubbles: true, cancelable: true,
+      clientX: r.left + _vX,
+      clientY: r.top  + _vY,
+    }));
+  }, true);
+
+  // Mouse buton olaylarını da ilet (pointer lock aktifken canvas'a gitmiyor)
+  document.addEventListener("mousedown", (e) => {
+    if (document.pointerLockElement !== canvas) return;
+    const r = getRect();
+    canvas.dispatchEvent(new MouseEvent("mousedown", {
+      bubbles: true, cancelable: true, button: e.button, buttons: e.buttons,
+      clientX: r.left + _vX, clientY: r.top + _vY,
+    }));
+  }, true);
+
+  document.addEventListener("mouseup", (e) => {
+    if (document.pointerLockElement !== canvas) return;
+    const r = getRect();
+    canvas.dispatchEvent(new MouseEvent("mouseup", {
+      bubbles: true, cancelable: true, button: e.button, buttons: e.buttons,
+      clientX: r.left + _vX, clientY: r.top + _vY,
+    }));
+  }, true);
+
+  // Ctrl+Alt → unlock (Ctrl+Alt+Del geçmesine izin ver)
+  document.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && e.altKey && document.pointerLockElement === canvas) {
+      if (e.key !== "Delete") {
+        document.exitPointerLock();
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+  }, true);
+
+  // Indicator + virtual pos reset
+  document.addEventListener("pointerlockchange", () => {
+    _updateLockBtn();
+    if (document.pointerLockElement === canvas) {
+      const r = getRect();
+      _vX = r.width  / 2;
+      _vY = r.height / 2;
+    }
+  });
+}
+
+// noVNC canvas'ı async oluşturuyor — polling ile bekle
+const _lockPoller = setInterval(() => {
+  const canvas = document.querySelector("#screen canvas");
+  if (canvas) { clearInterval(_lockPoller); setupPointerLock(canvas); }
+}, 150);
 </script>
 </body>
 </html>
