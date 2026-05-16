@@ -108,6 +108,38 @@ def update_user_role(username: str, role: str):
     _save(data)
 
 
+def update_user(username: str, new_username: str = None, new_password: str = None, new_role: str = None):
+    """Kullanıcı güncelle (kullanıcı adı, şifre, rol)."""
+    data = _load()
+    if username not in data.get("users", {}):
+        raise KeyError(f"Kullanıcı bulunamadı: {username}")
+
+    user_data = data["users"][username]
+
+    if new_password:
+        if len(new_password) < 8:
+            raise ValueError("Şifre en az 8 karakter olmalı")
+        user_data["password_hash"] = _hash_password(new_password)
+
+    if new_role:
+        valid_roles = {"viewer", "operator", "administrator"}
+        if new_role not in valid_roles:
+            raise ValueError(f"Geçersiz rol: {new_role}")
+        user_data["role"] = new_role
+
+    if new_username and new_username != username:
+        if len(new_username) < 2:
+            raise ValueError("Kullanıcı adı en az 2 karakter olmalı")
+        if new_username in data["users"]:
+            raise ValueError(f"Kullanıcı adı zaten mevcut: {new_username}")
+        data["users"][new_username] = user_data
+        del data["users"][username]
+    else:
+        data["users"][username] = user_data
+
+    _save(data)
+
+
 def verify_user(username: str, password: str) -> bool:
     """Kullanıcı şifresini doğrula."""
     data = _load()

@@ -2557,6 +2557,29 @@ def api_update_user_role(username):
     except (ValueError, KeyError) as e:
         return err(str(e))
 
+@app.route("/api/users/<username>", methods=["PUT"])
+@require_auth
+@require_role("admin", "administrator")
+def api_update_user(username):
+    """Kullanıcı güncelle (ad, şifre, rol)."""
+    primary_admin = cred_mgr.get_username()
+    if username == primary_admin:
+        return err("Ana yönetici bu yolla düzenlenemez", 403)
+    data = request.get_json() or {}
+    try:
+        user_manager.update_user(
+            username,
+            new_username=data.get("new_username", "").strip() or None,
+            new_password=data.get("password") or None,
+            new_role=data.get("role") or None,
+        )
+        ev.info(f"Kullanıcı güncellendi: {username}", category="auth")
+        return ok(status="updated")
+    except (ValueError, KeyError) as e:
+        return err(str(e))
+    except Exception as e:
+        return err(str(e), 500)
+
 # ── Shell Konsol ──────────────────────────────────────────────────────────────
 @app.route("/api/system/execute", methods=["POST"])
 @require_auth

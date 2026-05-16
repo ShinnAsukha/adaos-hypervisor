@@ -3146,6 +3146,32 @@
   </div>
 </div>
 
+<!-- Edit User -->
+<div class="modal-overlay" id="modal-edit-user">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Kullanıcı Düzenle</h2>
+      <button class="modal-close" onclick="closeModal('modal-edit-user')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-user-orig">
+      <div class="form-row"><label>Kullanıcı Adı</label><input id="edit-user-username" placeholder="kullanici"></div>
+      <div class="form-row"><label>Yeni Şifre</label><input id="edit-user-password" type="password" placeholder="Değiştirmek için girin (opsiyonel)"></div>
+      <div class="form-row"><label>Rol</label>
+        <select id="edit-user-role">
+          <option value="viewer">İzleyici</option>
+          <option value="operator">Operatör</option>
+          <option value="administrator">Yönetici</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-edit-user')">İptal</button>
+      <button class="btn primary" onclick="saveEditUser()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
 <!-- Create Snapshot -->
 <div class="modal-overlay" id="modal-create-snap">
   <div class="modal">
@@ -6929,7 +6955,7 @@ async function loadUsers() {
       </div></td>
       <td><span class="badge ${u.role==="administrator"?"running":u.role==="operator"?"paused":"stopped"}">${u.role==="administrator"?"Yönetici":u.role==="operator"?"Operatör":"İzleyici"}</span></td>
       <td>${u.created ? new Date(u.created*1000).toLocaleString("tr-TR") : "—"}</td>
-      <td>${u.username !== "admin" ? `<button class="btn sm danger" onclick="deleteUser('${escHtml(u.username)}')">✕</button>` : "—"}</td>
+      <td style="display:flex;gap:6px;align-items:center">${u.username !== "admin" ? `<button class="btn sm" onclick="openEditUser('${escHtml(u.username)}','${u.role}')">✏</button><button class="btn sm danger" onclick="deleteUser('${escHtml(u.username)}')">✕</button>` : "—"}</td>
     </tr>`).join("");
   } catch (e) { toast("Kullanıcılar alınamadı: " + e.message, "error"); }
 }
@@ -6952,6 +6978,32 @@ async function deleteUser(username) {
   if (!confirm(`"${username}" silinsin mi?`)) return;
   try { await api(`/users/${username}`, { method: "DELETE" }); toast("Silindi", "success"); loadUsers(); }
   catch (e) { toast(e.message, "error"); }
+}
+
+function openEditUser(username, role) {
+  document.getElementById('edit-user-orig').value = username;
+  document.getElementById('edit-user-username').value = username;
+  document.getElementById('edit-user-password').value = '';
+  document.getElementById('edit-user-role').value = role || 'viewer';
+  openModal('modal-edit-user');
+}
+
+async function saveEditUser() {
+  const orig = document.getElementById('edit-user-orig').value;
+  const newUsername = document.getElementById('edit-user-username').value.trim();
+  const password = document.getElementById('edit-user-password').value;
+  const role = document.getElementById('edit-user-role').value;
+  if (!newUsername) return toast('Kullanıcı adı boş olamaz', 'error');
+  if (password && password.length < 8) return toast('Şifre en az 8 karakter olmalı', 'error');
+  const body = { role };
+  if (newUsername !== orig) body.new_username = newUsername;
+  if (password) body.password = password;
+  try {
+    await api(`/users/${orig}`, { method: 'PUT', body });
+    toast('Kullanıcı güncellendi', 'success');
+    closeModal('modal-edit-user');
+    loadUsers();
+  } catch(e) { toast(e.message, 'error'); }
 }
 
 /* ══════════════════ Topology ══════════════════ */
