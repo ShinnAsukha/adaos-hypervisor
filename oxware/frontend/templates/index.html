@@ -1829,15 +1829,22 @@
                   <label style="font-size:12px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.5px">Windows</label>
                   <span style="font-size:10px;color:var(--text-muted);background:var(--surface3);border:1px solid var(--border2);border-radius:3px;padding:1px 6px">Microsoft Evaluation Center</span>
                 </div>
+                <!-- Win 10/11 uyarı kutusu -->
+                <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:6px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--text)">
+                  <div style="font-weight:700;margin-bottom:6px;color:#f87171">⚠️ Windows 10 / 11 — Otomatik İndirme Desteklenmiyor</div>
+                  <div style="color:var(--text-muted);line-height:1.6">
+                    Microsoft, Win 10/11 ISO'larını tarayıcı oturumu gerektiren linklerle koruyor. Doğrudan wget ile indirilemiyor.<br>
+                    <b style="color:var(--text)">Nasıl alınır:</b>
+                    <ol style="margin:6px 0 0 16px;padding:0;line-height:1.8">
+                      <li>Tarayıcında <a href="https://www.microsoft.com/software-download/windows11" target="_blank" style="color:var(--accent-lt)">microsoft.com/software-download/windows11</a> veya <a href="https://www.microsoft.com/software-download/windows10" target="_blank" style="color:var(--accent-lt)">…/windows10</a> aç</li>
+                      <li>Edition ve dil seç → <b>"64-bit Download"</b> butonuna <b>sağ tık → Bağlantı adresini kopyala</b></li>
+                      <li>Kopyalanan <code style="background:rgba(0,0,0,.3);padding:1px 4px;border-radius:3px">software.download.prss.microsoft.com/…</code> linkini aşağıdaki URL kutusuna yapıştır</li>
+                    </ol>
+                    <div style="margin-top:6px">📎 Alternatif mirror: <a href="https://tb.rg-adguard.net/public.php" target="_blank" style="color:var(--accent-lt)">tb.rg-adguard.net</a> — direkt ISO linkleri verir</div>
+                  </div>
+                </div>
+                <!-- Windows Server (Eval Center — direkt çalışır) -->
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                  <button onclick="selectIsoPreset('https://go.microsoft.com/fwlink/p/?LinkID=2208879&clcid=0x409&culture=en-us&country=US','Win11_23H2_English_x64v2.iso')" class="iso-preset-btn" style="background:var(--surface2);border:1px solid rgba(0,120,212,.35);border-radius:6px;padding:10px 12px;cursor:pointer;text-align:left;color:var(--text)">
-                    <div style="font-weight:700;font-size:12px;margin-bottom:2px">Windows 11 23H2</div>
-                    <div style="font-size:11px;color:var(--text-muted)">x64 · ~5.4 GB</div>
-                  </button>
-                  <button onclick="selectIsoPreset('https://go.microsoft.com/fwlink/?LinkId=2264631&clcid=0x409&culture=en-us&country=US','Win10_22H2_English_x64.iso')" class="iso-preset-btn" style="background:var(--surface2);border:1px solid rgba(0,120,212,.35);border-radius:6px;padding:10px 12px;cursor:pointer;text-align:left;color:var(--text)">
-                    <div style="font-weight:700;font-size:12px;margin-bottom:2px">Windows 10 22H2</div>
-                    <div style="font-size:11px;color:var(--text-muted)">x64 · ~5.8 GB</div>
-                  </button>
                   <button onclick="selectIsoPreset('https://go.microsoft.com/fwlink/p/?LinkID=2195280&clcid=0x409&culture=en-us&country=US','WinServer2022-eval.iso')" class="iso-preset-btn" style="background:var(--surface2);border:1px solid rgba(0,120,212,.35);border-radius:6px;padding:10px 12px;cursor:pointer;text-align:left;color:var(--text)">
                     <div style="font-weight:700;font-size:12px;margin-bottom:2px">Windows Server 2022</div>
                     <div style="font-size:11px;color:var(--text-muted)">Eval · Datacenter/Standard · ~5.4 GB</div>
@@ -1857,7 +1864,7 @@
                 </div>
                 <div style="margin-top:8px;font-size:10px;color:var(--text-dim);display:flex;align-items:flex-start;gap:4px">
                   <span>ℹ️</span>
-                  <span>Windows ISO'ları Microsoft Evaluation Center'dan indirilir. Ücretsiz 180 gün deneme lisansı içerir. Sunucu kurulumu sırasında aktivasyon anahtarı sormazsanız eval modunda çalışır.</span>
+                  <span>Windows Server ISO'ları Microsoft Evaluation Center'dan indirilir. Ücretsiz 180 gün deneme lisansı içerir.</span>
                 </div>
               </div>
 
