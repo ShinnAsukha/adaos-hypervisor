@@ -1721,7 +1721,8 @@ def api_vm_enable_ssh(vm_id):
             # Public IP'yi IPAM'dan bul
             public_ip = None
             try:
-                mac = vm.get("mac", "")
+                _nets = vm.get("networks", [])
+                mac = vm.get("mac", "") or (_nets[0]["mac"] if _nets else "")
                 assignments = ip_pool_mgr.list_assignments()
                 public_ip = next(
                     (a["ip"] for a in assignments
@@ -1797,7 +1798,9 @@ def api_vm_nat_sync(vm_id):
     try:
         vm = vm_manager.get_vm(vm_id)
         vm_name = vm.get("name", vm_id)
-        mac = vm.get("mac", "")
+        # MAC: networks listesinin ilk elemanından al
+        nets = vm.get("networks", [])
+        mac = vm.get("mac", "") or (nets[0]["mac"] if nets else "")
         if not mac:
             return err("VM MAC adresi bulunamadı", 400)
 
