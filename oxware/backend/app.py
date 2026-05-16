@@ -2390,7 +2390,8 @@ def _post_install_nat_sync(vm_uuid: str, vm_name: str, mac: str, public_ip: str)
     log.info("Post-install NAT sync başladı: %s (%s)", vm_name, vm_uuid)
 
     actual_ip = None
-    for _ in range(24):   # 2dk: 24×5s
+    # Windows kurulumu uzun sürer (çoklu reboot) — 15dk bekle
+    for attempt in range(180):   # 15dk: 180×5s
         try:
             arp_r = subprocess.run(["arp", "-n"], capture_output=True, text=True, timeout=5)
             for line in arp_r.stdout.splitlines():
@@ -2403,10 +2404,13 @@ def _post_install_nat_sync(vm_uuid: str, vm_name: str, mac: str, public_ip: str)
             pass
         if actual_ip:
             break
+        # Her 60 denemede bir log yaz
+        if attempt % 12 == 0:
+            log.info("Post-install NAT sync: ARP bekleniyor... (%s) %ds", mac, attempt * 5)
         _time.sleep(5)
 
     if not actual_ip:
-        log.warning("Post-install NAT sync: ARP'ta IP bulunamadı (%s)", mac)
+        log.warning("Post-install NAT sync: 15dk içinde ARP'ta IP bulunamadı (%s)", mac)
         return
 
     log.info("Post-install NAT sync: %s gerçek IP = %s", vm_name, actual_ip)
