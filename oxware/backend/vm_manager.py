@@ -30,7 +30,7 @@ _VNC_REGISTRY_FILE = os.path.join(config.DATA_DIR, "vnc_registry.json")
 _install_monitors: dict = {}
 
 
-def _monitor_install(vm_uuid: str, vm_name: str):
+def _monitor_install(vm_uuid: str, vm_name: str, on_complete=None):
     """
     ISO ile kurulan VM'i izle.
     Kurulum bitip VM kapanınca:
@@ -99,6 +99,18 @@ def _monitor_install(vm_uuid: str, vm_name: str):
                         log.info("VM diskten boot ile yeniden başlatıldı: %s", vm_name)
                     finally:
                         conn2.close()
+
+                    # Callback: NAT sync vs. için çağır
+                    if on_complete:
+                        try:
+                            threading.Thread(
+                                target=on_complete,
+                                args=(vm_uuid, vm_name),
+                                daemon=True,
+                                name=f"post-install-{vm_name}"
+                            ).start()
+                        except Exception as _cb_err:
+                            log.warning("on_complete callback hatası: %s", _cb_err)
 
                     break   # monitör işi bitti
             finally:

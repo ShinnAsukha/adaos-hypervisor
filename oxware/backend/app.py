@@ -2333,6 +2333,65 @@ def _mac_to_internal_ip(mac: str, base="192.168.122") -> str:
     return f"{base}.{offset}"
 
 
+def _post_install_nat_sync(vm_uuid: str, vm_name: str, mac: str, public_ip: str):
+    """
+    Kurulum sonrası VM'in gerçek IP'sini ARP'tan oku ve DNAT'ı güncelle.
+    _monitor_install on_complete callback'i tarafından çağrılır.
+    """
+    import time as _time
+    log.info("Post-install NAT sync başladı: %s (%s)", vm_name, vm_uuid)
+
+    actual_ip = None
+    for _ in range(24):   # 2dk: 24×5s
+        try:
+            arp_r = subprocess.run(["arp", "-n"], capture_output=True, text=True, timeout=5)
+            for line in arp_r.stdout.splitlines():
+                if mac.lower() in line.lower():
+                    parts = line.split()
+                    if parts and "." in parts[0]:
+                        actual_ip = parts[0]
+                        break
+        except Exception:
+            pass
+        if actual_ip:
+            break
+        _time.sleep(5)
+
+    if not actual_ip:
+        log.warning("Post-install NAT sync: ARP'ta IP bulunamadı (%s)", mac)
+        return
+
+    log.info("Post-install NAT sync: %s gerçek IP = %s", vm_name, actual_ip)
+
+    try:
+        r = subprocess.run(["iptables", "-t", "nat", "-S", "PREROUTING"],
+                           capture_output=True, text=True, timeout=5)
+        for line in r.stdout.splitlines():
+            if f"-d {public_ip}" in line and "-j DNAT" in line and f"--to-destination {actual_ip}" not in line:
+                del_parts = line.strip().replace("-A ", "-D ", 1).split()
+                subprocess.run(["iptables", "-t", "nat"] + del_parts,
+                               capture_output=True, timeout=5)
+                log.info("Eski DNAT silindi: %s", line.strip())
+    except Exception as _e:
+        log.warning("DNAT temizleme hatası: %s", _e)
+
+    _setup_nat(public_ip, actual_ip)
+    log.info("Post-install NAT sync tamamlandı: %s → %s", public_ip, actual_ip)
+
+    try:
+        data = ip_pool_mgr._load()
+        for ip, a in list(data["assignments"].items()):
+            if a.get("pool") == "__internal__" and a.get("vm_id") in (vm_uuid, mac):
+                if ip != actual_ip:
+                    del data["assignments"][ip]
+                    data["assignments"][actual_ip] = {**a, "ip": actual_ip}
+                    ip_pool_mgr._save(data)
+                    log.info("IPAM __internal__ güncellendi: %s → %s", ip, actual_ip)
+                break
+    except Exception as _ie:
+        log.warning("IPAM update hatası: %s", _ie)
+
+
 def _setup_nat(public_ip: str, internal_ip: str, host_iface: str = None) -> dict:
     """
     Public IP → Internal IP NAT kuralları ekle.
@@ -2539,6 +2598,17 @@ def api_ipam_assign_vm():
             # internal_ip'yi de kaydet
             ip_pool_mgr.manual_assign(ip=internal_ip, mac=mac, vm_name=vm_name,
                                        pool_name="__internal__", vm_id=vm_id or mac)
+            # Post-install ARP sync: VM henüz formula IP ile kuruluyorsa arka planda güncelle
+            _sync_mac  = mac
+            _sync_pub  = assigned_ip
+            _sync_uuid = vm_id or mac
+            _sync_name = vm_name
+            threading.Thread(
+                target=_post_install_nat_sync,
+                args=(_sync_uuid, _sync_name, _sync_mac, _sync_pub),
+                daemon=True,
+                name=f"post-install-nat-{vm_name}"
+            ).start()
 
         # VM yeniden başlat → yeni DHCP lease alsın
         restarted = False
