@@ -1751,6 +1751,26 @@
               <input id="ipam-filter" type="text" placeholder="Filtrele (IP, MAC, VM)..." style="padding:5px 10px;font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);width:200px" oninput="ipamFilter()">
             </div>
           </div>
+          <!-- DNS Nameserver Ayarları -->
+          <div class="card" style="margin-bottom:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div class="card-title" style="margin:0;padding:0;border:none"><i class="fa-solid fa-server" style="margin-right:6px;color:var(--accent-lt)"></i>DNS Nameserver Ayarları</div>
+              <button onclick="loadIpamDnsConfig()" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px"><i class="fa-solid fa-rotate-right"></i></button>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+              <div style="flex:1;min-width:200px">
+                <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Upstream DNS Sunucuları <span style="color:var(--text-muted)">(virgülle ayır)</span></label>
+                <input id="ipam-dns-upstream" type="text" placeholder="8.8.8.8,1.1.1.1" style="width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:12px;box-sizing:border-box">
+              </div>
+              <div style="flex:1;min-width:160px">
+                <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Domain Arama Adı <span style="color:var(--text-muted)">(isteğe bağlı)</span></label>
+                <input id="ipam-dns-domain" type="text" placeholder="local" style="width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:12px;box-sizing:border-box">
+              </div>
+              <button onclick="saveIpamDnsConfig()" style="padding:7px 16px;background:var(--accent);border:none;color:white;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap"><i class="fa-solid fa-floppy-disk"></i> Kaydet</button>
+            </div>
+            <div id="ipam-dns-status" style="font-size:11px;color:var(--text-muted);margin-top:8px"></div>
+          </div>
+
           <div class="table-wrap">
             <table>
               <thead>
@@ -1929,6 +1949,11 @@
                   <label>Bitiş IP</label>
                   <input id="ipam-pool-end" type="text" placeholder="192.168.100.254 (boş = otomatik)">
                 </div>
+                <div class="form-row">
+                  <label>Libvirt Ağ Adı</label>
+                  <input id="ipam-pool-libvirt-net" type="text" placeholder="default" value="default">
+                  <div class="form-hint">DHCP static entry eklenecek libvirt ağı. Terminalde: <code>virsh net-list</code></div>
+                </div>
               </div>
             </div>
             <div class="modal-footer">
@@ -2060,6 +2085,7 @@
                 <span id="vnc-status-text" style="font-size:11px;color:var(--text-muted)">Bağlanılıyor...</span>
               </div>
               <div style="display:flex;gap:6px;align-items:center">
+                <span id="vnc-mouse-indicator" onclick="vncRequestPointerLock()" title="Mouse yakalamak için tıkla veya konsola tıkla" style="font-size:11px;color:var(--text-muted);cursor:pointer;padding:3px 8px;border:1px solid var(--border2);border-radius:4px;background:var(--surface3);user-select:none">🖱 Mouse Kilitle</span>
                 <button onclick="vncSendCtrlAltDel()" title="Ctrl+Alt+Del gönder" style="background:var(--surface3);border:1px solid var(--border2);color:var(--text);padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px">Ctrl+Alt+Del</button>
                 <button onclick="vncToggleFullscreen()" title="Tam ekran" style="background:var(--surface3);border:1px solid var(--border2);color:var(--text);padding:3px 8px;border-radius:4px;cursor:pointer;font-size:11px"><i class="fa-solid fa-expand"></i></button>
                 <button onclick="closeVNCConsole()" style="background:#ef4444;border:none;color:white;padding:3px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">✕ Kapat</button>
@@ -4883,6 +4909,43 @@ let _ipamAllLeases = [];
 async function loadIpamPage() {
   loadIpamLeases();
   loadIpamPools();
+  loadIpamDnsConfig();
+}
+
+async function loadIpamDnsConfig() {
+  const statusEl = document.getElementById('ipam-dns-status');
+  try {
+    const d = await _api('/api/dns/config');
+    if (!d || d.error) { if (statusEl) statusEl.textContent = 'DNS modülü yüklenemedi'; return; }
+    const s = d.settings || {};
+    const upstreamEl = document.getElementById('ipam-dns-upstream');
+    const domainEl   = document.getElementById('ipam-dns-domain');
+    if (upstreamEl) upstreamEl.value = s.server  || '';
+    if (domainEl)   domainEl.value   = s.domain  || '';
+    if (statusEl)   statusEl.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#22c55e;margin-right:4px"></i>Mevcut ayarlar yüklendi';
+  } catch(e) {
+    if (statusEl) statusEl.textContent = 'DNS ayarları yüklenemedi: ' + e;
+  }
+}
+
+async function saveIpamDnsConfig() {
+  const statusEl   = document.getElementById('ipam-dns-status');
+  const upstreamRaw = (document.getElementById('ipam-dns-upstream')?.value || '').trim();
+  const domain      = (document.getElementById('ipam-dns-domain')?.value || '').trim() || null;
+  if (!upstreamRaw) { toast('Upstream DNS boş olamaz', 'error'); return; }
+  // Virgülle ayrılmış → birden fazla server satırı dnsmasq'ın beklediği format
+  const upstream_dns = upstreamRaw.replace(/\s+/g, '');
+  if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:4px"></i>Kaydediliyor...';
+  const body = { upstream_dns };
+  if (domain) body.domain = domain;
+  const d = await _api('/api/dns/config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (d && !d.error) {
+    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#22c55e;margin-right:4px"></i>DNS ayarları kaydedildi';
+    toast('DNS nameserver güncellendi', 'success');
+  } else {
+    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-circle-xmark" style="color:#f87171;margin-right:4px"></i>' + escHtml(d?.error || 'Kaydetme başarısız');
+    toast('DNS kaydedilemedi: ' + (d?.error || ''), 'error');
+  }
 }
 
 async function loadIpamLeases() {
@@ -5017,7 +5080,8 @@ async function ipamConfirmCreatePool() {
   const startIp = document.getElementById('ipam-pool-start').value.trim();
   const endIp   = document.getElementById('ipam-pool-end').value.trim();
   if (!name || !network || !gateway) { toast('Ad, Ağ ve Gateway zorunlu', 'error'); return; }
-  const body = { name, network, gateway };
+  const libvirtNet = (document.getElementById('ipam-pool-libvirt-net')?.value.trim()) || 'default';
+  const body = { name, network, gateway, libvirt_network: libvirtNet };
   if (dnsRaw) body.dns = dnsRaw.split(',').map(s => s.trim()).filter(Boolean);
   if (startIp) body.start_ip = startIp;
   if (endIp) body.end_ip = endIp;
@@ -5027,8 +5091,8 @@ async function ipamConfirmCreatePool() {
   toast(`Havuz oluşturuldu: ${name}`, 'success');
   ipamCloseCreatePool();
   loadIpamPage();
-  ['ipam-pool-name','ipam-pool-network','ipam-pool-gw','ipam-pool-dns','ipam-pool-start','ipam-pool-end'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
+  ['ipam-pool-name','ipam-pool-network','ipam-pool-gw','ipam-pool-dns','ipam-pool-start','ipam-pool-end','ipam-pool-libvirt-net'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = id === 'ipam-pool-libvirt-net' ? 'default' : '';
   });
 }
 
@@ -5526,6 +5590,7 @@ async function loadVMDetail(vmId) {
       actHtml += `<button class="vd-btn" onclick="vmAction('${v.id}','reboot')">↺ Yeniden Başlat</button>`;
       actHtml += `<button class="vd-btn danger" onclick="vmForceStop('${v.id}')">⏻ Zorla Durdur</button>`;
     }
+    actHtml += `<button class="vd-btn" onclick="vmEnableSsh('${v.id}')" title="QEMU Guest Agent üzerinden SSH servisi etkinleştir" style="background:var(--surface2);border:1px solid var(--border2)">🔑 SSH Etkinleştir</button>`;
     actHtml += `<button class="vd-btn danger" onclick="deleteVM('${v.id}','${escHtml(v.name)}')">✕ Sil</button>`;
     document.getElementById("vd-actions").innerHTML = actHtml;
 
@@ -6336,6 +6401,16 @@ async function vmForceStop(id) {
   } catch (e) { toast(e.message, "error"); }
 }
 
+async function vmEnableSsh(id) {
+  toast("SSH etkinleştiriliyor (QEMU Guest Agent)...", "info");
+  try {
+    const d = await api(`/vms/${id}/enable-ssh`, { method: "POST" });
+    toast(d.message || "SSH etkinleştirildi", "success");
+  } catch (e) {
+    toast("SSH etkinleştirilemedi: " + (e.message || e), "error");
+  }
+}
+
 // ── VNC Console — SocketIO TCP Proxy ─────────────────────────────────────────
 // Websockify / ayrı port YOK. Mevcut SocketIO bağlantısı (port 8006) üzerinden
 // VNC TCP verisi binary proxy olarak aktarılır. Mixed-content sorunu yok.
@@ -6545,6 +6620,65 @@ async function _initVNC(vmId) {
     rfb.addEventListener("desktopname", (e) => _setVncStatus("● " + (e.detail?.name || "Bağlı"), true));
 
     _vncRfb = rfb;
+
+    // ── Pointer Lock (VMware tarzı mouse yakalama) ──────────────────────────
+    let _vncVirtX = 0, _vncVirtY = 0;
+
+    // Canvas'ı bul (noVNC async oluşturuyor — polling)
+    const _findCanvas = setInterval(() => {
+      const canvas = screen.querySelector("canvas");
+      if (!canvas) return;
+      clearInterval(_findCanvas);
+
+      // Konsola tıklayınca mouse kilitle
+      canvas.addEventListener("click", () => {
+        if (!document.pointerLockElement) canvas.requestPointerLock();
+      });
+
+      // Pointer lock aktifken relative hareketi absolute'a çevir
+      document.addEventListener("mousemove", (e) => {
+        if (document.pointerLockElement !== canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        _vncVirtX = Math.max(0, Math.min(rect.width,  _vncVirtX + e.movementX));
+        _vncVirtY = Math.max(0, Math.min(rect.height, _vncVirtY + e.movementY));
+        // Sentetik absolute event gönder → noVNC'nin kendi handler'ı yakalar
+        canvas.dispatchEvent(new MouseEvent("mousemove", {
+          bubbles: true, cancelable: true,
+          clientX: rect.left + _vncVirtX,
+          clientY: rect.top  + _vncVirtY,
+        }));
+      }, true);
+    }, 100);
+
+    // Ctrl+Alt → pointer lock'u bırak
+    document.addEventListener("keydown", (e) => {
+      if (e.ctrlKey && e.altKey && document.pointerLockElement) {
+        document.exitPointerLock();
+        e.stopPropagation();
+        // Ctrl+Alt+Del ise bırak devam etsin
+        if (!e.key || e.key !== "Delete") e.preventDefault();
+      }
+    }, true);
+
+    // Pointer lock değişince indicator güncelle
+    document.addEventListener("pointerlockchange", () => {
+      const locked = !!document.pointerLockElement;
+      const ind = document.getElementById("vnc-mouse-indicator");
+      if (ind) {
+        ind.textContent  = locked ? "🔒 Ctrl+Alt = Serbest" : "🖱 Mouse Kilitle";
+        ind.style.color  = locked ? "#22c55e" : "var(--text-muted)";
+        ind.style.border = locked ? "1px solid #22c55e44" : "1px solid var(--border2)";
+      }
+      if (locked) {
+        // Kilitleme anında virtual pozisyonu canvas merkeze al
+        const canvas = screen.querySelector("canvas");
+        if (canvas) {
+          const r = canvas.getBoundingClientRect();
+          _vncVirtX = r.width / 2;
+          _vncVirtY = r.height / 2;
+        }
+      }
+    });
   } catch(e) {
     _setVncStatus("noVNC yüklenemedi: " + e.message, false);
     if (loadMsg) {

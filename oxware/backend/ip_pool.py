@@ -35,12 +35,13 @@ def _save(data: dict):
 
 def create_pool(
     name: str,
-    network: str,          # örn: "192.168.100.0/24"
+    network: str,                  # örn: "192.168.100.0/24"
     gateway: str,
     dns: list = None,
-    start_ip: str = None,  # Havuz başlangıcı (None = network+10)
-    end_ip: str = None,    # Havuz sonu (None = broadcast-1)
-    reserved: list = None, # Bu IP'leri dışarıda bırak
+    start_ip: str = None,          # Havuz başlangıcı (None = network+10)
+    end_ip: str = None,            # Havuz sonu (None = broadcast-1)
+    reserved: list = None,         # Bu IP'leri dışarıda bırak
+    libvirt_network: str = "default",  # Libvirt ağ adı (virsh net-update için)
 ) -> dict:
     net = ipaddress.IPv4Network(network, strict=False)
     hosts = list(net.hosts())
@@ -69,6 +70,7 @@ def create_pool(
         "start_ip": str(start),
         "end_ip": str(end),
         "reserved": reserved or [gateway],
+        "libvirt_network": libvirt_network or "default",
         "created_at": time.time(),
     }
 
@@ -162,12 +164,13 @@ def allocate_ip(pool_name: str, vm_id: str, vm_name: str, mac: str = None) -> di
         _save(data)
 
     return {
-        "ip":      ip,
-        "gateway": pool["gateway"],
-        "dns":     pool["dns"],
-        "network": pool["network"],
-        "netmask": str(ipaddress.IPv4Network(pool["network"], strict=False).netmask),
-        "prefix":  ipaddress.IPv4Network(pool["network"], strict=False).prefixlen,
+        "ip":              ip,
+        "gateway":         pool["gateway"],
+        "dns":             pool["dns"],
+        "network":         pool["network"],
+        "netmask":         str(ipaddress.IPv4Network(pool["network"], strict=False).netmask),
+        "prefix":          ipaddress.IPv4Network(pool["network"], strict=False).prefixlen,
+        "libvirt_network": pool.get("libvirt_network", "default"),
     }
 
 

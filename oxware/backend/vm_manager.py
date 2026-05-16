@@ -77,13 +77,25 @@ def _monitor_install(vm_uuid: str, vm_name: str):
                         boot_el = ET.SubElement(os_el, "boot")
                         boot_el.set("dev", "hd")
 
+                    # on_reboot → restart (kurulum sırasında destroy'du)
+                    for tag in ("on_reboot",):
+                        el = root.find(tag)
+                        if el is not None:
+                            el.text = "restart"
+
                     new_xml = ET.tostring(root, encoding="unicode")
 
                     conn2 = _connect()
                     try:
                         conn2.defineXML(new_xml)          # kalıcı kaydet
                         dom2 = conn2.lookupByUUIDString(vm_uuid)
-                        dom2.create()                     # başlat
+                        # Yarım kalmış state'i temizle — force stop sonra start
+                        try:
+                            dom2.destroy()
+                        except Exception:
+                            pass
+                        time.sleep(2)
+                        dom2.create()                     # diskten boot
                         log.info("VM diskten boot ile yeniden başlatıldı: %s", vm_name)
                     finally:
                         conn2.close()
@@ -367,7 +379,7 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
     <timer name='hpet' present='no'/>
   </clock>
   <on_poweroff>destroy</on_poweroff>
-  <on_reboot>restart</on_reboot>
+  <on_reboot>{'destroy' if iso_path and os.path.exists(iso_path) else 'restart'}</on_reboot>
   <on_crash>destroy</on_crash>
   <pm>
     <suspend-to-mem enabled='no'/>
@@ -417,6 +429,7 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
     conn = _connect()
     try:
         dom = conn.defineXML(xml)
+        dom.setAutostart(1)   # host restart'ta VM otomatik başlasın
         reg = _load_vnc_registry()
         reg[vm_uuid] = vnc_port
         _save_vnc_registry(reg)

@@ -1431,7 +1431,9 @@ def api_create_vm():
         if auto_ip and pool_name and vm_mac:
             try:
                 alloc = ip_pool_mgr.allocate_ip(pool_name, vm_id, name, vm_mac)
-                vm_manager.add_dhcp_host(network, vm_mac, alloc["ip"], name)
+                # Pool'un libvirt_network'ünü kullan (VM'in network'ü değil)
+                dhcp_net = alloc.get("libvirt_network") or network
+                vm_manager.add_dhcp_host(dhcp_net, vm_mac, alloc["ip"], name)
                 result["assigned_ip"] = alloc["ip"]
                 result["gateway"]     = alloc["gateway"]
                 result["dns"]         = alloc["dns"]
@@ -1665,6 +1667,54 @@ def api_vm_nic_detach(vm_id, mac):
 def api_vm_autostart(vm_id):
     data = request.get_json() or {}
     return ok(**vm_manager.set_autostart(vm_id, bool(data.get("enabled", False))))
+
+@app.route("/api/vms/<vm_id>/enable-ssh", methods=["POST"])
+@require_auth
+def api_vm_enable_ssh(vm_id):
+    """QEMU Guest Agent üzerinden Ubuntu/Debian VM'de SSH servisini etkinleştir."""
+    try:
+        vm = vm_manager.get_vm(vm_id)
+        vm_name = vm.get("name", vm_id)
+        # QEMU guest agent komutu: systemctl enable --now ssh (ubuntu/debian)
+        cmd_payload = json.dumps({
+            "execute": "guest-exec",
+            "arguments": {
+                "path": "/bin/bash",
+                "arg": ["-c", "systemctl enable --now ssh || systemctl enable --now sshd"],
+                "capture-output": True
+            }
+        })
+        result = subprocess.run(
+            ["virsh", "qemu-agent-command", vm_name, cmd_payload],
+            capture_output=True, text=True, timeout=15
+        )
+        if result.returncode != 0:
+            return err(f"Guest agent hatası: {result.stderr.strip() or 'Guest agent çalışmıyor olabilir'}")
+        # exec-status al
+        try:
+            exec_result = json.loads(result.stdout)
+            pid = exec_result.get("return", {}).get("pid")
+            if pid:
+                import time as _time
+                _time.sleep(1)
+                status_payload = json.dumps({"execute": "guest-exec-status", "arguments": {"pid": pid}})
+                status_result = subprocess.run(
+                    ["virsh", "qemu-agent-command", vm_name, status_payload],
+                    capture_output=True, text=True, timeout=10
+                )
+                status_data = json.loads(status_result.stdout) if status_result.returncode == 0 else {}
+                ret = status_data.get("return", {})
+                exitcode = ret.get("exitcode", 0)
+                if exitcode != 0:
+                    out_b64 = ret.get("err-data", "")
+                    import base64
+                    err_out = base64.b64decode(out_b64).decode("utf-8", errors="replace") if out_b64 else ""
+                    return err(f"SSH etkinleştirme başarısız (exit {exitcode}): {err_out}")
+        except Exception:
+            pass
+        return ok(message="SSH servisi etkinleştirildi ve başlatıldı")
+    except Exception as e:
+        return err(str(e), 500)
 
 @app.route("/api/vms/<vm_id>/console")
 @require_auth
@@ -2145,7 +2195,7 @@ def api_ipam_create_pool():
     if missing:
         return err(f"Zorunlu alanlar: {', '.join(missing)}")
     try:
-        _known = {"name", "network", "gateway", "dns", "start_ip", "end_ip", "reserved"}
+        _known = {"name", "network", "gateway", "dns", "start_ip", "end_ip", "reserved", "libvirt_network"}
         pool = ip_pool_mgr.create_pool(**{k: v for k, v in data.items() if k in _known})
         ev.info(f"IP havuzu oluşturuldu: {data['name']}", category="network")
         return ok(pool=pool), 201
