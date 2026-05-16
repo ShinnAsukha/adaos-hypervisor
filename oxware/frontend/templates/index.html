@@ -5231,13 +5231,19 @@ async function ipamConfirmVMAssign() {
   const [vmId, vmName, vmMac] = vmVal.split('|');
   if (!vmMac) { toast('Bu VM için MAC adresi bulunamadı — DHCP ataması yapılamaz', 'error'); return; }
   const mac = vmMac;
-  const body = { pool, mac, vm: vmName };
+  const body = { pool, mac, vm: vmName, vm_id: vmId, restart_after: true };
   if (manualIp) body.ip = manualIp;
+  toast('IP atanıyor ve VM yeniden başlatılıyor...', 'info');
   const d = await _api('/api/ipam/assign', 'POST', body);
   if (d && !d.error) {
-    toast(`IP atandı: ${d.ip || ''} → ${vmName}`, 'success');
+    const restartMsg = d.restarted
+      ? ' VM yeniden başlatıldı, yeni IP alındı.'
+      : (d.restart_error ? ` VM restart başarısız: ${d.restart_error}` : ' VM\'i manuel restart edin.');
+    toast(`IP atandı: ${d.ip || ''} → ${vmName}.${restartMsg}`, 'success');
     document.getElementById('modal-ipam-vmassign').classList.remove('open');
     loadIpamLeases();
+  } else {
+    toast('IP ataması başarısız: ' + (d?.error || ''), 'error');
   }
 }
 
@@ -6409,9 +6415,35 @@ async function vmEnableSsh(id) {
   toast("SSH etkinleştiriliyor (QEMU Guest Agent)...", "info");
   try {
     const d = await api(`/vms/${id}/enable-ssh`, { method: "POST" });
-    toast(d.message || "SSH etkinleştirildi", "success");
+    if (d.success === false || d.error) {
+      if (d.needs_guest_agent) {
+        // Guest agent yüklü değil — kurulum talimatı göster
+        const cmd = d.install_cmd || 'apt install -y qemu-guest-agent openssh-server && systemctl enable --now qemu-guest-agent ssh';
+        const vmName = d.vm_name || '';
+        const msg = `QEMU Guest Agent VM'de yüklü değil.\n\nVM konsolu veya SSH ile bağlanıp şunu çalıştırın:\n\n${cmd}\n\nSonra tekrar deneyin.`;
+        // Modal yerine özel bir info popup göster
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:#0008;z-index:99999;display:flex;align-items:center;justify-content:center';
+        overlay.innerHTML = `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px;max-width:520px;width:90%;box-shadow:0 20px 60px #000a">
+          <div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--accent-lt)">⚠ QEMU Guest Agent Gerekli</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">VM konsoluna girin (VNC) veya mevcut SSH ile bağlanıp şu komutu çalıştırın:</div>
+          <pre style="background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:10px;font-size:11px;color:#86efac;overflow-x:auto;white-space:pre-wrap;word-break:break-all">${escHtml(cmd)}</pre>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:10px">Kurulum sonrası "SSH Etkinleştir" butonuna tekrar tıklayın.</div>
+          <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+            <button onclick="navigator.clipboard?.writeText(${JSON.stringify(cmd)});toast('Kopyalandı','success')" style="padding:6px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;cursor:pointer;font-size:11px;color:var(--text)">📋 Kopyala</button>
+            <button onclick="this.closest('[style*=fixed]').remove()" style="padding:6px 14px;background:var(--accent);border:none;border-radius:4px;cursor:pointer;font-size:12px;color:white;font-weight:600">Kapat</button>
+          </div>
+        </div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+      } else {
+        toast("SSH etkinleştirilemedi: " + escHtml(d.error || 'Bilinmeyen hata'), "error");
+      }
+    } else {
+      toast(d.message || "SSH etkinleştirildi ✓", "success");
+    }
   } catch (e) {
-    toast("SSH etkinleştirilemedi: " + (e.message || e), "error");
+    toast("SSH etkinleştirilemedi: " + escHtml(e.message || String(e)), "error");
   }
 }
 

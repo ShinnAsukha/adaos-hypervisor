@@ -1672,15 +1672,18 @@ def api_vm_autostart(vm_id):
 @require_auth
 def api_vm_enable_ssh(vm_id):
     """QEMU Guest Agent üzerinden Ubuntu/Debian VM'de SSH servisini etkinleştir."""
+    _GUEST_AGENT_INSTALL = (
+        "apt update && apt install -y qemu-guest-agent openssh-server && "
+        "systemctl enable --now qemu-guest-agent ssh"
+    )
     try:
         vm = vm_manager.get_vm(vm_id)
         vm_name = vm.get("name", vm_id)
-        # QEMU guest agent komutu: systemctl enable --now ssh (ubuntu/debian)
         cmd_payload = json.dumps({
             "execute": "guest-exec",
             "arguments": {
                 "path": "/bin/bash",
-                "arg": ["-c", "systemctl enable --now ssh || systemctl enable --now sshd"],
+                "arg": ["-c", "systemctl enable --now ssh 2>/dev/null || systemctl enable --now sshd 2>/dev/null; echo done"],
                 "capture-output": True
             }
         })
@@ -1689,14 +1692,25 @@ def api_vm_enable_ssh(vm_id):
             capture_output=True, text=True, timeout=15
         )
         if result.returncode != 0:
-            return err(f"Guest agent hatası: {result.stderr.strip() or 'Guest agent çalışmıyor olabilir'}")
+            stderr = result.stderr.strip()
+            # Guest agent yüklü değil veya bağlı değil
+            not_connected = any(x in stderr.lower() for x in [
+                "not responding", "not connected", "agent is not", "no agent"
+            ])
+            return jsonify({
+                "success": False,
+                "needs_guest_agent": not_connected,
+                "error": stderr or "Guest agent bağlı değil",
+                "install_cmd": _GUEST_AGENT_INSTALL if not_connected else None,
+                "vm_name": vm_name,
+            }), 200  # 200 döndür ki frontend mesajı parse edebilsin
+
         # exec-status al
         try:
             exec_result = json.loads(result.stdout)
             pid = exec_result.get("return", {}).get("pid")
             if pid:
-                import time as _time
-                _time.sleep(1)
+                time.sleep(1)
                 status_payload = json.dumps({"execute": "guest-exec-status", "arguments": {"pid": pid}})
                 status_result = subprocess.run(
                     ["virsh", "qemu-agent-command", vm_name, status_payload],
@@ -1706,10 +1720,11 @@ def api_vm_enable_ssh(vm_id):
                 ret = status_data.get("return", {})
                 exitcode = ret.get("exitcode", 0)
                 if exitcode != 0:
-                    out_b64 = ret.get("err-data", "")
                     import base64
+                    out_b64 = ret.get("err-data", "")
                     err_out = base64.b64decode(out_b64).decode("utf-8", errors="replace") if out_b64 else ""
-                    return err(f"SSH etkinleştirme başarısız (exit {exitcode}): {err_out}")
+                    return jsonify({"success": False, "error": f"exit {exitcode}: {err_out}",
+                                    "needs_guest_agent": False}), 200
         except Exception:
             pass
         return ok(message="SSH servisi etkinleştirildi ve başlatıldı")
@@ -2299,30 +2314,45 @@ def api_ipam_add_lease():
 @require_auth
 def api_ipam_assign_vm():
     """VM'e havuzdan IP ata + libvirt DHCP static entry ekle."""
-    data      = request.get_json(force=True, silent=True) or {}
-    pool      = data.get("pool", "")
-    mac       = data.get("mac", "")
-    vm_name   = data.get("vm", "")
-    manual_ip = data.get("ip", "")
+    data         = request.get_json(force=True, silent=True) or {}
+    pool         = data.get("pool", "")
+    mac          = data.get("mac", "")
+    vm_name      = data.get("vm", "")
+    manual_ip    = data.get("ip", "")
+    vm_id        = data.get("vm_id", "")       # restart için
+    restart_after = data.get("restart_after", True)  # default: restart
     if not pool or not mac:
         return err("pool ve mac zorunlu")
     try:
         if manual_ip:
-            # Manuel IP: pool'dan libvirt_network al
-            pools = {p["name"]: p for p in ip_pool_mgr.list_pools()}
+            pools    = {p["name"]: p for p in ip_pool_mgr.list_pools()}
             dhcp_net = pools.get(pool, {}).get("libvirt_network", "default")
-            entry = ip_pool_mgr.manual_assign(ip=manual_ip, mac=mac, vm_name=vm_name, pool_name=pool)
+            entry    = ip_pool_mgr.manual_assign(ip=manual_ip, mac=mac, vm_name=vm_name, pool_name=pool, vm_id=vm_id or mac)
             assigned_ip = manual_ip
         else:
-            # Havuzdan otomatik — allocate_ip libvirt_network'ü de döndürür
-            entry = ip_pool_mgr.allocate_ip(pool_name=pool, vm_id=mac, vm_name=vm_name, mac=mac)
+            entry       = ip_pool_mgr.allocate_ip(pool_name=pool, vm_id=vm_id or mac, vm_name=vm_name, mac=mac)
             assigned_ip = entry.get("ip")
             dhcp_net    = entry.get("libvirt_network", "default")
 
-        # Libvirt DHCP static entry — VM bu MAC ile boot edince bu IP'yi alır
         dhcp_ok = vm_manager.add_dhcp_host(dhcp_net, mac, assigned_ip, vm_name)
-        ev.info(f"IP atandı: {assigned_ip} → {vm_name} (DHCP: {dhcp_ok})", category="network")
-        return ok(ip=assigned_ip, mac=mac, vm=vm_name, pool=pool, dhcp_entry=dhcp_ok)
+
+        # DHCP lease eski IP'yi tutmasın — VM'i yeniden başlat
+        restarted = False
+        restart_err = None
+        if restart_after and vm_id:
+            try:
+                vm_manager.stop_vm(vm_id, force=True)
+                time.sleep(2)
+                vm_manager.start_vm(vm_id)
+                restarted = True
+                log.info("IP ataması sonrası VM yeniden başlatıldı: %s → %s", vm_name, assigned_ip)
+            except Exception as re:
+                restart_err = str(re)
+                log.warning("IP sonrası VM restart başarısız (%s): %s", vm_name, re)
+
+        ev.info(f"IP atandı: {assigned_ip} → {vm_name} (DHCP: {dhcp_ok}, restart: {restarted})", category="network")
+        return ok(ip=assigned_ip, mac=mac, vm=vm_name, pool=pool,
+                  dhcp_entry=dhcp_ok, restarted=restarted, restart_error=restart_err)
     except Exception as e:
         return err(e, 500)
 
