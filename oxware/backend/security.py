@@ -81,7 +81,8 @@ RATE_LIMITS = {
     "/api/auth/login":    (5,   60),   # 5 deneme / dakika (brute-force)
     "/api/setup/init":    (3,  300),   # 3 deneme / 5 dakika
     "/api/provision":     (10,  60),   # 10 kurulum / dakika
-    "/api/storage/isos":  (5,  300),   # 5 upload / 5 dakika
+    # NOT: /api/storage/isos GET (liste) burada YOK — default 120/dk kullanır
+    # POST/DELETE upload limiti endpoint handler'ında kontrol edilir
     "default":            (120, 60),   # Genel API: 120 istek / dakika
 }
 
