@@ -191,6 +191,22 @@ update_mode() {
     install_cli_tools
     download_fontawesome
 
+    # Servis dosyasını güncelle (StartLimitIntervalSec [Unit] konumu düzeltmesi)
+    create_service
+
+    # Reboot sonrası kararlılık fixleri uygula
+    configure_ssh
+    configure_hostname
+    fix_reboot_stability
+
+    # UFW iptables-legacy fix
+    if command -v update-alternatives &>/dev/null; then
+        update-alternatives --set iptables  /usr/sbin/iptables-legacy  2>/dev/null || true
+        update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy 2>/dev/null || true
+    fi
+    systemctl enable ufw 2>/dev/null || true
+
+    systemctl daemon-reload
     systemctl restart oxware 2>/dev/null || true
     sleep 3
     if systemctl is-active --quiet oxware; then
@@ -225,7 +241,7 @@ install_packages() {
         openssl ca-certificates
         novnc websockify
         cpu-checker htop lsof curl wget git jq smartmontools
-        ufw fail2ban
+        ufw fail2ban certbot python3-certbot
         nftables wireguard
         openvswitch-switch openvswitch-common
         suricata
@@ -439,6 +455,8 @@ Documentation=https://github.com/ShinnAsukha/oxware-hypervisor
 # libvirt-guests.service: libvirt hem başladı hem de ağları otomatik açtı
 After=network-online.target libvirtd.service libvirt-guests.service
 Wants=network-online.target libvirtd.service
+StartLimitIntervalSec=120
+StartLimitBurst=5
 
 [Service]
 Type=simple
@@ -459,8 +477,6 @@ ExecReload=/bin/kill -HUP \$MAINPID
 
 Restart=on-failure
 RestartSec=10
-StartLimitIntervalSec=120
-StartLimitBurst=5
 TimeoutStartSec=60
 TimeoutStopSec=30
 KillMode=mixed
@@ -632,17 +648,116 @@ OXUPDATE
     log "oxupdate komutu kuruldu → 'sudo oxupdate'"
 }
 
+# ── SSH Kalıcı Konfigürasyon ──────────────────────────────────
+configure_ssh() {
+    step "SSH Servisi"
+    # Ubuntu'da servis adı 'ssh', Debian'da 'sshd' olabilir
+    systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true
+    systemctl start  ssh 2>/dev/null || systemctl start  sshd 2>/dev/null || true
+
+    # SSH config — root login ve PasswordAuthentication aktif tut
+    SSH_CONF="/etc/ssh/sshd_config"
+    if [ -f "$SSH_CONF" ]; then
+        # PermitRootLogin yes
+        if grep -q "^#*PermitRootLogin" "$SSH_CONF"; then
+            sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' "$SSH_CONF"
+        else
+            echo "PermitRootLogin yes" >> "$SSH_CONF"
+        fi
+        # PasswordAuthentication yes
+        if grep -q "^#*PasswordAuthentication" "$SSH_CONF"; then
+            sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' "$SSH_CONF"
+        else
+            echo "PasswordAuthentication yes" >> "$SSH_CONF"
+        fi
+        systemctl reload ssh 2>/dev/null || systemctl reload sshd 2>/dev/null || true
+    fi
+    log "SSH servisi etkinleştirildi"
+}
+
+# ── Hostname Kalıcı Konfigürasyon ────────────────────────────
+configure_hostname() {
+    step "Hostname Yapılandırması"
+
+    # Mevcut hostname'i koru, yoksa 'oxware-server' yap
+    CUR_HOST=$(hostname -s 2>/dev/null || echo "")
+    if [ -z "$CUR_HOST" ] || [ "$CUR_HOST" = "localhost" ] || [ "$CUR_HOST" = "localhost.localdomain" ]; then
+        NEW_HOST="oxware-server"
+    else
+        NEW_HOST="$CUR_HOST"
+    fi
+
+    hostnamectl set-hostname "$NEW_HOST" 2>/dev/null || echo "$NEW_HOST" > /etc/hostname
+
+    # /etc/hosts güncelle
+    if ! grep -q "$NEW_HOST" /etc/hosts; then
+        sed -i "/^127\.0\.1\.1/d" /etc/hosts
+        echo "127.0.1.1 $NEW_HOST" >> /etc/hosts
+    fi
+
+    # Cloud-init hostname reset'ini devre dışı bırak
+    if [ -d /etc/cloud/cloud.cfg.d ]; then
+        echo "preserve_hostname: true" > /etc/cloud/cloud.cfg.d/99_hostname.cfg
+        log "Cloud-init hostname reset devre dışı bırakıldı"
+    fi
+
+    log "Hostname: $NEW_HOST"
+}
+
+# ── Reboot Sonrası Ağ/Servis Kararlılığı ─────────────────────
+fix_reboot_stability() {
+    step "Reboot Kararlılığı"
+
+    # systemd-networkd-wait-online zaman aşımı — çok uzun beklerse oxware geç başlar
+    mkdir -p /etc/systemd/system/systemd-networkd-wait-online.service.d
+    cat > /etc/systemd/system/systemd-networkd-wait-online.service.d/timeout.conf << 'EOF'
+[Service]
+TimeoutStartSec=15
+EOF
+
+    # network-online.target — NetworkManager tabanlı sistemlerde
+    if systemctl is-enabled NetworkManager 2>/dev/null | grep -q "enabled"; then
+        systemctl enable NetworkManager-wait-online.service 2>/dev/null || true
+    fi
+
+    # libvirtd reboot'ta default ağı otomatik başlatsın
+    virsh net-autostart default 2>/dev/null || true
+
+    # KVM modüllerini reboot'ta yükle
+    if ! grep -q "^kvm" /etc/modules 2>/dev/null; then
+        echo "kvm" >> /etc/modules
+        grep -qE "vmx|svm" /proc/cpuinfo && {
+            grep -q "vmx" /proc/cpuinfo && echo "kvm_intel" >> /etc/modules || echo "kvm_amd" >> /etc/modules
+        }
+        log "KVM modülleri /etc/modules'a eklendi"
+    fi
+
+    systemctl daemon-reload
+    log "Reboot kararlılığı yapılandırıldı"
+}
+
 # ── Firewall ──────────────────────────────────────────────────
 configure_firewall() {
     step "Güvenlik Duvarı (UFW)"
-    ufw --force reset 2>/dev/null
-    ufw default deny incoming 2>/dev/null
-    ufw default allow outgoing 2>/dev/null
-    ufw allow 22/tcp   comment "SSH" 2>/dev/null
-    ufw allow 8006/tcp comment "OXware Web UI" 2>/dev/null
-    ufw allow 5900:5999/tcp comment "VNC" 2>/dev/null
-    ufw allow 6080/tcp comment "noVNC WS" 2>/dev/null
+
+    # Ubuntu 20.04+ nftables kullanır; UFW iptables beklediği için çakışır
+    # Çözüm: iptables-legacy kullan
+    if command -v update-alternatives &>/dev/null; then
+        update-alternatives --set iptables  /usr/sbin/iptables-legacy  2>/dev/null || true
+        update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy 2>/dev/null || true
+        log "iptables-legacy seçildi (UFW uyumluluğu için)"
+    fi
+
+    ufw --force reset 2>/dev/null || true
+    ufw default deny incoming  2>/dev/null || true
+    ufw default allow outgoing 2>/dev/null || true
+    ufw allow 22/tcp   comment "SSH" 2>/dev/null || true
+    ufw allow 8006/tcp comment "OXware Web UI" 2>/dev/null || true
+    ufw allow 80/tcp   comment "HTTP (Let's Encrypt)" 2>/dev/null || true
+    ufw allow 5900:5999/tcp comment "VNC" 2>/dev/null || true
+    ufw allow 6080/tcp comment "noVNC WS" 2>/dev/null || true
     echo "y" | ufw enable 2>/dev/null || true
+    systemctl enable ufw 2>/dev/null || true
     log "UFW aktif"
 }
 
@@ -677,11 +792,16 @@ F2BFILTER
 install_ovs() {
     step "OpenVSwitch (SDN)"
     if ! command -v ovs-vsctl &>/dev/null; then
-        warn "openvswitch-switch kurulu değil — paket kurulumu atlandı"
-    else
+        warn "ovs-vsctl bulunamadı — yeniden yükleniyor..."
+        apt-get install -y -qq openvswitch-switch openvswitch-common 2>/dev/null || true
+    fi
+    if command -v ovs-vsctl &>/dev/null; then
         systemctl enable --now openvswitch-switch 2>/dev/null || true
         ovs-vsctl show &>/dev/null || true
         log "OpenVSwitch etkinleştirildi"
+    else
+        warn "OpenVSwitch kurulamadı — SDN özellikleri devre dışı kalacak"
+        warn "Manuel kurulum: apt-get install openvswitch-switch"
     fi
 }
 
@@ -833,8 +953,11 @@ main() {
     write_config
     install_novnc
     create_service
+    configure_ssh
+    configure_hostname
     configure_firewall
     configure_fail2ban
+    fix_reboot_stability
     install_ovs
     install_suricata
     install_cli_tools

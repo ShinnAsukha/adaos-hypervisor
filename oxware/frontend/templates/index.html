@@ -1830,6 +1830,7 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
                   <span id="iso-fetch-fname" style="font-size:12px;color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
                   <span id="iso-fetch-pct" style="font-size:12px;font-weight:700;color:var(--accent-lt);margin-left:8px">0%</span>
+                  <button id="iso-fetch-cancel-btn" onclick="cancelIsoFetch()" style="margin-left:8px;padding:2px 8px;font-size:11px;background:var(--danger,#ef4444);border:none;color:white;border-radius:4px;cursor:pointer">✕ İptal</button>
                 </div>
                 <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden">
                   <div id="iso-fetch-bar" style="background:var(--accent);height:100%;width:0%;transition:width .5s;border-radius:4px"></div>
@@ -2730,6 +2731,14 @@
         <div class="form-row"><label>Disk Formatı</label>
           <select id="vm-disk-fmt"><option value="qcow2">qcow2 (Önerilen)</option><option value="raw">raw</option></select>
         </div>
+        <div class="form-row"><label>Disk Arabirimi</label>
+          <select id="vm-disk-bus">
+            <option value="sata">SATA (Uyumlu — Windows/Linux)</option>
+            <option value="virtio">VirtIO (Hızlı — yalnızca Linux)</option>
+            <option value="ide">IDE (Eski — max uyumluluk)</option>
+          </select>
+          <div class="form-hint">Windows ve Ubuntu kurulumu için SATA seçin</div>
+        </div>
       </div>
       <div class="form-row"><label>ISO (Opsiyonel)</label>
         <select id="vm-iso"><option value="">— ISO seçme —</option></select>
@@ -2748,6 +2757,19 @@
           <option value="win10">Windows 10</option>
           <option value="win2019">Windows Server 2019</option>
         </select>
+      </div>
+      <div class="form-row"><label>VM Tipi</label>
+        <select id="vm-type">
+          <option value="vps">VPS — Paylaşımlı (host-model CPU, esnek kaynak)</option>
+          <option value="vds">VDS — Özel (host-passthrough CPU, tam fiziksel performans)</option>
+        </select>
+        <div class="form-hint">VDS için host CPU sanallaştırma desteği gerekli</div>
+      </div>
+      <div class="form-row"><label>Otomatik IP Havuzu</label>
+        <select id="vm-autoip-pool">
+          <option value="">— Yok (Manuel IP) —</option>
+        </select>
+        <div class="form-hint">Seçilirse VM oluşturulurken otomatik IP atanır</div>
       </div>
       <div class="form-row"><label>Açılış Sırası</label>
         <select id="vm-boot">
@@ -3458,7 +3480,7 @@ window.addEventListener("click", e => {
   if (e.target.classList.contains("modal-overlay")) e.target.classList.remove("open");
 });
 
-function openCreateVMModal() { loadISOOptions(); loadNetworkOptions(); openModal("modal-create-vm"); }
+function openCreateVMModal() { loadISOOptions(); loadIpPoolOptions(); loadNetworkOptions(); openModal("modal-create-vm"); }
 function openCreateNetworkModal() { openModal("modal-create-net"); }
 function openCreatePoolModal() { openModal("modal-create-pool"); }
 function openCreateUserModal() { openModal("modal-create-user"); }
@@ -4186,6 +4208,7 @@ let _isoFetchTimer = null;
 function openIsoFetchModal() {
   document.getElementById('modal-iso-fetch').classList.add('open');
   document.getElementById('iso-fetch-url').value = '';
+  _isoPresetFilename = '';
   document.getElementById('iso-fetch-progress-wrap').style.display = 'none';
   document.getElementById('iso-fetch-start-btn').disabled = false;
 }
@@ -4193,8 +4216,21 @@ function closeIsoFetchModal() {
   document.getElementById('modal-iso-fetch').classList.remove('open');
   if (_isoFetchTimer) { clearInterval(_isoFetchTimer); _isoFetchTimer = null; }
 }
+async function cancelIsoFetch() {
+  if (!_isoFetchJobId) return;
+  try {
+    await _api(`/api/storage/iso/fetch/${_isoFetchJobId}/cancel`, 'POST');
+    clearInterval(_isoFetchTimer); _isoFetchTimer = null;
+    document.getElementById('iso-fetch-status').textContent = '✕ İptal edildi';
+    document.getElementById('iso-fetch-start-btn').disabled = false;
+    toast('İndirme iptal edildi', 'info');
+    _isoFetchJobId = null;
+  } catch(e) { toast('İptal hatası: ' + e.message, 'error'); }
+}
+let _isoPresetFilename = '';
 function selectIsoPreset(url, fname) {
   document.getElementById('iso-fetch-url').value = url;
+  _isoPresetFilename = fname || '';
   // Highlight selected
   document.querySelectorAll('.iso-preset-btn').forEach(b => b.style.borderColor = 'var(--border2)');
   event.currentTarget.style.borderColor = 'var(--accent-lt)';
@@ -4209,7 +4245,9 @@ async function startIsoFetch() {
   document.getElementById('iso-fetch-bar').style.width = '0%';
   document.getElementById('iso-fetch-status').textContent = 'Başlatılıyor...';
   try {
-    const d = await _api('/api/storage/iso/fetch', 'POST', { url });
+    const fetchBody = { url };
+    if (_isoPresetFilename) fetchBody.filename = _isoPresetFilename;
+    const d = await _api('/api/storage/iso/fetch', 'POST', fetchBody);
     if (d.error) { toast(d.error, 'error'); btn.disabled = false; return; }
     _isoFetchJobId = d.job_id;
     const fname = d.filename || url.split('/').pop();
@@ -4664,15 +4702,14 @@ async function ipamConfirmCreatePool() {
   if (startIp) body.start_ip = startIp;
   if (endIp) body.end_ip = endIp;
   const d = await _api('/api/ipam/pools', 'POST', body);
-  if (d && !d.error) {
-    toast(`Havuz oluşturuldu: ${name}`, 'success');
-    ipamCloseCreatePool();
-    loadIpamPage();
-    // Alanları temizle
-    ['ipam-pool-name','ipam-pool-network','ipam-pool-gw','ipam-pool-dns','ipam-pool-start','ipam-pool-end'].forEach(id => {
-      const el = document.getElementById(id); if (el) el.value = '';
-    });
-  }
+  if (!d) { toast('Sunucu yanıt vermedi', 'error'); return; }
+  if (d.error) { toast(`Havuz oluşturma hatası: ${d.error}`, 'error'); return; }
+  toast(`Havuz oluşturuldu: ${name}`, 'success');
+  ipamCloseCreatePool();
+  loadIpamPage();
+  ['ipam-pool-name','ipam-pool-network','ipam-pool-gw','ipam-pool-dns','ipam-pool-start','ipam-pool-end'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
 }
 
 async function ipamDeletePool(name) {
@@ -5269,7 +5306,7 @@ async function hwApplyVcpu() {
   if (!_hwVmId) return;
   const count = parseInt(document.getElementById('hw-vcpu-count').value);
   try {
-    const r = await api(`/vms/${_hwVmId}/hardware/vcpus`, { method:'POST', body: JSON.stringify({count}) });
+    const r = await api(`/vms/${_hwVmId}/hardware/vcpus`, { method:'POST', body: {count} });
     toast(`vCPU ${count} olarak ${r.live ? 'canlı' : 'config'} uygulandı`, 'success');
     loadVMDetail(_hwVmId);
   } catch(e) { toast('vCPU değiştirilemedi: ' + e.message, 'error'); }
@@ -5279,7 +5316,7 @@ async function hwApplyMemory() {
   if (!_hwVmId) return;
   const mb = parseInt(document.getElementById('hw-mem-mb').value);
   try {
-    const r = await api(`/vms/${_hwVmId}/hardware/memory`, { method:'POST', body: JSON.stringify({mb}) });
+    const r = await api(`/vms/${_hwVmId}/hardware/memory`, { method:'POST', body: {mb} });
     toast(`RAM ${mb} MB ${r.live ? 'canlı balloon' : 'config'} uygulandı`, 'success');
     loadVMDetail(_hwVmId);
   } catch(e) { toast('RAM değiştirilemedi: ' + e.message, 'error'); }
@@ -5289,7 +5326,7 @@ async function hwApplyCpuMode() {
   if (!_hwVmId) return;
   const mode = document.getElementById('hw-cpu-mode').value;
   try {
-    await api(`/vms/${_hwVmId}/hardware/cpu-mode`, { method:'POST', body: JSON.stringify({mode}) });
+    await api(`/vms/${_hwVmId}/hardware/cpu-mode`, { method:'POST', body: {mode} });
     toast(`CPU modu "${mode}" olarak ayarlandı. VM yeniden başlatılmalı.`, 'warning');
   } catch(e) { toast('CPU modu değiştirilemedi: ' + e.message, 'error'); }
 }
@@ -5297,7 +5334,7 @@ async function hwApplyCpuMode() {
 async function hwApplyNestedVirt(enabled) {
   if (!_hwVmId) return;
   try {
-    await api(`/vms/${_hwVmId}/hardware/nested-virt`, { method:'POST', body: JSON.stringify({enabled}) });
+    await api(`/vms/${_hwVmId}/hardware/nested-virt`, { method:'POST', body: {enabled} });
     toast(`Nested virt ${enabled ? 'açıldı' : 'kapatıldı'}. VM yeniden başlatılmalı.`, 'warning');
   } catch(e) {
     toast('Nested virt değiştirilemedi: ' + e.message, 'error');
@@ -5322,7 +5359,7 @@ async function hwEjectCdrom(targetDev) {
   try {
     await api(`/vms/${_hwVmId}/cdrom`, {
       method: 'PUT',
-      body: JSON.stringify({ eject: true, device: targetDev })
+      body: { eject: true, device: targetDev }
     });
     toast(`ISO çıkarıldı (${targetDev})`, 'success');
     loadHardwareConfig(_hwVmId);
@@ -5353,7 +5390,7 @@ async function hwConfirmAddDisk() {
   const bus     = document.getElementById('add-disk-bus').value;
   const format  = document.getElementById('add-disk-fmt').value;
   try {
-    const r = await api(`/vms/${_hwVmId}/hardware/disk/attach`, { method:'POST', body: JSON.stringify({size_gb, bus, format}) });
+    const r = await api(`/vms/${_hwVmId}/hardware/disk/attach`, { method:'POST', body: {size_gb, bus, format} });
     toast(`${size_gb}GB disk eklendi (${r.target}) ${r.live ? '— canlı' : '— config'}`, 'success');
     hwCloseAddDisk();
     loadHardwareConfig(_hwVmId);
@@ -5374,7 +5411,7 @@ async function hwConfirmAddNic() {
   const network = document.getElementById('add-nic-net').value.trim() || 'default';
   const model   = document.getElementById('add-nic-model').value;
   try {
-    const r = await api(`/vms/${_hwVmId}/hardware/nic/attach`, { method:'POST', body: JSON.stringify({network, model}) });
+    const r = await api(`/vms/${_hwVmId}/hardware/nic/attach`, { method:'POST', body: {network, model} });
     toast(`NIC eklendi (${r.mac}) ${r.live ? '— canlı' : '— config'}`, 'success');
     hwCloseAddNic();
     loadHardwareConfig(_hwVmId);
@@ -5706,6 +5743,18 @@ async function loadISOOptions() {
   } catch {}
 }
 
+async function loadIpPoolOptions() {
+  try {
+    const data = await _api('/api/ipam/pools');
+    const sel = document.getElementById("vm-autoip-pool");
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Yok (Manuel IP) —</option>';
+    (data.pools || []).forEach(p => {
+      sel.innerHTML += `<option value="${escHtml(p.name)}">${escHtml(p.name)} (${p.network}) — ${p.free_ips} boş IP</option>`;
+    });
+  } catch {}
+}
+
 async function loadNetworkOptions() {
   try {
     const data = await api("/networks");
@@ -5728,10 +5777,15 @@ async function createVM() {
     disk_gb: parseInt(document.getElementById("vm-disk").value),
     disk_format: document.getElementById("vm-disk-fmt").value,
     iso_path: document.getElementById("vm-iso").value || null,
-    network_name: document.getElementById("vm-net").value,
-    os_type: document.getElementById("vm-os").value,
+    network: document.getElementById("vm-net").value,
+    os_variant: document.getElementById("vm-os").value,
     boot_order: document.getElementById("vm-boot").value,
+    disk_bus: document.getElementById("vm-disk-bus")?.value || "sata",
+    vm_type: document.getElementById("vm-type")?.value || "vps",
   };
+  // Auto IP
+  const autoIpPool = document.getElementById("vm-autoip-pool")?.value || "";
+  if (autoIpPool) { body.auto_ip = true; body.ip_pool = autoIpPool; }
   // App install
   const appInstall = document.querySelector('input[name="app_install"]:checked')?.value || '';
   if (appInstall) body.app_install = appInstall;
@@ -6294,7 +6348,10 @@ async function loadISOList() {
     document.getElementById("iso-tbody").innerHTML = isos.length ? isos.map(i => `<tr>
       <td>◎ ${escHtml(i.name)}</td>
       <td>${i.size_mb.toLocaleString()} MB</td>
-      <td><button class="btn sm danger" onclick="deleteISO('${escHtml(i.name)}')">✕ Sil</button></td>
+      <td style="display:flex;gap:4px">
+        <button class="btn sm" onclick="renameISO('${escHtml(i.name)}')">✏ Yeniden Adlandır</button>
+        <button class="btn sm danger" onclick="deleteISO('${escHtml(i.name)}')">✕ Sil</button>
+      </td>
     </tr>`).join("") : `<tr><td colspan="3"><div class="empty-state"><div class="icon">💿</div><h3>ISO yok</h3></div></td></tr>`;
   } catch (e) { toast("ISO alınamadı: " + e.message, "error"); }
 }
@@ -6399,6 +6456,16 @@ async function deleteISO(name) {
   if (!confirm(`"${name}" silinsin mi?`)) return;
   try { await api(`/storage/isos/${encodeURIComponent(name)}`, { method: "DELETE" }); toast("Silindi", "success"); loadStorage(); }
   catch (e) { toast(e.message, "error"); }
+}
+async function renameISO(name) {
+  const newName = prompt(`"${name}" için yeni isim girin (uzantı opsiyonel):`, name.replace(/\.iso$/i, ''));
+  if (!newName || newName === name) return;
+  const cleanName = newName.endsWith('.iso') ? newName : newName + '.iso';
+  try {
+    await api(`/storage/isos/${encodeURIComponent(name)}/rename`, { method: 'POST', body: { new_name: cleanName } });
+    toast(`Yeniden adlandırıldı: ${cleanName}`, 'success');
+    loadStorage();
+  } catch(e) { toast('Yeniden adlandırma hatası: ' + e.message, 'error'); }
 }
 
 /* ══════════════════ Monitor ══════════════════ */

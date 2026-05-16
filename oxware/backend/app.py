@@ -1389,6 +1389,14 @@ def api_create_vm():
         app_install = security.sanitize_str(data.get("app_install", ""), 64)
         if app_install and app_install not in _VALID_APPS:
             app_install = ""
+        disk_bus = security.sanitize_str(data.get("disk_bus", "sata"), 16)
+        if disk_bus not in ("sata", "virtio", "ide"):
+            disk_bus = "sata"
+        vm_type = data.get("vm_type", "vps")
+        if vm_type not in ("vps", "vds"):
+            vm_type = "vps"
+        # VDS: host-passthrough CPU; VPS: host-model
+        cpu_mode = "host-passthrough" if vm_type == "vds" else "host-model"
     except (ValueError, TypeError) as e:
         return err(str(e))
     try:
@@ -1402,7 +1410,8 @@ def api_create_vm():
         create_kwargs = dict(
             name=name, memory_mb=memory_mb, vcpus=vcpus, disk_gb=disk_gb,
             iso_path=iso_path, network=network, disk_format=disk_format,
-            os_variant=os_variant, boot_order=boot_order,
+            os_variant=os_variant, boot_order=boot_order, disk_bus=disk_bus,
+            cpu_mode=cpu_mode,
         )
         # Pass cloud-init data if vm_manager supports it
         try:
@@ -1889,6 +1898,33 @@ def api_delete_iso(name):
     except FileNotFoundError as e:
         return err(e, 404)
 
+@app.route("/api/storage/isos/<name>/rename", methods=["POST"])
+@require_auth
+def api_rename_iso(name):
+    """ISO dosyasını yeniden adlandır."""
+    data = request.get_json(force=True, silent=True) or {}
+    new_name = (data.get("new_name") or "").strip()
+    if not new_name:
+        return err("new_name zorunlu")
+    try:
+        new_name = security.validate_filename(new_name)
+        if not new_name.lower().endswith(".iso"):
+            new_name += ".iso"
+    except ValueError as e:
+        return err(str(e))
+    old_path = os.path.join(config.ISO_DIR, name)
+    new_path = os.path.join(config.ISO_DIR, new_name)
+    if not os.path.exists(old_path):
+        return err(f"ISO bulunamadı: {name}", 404)
+    if os.path.exists(new_path):
+        return err(f"Bu isimde ISO zaten var: {new_name}")
+    try:
+        os.rename(old_path, new_path)
+        ev.info(f"ISO yeniden adlandırıldı: {name} → {new_name}", category="storage")
+        return ok(old_name=name, new_name=new_name)
+    except Exception as e:
+        return err(str(e), 500)
+
 @app.route("/api/storage/disks")
 @require_auth
 def api_disk_usage():
@@ -1914,7 +1950,8 @@ def api_create_ip_pool():
     if missing:
         return err(f"Zorunlu alanlar eksik: {', '.join(missing)}")
     try:
-        pool = ip_pool_mgr.create_pool(**data)
+        _known = {"name", "network", "gateway", "dns", "start_ip", "end_ip", "reserved"}
+        pool = ip_pool_mgr.create_pool(**{k: v for k, v in data.items() if k in _known})
         ev.info(f"IP havuzu oluşturuldu: {data['name']}", category="network")
         return ok(pool=pool), 201
     except Exception as e:
@@ -2056,7 +2093,8 @@ def api_ipam_create_pool():
     if missing:
         return err(f"Zorunlu alanlar: {', '.join(missing)}")
     try:
-        pool = ip_pool_mgr.create_pool(**data)
+        _known = {"name", "network", "gateway", "dns", "start_ip", "end_ip", "reserved"}
+        pool = ip_pool_mgr.create_pool(**{k: v for k, v in data.items() if k in _known})
         ev.info(f"IP havuzu oluşturuldu: {data['name']}", category="network")
         return ok(pool=pool), 201
     except Exception as e:
@@ -3986,10 +4024,14 @@ def fetch_iso_url():
     if not url.startswith(("http://", "https://")):
         return jsonify({"error": "Yalnızca http/https URL desteklenir"}), 400
 
-    # Dosya adını URL'den çıkar
-    fname = url.split("?")[0].split("/")[-1]
-    if not fname.lower().endswith(".iso"):
-        fname = fname + ".iso"
+    # Dosya adını URL'den çıkar; istemci filename sağlarsa onu kullan
+    provided_name = (data.get("filename") or "").strip()
+    if provided_name:
+        fname = provided_name if provided_name.lower().endswith(".iso") else provided_name + ".iso"
+    else:
+        fname = url.split("?")[0].split("/")[-1]
+        if not fname.lower().endswith(".iso") or len(fname) < 5:
+            fname = "download.iso"
     safe_name = _re.sub(r"[^a-zA-Z0-9_\-\.]", "_", fname)
 
     iso_dir = config.ISO_DIR
@@ -4003,6 +4045,7 @@ def fetch_iso_url():
         try:
             cmd = ["wget", "-O", dest, "--progress=dot:mega", url]
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            _iso_fetch_jobs[job_id]["_proc"] = proc
             for line in proc.stdout:
                 line = line.strip()
                 if "%" in line:
@@ -4038,6 +4081,23 @@ def fetch_iso_status(job_id):
     if not job:
         return jsonify({"error": "İş bulunamadı"}), 404
     return jsonify(job)
+
+
+@app.route("/api/storage/iso/fetch/<job_id>/cancel", methods=["POST"])
+@require_auth
+def cancel_iso_fetch(job_id):
+    """ISO indirme işini iptal et."""
+    job = _iso_fetch_jobs.get(job_id)
+    if not job:
+        return jsonify({"error": "İş bulunamadı"}), 404
+    proc = job.get("_proc")
+    if proc:
+        try:
+            proc.terminate()
+        except Exception:
+            pass
+    job["status"] = "cancelled"
+    return jsonify({"ok": True, "job_id": job_id})
 
 
 # ── Lisans ──────────────────────────────────────────────────────────────────────
@@ -4763,7 +4823,9 @@ def api_vm_cdrom(vm_id):
     import libvirt as _lv_cd
     import xml.etree.ElementTree as _ET_cd
 
-    d        = request.get_json() or {}
+    d = request.get_json(force=True, silent=True) or {}
+    if not isinstance(d, dict):
+        d = {}
     eject    = d.get("eject", False)
     iso_path = d.get("iso_path", "")
     device   = d.get("device", "")   # target dev name e.g. sdb, hdc

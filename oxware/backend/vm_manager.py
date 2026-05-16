@@ -231,12 +231,14 @@ def remove_dhcp_host(network: str, mac: str, ip: str) -> bool:
 
 def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
               network="default", disk_format="qcow2", os_variant="generic",
-              boot_order="cdrom,hd", mac: str = None):
+              boot_order="cdrom,hd", mac: str = None, disk_bus: str = "sata",
+              cpu_mode: str = "host-model"):
 
     vm_uuid  = str(uuid.uuid4())
     vm_mac   = mac or _generate_mac()          # stable MAC for DHCP static entry
     disk_path = os.path.join(config.DISK_DIR, f"{name}.qcow2")
     vnc_port = _next_vnc_port()
+    disk_dev = "vda" if disk_bus == "virtio" else "sda"
 
     os.makedirs(config.DISK_DIR, exist_ok=True)
 
@@ -247,13 +249,16 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
     )
 
     # XML şablonu
+    cpu_check = "none" if cpu_mode == "host-passthrough" else "partial"
+    cpu_model_xml = "" if cpu_mode == "host-passthrough" else "    <model fallback='allow'/>"
+    cdrom_dev = "sdb" if disk_bus == "sata" else "sda"
     iso_block = ""
     if iso_path and os.path.exists(iso_path):
         iso_block = f"""
     <disk type='file' device='cdrom'>
       <driver name='qemu' type='raw'/>
       <source file='{iso_path}'/>
-      <target dev='sdb' bus='sata'/>
+      <target dev='{cdrom_dev}' bus='sata'/>
       <readonly/>
     </disk>"""
 
@@ -277,8 +282,8 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
     <apic/>
     <vmport state='off'/>
   </features>
-  <cpu mode='host-model' check='partial'>
-    <model fallback='allow'/>
+  <cpu mode='{cpu_mode}' check='{cpu_check}'>
+{cpu_model_xml}
   </cpu>
   <clock offset='utc'>
     <timer name='rtc' tickpolicy='catchup'/>
@@ -297,7 +302,7 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
     <disk type='file' device='disk'>
       <driver name='qemu' type='{disk_format}' cache='none' io='native'/>
       <source file='{disk_path}'/>
-      <target dev='vda' bus='virtio'/>
+      <target dev='{disk_dev}' bus='{disk_bus}'/>
     </disk>{iso_block}
     <interface type='network'>
       <mac address='{vm_mac}' />
