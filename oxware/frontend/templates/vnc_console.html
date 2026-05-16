@@ -155,6 +155,29 @@ function hideLoading() {
   } catch (_) {}
 })();
 
+// ── Canvas createElement intercept — noVNC handler capture (pointer lock) ─────
+// noVNC registers mouse handlers on canvas via addEventListener.
+// We capture them here (before noVNC loads) so pointer lock can call them directly,
+// bypassing isTrusted check on synthetic events.
+(function() {
+  const _orig = document.createElement.bind(document);
+  const _map  = new WeakMap();
+  document.createElement = function(tag, ...args) {
+    const el = _orig(tag, ...args);
+    if (tag.toLowerCase() === "canvas") {
+      const h = { mousemove: [], mousedown: [], mouseup: [], wheel: [] };
+      const _origAEL = el.addEventListener.bind(el);
+      el.addEventListener = function(type, fn, opts) {
+        if (h[type]) h[type].push(fn);
+        return _origAEL(type, fn, opts);
+      };
+      _map.set(el, h);
+    }
+    return el;
+  };
+  window._vncHandlers = (canvas) => _map.get(canvas) || {};
+})();
+
 // ── WebSocket debug interceptor — logs all WS events to console ──────────────
 (function() {
   const _OrigWS = window.WebSocket;
@@ -253,11 +276,11 @@ let _vX = 0, _vY = 0;
 let _plCanvas = null;
 
 function _updateLockBtn() {
-  const btn    = document.getElementById("lock-btn");
+  const btn = document.getElementById("lock-btn");
   const locked = !!document.pointerLockElement;
   if (!btn) return;
-  btn.textContent = locked ? "🔒 Ctrl+Alt = Serbest" : "🖱 Mouse Kilitle";
-  btn.style.color = locked ? "#3fb950" : "";
+  btn.textContent  = locked ? "🔒 Ctrl+Alt = Serbest" : "🖱 Mouse Kilitle";
+  btn.style.color  = locked ? "#3fb950" : "";
   btn.style.borderColor = locked ? "rgba(63,185,80,.5)" : "";
 }
 
@@ -268,50 +291,53 @@ function togglePointerLock() {
 
 function setupPointerLock(canvas) {
   _plCanvas = canvas;
-  const getRect = () => canvas.getBoundingClientRect();
+  const h = window._vncHandlers(canvas); // noVNC'nin yakalanan handler'ları
 
-  // Tıklayınca kilitle
+  // noVNC handler'larını Proxy ile doğrudan çağır (isTrusted sorunu yok)
+  function _call(type, e, extra) {
+    const list = h[type] || [];
+    if (!list.length) return;
+    const proxy = new Proxy(e, {
+      get(t, p) {
+        if (p in extra) return extra[p];
+        const v = t[p];
+        return typeof v === "function" ? v.bind(t) : v;
+      }
+    });
+    for (const fn of list) { try { fn(proxy); } catch(_) {} }
+  }
+
+  // Canvas'a tıklayınca kilitle
   canvas.addEventListener("click", () => {
     if (!document.pointerLockElement) canvas.requestPointerLock();
   });
 
-  // Pointer lock aktifken: relative movementX/Y → virtual absolute → noVNC'ye gönder
-  // isTrusted=false ise synthetic event — sonsuz döngü önle
+  // Pointer lock aktif → relative movementX/Y → sanal mutlak konum → noVNC handler
   document.addEventListener("mousemove", (e) => {
-    if (!e.isTrusted) return;
-    if (document.pointerLockElement !== canvas) return;
-    const r = getRect();
+    if (!e.isTrusted || document.pointerLockElement !== canvas) return;
+    const r = canvas.getBoundingClientRect();
     _vX = Math.max(0, Math.min(r.width,  _vX + e.movementX));
     _vY = Math.max(0, Math.min(r.height, _vY + e.movementY));
-    canvas.dispatchEvent(new MouseEvent("mousemove", {
-      bubbles: false, cancelable: true,
-      clientX: r.left + _vX,
-      clientY: r.top  + _vY,
-    }));
+    _call("mousemove", e, { clientX: r.left + _vX, clientY: r.top + _vY,
+                             movementX: 0, movementY: 0, isTrusted: true,
+                             target: canvas, currentTarget: canvas });
   }, true);
 
-  // Mouse buton olaylarını da ilet
   document.addEventListener("mousedown", (e) => {
-    if (!e.isTrusted) return;
-    if (document.pointerLockElement !== canvas) return;
-    const r = getRect();
-    canvas.dispatchEvent(new MouseEvent("mousedown", {
-      bubbles: false, cancelable: true, button: e.button, buttons: e.buttons,
-      clientX: r.left + _vX, clientY: r.top + _vY,
-    }));
+    if (!e.isTrusted || document.pointerLockElement !== canvas) return;
+    const r = canvas.getBoundingClientRect();
+    _call("mousedown", e, { clientX: r.left + _vX, clientY: r.top + _vY,
+                             isTrusted: true, target: canvas, currentTarget: canvas });
   }, true);
 
   document.addEventListener("mouseup", (e) => {
-    if (!e.isTrusted) return;
-    if (document.pointerLockElement !== canvas) return;
-    const r = getRect();
-    canvas.dispatchEvent(new MouseEvent("mouseup", {
-      bubbles: false, cancelable: true, button: e.button, buttons: e.buttons,
-      clientX: r.left + _vX, clientY: r.top + _vY,
-    }));
+    if (!e.isTrusted || document.pointerLockElement !== canvas) return;
+    const r = canvas.getBoundingClientRect();
+    _call("mouseup", e, { clientX: r.left + _vX, clientY: r.top + _vY,
+                           isTrusted: true, target: canvas, currentTarget: canvas });
   }, true);
 
-  // Ctrl+Alt → unlock (Ctrl+Alt+Del geçmesine izin ver)
+  // Ctrl+Alt → unlock; Ctrl+Alt+Del geçer
   document.addEventListener("keydown", (e) => {
     if (e.ctrlKey && e.altKey && document.pointerLockElement === canvas) {
       if (e.key !== "Delete") {
@@ -322,12 +348,12 @@ function setupPointerLock(canvas) {
     }
   }, true);
 
-  // Indicator + virtual pos reset
+  // Kilit durumu değişince gösterge güncelle + sanal pos merkeze al
   document.addEventListener("pointerlockchange", () => {
     _updateLockBtn();
     if (document.pointerLockElement === canvas) {
-      const r = getRect();
-      _vX = r.width  / 2;
+      const r = canvas.getBoundingClientRect();
+      _vX = r.width / 2;
       _vY = r.height / 2;
     }
   });
