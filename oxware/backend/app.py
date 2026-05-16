@@ -2966,6 +2966,126 @@ def api_backup_history():
     vm_id = request.args.get("vm_id")
     return ok({"history": backup_sched.get_history(vm_id)})
 
+# ── Backup Disk ───────────────────────────────────────────────────────────────
+_BACKUP_DISK_REGISTRY_FILE = os.path.join(
+    config.DATA_DIR if hasattr(config, "DATA_DIR") else "/var/lib/oxware",
+    "backup_disks.json"
+)
+
+def _load_backup_disk_registry():
+    try:
+        if os.path.exists(_BACKUP_DISK_REGISTRY_FILE):
+            with open(_BACKUP_DISK_REGISTRY_FILE) as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return []
+
+def _save_backup_disk_registry(lst):
+    os.makedirs(os.path.dirname(_BACKUP_DISK_REGISTRY_FILE), exist_ok=True)
+    with open(_BACKUP_DISK_REGISTRY_FILE, "w") as f:
+        json.dump(lst, f, indent=2)
+
+@app.route("/api/backup/disks", methods=["GET"])
+@require_auth
+def api_backup_disk_list():
+    """Kayıtlı yedekleme disklerini listele."""
+    disks = _load_backup_disk_registry()
+    # Disk dosyası hâlâ var mı kontrol et
+    for d in disks:
+        d["exists"] = os.path.isfile(d.get("path", ""))
+        if d["exists"]:
+            try:
+                d["size_bytes"] = os.path.getsize(d["path"])
+            except Exception:
+                d["size_bytes"] = 0
+    return ok({"disks": disks})
+
+@app.route("/api/backup/disks", methods=["POST"])
+@require_auth
+def api_backup_disk_create():
+    """Yeni yedekleme diski oluştur ve VM'e bağla."""
+    import time as _time
+    data = request.get_json(force=True, silent=True) or {}
+    vm_id   = (data.get("vm_id") or "").strip()
+    size_gb = int(data.get("size_gb") or 50)
+    label   = security.sanitize_str(data.get("label") or "backup", 64)
+    bus     = data.get("bus", "sata")
+    if bus not in ("sata", "virtio", "ide"):
+        bus = "sata"
+    if size_gb < 1 or size_gb > 8192:
+        return err("Geçersiz disk boyutu (1-8192 GB)")
+
+    try:
+        vm = vm_manager.get_vm(vm_id)
+        if not vm:
+            return err("VM bulunamadı")
+    except Exception as e:
+        return err(str(e))
+
+    import re as _re
+    ts        = int(_time.time())
+    safe_name = _re.sub(r"[^a-zA-Z0-9_\-]", "_", label)
+    disk_name = f"{vm['name']}-{safe_name}-{ts}.qcow2"
+    disk_path = os.path.join(config.DISK_DIR, disk_name)
+
+    try:
+        import subprocess as _sp
+        _sp.run(
+            ["qemu-img", "create", "-f", "qcow2", disk_path, f"{size_gb}G"],
+            check=True, capture_output=True
+        )
+    except Exception as e:
+        return err(f"Disk oluşturulamadı: {e}")
+
+    try:
+        result = vm_manager.hot_attach_disk(vm_id, disk_path, bus=bus)
+    except Exception as e:
+        # Disk oluşturuldu ama bağlanamadı — dosyayı sil
+        try:
+            os.unlink(disk_path)
+        except Exception:
+            pass
+        return err(f"Disk bağlanamadı: {e}")
+
+    import datetime as _dt
+    entry = {
+        "id":         f"bd-{ts}",
+        "vm_id":      vm_id,
+        "vm_name":    vm.get("name", vm_id),
+        "label":      label,
+        "size_gb":    size_gb,
+        "path":       disk_path,
+        "bus":        bus,
+        "target_dev": result.get("target", ""),
+        "created_at": _dt.datetime.utcnow().isoformat(),
+    }
+    registry = _load_backup_disk_registry()
+    registry.append(entry)
+    _save_backup_disk_registry(registry)
+
+    ev.info(f"Yedekleme diski oluşturuldu: {disk_name} → VM {vm_id}", category="backup")
+    return ok({"disk": entry}), 201
+
+@app.route("/api/backup/disks/<disk_id>", methods=["DELETE"])
+@require_auth
+def api_backup_disk_delete(disk_id):
+    """Yedekleme diskini kayıttan ve dosya sisteminden sil."""
+    registry = _load_backup_disk_registry()
+    entry    = next((d for d in registry if d.get("id") == disk_id), None)
+    if not entry:
+        return err("Disk kaydı bulunamadı", 404)
+    path = entry.get("path", "")
+    if path and os.path.isfile(path):
+        try:
+            os.unlink(path)
+        except Exception as e:
+            return err(f"Dosya silinemedi: {e}")
+    registry = [d for d in registry if d.get("id") != disk_id]
+    _save_backup_disk_registry(registry)
+    ev.info(f"Yedekleme diski silindi: {path}", category="backup")
+    return ok({"deleted": disk_id})
+
 # ── Auto-Snapshot ─────────────────────────────────────────────────────────────
 @app.route("/api/auto-snapshot/config", methods=["GET"])
 @require_auth

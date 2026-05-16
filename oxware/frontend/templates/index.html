@@ -1524,10 +1524,49 @@
             </table>
           </div>
           <div class="section-header"><h2>Backup Geçmişi</h2></div>
-          <div class="table-wrap">
+          <div class="table-wrap" style="margin-bottom:18px">
             <table>
               <thead><tr><th>VM</th><th>Snapshot</th><th>Zaman</th><th>Durum</th><th>Hata</th></tr></thead>
               <tbody id="backupHistoryTbody"><tr><td colspan="5" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody>
+            </table>
+          </div>
+
+          <!-- Yedekleme Diski -->
+          <div class="section-header">
+            <h2>Yedekleme Diski</h2>
+            <div class="spacer"></div>
+            <button class="btn sm" onclick="loadBackupDisks()">↻ Yenile</button>
+          </div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-title">Yeni Yedekleme Diski Oluştur</div>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+              <div class="form-group">
+                <label>VM</label>
+                <select id="bdVmId" class="form-control" style="min-width:160px"></select>
+              </div>
+              <div class="form-group">
+                <label>Etiket</label>
+                <input id="bdLabel" type="text" class="form-control" value="backup" placeholder="backup" style="min-width:120px">
+              </div>
+              <div class="form-group">
+                <label>Boyut (GB)</label>
+                <input id="bdSize" type="number" class="form-control" value="50" min="1" max="8192" style="min-width:90px">
+              </div>
+              <div class="form-group">
+                <label>Bus Tipi</label>
+                <select id="bdBus" class="form-control">
+                  <option value="sata">SATA</option>
+                  <option value="virtio">VirtIO</option>
+                  <option value="ide">IDE</option>
+                </select>
+              </div>
+              <button class="btn-primary" onclick="createBackupDisk()">+ Oluştur ve Bağla</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>VM</th><th>Etiket</th><th>Boyut</th><th>Dev</th><th>Oluşturma Tarihi</th><th>Durum</th><th>Sil</th></tr></thead>
+              <tbody id="backupDisksTbody"><tr><td colspan="7" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -2613,6 +2652,27 @@
         <div class="page" id="page-tab-settings">
           <div class="section-header"><h2><i class="fa-solid fa-gear" style="margin-right:8px;color:var(--accent-lt)"></i>Sistem Ayarları</h2></div>
 
+          <!-- Oturum Güvenlik Ayarları -->
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-title"><i class="fa-solid fa-user-clock" style="color:var(--accent-lt);margin-right:6px"></i>Oturum Güvenlik Ayarları</div>
+            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+              <div class="form-row" style="margin:0;flex:1;min-width:200px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Otomatik Çıkış (Hareketsizlik)</label>
+                <select id="idle-timeout-sel" onchange="saveIdleTimeout()" style="width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:12px">
+                  <option value="0">Devre Dışı (Otomatik çıkış yok)</option>
+                  <option value="5">5 dakika</option>
+                  <option value="10">10 dakika (Önerilen)</option>
+                  <option value="15">15 dakika</option>
+                  <option value="30">30 dakika</option>
+                  <option value="60">1 saat</option>
+                </select>
+              </div>
+              <div style="font-size:11px;color:var(--text-muted);max-width:280px">
+                Seçilen süre boyunca panel üzerinde hiçbir işlem yapılmazsa oturum otomatik olarak kapatılır.
+              </div>
+            </div>
+          </div>
+
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
             <div class="card">
               <div class="card-title">SDN Durumu (OVS)</div>
@@ -2675,6 +2735,23 @@
     </div><!-- /content-area -->
 
   </div><!-- /middle -->
+
+  <!-- ─── Idle Timeout Warning Modal ─── -->
+  <div id="idle-warn-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.65);align-items:center;justify-content:center">
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:32px 40px;text-align:center;max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,.5)">
+      <div style="font-size:40px;margin-bottom:12px">⏱️</div>
+      <h3 style="margin:0 0 8px;font-size:18px;color:var(--text)">Oturum Kapanıyor</h3>
+      <p style="color:var(--text-muted);font-size:13px;margin:0 0 16px">
+        <span id="idle-warn-countdown">60</span> saniye hareketsizlik sonrası çıkış yapılacak.
+      </p>
+      <button onclick="_resetIdle()" style="background:var(--accent);border:none;color:white;padding:10px 28px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-right:8px">
+        ✓ Oturumu Uzat
+      </button>
+      <button onclick="_forceLogout()" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:10px 20px;border-radius:8px;font-size:14px;cursor:pointer">
+        Çıkış Yap
+      </button>
+    </div>
+  </div>
 
   <!-- ────────── TASKBAR ────────── -->
   <div id="taskbar">
@@ -3430,6 +3507,7 @@ async function api(path, options = {}) {
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
+  if (res.status === 401) { _forceLogout(); return {}; }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || "API hatası");
   return data;
@@ -3501,6 +3579,10 @@ function stateBadge(state) {
 /* ══ Logout ══ */
 function logout() {
   if (!confirm("Çıkış yapmak istiyor musunuz?")) return;
+  _clearSession();
+}
+
+function _clearSession() {
   localStorage.removeItem("oxware_token");
   localStorage.removeItem("oxware_user");
   localStorage.removeItem("oxware_role");
@@ -3509,6 +3591,97 @@ function logout() {
   localStorage.removeItem("adaos_role");
   window.location.href = "/login";
 }
+
+function _forceLogout() {
+  // Called on 401 or idle timeout — no confirm
+  _clearSession();
+}
+
+/* ══════════════════ Idle Timeout ══════════════════ */
+let _lastActivity = Date.now();
+let _idleCheckTimer = null;
+let _idleWarnTimer = null;
+let _idleWarnShown = false;
+
+function _getIdleTimeoutMs() {
+  const mins = parseInt(localStorage.getItem("oxware_idle_timeout") || "0");
+  return mins > 0 ? mins * 60 * 1000 : 0;
+}
+
+function _resetIdle() {
+  _lastActivity = Date.now();
+  if (_idleWarnShown) {
+    _idleWarnShown = false;
+    const el = document.getElementById('idle-warn-modal');
+    if (el) el.style.display = 'none';
+  }
+}
+
+function _checkIdle() {
+  const timeout = _getIdleTimeoutMs();
+  if (!timeout) return;
+  const idle = Date.now() - _lastActivity;
+  const warnAt = timeout - 60000; // warn 60s before
+  if (idle >= timeout) {
+    // Logout now
+    const el = document.getElementById('idle-warn-modal');
+    if (el) el.style.display = 'none';
+    toast('Oturum hareketsizlik nedeniyle kapatıldı', 'info');
+    setTimeout(_forceLogout, 1500);
+  } else if (idle >= warnAt && !_idleWarnShown) {
+    _idleWarnShown = true;
+    const remaining = Math.ceil((timeout - idle) / 1000);
+    const el = document.getElementById('idle-warn-modal');
+    const cEl = document.getElementById('idle-warn-countdown');
+    if (el) { el.style.display = 'flex'; }
+    if (cEl) { cEl.textContent = remaining; }
+    // Countdown update
+    clearInterval(_idleWarnTimer);
+    let secs = remaining;
+    _idleWarnTimer = setInterval(() => {
+      secs--;
+      if (document.getElementById('idle-warn-countdown'))
+        document.getElementById('idle-warn-countdown').textContent = secs;
+      if (secs <= 0) { clearInterval(_idleWarnTimer); }
+    }, 1000);
+  }
+}
+
+function _startIdleMonitor() {
+  ['mousemove','mousedown','keypress','touchstart','scroll','click'].forEach(e =>
+    document.addEventListener(e, _resetIdle, { passive: true })
+  );
+  clearInterval(_idleCheckTimer);
+  _idleCheckTimer = setInterval(_checkIdle, 10000); // check every 10s
+}
+
+_startIdleMonitor();
+
+function saveIdleTimeout() {
+  const sel = document.getElementById('idle-timeout-sel');
+  if (!sel) return;
+  localStorage.setItem('oxware_idle_timeout', sel.value);
+  const mins = parseInt(sel.value);
+  if (mins > 0) {
+    toast(`Otomatik çıkış: ${mins} dakika hareketsizlikte`, 'success');
+  } else {
+    toast('Otomatik çıkış devre dışı', 'info');
+  }
+}
+
+// Initialize idle timeout select from localStorage
+(function() {
+  const saved = localStorage.getItem('oxware_idle_timeout') || '0';
+  document.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('idle-timeout-sel');
+    if (sel) sel.value = saved;
+  });
+  // Also set after a short delay since DOM might be ready
+  setTimeout(() => {
+    const sel = document.getElementById('idle-timeout-sel');
+    if (sel) sel.value = saved;
+  }, 500);
+})();
 
 /* ══════════════════ TREE / NAV ══════════════════ */
 
@@ -7937,7 +8110,7 @@ function switchProxyTab(tab, btn) {
 async function loadTabData(tabId) {
   switch(tabId) {
     case 'tab-templates':    loadTemplates(); break;
-    case 'tab-backup':       loadBackupSchedules(); loadBackupHistory(); loadBackupVmOptions(); break;
+    case 'tab-backup':       loadBackupSchedules(); loadBackupHistory(); loadBackupVmOptions(); loadBackupDisks(); break;
     case 'tab-firewall':     loadFirewallStatus(); loadFirewallRules(); break;
     case 'tab-vpn':          loadVpnStatus(); loadVpnPeers(); break;
     case 'tab-dns':          loadDnsHosts(); loadDhcpLeases(); break;
@@ -7960,6 +8133,7 @@ async function _api(url, method='GET', body=null) {
   };
   if (body) opts.body = JSON.stringify(body);
   const r = await fetch(url, opts);
+  if (r.status === 401) { _forceLogout(); return null; }
   return r.json().catch(() => ({}));
 }
 
@@ -8012,13 +8186,12 @@ async function deployTemplate(tid) {
 async function loadBackupVmOptions() {
   try {
     const vmData = await api('/vms');
-    const sel = document.getElementById('bsVmId');
-    if (sel) {
-      sel.innerHTML = '<option value="">— VM seçin —</option>';
-      (vmData.vms || []).forEach(v => {
-        sel.innerHTML += `<option value="${v.id}">${escHtml(v.name)}</option>`;
-      });
-    }
+    const opts = '<option value="">— VM seçin —</option>' +
+      (vmData.vms || []).map(v => `<option value="${v.id}">${escHtml(v.name)}</option>`).join('');
+    const sel  = document.getElementById('bsVmId');
+    const sel2 = document.getElementById('bdVmId');
+    if (sel)  sel.innerHTML  = opts;
+    if (sel2) sel2.innerHTML = opts;
   } catch(e) {}
 }
 
@@ -8075,6 +8248,52 @@ async function loadBackupHistory() {
       <td style="font-size:11px">${escHtml(h.error || '')}</td>
     </tr>
   `).join('') || '<tr><td colspan="5" class="text-center text-muted" style="padding:12px">Geçmiş yok</td></tr>';
+}
+
+/* ── Backup Disk ── */
+async function loadBackupDisks() {
+  const d = await _api('/api/backup/disks');
+  const tbody = document.getElementById('backupDisksTbody');
+  if (!tbody) return;
+  const disks = d ? (d.disks || []) : [];
+  tbody.innerHTML = disks.length ? disks.map(disk => {
+    const sizeMb = disk.size_gb ? `${disk.size_gb} GB` : (disk.size_bytes ? `${(disk.size_bytes/1073741824).toFixed(1)} GB` : '—');
+    const created = disk.created_at ? new Date(disk.created_at).toLocaleString('tr-TR') : '—';
+    const exists = disk.exists !== false;
+    return `<tr>
+      <td>${escHtml(disk.vm_name || disk.vm_id)}</td>
+      <td>${escHtml(disk.label || '—')}</td>
+      <td>${sizeMb}</td>
+      <td><code>${escHtml(disk.target_dev || '—')}</code></td>
+      <td style="font-size:11px">${created}</td>
+      <td><span class="badge-${exists ? 'success' : 'danger'}">${exists ? 'Mevcut' : 'Eksik'}</span></td>
+      <td><button class="btn sm danger" onclick="deleteBackupDisk('${escHtml(disk.id)}')">✕ Sil</button></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="7" class="text-center text-muted" style="padding:12px">Yedekleme diski yok</td></tr>';
+}
+
+async function createBackupDisk() {
+  const vm_id  = document.getElementById('bdVmId').value;
+  const label  = document.getElementById('bdLabel').value.trim() || 'backup';
+  const size_gb = parseInt(document.getElementById('bdSize').value) || 50;
+  const bus    = document.getElementById('bdBus').value || 'sata';
+  if (!vm_id) { toast('VM seçin', 'error'); return; }
+  if (size_gb < 1 || size_gb > 8192) { toast('Geçersiz boyut (1-8192 GB)', 'error'); return; }
+  toast('Yedekleme diski oluşturuluyor...', 'info');
+  const d = await _api('/api/backup/disks', 'POST', { vm_id, label, size_gb, bus });
+  if (!d) { toast('Sunucu yanıt vermedi', 'error'); return; }
+  if (d.error) { toast(`Hata: ${d.error}`, 'error'); return; }
+  toast(`Yedekleme diski oluşturuldu ve ${d.disk?.target_dev || ''} olarak bağlandı`, 'success');
+  loadBackupDisks();
+}
+
+async function deleteBackupDisk(diskId) {
+  if (!confirm('Bu yedekleme diski ve dosyası kalıcı olarak silinecek. Devam edilsin mi?')) return;
+  const d = await _api(`/api/backup/disks/${diskId}`, 'DELETE');
+  if (!d) { toast('Sunucu yanıt vermedi', 'error'); return; }
+  if (d.error) { toast(`Hata: ${d.error}`, 'error'); return; }
+  toast('Yedekleme diski silindi', 'success');
+  loadBackupDisks();
 }
 
 /* ══════════════════ Firewall ══════════════════ */
