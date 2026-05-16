@@ -2481,9 +2481,44 @@ def api_ipam_assign_vm():
                 assigned_addr = ipaddress.IPv4Address(assigned_ip)
                 if assigned_addr not in libvirt_net_obj:
                     # Public IP libvirt subnet'i dışında → NAT gerekli
-                    nat_mode    = True
-                    internal_ip = _mac_to_internal_ip(mac, str(libvirt_net_obj.network_address).rsplit(".", 1)[0])
-                    log.info("NAT modu: %s → %s (internal: %s)", assigned_ip, vm_name, internal_ip)
+                    nat_mode = True
+                    base = str(libvirt_net_obj.network_address).rsplit(".", 1)[0]
+
+                    # 1. VM çalışıyorsa ARP'tan gerçek IP'yi oku (en güvenilir)
+                    actual_ip = None
+                    if mac:
+                        try:
+                            arp_r = subprocess.run(["arp", "-n"],
+                                                   capture_output=True, text=True, timeout=5)
+                            for arp_line in arp_r.stdout.splitlines():
+                                if mac.lower() in arp_line.lower():
+                                    arp_parts = arp_line.split()
+                                    if arp_parts and "." in arp_parts[0]:
+                                        actual_ip = arp_parts[0]
+                                        break
+                        except Exception:
+                            pass
+
+                    # 2. ARP'ta yoksa lease dosyasından bak
+                    if not actual_ip and mac:
+                        try:
+                            for lf in ["/var/lib/libvirt/dnsmasq/default.leases"]:
+                                if os.path.exists(lf):
+                                    with open(lf) as _lf:
+                                        for _ll in _lf:
+                                            if mac.lower() in _ll.lower():
+                                                _lparts = _ll.split()
+                                                if len(_lparts) >= 3:
+                                                    actual_ip = _lparts[2]
+                                                    break
+                        except Exception:
+                            pass
+
+                    # 3. Hiçbiri yoksa deterministic formula (VM henüz açılmadı)
+                    internal_ip = actual_ip or _mac_to_internal_ip(mac, base)
+                    log.info("NAT modu: %s → %s (internal: %s%s)",
+                             assigned_ip, vm_name, internal_ip,
+                             " [ARP]" if actual_ip else " [formula]")
             except Exception as _ne:
                 log.warning("Subnet kontrol hatası: %s", _ne)
 
