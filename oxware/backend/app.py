@@ -4215,58 +4215,49 @@ def fetch_iso_url():
 
     def _do_fetch():
         import time as _time
-        import urllib.request as _urllib
         try:
-            # Redirect takip ederek Content-Length al
+            # ── 1. Content-Length al (curl redirect takip eder) ──
             total_size = 0
             try:
-                req = _urllib.Request(url, method="HEAD")
-                req.add_header("User-Agent", "Mozilla/5.0")
-                with _urllib.urlopen(req, timeout=15) as resp:
-                    total_size = int(resp.headers.get("Content-Length") or 0)
+                head = subprocess.run(
+                    ["curl", "-sIL", "--max-time", "15",
+                     "-A", "Mozilla/5.0", url],
+                    capture_output=True, text=True, timeout=20
+                )
+                for line in reversed(head.stdout.splitlines()):
+                    if line.lower().startswith("content-length:"):
+                        val = int(line.split(":", 1)[1].strip())
+                        if val > 0:
+                            total_size = val
+                            break
             except Exception:
                 pass
 
-            # wget: quiet mod, redirect takip et
-            cmd = ["wget", "-O", dest, "--no-verbose", "--show-progress",
-                   "--progress=bar:force:noscroll", url]
-            proc = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1
-            )
-            _iso_fetch_jobs[job_id]["_proc"] = proc
+            # ── 2. wget sessiz indir (output okumaya gerek yok) ──
+            cmd = ["wget", "-O", dest, "-q", url]
+            proc = subprocess.Popen(cmd,
+                                    stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL)
+            _iso_fetch_jobs[job_id]["_proc"]    = proc
+            _iso_fetch_jobs[job_id]["total_mb"] = round(total_size / 1048576, 1) if total_size else 0
 
-            # Dosya boyutunu poll eden thread (wget output'una güvenmek yerine)
-            def _size_poller():
-                while proc.poll() is None:
-                    try:
-                        if os.path.exists(dest) and total_size > 0:
-                            cur = os.path.getsize(dest)
+            # ── 3. Dosya boyutu poll (main thread) ──
+            while proc.poll() is None:
+                try:
+                    if os.path.exists(dest):
+                        cur = os.path.getsize(dest)
+                        _iso_fetch_jobs[job_id]["downloaded_mb"] = round(cur / 1048576, 1)
+                        if total_size > 0:
                             pct = min(int(cur / total_size * 100), 99)
                             _iso_fetch_jobs[job_id]["progress"] = f"{pct}%"
-                            _iso_fetch_jobs[job_id]["downloaded_mb"] = round(cur / 1048576, 1)
-                            _iso_fetch_jobs[job_id]["total_mb"] = round(total_size / 1048576, 1)
-                        elif os.path.exists(dest):
-                            # total bilinmiyor, sadece MB göster
-                            cur = os.path.getsize(dest)
-                            _iso_fetch_jobs[job_id]["downloaded_mb"] = round(cur / 1048576, 1)
-                    except Exception:
-                        pass
-                    _time.sleep(1)
+                        else:
+                            # total bilinmiyor — animasyonlu göster
+                            _iso_fetch_jobs[job_id]["progress"] = "?"
+                except Exception:
+                    pass
+                _time.sleep(1)
 
-            poll_t = threading.Thread(target=_size_poller, daemon=True)
-            poll_t.start()
-
-            # wget stderr/stdout satırlarını da oku (block etmesin diye)
-            for line in proc.stdout:
-                pass  # consume output so process doesn't block
-
-            proc.wait()
-            poll_t.join(timeout=3)
-
+            # ── 4. Sonuç ──
             if proc.returncode == 0:
                 size = os.path.getsize(dest) if os.path.exists(dest) else 0
                 _iso_fetch_jobs[job_id]["status"]   = "done"
@@ -4275,7 +4266,7 @@ def fetch_iso_url():
                 log.info("ISO indirildi: %s (%d bytes)", safe_name, size)
             else:
                 _iso_fetch_jobs[job_id]["status"] = "error"
-                _iso_fetch_jobs[job_id]["error"]  = f"wget çıkış kodu: {proc.returncode}"
+                _iso_fetch_jobs[job_id]["error"]  = f"wget hatası (kod: {proc.returncode})"
                 if os.path.exists(dest):
                     os.unlink(dest)
         except Exception as ex:
