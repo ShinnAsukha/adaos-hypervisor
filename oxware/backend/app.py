@@ -4284,7 +4284,9 @@ def fetch_iso_status(job_id):
     job = _iso_fetch_jobs.get(job_id)
     if not job:
         return jsonify({"error": "İş bulunamadı"}), 404
-    return jsonify(job)
+    # _proc Popen objesi JSON serialize edilemez — hariç tut
+    safe = {k: v for k, v in job.items() if k != "_proc"}
+    return jsonify(safe)
 
 
 @app.route("/api/storage/iso/fetch/<job_id>/cancel", methods=["POST"])
@@ -4297,10 +4299,17 @@ def cancel_iso_fetch(job_id):
     proc = job.get("_proc")
     if proc:
         try:
-            proc.terminate()
+            proc.kill()   # SIGKILL — terminate yerine kill (daha güvenilir)
         except Exception:
             pass
     job["status"] = "cancelled"
+    # Yarım kalan dosyayı sil
+    dest = os.path.join(config.ISO_DIR, job.get("filename", ""))
+    if dest and os.path.exists(dest):
+        try:
+            os.unlink(dest)
+        except Exception:
+            pass
     return jsonify({"ok": True, "job_id": job_id})
 
 
