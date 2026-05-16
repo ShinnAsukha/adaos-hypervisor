@@ -109,6 +109,41 @@ def stop_network(net_uuid):
         conn.close()
 
 
+def set_network_autostart(net_uuid, enabled: bool):
+    conn = _connect()
+    try:
+        net = conn.networkLookupByUUIDString(net_uuid)
+        net.setAutostart(1 if enabled else 0)
+        return {"ok": True, "autostart": enabled}
+    finally:
+        conn.close()
+
+def get_network_info(net_uuid):
+    """Get detailed info for a single network."""
+    conn = _connect()
+    try:
+        net = conn.networkLookupByUUIDString(net_uuid)
+        import xml.etree.ElementTree as ET
+        root = ET.fromstring(net.XMLDesc(0))
+        ip_el = root.find("ip")
+        dhcp_el = ip_el.find("dhcp") if ip_el is not None else None
+        range_el = dhcp_el.find("range") if dhcp_el is not None else None
+        return {
+            "name": net.name(),
+            "uuid": net_uuid,
+            "active": bool(net.isActive()),
+            "autostart": bool(net.autostart()),
+            "bridge": net.bridgeName() if net.isActive() else "",
+            "mode": root.findtext("forward/@mode") or (root.find("forward").get("mode") if root.find("forward") is not None else "nat"),
+            "gateway": ip_el.get("address") if ip_el is not None else None,
+            "netmask": ip_el.get("netmask") if ip_el is not None else None,
+            "dhcp_start": range_el.get("start") if range_el is not None else None,
+            "dhcp_end": range_el.get("end") if range_el is not None else None,
+        }
+    finally:
+        conn.close()
+
+
 def get_host_interfaces():
     result = subprocess.run(
         ["ip", "-j", "addr"],

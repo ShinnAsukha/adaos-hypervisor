@@ -3001,6 +3001,69 @@
   </div>
 </div>
 
+<!-- Edit Network Modal -->
+<div class="modal-overlay" id="modal-edit-net">
+  <div class="modal" style="width:440px">
+    <div class="modal-header">
+      <h2>Ağ Düzenle: <span id="edit-net-name-label"></span></h2>
+      <button class="modal-close" onclick="closeModal('modal-edit-net')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-net-uuid">
+      <table style="width:100%;border-collapse:collapse;margin-bottom:14px;font-size:13px">
+        <tr><td style="color:var(--text-muted);padding:5px 0;width:120px">Gateway</td><td id="edit-net-gateway">—</td></tr>
+        <tr><td style="color:var(--text-muted);padding:5px 0">Netmask</td><td id="edit-net-netmask">—</td></tr>
+        <tr><td style="color:var(--text-muted);padding:5px 0">DHCP Başlangıç</td><td id="edit-net-dhcp-start">—</td></tr>
+        <tr><td style="color:var(--text-muted);padding:5px 0">DHCP Bitiş</td><td id="edit-net-dhcp-end">—</td></tr>
+        <tr><td style="color:var(--text-muted);padding:5px 0">Bridge</td><td id="edit-net-bridge">—</td></tr>
+        <tr><td style="color:var(--text-muted);padding:5px 0">Durum</td><td id="edit-net-status">—</td></tr>
+      </table>
+      <div class="form-group" style="margin-bottom:14px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input type="checkbox" id="edit-net-autostart" style="width:16px;height:16px">
+          <span>Otomatik Başlat (autostart)</span>
+        </label>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-primary" onclick="netEditSave()">💾 Kaydet</button>
+        <button id="edit-net-startstop" class="btn sm" onclick="netEditToggle()">— —</button>
+        <button class="btn sm" onclick="closeModal('modal-edit-net')">İptal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Storage Pool Modal -->
+<div class="modal-overlay" id="modal-edit-pool">
+  <div class="modal" style="width:440px">
+    <div class="modal-header">
+      <h2>Havuz Düzenle: <span id="edit-pool-name-label"></span></h2>
+      <button class="modal-close" onclick="closeModal('modal-edit-pool')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-pool-uuid">
+      <table style="width:100%;border-collapse:collapse;margin-bottom:14px;font-size:13px">
+        <tr><td style="color:var(--text-muted);padding:5px 0;width:120px">Tür</td><td id="edit-pool-type">—</td></tr>
+        <tr><td style="color:var(--text-muted);padding:5px 0">Yol</td><td id="edit-pool-path" style="font-size:11px;word-break:break-all">—</td></tr>
+        <tr><td style="color:var(--text-muted);padding:5px 0">Kapasite</td><td id="edit-pool-cap">—</td></tr>
+        <tr><td style="color:var(--text-muted);padding:5px 0">Durum</td><td id="edit-pool-status">—</td></tr>
+      </table>
+      <div class="form-group" style="margin-bottom:14px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input type="checkbox" id="edit-pool-autostart" style="width:16px;height:16px">
+          <span>Otomatik Başlat (autostart)</span>
+        </label>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-primary" onclick="poolEditSave()">💾 Kaydet</button>
+        <button id="edit-pool-startstop" class="btn sm" onclick="poolEditToggle()">— —</button>
+        <button class="btn sm" onclick="poolEditRefresh()">↻ Yenile</button>
+        <button class="btn sm" onclick="closeModal('modal-edit-pool')">İptal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Create Network -->
 <div class="modal-overlay" id="modal-create-net">
   <div class="modal">
@@ -6423,6 +6486,7 @@ async function loadNetworks() {
       <td>${n.dhcp ? `${n.dhcp.start}–${n.dhcp.end}` : "—"}</td>
       <td>
         <div class="action-btns">
+          <button class="btn sm" onclick="openEditNetwork('${n.uuid}','${escHtml(n.name)}')">✏</button>
           ${n.active
             ? `<button class="btn sm" onclick="netAction('${n.uuid}','stop')">■</button>`
             : `<button class="btn sm success" onclick="netAction('${n.uuid}','start')">▶</button>`}
@@ -6472,6 +6536,97 @@ async function netAction(uuid, action) {
   catch (e) { toast(e.message, "error"); }
 }
 
+let _editNetActive = false;
+async function openEditNetwork(uuid, name) {
+  document.getElementById('edit-net-uuid').value = uuid;
+  document.getElementById('edit-net-name-label').textContent = name;
+  document.getElementById('edit-net-gateway').textContent = '...';
+  document.getElementById('edit-net-netmask').textContent = '...';
+  document.getElementById('edit-net-dhcp-start').textContent = '...';
+  document.getElementById('edit-net-dhcp-end').textContent = '...';
+  document.getElementById('edit-net-bridge').textContent = '...';
+  openModal('modal-edit-net');
+  try {
+    const d = await api(`/networks/${uuid}`);
+    const n = d.network || d;
+    document.getElementById('edit-net-gateway').textContent = n.gateway || '—';
+    document.getElementById('edit-net-netmask').textContent = n.netmask || '—';
+    document.getElementById('edit-net-dhcp-start').textContent = n.dhcp_start || '—';
+    document.getElementById('edit-net-dhcp-end').textContent = n.dhcp_end || '—';
+    document.getElementById('edit-net-bridge').textContent = n.bridge || '—';
+    document.getElementById('edit-net-status').textContent = n.active ? '🟢 Aktif' : '🔴 Pasif';
+    document.getElementById('edit-net-autostart').checked = !!n.autostart;
+    _editNetActive = !!n.active;
+    const btn = document.getElementById('edit-net-startstop');
+    btn.textContent = n.active ? '■ Durdur' : '▶ Başlat';
+    btn.className = n.active ? 'btn sm danger' : 'btn sm success';
+  } catch(e) { toast('Ağ bilgisi alınamadı: ' + e.message, 'error'); }
+}
+async function netEditSave() {
+  const uuid = document.getElementById('edit-net-uuid').value;
+  const autostart = document.getElementById('edit-net-autostart').checked;
+  try {
+    await api(`/networks/${uuid}/autostart`, { method: 'POST', body: { enabled: autostart } });
+    toast('Ağ ayarları kaydedildi', 'success');
+    closeModal('modal-edit-net'); loadNetworks();
+  } catch(e) { toast('Kayıt hatası: ' + e.message, 'error'); }
+}
+async function netEditToggle() {
+  const uuid = document.getElementById('edit-net-uuid').value;
+  const action = _editNetActive ? 'stop' : 'start';
+  try {
+    await api(`/networks/${uuid}/${action}`, { method: 'POST' });
+    toast(action === 'start' ? 'Ağ başlatıldı' : 'Ağ durduruldu', 'success');
+    closeModal('modal-edit-net'); loadNetworks();
+  } catch(e) { toast('İşlem hatası: ' + e.message, 'error'); }
+}
+
+let _editPoolActive = false;
+function openEditPool(uuid, name, type, path, cap_gb, active) {
+  document.getElementById('edit-pool-uuid').value = uuid;
+  document.getElementById('edit-pool-name-label').textContent = name;
+  document.getElementById('edit-pool-type').textContent = type;
+  document.getElementById('edit-pool-path').textContent = path;
+  document.getElementById('edit-pool-cap').textContent = cap_gb + ' GB';
+  _editPoolActive = !!active;
+  document.getElementById('edit-pool-status').textContent = active ? '🟢 Aktif' : '🔴 Pasif';
+  const btn = document.getElementById('edit-pool-startstop');
+  btn.textContent = active ? '■ Durdur' : '▶ Başlat';
+  btn.className = active ? 'btn sm danger' : 'btn sm success';
+  // Autostart bilgisi yükle (async)
+  api(`/storage/pools`).then(d => {
+    const pool = (d.pools || []).find(p => p.uuid === uuid);
+    if (pool) document.getElementById('edit-pool-autostart').checked = !!pool.autostart;
+  }).catch(() => {});
+  openModal('modal-edit-pool');
+}
+async function poolEditSave() {
+  const uuid = document.getElementById('edit-pool-uuid').value;
+  const autostart = document.getElementById('edit-pool-autostart').checked;
+  try {
+    await api(`/storage/pools/${uuid}/autostart`, { method: 'POST', body: { enabled: autostart } });
+    toast('Havuz ayarları kaydedildi', 'success');
+    closeModal('modal-edit-pool'); loadStorage();
+  } catch(e) { toast('Kayıt hatası: ' + e.message, 'error'); }
+}
+async function poolEditToggle() {
+  const uuid = document.getElementById('edit-pool-uuid').value;
+  const action = _editPoolActive ? 'stop' : 'start';
+  try {
+    await api(`/storage/pools/${uuid}/${action}`, { method: 'POST' });
+    toast(action === 'start' ? 'Havuz başlatıldı' : 'Havuz durduruldu', 'success');
+    closeModal('modal-edit-pool'); loadStorage();
+  } catch(e) { toast('İşlem hatası: ' + e.message, 'error'); }
+}
+async function poolEditRefresh() {
+  const uuid = document.getElementById('edit-pool-uuid').value;
+  try {
+    await api(`/storage/pools/${uuid}/refresh`, { method: 'POST' });
+    toast('Havuz yenilendi', 'success');
+    loadStorage();
+  } catch(e) { toast('Yenileme hatası: ' + e.message, 'error'); }
+}
+
 /* ══════════════════ Storage ══════════════════ */
 let _currentStorageTab = "pools";
 
@@ -6508,7 +6663,10 @@ async function loadPoolList() {
           </div>
         </td>
         <td>${p.available_gb} GB</td>
-        <td><div class="action-btns"><button class="btn sm danger" onclick="deletePool('${p.uuid}','${escHtml(p.name)}')">✕</button></div></td>
+        <td><div class="action-btns">
+          <button class="btn sm" onclick="openEditPool('${p.uuid}','${escHtml(p.name)}','${escHtml(p.type)}','${escHtml(p.path)}',${p.capacity_gb},${p.active ? 1:0})">✏</button>
+          <button class="btn sm danger" onclick="deletePool('${p.uuid}','${escHtml(p.name)}')">✕</button>
+        </div></td>
       </tr>`;
     }).join("") : `<tr><td colspan="8"><div class="empty-state"><div class="icon">💾</div><h3>Depolama havuzu yok</h3></div></td></tr>`;
   } catch (e) { toast("Havuzlar alınamadı: " + e.message, "error"); }

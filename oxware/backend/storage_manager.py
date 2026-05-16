@@ -295,3 +295,43 @@ def _fmt_bytes(b):
             return f"{b:.1f} {unit}"
         b /= 1024
     return f"{b:.1f} PB"
+
+
+def start_pool(pool_uuid):
+    conn = _connect()
+    try:
+        pool = conn.storagePoolLookupByUUIDString(pool_uuid)
+        if not pool.isActive():
+            pool.create(0)
+        return {"ok": True, "active": True}
+    finally:
+        conn.close()
+
+def stop_pool(pool_uuid):
+    conn = _connect()
+    try:
+        pool = conn.storagePoolLookupByUUIDString(pool_uuid)
+        if pool.isActive():
+            pool.destroy()
+        return {"ok": True, "active": False}
+    finally:
+        conn.close()
+
+def set_pool_autostart(pool_uuid, enabled: bool):
+    conn = _connect()
+    try:
+        pool = conn.storagePoolLookupByUUIDString(pool_uuid)
+        pool.setAutostart(1 if enabled else 0)
+        return {"ok": True, "autostart": enabled}
+    finally:
+        conn.close()
+
+def refresh_pool(pool_uuid):
+    conn = _connect()
+    try:
+        pool = conn.storagePoolLookupByUUIDString(pool_uuid)
+        if pool.isActive():
+            pool.refresh(0)
+        return {"ok": True}
+    finally:
+        conn.close()

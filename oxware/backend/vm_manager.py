@@ -380,10 +380,12 @@ def reboot_vm(vm_id, force=False):
     conn = _connect()
     try:
         dom = conn.lookupByUUIDString(vm_id)
+        if not dom.isActive():
+            raise ValueError("VM çalışmıyor")
         if force:
-            dom.reset()
+            dom.reset(0)
         else:
-            dom.reboot()
+            dom.reboot(0)
         return {"status": "rebooting"}
     finally:
         conn.close()

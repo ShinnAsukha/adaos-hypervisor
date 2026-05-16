@@ -1805,6 +1805,24 @@ def api_stop_network(net_uuid):
     except Exception as e:
         return err(e, 500)
 
+@app.route("/api/networks/<net_uuid>/autostart", methods=["POST"])
+@require_auth
+def api_network_autostart(net_uuid):
+    data = request.get_json() or {}
+    enabled = bool(data.get("enabled", False))
+    try:
+        return ok(**network_manager.set_network_autostart(net_uuid, enabled))
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/networks/<net_uuid>", methods=["GET"])
+@require_auth
+def api_get_network(net_uuid):
+    try:
+        return ok(network=network_manager.get_network_info(net_uuid))
+    except Exception as e:
+        return err(e, 500)
+
 @app.route("/api/networks/host-interfaces")
 @require_auth
 def api_host_interfaces():
@@ -1836,6 +1854,40 @@ def api_delete_pool(pool_uuid):
     delete_files = request.args.get("delete_files", "false").lower() == "true"
     try:
         return ok(**storage_manager.delete_pool(pool_uuid, delete_files=delete_files))
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/storage/pools/<pool_uuid>/start", methods=["POST"])
+@require_auth
+def api_start_pool(pool_uuid):
+    try:
+        return ok(**storage_manager.start_pool(pool_uuid))
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/storage/pools/<pool_uuid>/stop", methods=["POST"])
+@require_auth
+def api_stop_pool(pool_uuid):
+    try:
+        return ok(**storage_manager.stop_pool(pool_uuid))
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/storage/pools/<pool_uuid>/autostart", methods=["POST"])
+@require_auth
+def api_pool_autostart(pool_uuid):
+    data = request.get_json() or {}
+    enabled = bool(data.get("enabled", False))
+    try:
+        return ok(**storage_manager.set_pool_autostart(pool_uuid, enabled))
+    except Exception as e:
+        return err(e, 500)
+
+@app.route("/api/storage/pools/<pool_uuid>/refresh", methods=["POST"])
+@require_auth
+def api_refresh_pool(pool_uuid):
+    try:
+        return ok(**storage_manager.refresh_pool(pool_uuid))
     except Exception as e:
         return err(e, 500)
 
