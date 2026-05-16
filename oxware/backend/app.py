@@ -2376,9 +2376,9 @@ def _setup_nat(public_ip: str, internal_ip: str, host_iface: str = None) -> dict
         # MASQUERADE: VM'in dışarı çıkışı
         ["iptables", "-t", "nat", "-A", "POSTROUTING",
          "-s", internal_ip, "-o", host_iface, "-j", "MASQUERADE"],
-        # FORWARD: default'ta DROP ise izin ver
-        ["iptables", "-A", "FORWARD", "-d", internal_ip, "-j", "ACCEPT"],
-        ["iptables", "-A", "FORWARD", "-s", internal_ip, "-j", "ACCEPT"],
+        # FORWARD: LIBVIRT_FWI'dan ÖNCE ekle (insert pos 1), yoksa REJECT yutar
+        ["iptables", "-I", "FORWARD", "1", "-d", internal_ip, "-j", "ACCEPT"],
+        ["iptables", "-I", "FORWARD", "1", "-s", internal_ip, "-j", "ACCEPT"],
     ]
     for rule in rules:
         r = subprocess.run(rule, capture_output=True, text=True, timeout=10)
