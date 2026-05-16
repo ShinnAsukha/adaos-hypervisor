@@ -88,6 +88,8 @@ class State:
         self.username    = ""
         self.password    = ""
         self.confirm_pw  = ""
+        self.keyboard_layout  = "tr"
+        self.keyboard_variant = ""
 
 state = State()
 
@@ -1042,6 +1044,18 @@ def do_install(progress_cb):
     run_chroot("update-locale LANG=en_US.UTF-8", check=False)
     run_chroot("ln -sf /usr/share/zoneinfo/UTC /etc/localtime", check=False)
 
+    # Keyboard layout
+    progress_cb(74, "Klavye düzeni yapılandırılıyor...")
+    _kbd_layout  = getattr(state, 'keyboard_layout',  'tr')
+    _kbd_variant = getattr(state, 'keyboard_variant', '')
+    Path(f"{TARGET_MOUNT}/etc/default/keyboard").write_text(
+        f'XKBMODEL="pc105"\n'
+        f'XKBLAYOUT="{_kbd_layout}"\n'
+        f'XKBVARIANT="{_kbd_variant}"\n'
+        f'XKBOPTIONS=""\n'
+        f'BACKSPACE="guess"\n'
+    )
+
     run_chroot(f"grub-install --target=i386-pc --recheck {disk}")
     run_chroot(
         f"grub-install --target=x86_64-efi --efi-directory=/boot/efi "
@@ -1454,6 +1468,8 @@ def _headless_main(config_file: str):
     state.netmask  = cfg.get('net_mask', '255.255.255.0')
     state.gateway  = cfg.get('net_gw', '')
     state.dns      = cfg.get('net_dns', '8.8.8.8')
+    state.keyboard_layout  = cfg.get('keyboard_layout',  'tr')
+    state.keyboard_variant = cfg.get('keyboard_variant', '')
 
     def progress_cb(pct, msg):
         print(_json.dumps({'pct': pct, 'msg': msg}), flush=True)

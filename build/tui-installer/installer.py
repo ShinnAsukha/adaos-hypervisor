@@ -51,11 +51,30 @@ STEPS = [
     ("2", "Disk"),
     ("3", "Ağ"),
     ("4", "Yönetici"),
-    ("5", "Özet"),
-    ("6", "Kurulum"),
+    ("5", "Klavye"),
+    ("6", "Özet"),
+    ("7", "Kurulum"),
 ]
 
 FS_TYPES = ["ext4", "xfs", "btrfs"]
+
+# (id, display_name, xkb_layout, xkb_variant)
+KEYBOARD_LAYOUTS = [
+    ("tr",  "Türkçe Q",     "tr", ""),
+    ("trf", "Türkçe F",     "tr", "f"),
+    ("us",  "English US",   "us", ""),
+    ("gb",  "English UK",   "gb", ""),
+    ("de",  "Deutsch",      "de", ""),
+    ("fr",  "Français",     "fr", ""),
+    ("es",  "Español",      "es", ""),
+    ("it",  "Italiano",     "it", ""),
+    ("ru",  "Русский",      "ru", ""),
+    ("pt",  "Português",    "pt", ""),
+    ("pl",  "Polski",       "pl", ""),
+    ("nl",  "Nederlands",   "nl", ""),
+    ("ar",  "العربية",      "ar", ""),
+]
+_kb_sel = 0
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  COLOR PAIRS
@@ -124,6 +143,7 @@ class State:
     username   = "oxadmin"
     password   = ""
     password2  = ""
+    keyboard   = "tr"   # keyboard layout id
     # runtime
     disks      = []
     ifaces     = []
@@ -724,9 +744,71 @@ def handle_step3(scr, ch):
     return True
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  STEP 4 — ÖZET
+#  STEP 4 — KLAVYE DÜZENİ
 # ─────────────────────────────────────────────────────────────────────────────
 def draw_step4(scr):
+    global _kb_sel
+    draw_header(scr)
+    ty, lx, by, rx, cth, ctw = content_area(scr)
+
+    safeadd(scr, ty + 1, lx, "Klavye Düzeni",
+            curses.color_pair(C_TITLE) | curses.A_BOLD)
+    safeadd(scr, ty + 2, lx,
+            "Kurulacak sistemin klavye düzenini seçin.",
+            curses.color_pair(C_DIM))
+
+    safeadd(scr, ty + 3, lx,
+            f"  {'#':<4} {'DÜZEN':<22} XKB",
+            curses.color_pair(C_LABEL) | curses.A_BOLD | curses.A_UNDERLINE)
+
+    list_top = ty + 4
+    list_bot = by - 3
+    n_vis    = list_bot - list_top
+    start    = max(0, _kb_sel - n_vis // 2)
+    start    = min(start, max(0, len(KEYBOARD_LAYOUTS) - n_vis))
+
+    for i, (kid, kname, xkbl, xkbv) in enumerate(KEYBOARD_LAYOUTS[start:start + n_vis]):
+        abs_i   = start + i
+        row     = list_top + i
+        marker  = "▶" if abs_i == _kb_sel else " "
+        vstr    = f"/{xkbv}" if xkbv else ""
+        line    = f"{marker} {abs_i+1:<3} {kname:<22}{xkbl}{vstr}"
+        if abs_i == _kb_sel:
+            fill_row(scr, row, curses.color_pair(C_SEL))
+            safeadd(scr, row, lx, line, curses.color_pair(C_SEL) | curses.A_BOLD)
+        else:
+            attr = curses.color_pair(C_OK) if kid == st.keyboard else curses.color_pair(C_TITLE)
+            safeadd(scr, row, lx, line, attr)
+
+    kid, kname, xkbl, xkbv = KEYBOARD_LAYOUTS[_kb_sel]
+    vstr = f" / variant={xkbv}" if xkbv else ""
+    safeadd(scr, by - 1, lx,
+            f"Seçili: {kname}  (layout={xkbl}{vstr})",
+            curses.color_pair(C_OK) | curses.A_BOLD)
+
+    draw_footer(scr, "[↑/↓] Seç   [Enter/→] Onayla   [←] Geri")
+
+
+def handle_step4(scr, ch):
+    global _kb_sel
+    n = len(KEYBOARD_LAYOUTS)
+    if ch == curses.KEY_UP:
+        _kb_sel = max(0, _kb_sel - 1)
+    elif ch == curses.KEY_DOWN:
+        _kb_sel = min(n - 1, _kb_sel + 1)
+    elif ch in (curses.KEY_RIGHT, ord('\n'), ord('\r')):
+        st.keyboard = KEYBOARD_LAYOUTS[_kb_sel][0]
+        st.step = 5
+    elif ch == curses.KEY_LEFT:
+        st.step = 3
+    elif ch == curses.KEY_F10:
+        return False
+    return True
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  STEP 5 — ÖZET
+# ─────────────────────────────────────────────────────────────────────────────
+def draw_step5(scr):
     draw_header(scr)
     ty, lx, by, rx, cth, ctw = content_area(scr)
     h, w = scr.getmaxyx()
@@ -737,6 +819,7 @@ def draw_step4(scr):
             "Aşağıdaki yapılandırma ile kurulum başlayacak.",
             curses.color_pair(C_DIM))
 
+    _kb_name = next((kn for ki, kn, _, _ in KEYBOARD_LAYOUTS if ki == st.keyboard), st.keyboard)
     rows = [
         ("Disk",          f"{st.disk}  ({st.disk_size})"),
         ("Dosya Sistemi", f"{st.fs_type}" + ("  +swap 4GB" if st.swap else "")),
@@ -747,6 +830,7 @@ def draw_step4(scr):
         ("DNS",          st.net_dns if st.net_mode == "static" else "DHCP"),
         ("Sunucu Adı",   st.hostname),
         ("Kullanıcı",    st.username),
+        ("Klavye",       _kb_name),
         ("Şifre",        "*" * len(st.password)),
     ]
 
@@ -768,9 +852,9 @@ def draw_step4(scr):
     draw_footer(scr, "[←] Geri   [→ / Enter] Kurulumu BAŞLAT")
 
 
-def handle_step4(scr, ch):
+def handle_step5(scr, ch):
     if ch in (curses.KEY_RIGHT, ord('\n'), ord('\r')):
-        st.step  = 5
+        st.step  = 6
         st.pct   = 0
         st.msg   = "Başlatılıyor..."
         st.done  = False
@@ -778,19 +862,19 @@ def handle_step4(scr, ch):
         st.log_lines = []
         threading.Thread(target=_run_install, daemon=True).start()
     elif ch == curses.KEY_LEFT:
-        st.step = 3
+        st.step = 4
     elif ch == curses.KEY_F10:
         return False
     return True
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  STEP 5 — KURULUM İLERLEMESİ
+#  STEP 6 — KURULUM İLERLEMESİ
 # ─────────────────────────────────────────────────────────────────────────────
 _SPIN = ["⠋", "⠙", "⠸", "⠴", "⠦", "⠇"]
 _spin_i = 0
 _reboot_countdown = None
 
-def draw_step5(scr):
+def draw_step6(scr):
     global _spin_i, _reboot_countdown
     draw_header(scr)
     ty, lx, by, rx, cth, ctw = content_area(scr)
@@ -876,7 +960,7 @@ def draw_step5(scr):
     draw_footer(scr, "Kurulum devam ediyor, lütfen bekleyin...")
 
 
-def handle_step5(scr, ch):
+def handle_step6(scr, ch):
     global _reboot_countdown
     if st.done and st.error:
         if ch in (ord('q'), ord('Q'), curses.KEY_F10):
@@ -898,19 +982,23 @@ def handle_step5(scr, ch):
 def _run_install():
     global _reboot_countdown
 
+    _kb_entry = next((k for k in KEYBOARD_LAYOUTS if k[0] == st.keyboard), KEYBOARD_LAYOUTS[0])
     config = {
-        "disk":     st.disk,
-        "fs_type":  st.fs_type,
-        "swap":     st.swap,
-        "iface":    st.iface or (st.ifaces[0] if st.ifaces else "eth0"),
-        "net_mode": st.net_mode,
-        "net_ip":   st.net_ip,
-        "net_mask": st.net_mask,
-        "net_gw":   st.net_gw,
-        "net_dns":  st.net_dns,
-        "hostname": st.hostname,
-        "username": st.username,
-        "password": st.password,
+        "disk":             st.disk,
+        "fs_type":          st.fs_type,
+        "swap":             st.swap,
+        "iface":            st.iface or (st.ifaces[0] if st.ifaces else "eth0"),
+        "net_mode":         st.net_mode,
+        "net_ip":           st.net_ip,
+        "net_mask":         st.net_mask,
+        "net_gw":           st.net_gw,
+        "net_dns":          st.net_dns,
+        "hostname":         st.hostname,
+        "username":         st.username,
+        "password":         st.password,
+        "keyboard":         st.keyboard,
+        "keyboard_layout":  _kb_entry[2],
+        "keyboard_variant": _kb_entry[3],
     }
 
     cfg_path = "/tmp/oxware-install.json"
@@ -989,8 +1077,8 @@ def _run_install():
 # ─────────────────────────────────────────────────────────────────────────────
 #  DISPATCH TABLE
 # ─────────────────────────────────────────────────────────────────────────────
-DRAWERS  = [draw_step0, draw_step1, draw_step2, draw_step3, draw_step4, draw_step5]
-HANDLERS = [handle_step0, handle_step1, handle_step2, handle_step3, handle_step4, handle_step5]
+DRAWERS  = [draw_step0, draw_step1, draw_step2, draw_step3, draw_step4, draw_step5, draw_step6]
+HANDLERS = [handle_step0, handle_step1, handle_step2, handle_step3, handle_step4, handle_step5, handle_step6]
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  CONFIRM QUIT OVERLAY
@@ -1059,7 +1147,7 @@ def main(scr):
         scr.refresh()
 
         # Timeout for spinner refresh on install step
-        if st.step == 5:
+        if st.step == 6:
             scr.timeout(250)
         else:
             scr.timeout(-1)
@@ -1070,7 +1158,7 @@ def main(scr):
 
         keep_going = HANDLERS[st.step](scr, ch)
         if not keep_going:
-            if st.step == 5 and st.done:
+            if st.step == 6 and st.done:
                 break
             elif confirm_quit(scr):
                 break
