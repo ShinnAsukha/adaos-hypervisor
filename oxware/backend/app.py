@@ -2358,6 +2358,16 @@ def _setup_nat(public_ip: str, internal_ip: str, host_iface: str = None) -> dict
     # ip_forward
     subprocess.run(["sysctl", "-w", "net.ipv4.ip_forward=1"],
                    capture_output=True, timeout=5)
+    # Public IP interface'te yoksa ekle (kernel drop etmesin)
+    try:
+        check = subprocess.run(["ip", "addr", "show", "dev", host_iface],
+                               capture_output=True, text=True, timeout=5)
+        if public_ip not in check.stdout:
+            subprocess.run(["ip", "addr", "add", f"{public_ip}/24", "dev", host_iface],
+                           capture_output=True, timeout=5)
+            log.info("Secondary IP eklendi: %s → %s", public_ip, host_iface)
+    except Exception as _ie:
+        log.warning("Secondary IP eklenemedi: %s", _ie)
 
     rules = [
         # DNAT: dışarıdan public_ip'ye gelen → internal_ip
