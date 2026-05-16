@@ -10,6 +10,14 @@ def _connect():
     return libvirt.open(LIBVIRT_URI)
 
 
+def _safe_bridge_name(net):
+    """Passthrough/macvtap ağlarda bridgeName() exception fırlatır — yakala."""
+    try:
+        return net.bridgeName() if net.isActive() else ""
+    except Exception:
+        return ""
+
+
 def list_networks():
     conn = _connect()
     nets = []
@@ -27,7 +35,7 @@ def list_networks():
                 "name": net.name(),
                 "active": bool(net.isActive()),
                 "autostart": bool(net.autostart()),
-                "bridge": net.bridgeName() if net.isActive() else "",
+                "bridge": _safe_bridge_name(net),
                 "forward_mode": forward.get("mode", "nat") if forward is not None else "isolated",
                 "ip": ip_el.get("address", "") if ip_el is not None else "",
                 "netmask": ip_el.get("netmask", "") if ip_el is not None else "",
