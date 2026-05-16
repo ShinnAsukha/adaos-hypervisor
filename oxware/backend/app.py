@@ -4214,32 +4214,73 @@ def fetch_iso_url():
     _iso_fetch_jobs[job_id] = {"status": "downloading", "filename": safe_name, "url": url, "progress": "0%"}
 
     def _do_fetch():
+        import time as _time
+        import urllib.request as _urllib
         try:
-            cmd = ["wget", "-O", dest, "--progress=dot:mega", url]
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            # Redirect takip ederek Content-Length al
+            total_size = 0
+            try:
+                req = _urllib.Request(url, method="HEAD")
+                req.add_header("User-Agent", "Mozilla/5.0")
+                with _urllib.urlopen(req, timeout=15) as resp:
+                    total_size = int(resp.headers.get("Content-Length") or 0)
+            except Exception:
+                pass
+
+            # wget: quiet mod, redirect takip et
+            cmd = ["wget", "-O", dest, "--no-verbose", "--show-progress",
+                   "--progress=bar:force:noscroll", url]
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
+            )
             _iso_fetch_jobs[job_id]["_proc"] = proc
+
+            # Dosya boyutunu poll eden thread (wget output'una güvenmek yerine)
+            def _size_poller():
+                while proc.poll() is None:
+                    try:
+                        if os.path.exists(dest) and total_size > 0:
+                            cur = os.path.getsize(dest)
+                            pct = min(int(cur / total_size * 100), 99)
+                            _iso_fetch_jobs[job_id]["progress"] = f"{pct}%"
+                            _iso_fetch_jobs[job_id]["downloaded_mb"] = round(cur / 1048576, 1)
+                            _iso_fetch_jobs[job_id]["total_mb"] = round(total_size / 1048576, 1)
+                        elif os.path.exists(dest):
+                            # total bilinmiyor, sadece MB göster
+                            cur = os.path.getsize(dest)
+                            _iso_fetch_jobs[job_id]["downloaded_mb"] = round(cur / 1048576, 1)
+                    except Exception:
+                        pass
+                    _time.sleep(1)
+
+            poll_t = threading.Thread(target=_size_poller, daemon=True)
+            poll_t.start()
+
+            # wget stderr/stdout satırlarını da oku (block etmesin diye)
             for line in proc.stdout:
-                line = line.strip()
-                if "%" in line:
-                    parts = line.split()
-                    for p in parts:
-                        if "%" in p:
-                            _iso_fetch_jobs[job_id]["progress"] = p
-                            break
+                pass  # consume output so process doesn't block
+
             proc.wait()
+            poll_t.join(timeout=3)
+
             if proc.returncode == 0:
                 size = os.path.getsize(dest) if os.path.exists(dest) else 0
-                _iso_fetch_jobs[job_id]["status"] = "done"
-                _iso_fetch_jobs[job_id]["size"] = size
+                _iso_fetch_jobs[job_id]["status"]   = "done"
+                _iso_fetch_jobs[job_id]["progress"] = "100%"
+                _iso_fetch_jobs[job_id]["size"]     = size
                 log.info("ISO indirildi: %s (%d bytes)", safe_name, size)
             else:
                 _iso_fetch_jobs[job_id]["status"] = "error"
-                _iso_fetch_jobs[job_id]["error"] = f"wget çıkış kodu: {proc.returncode}"
+                _iso_fetch_jobs[job_id]["error"]  = f"wget çıkış kodu: {proc.returncode}"
                 if os.path.exists(dest):
                     os.unlink(dest)
         except Exception as ex:
             _iso_fetch_jobs[job_id]["status"] = "error"
-            _iso_fetch_jobs[job_id]["error"] = str(ex)
+            _iso_fetch_jobs[job_id]["error"]  = str(ex)
 
     threading.Thread(target=_do_fetch, daemon=True).start()
     return jsonify({"ok": True, "job_id": job_id, "filename": safe_name}), 202

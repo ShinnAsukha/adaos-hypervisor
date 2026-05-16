@@ -4530,7 +4530,13 @@ async function startIsoFetch() {
         document.getElementById('iso-fetch-pct').textContent = pct;
         const num = parseInt(pct) || 0;
         document.getElementById('iso-fetch-bar').style.width = num + '%';
-        document.getElementById('iso-fetch-status').textContent = s.status === 'done' ? '✓ Tamamlandı' : s.status === 'error' ? `Hata: ${s.error}` : 'İndiriliyor...';
+        let statusTxt = 'İndiriliyor...';
+        if (s.status === 'done') statusTxt = '✓ Tamamlandı';
+        else if (s.status === 'error') statusTxt = `Hata: ${s.error}`;
+        else if (s.downloaded_mb != null) {
+          statusTxt = s.total_mb ? `${s.downloaded_mb} MB / ${s.total_mb} MB` : `${s.downloaded_mb} MB indirildi`;
+        }
+        document.getElementById('iso-fetch-status').textContent = statusTxt;
         if (s.status === 'done') {
           clearInterval(_isoFetchTimer); _isoFetchTimer = null;
           document.getElementById('iso-fetch-bar').style.width = '100%';
