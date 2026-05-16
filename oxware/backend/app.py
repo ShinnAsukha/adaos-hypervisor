@@ -895,47 +895,71 @@ def api_cve_products():
     return ok(products=CVE_PRODUCTS)
 
 @app.route("/api/cve/search")
+@require_auth
 def api_cve_search():
     product_id = request.args.get("product", "").lower()
     force      = request.args.get("force", "0") == "1"
+    oxware_only = request.args.get("oxware_only", "1") == "1"   # default: sadece OXware stack
     try:
-        years_back = int(request.args.get("years_back", "3"))
-        years_back = max(0, min(years_back, 10))  # clamp 0–10
+        years_back = int(request.args.get("years_back", "1"))   # default: son 1 yıl
+        years_back = max(0, min(years_back, 10))
     except ValueError:
-        years_back = 3
+        years_back = 1
 
     if product_id and product_id not in CVE_PRODUCTS:
         return err(f"Bilinmeyen ürün: {product_id}", 400)
 
+    if product_id:
+        targets = {product_id: CVE_PRODUCTS[product_id]}
+    elif oxware_only:
+        # Sadece OXware runtime stack ürünleri (6 adet, 13 değil)
+        targets = {pid: p for pid, p in CVE_PRODUCTS.items() if p.get("in_oxware_stack")}
+    else:
+        targets = CVE_PRODUCTS
+
     results = {}
     fetch_errors = []
-    targets = {product_id: CVE_PRODUCTS[product_id]} if product_id else CVE_PRODUCTS
+    stale_pids   = []
 
-    # NVD rate limit: 5 req/30s (no key) or 50 req/30s (with key).
-    # Add 0.7s delay between uncached fetches to avoid 429s.
-    has_api_key = bool(os.environ.get("NVD_API_KEY", ""))
-    req_delay = 0.2 if has_api_key else 0.7
-    fetch_count = 0
-
+    # Önce cache'e bak — hepsi tazeyse anında dön
     for pid, pinfo in targets.items():
-        # Cache key includes years_back so different time ranges don't collide
         cache_key = f"{pid}:{years_back}"
         cached = _CVE_CACHE.get(cache_key)
         if not force and cached and (time.time() - cached["fetched_at"]) < _CVE_TTL:
             results[pid] = cached["data"]
-            continue
-        # Respect rate limit between live API calls
-        if fetch_count > 0:
-            time.sleep(req_delay)
-        fetch_count += 1
-        cves, fetch_err = _fetch_cves(pinfo["keyword"], product_id=pid, years_back=years_back)
-        if fetch_err:
-            fetch_errors.append(f"{pinfo['label']}: {fetch_err}")
-            # Use stale cache rather than empty on error
-            if cached:
-                cves = cached["data"]
-        _CVE_CACHE[cache_key] = {"data": cves, "fetched_at": time.time()}
-        results[pid] = cves
+        else:
+            stale_pids.append(pid)
+            # Stale cache varsa göster, arka planda güncellenir
+            if cached and not force:
+                results[pid] = cached["data"]
+
+    if stale_pids:
+        # Paralel fetch — ThreadPoolExecutor, NVD rate limit: max 3 eş zamanlı
+        import concurrent.futures as _cf
+        has_api_key = bool(os.environ.get("NVD_API_KEY", ""))
+        max_workers = 3 if has_api_key else 2   # NVD: 5 req/30s without key
+
+        def _fetch_one(pid):
+            pinfo = CVE_PRODUCTS[pid]
+            cves, err_ = _fetch_cves(pinfo["keyword"], product_id=pid, years_back=years_back)
+            return pid, cves, err_
+
+        with _cf.ThreadPoolExecutor(max_workers=max_workers) as ex:
+            futures = {ex.submit(_fetch_one, pid): pid for pid in stale_pids}
+            for fut in _cf.as_completed(futures, timeout=60):
+                try:
+                    pid, cves, fetch_err = fut.result(timeout=60)
+                    cache_key = f"{pid}:{years_back}"
+                    cached = _CVE_CACHE.get(cache_key)
+                    if fetch_err:
+                        fetch_errors.append(f"{CVE_PRODUCTS[pid]['label']}: {fetch_err}")
+                        if cached:
+                            cves = cached["data"]   # stale on error
+                    _CVE_CACHE[cache_key] = {"data": cves, "fetched_at": time.time()}
+                    results[pid] = cves
+                except Exception as _fe:
+                    pid = futures[fut]
+                    fetch_errors.append(f"{CVE_PRODUCTS[pid]['label']}: timeout/error")
 
     # Global deduplication: same CVE ID must not appear under multiple products.
     # Priority: OXware-stack products first, then alphabetical. Keep first seen.
