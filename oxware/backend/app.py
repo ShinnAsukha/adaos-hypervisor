@@ -1837,12 +1837,16 @@ def api_create_network():
     if "name" not in data:
         return err("name zorunludur")
     try:
-        # Frontend sends 'mode' and 'gateway'; map to create_network() param names
+        # Frontend field mapping
         if "mode" in data and "forward_mode" not in data:
             data["forward_mode"] = data.pop("mode")
         if "gateway" in data and "ip_address" not in data:
             data["ip_address"] = data.pop("gateway")
-        return ok(**network_manager.create_network(**data)), 201
+        # Yalnızca create_network() parametrelerini geçir
+        allowed = {"name","forward_mode","bridge_name","ip_address","netmask",
+                   "dhcp_start","dhcp_end","bridge_iface"}
+        filtered = {k: v for k, v in data.items() if k in allowed}
+        return ok(**network_manager.create_network(**filtered)), 201
     except Exception as e:
         return err(e, 500)
 

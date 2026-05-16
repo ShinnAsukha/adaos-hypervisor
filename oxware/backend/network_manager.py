@@ -43,7 +43,25 @@ def list_networks():
 
 def create_network(name, forward_mode="nat", bridge_name=None,
                    ip_address="192.168.100.1", netmask="255.255.255.0",
-                   dhcp_start="192.168.100.100", dhcp_end="192.168.100.200"):
+                   dhcp_start="192.168.100.100", dhcp_end="192.168.100.200",
+                   bridge_iface=None):
+
+    # Bridge modu: fiziksel arayüze direkt bridge — libvirt DHCP/IP yok
+    if forward_mode == "bridge":
+        iface = bridge_iface or "enp1s0"
+        xml = f"""<network>
+  <name>{name}</name>
+  <forward mode='bridge'/>
+  <bridge name='{iface}'/>
+</network>"""
+        conn = _connect()
+        try:
+            net = conn.networkDefineXML(xml)
+            net.setAutostart(1)
+            net.create()
+            return {"uuid": net.UUIDString(), "name": name, "status": "created", "mode": "bridge"}
+        finally:
+            conn.close()
 
     if not bridge_name:
         bridge_name = f"virbr-{name[:8]}"

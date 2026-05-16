@@ -3111,19 +3111,28 @@
     <div class="modal-body">
       <div class="form-row"><label>Ağ Adı</label><input id="net-name" placeholder="custom-net"></div>
       <div class="form-row"><label>Yönlendirme Modu</label>
-        <select id="net-mode">
+        <select id="net-mode" onchange="netModeChanged(this.value)">
           <option value="nat">NAT (Önerilen)</option>
           <option value="route">Route</option>
+          <option value="bridge">Bridge (Fiziksel Ağ)</option>
           <option value="isolated">İzole (İnternet Yok)</option>
         </select>
       </div>
-      <div class="form-grid">
-        <div class="form-row"><label>Ağ Geçidi IP</label><input id="net-ip" value="192.168.100.1"></div>
-        <div class="form-row"><label>Ağ Maskesi</label><input id="net-mask" value="255.255.255.0"></div>
+      <!-- Bridge modu: fiziksel interface adı -->
+      <div class="form-row" id="net-bridge-row" style="display:none">
+        <label>Host Arayüzü <span style="font-size:10px;color:var(--text-muted)">(ip a ile öğren)</span></label>
+        <input id="net-bridge-iface" placeholder="enp1s0" value="enp1s0">
+        <div class="form-hint" style="font-size:11px;color:var(--text-muted);margin-top:4px">⚠ Bridge modunda libvirt DHCP çalışmaz — sağlayıcının DHCP/IP'si kullanılır. Gateway/DHCP alanları yok sayılır.</div>
       </div>
-      <div class="form-grid">
-        <div class="form-row"><label>DHCP Başlangıç</label><input id="net-dhcp-start" value="192.168.100.100"></div>
-        <div class="form-row"><label>DHCP Bitiş</label><input id="net-dhcp-end" value="192.168.100.200"></div>
+      <div id="net-ip-section">
+        <div class="form-grid">
+          <div class="form-row"><label>Ağ Geçidi IP</label><input id="net-ip" value="192.168.100.1"></div>
+          <div class="form-row"><label>Ağ Maskesi</label><input id="net-mask" value="255.255.255.0"></div>
+        </div>
+        <div class="form-grid">
+          <div class="form-row"><label>DHCP Başlangıç</label><input id="net-dhcp-start" value="192.168.100.100"></div>
+          <div class="form-row"><label>DHCP Bitiş</label><input id="net-dhcp-end" value="192.168.100.200"></div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -3707,7 +3716,18 @@ window.addEventListener("click", e => {
 });
 
 function openCreateVMModal() { loadISOOptions(); loadIpPoolOptions(); loadNetworkOptions(); openModal("modal-create-vm"); }
-function openCreateNetworkModal() { openModal("modal-create-net"); }
+function openCreateNetworkModal() { openModal("modal-create-net"); netModeChanged('nat'); }
+function netModeChanged(mode) {
+  const bridgeRow = document.getElementById('net-bridge-row');
+  const ipSection  = document.getElementById('net-ip-section');
+  if (mode === 'bridge') {
+    bridgeRow.style.display = '';
+    ipSection.style.display  = 'none';
+  } else {
+    bridgeRow.style.display = 'none';
+    ipSection.style.display  = '';
+  }
+}
 function openCreatePoolModal() { openModal("modal-create-pool"); }
 function openCreateUserModal() { openModal("modal-create-user"); }
 function openCreateSnapModal() {
@@ -6761,22 +6781,24 @@ async function loadNetworks() {
 }
 
 async function createNetwork() {
+  const mode = document.getElementById("net-mode").value;
+  const name = document.getElementById("net-name").value.trim();
+  if (!name) { toast("Ağ adı zorunlu", "error"); return; }
   try {
-    await api("/networks", {
-      method: "POST",
-      body: {
-        name: document.getElementById("net-name").value.trim(),
-        mode: document.getElementById("net-mode").value,
-        gateway: document.getElementById("net-ip").value,
-        netmask: document.getElementById("net-mask").value,
-        dhcp_start: document.getElementById("net-dhcp-start").value,
-        dhcp_end: document.getElementById("net-dhcp-end").value,
-      }
-    });
+    const body = { name, mode };
+    if (mode === 'bridge') {
+      body.bridge_iface = document.getElementById("net-bridge-iface").value.trim() || "enp1s0";
+    } else {
+      body.gateway    = document.getElementById("net-ip").value;
+      body.netmask    = document.getElementById("net-mask").value;
+      body.dhcp_start = document.getElementById("net-dhcp-start").value;
+      body.dhcp_end   = document.getElementById("net-dhcp-end").value;
+    }
+    await api("/networks", { method: "POST", body });
     toast("Ağ oluşturuldu", "success");
     closeModal("modal-create-net");
     loadNetworks();
-  } catch (e) { toast(e.message, "error"); }
+  } catch (e) { toast(escHtml(e.message), "error"); }
 }
 
 async function deleteNetwork(uuid, name) {
