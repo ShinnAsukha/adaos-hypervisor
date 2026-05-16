@@ -429,6 +429,18 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
         for dev in boot_order.split(",")
     )
 
+    clock_offset = "localtime" if is_windows else "utc"
+    hyperv_xml = """
+    <hyperv mode='custom'>
+      <relaxed state='on'/>
+      <vapic state='on'/>
+      <spinlocks state='on' retries='8191'/>
+      <vpindex state='on'/>
+      <synic state='on'/>
+      <stimer state='on'/>
+      <reset state='on'/>
+    </hyperv>""" if is_windows else ""
+
     xml = f"""<domain type='kvm'>
   <name>{name}</name>
   <uuid>{vm_uuid}</uuid>
@@ -442,21 +454,12 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
   <features>
     <acpi/>
     <apic/>
-    <vmport state='off'/>{"" if not is_windows else """
-    <hyperv mode='custom'>
-      <relaxed state='on'/>
-      <vapic state='on'/>
-      <spinlocks state='on' retries='8191'/>
-      <vpindex state='on'/>
-      <synic state='on'/>
-      <stimer state='on'/>
-      <reset state='on'/>
-    </hyperv>"""}
+    <vmport state='off'/>{hyperv_xml}
   </features>
   <cpu mode='{cpu_mode}' check='{cpu_check}'>
 {cpu_model_xml}
   </cpu>
-  <clock offset='{"localtime" if is_windows else "utc"}'>
+  <clock offset='{clock_offset}'>
     <timer name='rtc' tickpolicy='catchup'/>
     <timer name='pit' tickpolicy='delay'/>
     <timer name='hpet' present='no'/>
