@@ -450,3 +450,19 @@ echo -e "${CYAN}║${NC}  Web UI  : https://<ip>:8006 (kurulum sonrası)        
 echo -e "${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
 echo -e "${CYAN}║${NC}  USB: sudo dd if=$(basename "$OUTPUT_ISO") of=/dev/sdX bs=4M${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+
+# ── OXware ISO Kütüphanesine Otomatik Kopyala ─────────────────────────────────
+OXWARE_ISO_DIR="/var/lib/oxware/isos"
+if [ -d "$OXWARE_ISO_DIR" ]; then
+    log "OXware ISO kütüphanesine kopyalanıyor: $OXWARE_ISO_DIR"
+    cp -f "$OUTPUT_ISO" "$OXWARE_ISO_DIR/"
+    cp -f "${OUTPUT_ISO}.sha256" "$OXWARE_ISO_DIR/" 2>/dev/null || true
+    log "ISO kütüphanesine kopyalandı: $OXWARE_ISO_DIR/$(basename "$OUTPUT_ISO")"
+    echo -e "${GREEN}[BUILD]${NC}  Web arayüzünden hemen kullanılabilir → ISO Kütüphanesi"
+else
+    echo ""
+    echo -e "${YELLOW}[WARN]${NC}   OXware kurulu değil veya ISO dizini bulunamadı."
+    echo -e "${YELLOW}[WARN]${NC}   ISO'yu manuel kopyalamak için:"
+    echo -e "${WHITE}         mkdir -p $OXWARE_ISO_DIR${NC}"
+    echo -e "${WHITE}         cp \"$OUTPUT_ISO\" $OXWARE_ISO_DIR/${NC}"
+fi
