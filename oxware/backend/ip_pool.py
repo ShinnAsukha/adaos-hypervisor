@@ -152,14 +152,15 @@ def allocate_ip(pool_name: str, vm_id: str, vm_name: str, mac: str = None) -> di
 
         ip = available[0]
         data["assignments"][ip] = {
-            "vm_id":       vm_id,
-            "vm_name":     vm_name,
-            "pool":        pool_name,
-            "mac":         mac or "",
-            "assigned_at": time.time(),
-            "gateway":     pool["gateway"],
-            "dns":         pool["dns"],
-            "network":     pool["network"],
+            "vm_id":          vm_id,
+            "vm_name":        vm_name,
+            "pool":           pool_name,
+            "mac":            mac or "",
+            "assigned_at":    time.time(),
+            "gateway":        pool["gateway"],
+            "dns":            pool["dns"],
+            "network":        pool["network"],
+            "libvirt_network": pool.get("libvirt_network", "default"),
         }
         _save(data)
 

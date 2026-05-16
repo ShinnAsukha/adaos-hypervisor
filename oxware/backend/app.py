@@ -1463,45 +1463,43 @@ def api_delete_vm(vm_id):
     delete_disk = request.args.get("delete_disk", "true").lower() == "true"
     try:
         vm = vm_manager.get_vm(vm_id)
-        # Remove DHCP static entry before deleting VM
+        # Tek seferinde fetch — race condition önle
+        assignment     = ip_pool_mgr.get_vm_assignment(vm_id)
+        mac            = assignment.get("mac", "") if assignment else ""
+        public_ip      = assignment.get("ip", "")  if assignment else ""
+
+        # __internal__ pool'dan gerçek internal IP bul
+        internal_ip = None
         try:
-            assignment = ip_pool_mgr.get_vm_assignment(vm_id)
-            if assignment and assignment.get("mac") and assignment.get("ip"):
-                vm_manager.remove_dhcp_host(
-                    assignment.get("network", "default"),
-                    assignment["mac"],
-                    assignment["ip"]
-                )
-        except Exception as _dhcp_e:
-            log.warning("DHCP host silinemedi vm=%s: %s", vm_id, _dhcp_e)
+            internal_assignments = ip_pool_mgr.list_assignments("__internal__")
+            internal_ip = next(
+                (a["ip"] for a in internal_assignments if a.get("mac") == mac),
+                None
+            )
+        except Exception:
+            pass
+        internal_ip = internal_ip or (_mac_to_internal_ip(mac) if mac else "")
+
+        # DHCP static entry sil (internal_ip ile eklenmişti)
+        if mac and internal_ip:
+            try:
+                vm_manager.remove_dhcp_host("default", mac, internal_ip)
+            except Exception as _dhcp_e:
+                log.warning("DHCP host silinemedi vm=%s: %s", vm_id, _dhcp_e)
+
         # NAT kurallarını temizle
-        try:
-            assignment = ip_pool_mgr.get_vm_assignment(vm_id)
-            if assignment:
-                public_ip = assignment.get("ip", "")
-                mac = assignment.get("mac", "")
-                # Gerçek internal IP'yi __internal__ pool'dan al
-                internal_ip = None
-                try:
-                    internal_assignments = ip_pool_mgr.list_assignments("__internal__")
-                    internal_ip = next(
-                        (a["ip"] for a in internal_assignments if a.get("mac") == mac),
-                        None
-                    )
-                except Exception:
-                    pass
-                internal_ip = internal_ip or _mac_to_internal_ip(mac)
-                if public_ip and public_ip != internal_ip:
-                    _remove_nat(public_ip, internal_ip)
-                # __internal__ assignment'ı da sil
-                try:
-                    ip_pool_mgr.release_ip(mac)  # mac = vm_id for internal entries
-                except Exception:
-                    pass
-        except Exception as _nat_e:
-            log.warning("NAT temizleme başarısız vm=%s: %s", vm_id, _nat_e)
+        if public_ip and internal_ip and public_ip != internal_ip:
+            try:
+                _remove_nat(public_ip, internal_ip)
+            except Exception as _nat_e:
+                log.warning("NAT temizleme başarısız vm=%s: %s", vm_id, _nat_e)
+
         result = vm_manager.delete_vm(vm_id, delete_disk=delete_disk)
+
+        # Tüm IPAM kayıtlarını temizle (vm_id ve mac ile)
         ip_pool_mgr.release_ip(vm_id)
+        if mac:
+            ip_pool_mgr.release_ip(mac)  # __internal__ entries stored with mac as vm_id
         ev.vm_event(f"VM silindi: {vm.get('name')}", vm_id, level="WARNING")
         return ok(**result)
     except Exception as e:
@@ -2497,13 +2495,22 @@ def _setup_nat(public_ip: str, internal_ip: str, host_iface: str = None) -> dict
         # MASQUERADE: VM'in dışarı çıkışı
         ["iptables", "-t", "nat", "-A", "POSTROUTING",
          "-s", internal_ip, "-o", host_iface, "-j", "MASQUERADE"],
-        # FORWARD: LIBVIRT_FWI'dan ÖNCE ekle (insert pos 1), yoksa REJECT yutar
-        ["iptables", "-I", "FORWARD", "1", "-d", internal_ip, "-j", "ACCEPT"],
-        ["iptables", "-I", "FORWARD", "1", "-s", internal_ip, "-j", "ACCEPT"],
     ]
     for rule in rules:
         r = subprocess.run(rule, capture_output=True, text=True, timeout=10)
         if r.returncode != 0 and "already exists" not in r.stderr:
+            errors.append(r.stderr.strip())
+
+    # FORWARD: önce sil (duplicate önle), sonra pos 1'e ekle — LIBVIRT_FWI'dan önce
+    for fwd_rule_args in [
+        ["-d", internal_ip, "-j", "ACCEPT"],
+        ["-s", internal_ip, "-j", "ACCEPT"],
+    ]:
+        subprocess.run(["iptables", "-D", "FORWARD"] + fwd_rule_args,
+                       capture_output=True, timeout=10)
+        r = subprocess.run(["iptables", "-I", "FORWARD", "1"] + fwd_rule_args,
+                           capture_output=True, text=True, timeout=10)
+        if r.returncode != 0:
             errors.append(r.stderr.strip())
 
     # Kalıcı yap (varsa)
@@ -2514,8 +2521,21 @@ def _setup_nat(public_ip: str, internal_ip: str, host_iface: str = None) -> dict
             "public_ip": public_ip, "internal_ip": internal_ip}
 
 
-def _remove_nat(public_ip: str, internal_ip: str, host_iface: str = "ens160"):
-    """NAT kurallarını temizle."""
+def _remove_nat(public_ip: str, internal_ip: str, host_iface: str = None):
+    """NAT kurallarını temizle. host_iface None ise _setup_nat ile aynı auto-detect."""
+    if not host_iface:
+        try:
+            r = subprocess.run(["ip", "route", "get", "8.8.8.8"],
+                               capture_output=True, text=True, timeout=5)
+            for token in r.stdout.split():
+                if token not in ("8.8.8.8", "via", "dev", "src", "uid"):
+                    if not token.startswith("1") and "." not in token:
+                        host_iface = token
+                        break
+        except Exception:
+            pass
+        host_iface = host_iface or "ens160"
+
     rules = [
         ["iptables", "-t", "nat", "-D", "PREROUTING",
          "-d", public_ip, "-j", "DNAT", "--to-destination", internal_ip],
