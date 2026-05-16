@@ -276,34 +276,37 @@ function setupPointerLock(canvas) {
   });
 
   // Pointer lock aktifken: relative movementX/Y → virtual absolute → noVNC'ye gönder
+  // isTrusted=false ise synthetic event — sonsuz döngü önle
   document.addEventListener("mousemove", (e) => {
+    if (!e.isTrusted) return;
     if (document.pointerLockElement !== canvas) return;
     const r = getRect();
     _vX = Math.max(0, Math.min(r.width,  _vX + e.movementX));
     _vY = Math.max(0, Math.min(r.height, _vY + e.movementY));
-    // noVNC absolute clientX/Y bekliyor — synthetic event gönder
     canvas.dispatchEvent(new MouseEvent("mousemove", {
-      bubbles: true, cancelable: true,
+      bubbles: false, cancelable: true,
       clientX: r.left + _vX,
       clientY: r.top  + _vY,
     }));
   }, true);
 
-  // Mouse buton olaylarını da ilet (pointer lock aktifken canvas'a gitmiyor)
+  // Mouse buton olaylarını da ilet
   document.addEventListener("mousedown", (e) => {
+    if (!e.isTrusted) return;
     if (document.pointerLockElement !== canvas) return;
     const r = getRect();
     canvas.dispatchEvent(new MouseEvent("mousedown", {
-      bubbles: true, cancelable: true, button: e.button, buttons: e.buttons,
+      bubbles: false, cancelable: true, button: e.button, buttons: e.buttons,
       clientX: r.left + _vX, clientY: r.top + _vY,
     }));
   }, true);
 
   document.addEventListener("mouseup", (e) => {
+    if (!e.isTrusted) return;
     if (document.pointerLockElement !== canvas) return;
     const r = getRect();
     canvas.dispatchEvent(new MouseEvent("mouseup", {
-      bubbles: true, cancelable: true, button: e.button, buttons: e.buttons,
+      bubbles: false, cancelable: true, button: e.button, buttons: e.buttons,
       clientX: r.left + _vX, clientY: r.top + _vY,
     }));
   }, true);
