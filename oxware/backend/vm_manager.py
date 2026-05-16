@@ -6,6 +6,7 @@ import time
 import json
 import uuid
 import logging
+import threading
 import config
 
 _log = logging.getLogger("oxware.vm_manager")
@@ -24,6 +25,80 @@ STATE_MAP = {
 }
 
 _VNC_REGISTRY_FILE = os.path.join(config.DATA_DIR, "vnc_registry.json")
+
+# ISO kurulum monitörleri: vm_uuid → Thread
+_install_monitors: dict = {}
+
+
+def _monitor_install(vm_uuid: str, vm_name: str):
+    """
+    ISO ile kurulan VM'i izle.
+    Kurulum bitip VM kapanınca:
+      1. CDROM'u XML'den kaldır
+      2. Boot order → hd (disk)
+      3. VM'i yeniden başlat
+    """
+    log = logging.getLogger("oxware.install_monitor")
+    log.info("Kurulum monitörü başladı: %s (%s)", vm_name, vm_uuid)
+
+    was_running = False
+    timeout    = 7200   # 2 saat max
+    elapsed    = 0
+
+    while elapsed < timeout:
+        try:
+            conn = _connect()
+            try:
+                dom   = conn.lookupByUUIDString(vm_uuid)
+                state, _ = dom.state()
+                running   = (state == libvirt.VIR_DOMAIN_RUNNING)
+
+                if running:
+                    was_running = True
+                elif was_running and not running:
+                    # VM çalışıyordu → durdu = kurulum tamamlandı
+                    log.info("Kurulum bitti: %s — cdrom eject, boot=hd, başlatılıyor", vm_name)
+
+                    xml_str = dom.XMLDesc(0)
+                    root    = ET.fromstring(xml_str)
+
+                    # cdrom disk elementlerini kaldır
+                    devices = root.find("devices")
+                    if devices is not None:
+                        for disk in list(devices.findall("disk")):
+                            if disk.get("device") == "cdrom":
+                                devices.remove(disk)
+
+                    # boot order → sadece hd
+                    os_el = root.find("os")
+                    if os_el is not None:
+                        for b in list(os_el.findall("boot")):
+                            os_el.remove(b)
+                        boot_el = ET.SubElement(os_el, "boot")
+                        boot_el.set("dev", "hd")
+
+                    new_xml = ET.tostring(root, encoding="unicode")
+
+                    conn2 = _connect()
+                    try:
+                        conn2.defineXML(new_xml)          # kalıcı kaydet
+                        dom2 = conn2.lookupByUUIDString(vm_uuid)
+                        dom2.create()                     # başlat
+                        log.info("VM diskten boot ile yeniden başlatıldı: %s", vm_name)
+                    finally:
+                        conn2.close()
+
+                    break   # monitör işi bitti
+            finally:
+                conn.close()
+        except Exception as ex:
+            log.warning("Install monitor hata (%s): %s", vm_name, ex)
+
+        time.sleep(5)
+        elapsed += 5
+
+    _install_monitors.pop(vm_uuid, None)
+    log.info("Kurulum monitörü durdu: %s", vm_name)
 
 
 def _connect():
@@ -251,7 +326,8 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
     # XML şablonu
     cpu_check = "none" if cpu_mode == "host-passthrough" else "partial"
     cpu_model_xml = "" if cpu_mode == "host-passthrough" else "    <model fallback='allow'/>"
-    cdrom_dev = "sdb" if disk_bus == "sata" else "sda"
+    # cdrom her zaman sata/sdb — disk ile çakışmaz (virtio vda, sata sda)
+    cdrom_dev = "sdb"
     iso_block = ""
     if iso_path and os.path.exists(iso_path):
         iso_block = f"""
@@ -344,6 +420,18 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
         reg = _load_vnc_registry()
         reg[vm_uuid] = vnc_port
         _save_vnc_registry(reg)
+
+        # ISO varsa kurulum monitörü başlat (otomatik eject + boot fix)
+        if iso_path and os.path.exists(iso_path):
+            t = threading.Thread(
+                target=_monitor_install,
+                args=(vm_uuid, name),
+                daemon=True,
+                name=f"install-monitor-{name}"
+            )
+            _install_monitors[vm_uuid] = t
+            t.start()
+
         return {"id": vm_uuid, "name": name, "vnc_port": vnc_port, "mac": vm_mac}
     finally:
         conn.close()
