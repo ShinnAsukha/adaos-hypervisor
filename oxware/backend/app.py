@@ -13,6 +13,7 @@ import hmac
 import logging
 import subprocess
 import threading
+import ipaddress
 from datetime import timedelta
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -1473,6 +1474,16 @@ def api_delete_vm(vm_id):
                 )
         except Exception as _dhcp_e:
             log.warning("DHCP host silinemedi vm=%s: %s", vm_id, _dhcp_e)
+        # NAT kurallarını temizle
+        try:
+            assignment = ip_pool_mgr.get_vm_assignment(vm_id)
+            if assignment:
+                public_ip   = assignment.get("ip", "")
+                internal_ip = _mac_to_internal_ip(assignment.get("mac",""))
+                if public_ip and public_ip != internal_ip:
+                    _remove_nat(public_ip, internal_ip)
+        except Exception as _nat_e:
+            log.warning("NAT temizleme başarısız vm=%s: %s", vm_id, _nat_e)
         result = vm_manager.delete_vm(vm_id, delete_disk=delete_disk)
         ip_pool_mgr.release_ip(vm_id)
         ev.vm_event(f"VM silindi: {vm.get('name')}", vm_id, level="WARNING")
@@ -2314,6 +2325,88 @@ def api_ipam_add_lease():
         return err(e, 500)
 
 
+def _mac_to_internal_ip(mac: str, base="192.168.122") -> str:
+    """MAC'in son iki byte'ından deterministik internal IP türet (100-253 aralığı)."""
+    parts = mac.split(":")
+    last = int(parts[-1], 16) if len(parts) >= 1 else 0
+    offset = 100 + (last % 153)   # 100-252
+    return f"{base}.{offset}"
+
+
+def _setup_nat(public_ip: str, internal_ip: str, host_iface: str = None) -> dict:
+    """
+    Public IP → Internal IP NAT kuralları ekle.
+    - PREROUTING DNAT: dışarıdan gelen → internal_ip
+    - POSTROUTING SNAT: internal_ip çıkışı → public_ip gibi görünsün
+    - ip_forward etkinleştir
+    """
+    if not host_iface:
+        # Ana çıkış interface'ini bul
+        try:
+            r = subprocess.run(["ip", "route", "get", "8.8.8.8"],
+                               capture_output=True, text=True, timeout=5)
+            for token in r.stdout.split():
+                if token not in ("8.8.8.8", "via", "dev", "src", "uid"):
+                    if not token.startswith("1") and "." not in token:
+                        host_iface = token
+                        break
+        except Exception:
+            pass
+        host_iface = host_iface or "ens160"
+
+    errors = []
+    # ip_forward
+    subprocess.run(["sysctl", "-w", "net.ipv4.ip_forward=1"],
+                   capture_output=True, timeout=5)
+
+    rules = [
+        # DNAT: dışarıdan public_ip'ye gelen → internal_ip
+        ["iptables", "-t", "nat", "-A", "PREROUTING",
+         "-d", public_ip, "-j", "DNAT", "--to-destination", internal_ip],
+        # MASQUERADE: VM'in dışarı çıkışı
+        ["iptables", "-t", "nat", "-A", "POSTROUTING",
+         "-s", internal_ip, "-o", host_iface, "-j", "MASQUERADE"],
+        # FORWARD: default'ta DROP ise izin ver
+        ["iptables", "-A", "FORWARD", "-d", internal_ip, "-j", "ACCEPT"],
+        ["iptables", "-A", "FORWARD", "-s", internal_ip, "-j", "ACCEPT"],
+    ]
+    for rule in rules:
+        r = subprocess.run(rule, capture_output=True, text=True, timeout=10)
+        if r.returncode != 0 and "already exists" not in r.stderr:
+            errors.append(r.stderr.strip())
+
+    # Kalıcı yap (varsa)
+    subprocess.run(["netfilter-persistent", "save"],
+                   capture_output=True, timeout=10)
+
+    return {"ok": len(errors) == 0, "errors": errors,
+            "public_ip": public_ip, "internal_ip": internal_ip}
+
+
+def _remove_nat(public_ip: str, internal_ip: str, host_iface: str = "ens160"):
+    """NAT kurallarını temizle."""
+    rules = [
+        ["iptables", "-t", "nat", "-D", "PREROUTING",
+         "-d", public_ip, "-j", "DNAT", "--to-destination", internal_ip],
+        ["iptables", "-t", "nat", "-D", "POSTROUTING",
+         "-s", internal_ip, "-o", host_iface, "-j", "MASQUERADE"],
+        ["iptables", "-D", "FORWARD", "-d", internal_ip, "-j", "ACCEPT"],
+        ["iptables", "-D", "FORWARD", "-s", internal_ip, "-j", "ACCEPT"],
+    ]
+    for rule in rules:
+        subprocess.run(rule, capture_output=True, timeout=10)
+    subprocess.run(["netfilter-persistent", "save"], capture_output=True, timeout=10)
+
+
+def _pool_in_libvirt_subnet(pool_network: str, libvirt_network: str) -> bool:
+    """Pool ağı libvirt ağıyla aynı subnet mi?"""
+    try:
+        return ipaddress.IPv4Network(pool_network, strict=False) == \
+               ipaddress.IPv4Network(libvirt_network, strict=False)
+    except Exception:
+        return False
+
+
 @app.route("/api/ipam/assign", methods=["POST"])
 @require_auth
 def api_ipam_assign_vm():
@@ -2328,19 +2421,65 @@ def api_ipam_assign_vm():
     if not pool or not mac:
         return err("pool ve mac zorunlu")
     try:
+        pools_map = {p["name"]: p for p in ip_pool_mgr.list_pools()}
+        pool_info = pools_map.get(pool, {})
+        dhcp_net  = pool_info.get("libvirt_network", "default")
+
         if manual_ip:
-            pools    = {p["name"]: p for p in ip_pool_mgr.list_pools()}
-            dhcp_net = pools.get(pool, {}).get("libvirt_network", "default")
-            entry    = ip_pool_mgr.manual_assign(ip=manual_ip, mac=mac, vm_name=vm_name, pool_name=pool, vm_id=vm_id or mac)
+            entry = ip_pool_mgr.manual_assign(ip=manual_ip, mac=mac, vm_name=vm_name,
+                                               pool_name=pool, vm_id=vm_id or mac)
             assigned_ip = manual_ip
         else:
-            entry       = ip_pool_mgr.allocate_ip(pool_name=pool, vm_id=vm_id or mac, vm_name=vm_name, mac=mac)
+            entry       = ip_pool_mgr.allocate_ip(pool_name=pool, vm_id=vm_id or mac,
+                                                   vm_name=vm_name, mac=mac)
             assigned_ip = entry.get("ip")
-            dhcp_net    = entry.get("libvirt_network", "default")
+            dhcp_net    = entry.get("libvirt_network", dhcp_net)
 
-        dhcp_ok = vm_manager.add_dhcp_host(dhcp_net, mac, assigned_ip, vm_name)
+        # Libvirt ağ bilgisi al
+        try:
+            nets = network_manager.list_networks()
+            libvirt_net_info = next((n for n in nets if n["name"] == dhcp_net), None)
+            libvirt_subnet = libvirt_net_info.get("ip", "") if libvirt_net_info else ""
+            libvirt_netmask = libvirt_net_info.get("netmask", "255.255.255.0") if libvirt_net_info else "255.255.255.0"
+            libvirt_cidr = f"{libvirt_subnet}/{libvirt_netmask}" if libvirt_subnet else ""
+        except Exception:
+            libvirt_subnet = ""
+            libvirt_cidr   = ""
 
-        # DHCP lease eski IP'yi tutmasın — VM'i yeniden başlat
+        # Pool IP'si libvirt subnet'inde mi?
+        pool_network = pool_info.get("network", "")
+        nat_mode = False
+        nat_result = None
+        internal_ip = assigned_ip  # varsayılan: aynı
+
+        if libvirt_subnet and pool_network:
+            try:
+                libvirt_net_obj = ipaddress.IPv4Network(
+                    f"{libvirt_subnet}/{libvirt_netmask}", strict=False)
+                assigned_addr = ipaddress.IPv4Address(assigned_ip)
+                if assigned_addr not in libvirt_net_obj:
+                    # Public IP libvirt subnet'i dışında → NAT gerekli
+                    nat_mode    = True
+                    internal_ip = _mac_to_internal_ip(mac, str(libvirt_net_obj.network_address).rsplit(".", 1)[0])
+                    log.info("NAT modu: %s → %s (internal: %s)", assigned_ip, vm_name, internal_ip)
+            except Exception as _ne:
+                log.warning("Subnet kontrol hatası: %s", _ne)
+
+        # DHCP static entry: internal_ip ile (libvirt subnet'inde)
+        dhcp_ok = vm_manager.add_dhcp_host(dhcp_net, mac, internal_ip, vm_name)
+
+        # NAT kurulumu
+        if nat_mode:
+            nat_result = _setup_nat(assigned_ip, internal_ip)
+            if nat_result["ok"]:
+                log.info("NAT kuruldu: %s → %s", assigned_ip, internal_ip)
+            else:
+                log.warning("NAT hataları: %s", nat_result["errors"])
+            # internal_ip'yi de kaydet
+            ip_pool_mgr.manual_assign(ip=internal_ip, mac=mac, vm_name=vm_name,
+                                       pool_name="__internal__", vm_id=vm_id or mac)
+
+        # VM yeniden başlat → yeni DHCP lease alsın
         restarted = False
         restart_err = None
         if restart_after and vm_id:
@@ -2349,14 +2488,13 @@ def api_ipam_assign_vm():
                 time.sleep(2)
                 vm_manager.start_vm(vm_id)
                 restarted = True
-                log.info("IP ataması sonrası VM yeniden başlatıldı: %s → %s", vm_name, assigned_ip)
             except Exception as re:
                 restart_err = str(re)
-                log.warning("IP sonrası VM restart başarısız (%s): %s", vm_name, re)
 
-        ev.info(f"IP atandı: {assigned_ip} → {vm_name} (DHCP: {dhcp_ok}, restart: {restarted})", category="network")
-        return ok(ip=assigned_ip, mac=mac, vm=vm_name, pool=pool,
-                  dhcp_entry=dhcp_ok, restarted=restarted, restart_error=restart_err)
+        ev.info(f"IP atandı: {assigned_ip} → {vm_name} (internal: {internal_ip}, NAT: {nat_mode})", category="network")
+        return ok(ip=assigned_ip, internal_ip=internal_ip, mac=mac, vm=vm_name, pool=pool,
+                  dhcp_entry=dhcp_ok, nat=nat_mode, nat_result=nat_result,
+                  restarted=restarted, restart_error=restart_err)
     except Exception as e:
         return err(e, 500)
 

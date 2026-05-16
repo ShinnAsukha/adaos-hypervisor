@@ -5256,10 +5256,9 @@ async function ipamConfirmVMAssign() {
   toast('IP atanıyor ve VM yeniden başlatılıyor...', 'info');
   const d = await _api('/api/ipam/assign', 'POST', body);
   if (d && !d.error) {
-    const restartMsg = d.restarted
-      ? ' VM yeniden başlatıldı, yeni IP alındı.'
-      : (d.restart_error ? ` VM restart başarısız: ${d.restart_error}` : ' VM\'i manuel restart edin.');
-    toast(`IP atandı: ${d.ip || ''} → ${vmName}.${restartMsg}`, 'success');
+    const natMsg = d.nat ? ` (NAT: ${d.internal_ip} → ${d.ip})` : '';
+    const restartMsg = d.restarted ? ' VM yeniden başlatıldı.' : (d.restart_error ? ' VM restart başarısız, manuel başlatın.' : ' VM\'i restart edin.');
+    toast(`IP atandı: ${d.ip || ''}${natMsg} → ${vmName}.${restartMsg}`, 'success');
     document.getElementById('modal-ipam-vmassign').classList.remove('open');
     loadIpamLeases();
   } else {
