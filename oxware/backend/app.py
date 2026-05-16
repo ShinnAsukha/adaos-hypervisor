@@ -2369,6 +2369,18 @@ def _setup_nat(public_ip: str, internal_ip: str, host_iface: str = None) -> dict
     except Exception as _ie:
         log.warning("Secondary IP eklenemedi: %s", _ie)
 
+    # Aynı public_ip için eski DNAT kurallarını sil (önceki VM'den kalmış olabilir)
+    try:
+        r = subprocess.run(["iptables", "-t", "nat", "-S", "PREROUTING"],
+                           capture_output=True, text=True, timeout=5)
+        for line in r.stdout.splitlines():
+            if f"-d {public_ip}" in line and "-j DNAT" in line and f"--to-destination {internal_ip}" not in line:
+                del_parts = line.strip().replace("-A ", "-D ", 1).split()
+                subprocess.run(["iptables", "-t", "nat"] + del_parts,
+                               capture_output=True, timeout=5)
+    except Exception as _fe:
+        log.warning("Eski DNAT temizleme hatası: %s", _fe)
+
     rules = [
         # DNAT: dışarıdan public_ip'ye gelen → internal_ip
         ["iptables", "-t", "nat", "-A", "PREROUTING",
@@ -2474,6 +2486,10 @@ def api_ipam_assign_vm():
                     log.info("NAT modu: %s → %s (internal: %s)", assigned_ip, vm_name, internal_ip)
             except Exception as _ne:
                 log.warning("Subnet kontrol hatası: %s", _ne)
+
+        # NAT modunda VM "default" ağındaki virbr0'dan IP alır — fabnet değil
+        if nat_mode:
+            dhcp_net = "default"
 
         # DHCP static entry: internal_ip ile (libvirt subnet'inde)
         dhcp_ok = vm_manager.add_dhcp_host(dhcp_net, mac, internal_ip, vm_name)
