@@ -1478,10 +1478,26 @@ def api_delete_vm(vm_id):
         try:
             assignment = ip_pool_mgr.get_vm_assignment(vm_id)
             if assignment:
-                public_ip   = assignment.get("ip", "")
-                internal_ip = _mac_to_internal_ip(assignment.get("mac",""))
+                public_ip = assignment.get("ip", "")
+                mac = assignment.get("mac", "")
+                # Gerçek internal IP'yi __internal__ pool'dan al
+                internal_ip = None
+                try:
+                    internal_assignments = ip_pool_mgr.list_assignments("__internal__")
+                    internal_ip = next(
+                        (a["ip"] for a in internal_assignments if a.get("mac") == mac),
+                        None
+                    )
+                except Exception:
+                    pass
+                internal_ip = internal_ip or _mac_to_internal_ip(mac)
                 if public_ip and public_ip != internal_ip:
                     _remove_nat(public_ip, internal_ip)
+                # __internal__ assignment'ı da sil
+                try:
+                    ip_pool_mgr.release_ip(mac)  # mac = vm_id for internal entries
+                except Exception:
+                    pass
         except Exception as _nat_e:
             log.warning("NAT temizleme başarısız vm=%s: %s", vm_id, _nat_e)
         result = vm_manager.delete_vm(vm_id, delete_disk=delete_disk)
@@ -1679,10 +1695,21 @@ def api_vm_autostart(vm_id):
     data = request.get_json() or {}
     return ok(**vm_manager.set_autostart(vm_id, bool(data.get("enabled", False))))
 
+def _is_windows_vm(vm_name: str) -> bool:
+    """Libvirt XML'de <hyperv> veya Windows işaretlerine göre Windows VM mi?"""
+    try:
+        r = subprocess.run(["virsh", "dumpxml", vm_name],
+                           capture_output=True, text=True, timeout=5)
+        xml = r.stdout.lower()
+        return "<hyperv>" in xml or "windows" in xml or "win10" in xml or "win11" in xml
+    except Exception:
+        return False
+
+
 @app.route("/api/vms/<vm_id>/enable-ssh", methods=["POST"])
 @require_auth
 def api_vm_enable_ssh(vm_id):
-    """QEMU Guest Agent üzerinden Ubuntu/Debian VM'de SSH servisini etkinleştir."""
+    """QEMU Guest Agent üzerinden VM'de SSH (Linux) veya RDP (Windows) bilgisi döndür."""
     _GUEST_AGENT_INSTALL = (
         "apt update && apt install -y qemu-guest-agent openssh-server && "
         "systemctl enable --now qemu-guest-agent ssh"
@@ -1690,6 +1717,29 @@ def api_vm_enable_ssh(vm_id):
     try:
         vm = vm_manager.get_vm(vm_id)
         vm_name = vm.get("name", vm_id)
+
+        # Windows VM ise RDP bilgisi döndür
+        if _is_windows_vm(vm_name):
+            # Public IP'yi IPAM'dan bul
+            public_ip = None
+            try:
+                mac = vm.get("mac", "")
+                assignments = ip_pool_mgr.list_assignments()
+                public_ip = next(
+                    (a["ip"] for a in assignments
+                     if a.get("mac") == mac and a.get("pool") != "__internal__"),
+                    None
+                )
+            except Exception:
+                pass
+            return jsonify({
+                "success": True,
+                "protocol": "rdp",
+                "host": public_ip or vm.get("ip", ""),
+                "port": 3389,
+                "message": f"RDP ile bağlanın: {public_ip or ''}:3389 — Windows Uzak Masaüstü kullanın.",
+            }), 200
+
         cmd_payload = json.dumps({
             "execute": "guest-exec",
             "arguments": {

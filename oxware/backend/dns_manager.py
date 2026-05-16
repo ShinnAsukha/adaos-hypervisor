@@ -263,6 +263,23 @@ def update_config(upstream_dns=None, domain=None, dhcp_range=None, dhcp_enabled=
                 f.writelines(lines)
 
             log.info("dnsmasq config güncellendi")
+
+            # systemd-resolved kalıcı DNS — reboot'ta sıfırlanmasın
+            if upstream_dns is not None:
+                try:
+                    dns_list = upstream_dns if isinstance(upstream_dns, list) else [upstream_dns]
+                    dns_str = " ".join(dns_list)
+                    resolved_conf = "/etc/systemd/resolved.conf.d/oxware.conf"
+                    os.makedirs(os.path.dirname(resolved_conf), exist_ok=True)
+                    with open(resolved_conf, "w") as _rf:
+                        _rf.write(f"[Resolve]\nDNS={dns_str}\n")
+                    import subprocess as _sp
+                    _sp.run(["systemctl", "restart", "systemd-resolved"],
+                            capture_output=True, timeout=10)
+                    log.info("systemd-resolved DNS güncellendi: %s", dns_str)
+                except Exception as _re:
+                    log.warning("resolved.conf güncellenemedi: %s", _re)
+
             return {"success": True, "settings": settings}
         except OSError as exc:
             log.error("Config güncellenemedi: %s", exc)
