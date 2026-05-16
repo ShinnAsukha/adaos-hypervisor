@@ -2273,17 +2273,23 @@ def api_ipam_update_pool(name):
 def api_ipam_add_lease():
     """Manuel IP ataması ekle."""
     data = request.get_json(force=True, silent=True) or {}
-    ip   = data.get("ip", "")
-    mac  = data.get("mac", "")
+    ip        = data.get("ip", "")
+    mac       = data.get("mac", "")
+    pool_name = data.get("pool", "")
+    vm_name   = data.get("vm", "")
     if not ip or not mac:
         return err("ip ve mac zorunlu")
     try:
         entry = ip_pool_mgr.manual_assign(
-            ip=ip,
-            mac=mac,
-            vm_name=data.get("vm", ""),
-            pool_name=data.get("pool", ""),
+            ip=ip, mac=mac, vm_name=vm_name, pool_name=pool_name,
         )
+        # Libvirt DHCP static entry ekle
+        try:
+            pools = {p["name"]: p for p in ip_pool_mgr.list_pools()}
+            dhcp_net = pools.get(pool_name, {}).get("libvirt_network", "default") if pool_name else "default"
+            vm_manager.add_dhcp_host(dhcp_net, mac, ip, vm_name)
+        except Exception as _e:
+            log.warning("Manuel atama DHCP entry eklenemedi: %s", _e)
         return ok(entry=entry), 201
     except Exception as e:
         return err(e, 500)
@@ -2292,22 +2298,31 @@ def api_ipam_add_lease():
 @app.route("/api/ipam/assign", methods=["POST"])
 @require_auth
 def api_ipam_assign_vm():
-    """VM'e havuzdan IP ata."""
-    data     = request.get_json(force=True, silent=True) or {}
-    pool     = data.get("pool", "")
-    mac      = data.get("mac", "")
-    vm_name  = data.get("vm", "")
+    """VM'e havuzdan IP ata + libvirt DHCP static entry ekle."""
+    data      = request.get_json(force=True, silent=True) or {}
+    pool      = data.get("pool", "")
+    mac       = data.get("mac", "")
+    vm_name   = data.get("vm", "")
     manual_ip = data.get("ip", "")
     if not pool or not mac:
         return err("pool ve mac zorunlu")
     try:
         if manual_ip:
+            # Manuel IP: pool'dan libvirt_network al
+            pools = {p["name"]: p for p in ip_pool_mgr.list_pools()}
+            dhcp_net = pools.get(pool, {}).get("libvirt_network", "default")
             entry = ip_pool_mgr.manual_assign(ip=manual_ip, mac=mac, vm_name=vm_name, pool_name=pool)
+            assigned_ip = manual_ip
         else:
-            # vm_id olarak mac kullan (yeterli benzersizlik)
+            # Havuzdan otomatik — allocate_ip libvirt_network'ü de döndürür
             entry = ip_pool_mgr.allocate_ip(pool_name=pool, vm_id=mac, vm_name=vm_name, mac=mac)
-        ev.info(f"IP atandı: {entry.get('ip')} → {vm_name}", category="network")
-        return ok(ip=entry.get("ip"), mac=mac, vm=vm_name, pool=pool)
+            assigned_ip = entry.get("ip")
+            dhcp_net    = entry.get("libvirt_network", "default")
+
+        # Libvirt DHCP static entry — VM bu MAC ile boot edince bu IP'yi alır
+        dhcp_ok = vm_manager.add_dhcp_host(dhcp_net, mac, assigned_ip, vm_name)
+        ev.info(f"IP atandı: {assigned_ip} → {vm_name} (DHCP: {dhcp_ok})", category="network")
+        return ok(ip=assigned_ip, mac=mac, vm=vm_name, pool=pool, dhcp_entry=dhcp_ok)
     except Exception as e:
         return err(e, 500)
 
