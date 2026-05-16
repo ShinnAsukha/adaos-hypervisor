@@ -3760,6 +3760,21 @@ def api_ssl_upload():
     d = request.json or {}
     return ok(ssl_mgr.upload_custom_cert(d["cert_pem"], d["key_pem"]))
 
+@app.route("/api/ssl/autorenew/setup", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator")
+def api_ssl_autorenew_setup():
+    """Systemd timer kur — certbot günde 2x otomatik yenile."""
+    if not ssl_mgr: return err("SSL modülü yüklenemedi")
+    return ok(ssl_mgr.setup_systemd_timer())
+
+@app.route("/api/ssl/autorenew/status", methods=["GET"])
+@require_auth
+def api_ssl_autorenew_status():
+    """Systemd timer aktif mi?"""
+    if not ssl_mgr: return ok({"active": False})
+    return ok(ssl_mgr.get_timer_status())
+
 # ── Nginx Reverse Proxy ───────────────────────────────────────────────────────
 @app.route("/api/nginx/status", methods=["GET"])
 @require_auth

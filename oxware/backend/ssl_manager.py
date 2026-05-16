@@ -202,6 +202,8 @@ def request_letsencrypt(domain, email):
 def renew_cert():
     """
     Renew the certificate via ``certbot renew``.
+    Başarılıysa yenilenen certı /etc/oxware/ssl/ altına kopyalar ve
+    oxware servisini restart eder.
 
     Returns:
         dict: success, output
@@ -215,6 +217,17 @@ def renew_cert():
         output  = (result.stdout + result.stderr).strip()
         if success:
             log.info("certbot renew succeeded")
+            # Yenilenen certı kopyala
+            _copy_letsencrypt_certs()
+            # OXware'i yeniden başlat (yeni cert aktif olsun)
+            try:
+                subprocess.run(
+                    ["systemctl", "restart", "oxware"],
+                    capture_output=True, timeout=30
+                )
+                log.info("oxware servisi yenilenen cert ile restart edildi")
+            except Exception as ex:
+                log.warning("oxware restart başarısız: %s", ex)
         else:
             log.warning("certbot renew failed: %s", output)
         return {"success": success, "output": output}
@@ -223,6 +236,104 @@ def renew_cert():
     except Exception as exc:
         log.exception("renew_cert error: %s", exc)
         return {"success": False, "output": str(exc)}
+
+
+def _copy_letsencrypt_certs():
+    """
+    /etc/letsencrypt/live/ altındaki ilk geçerli domain certını
+    /etc/oxware/ssl/ altına kopyalar.
+    """
+    le_base = "/etc/letsencrypt/live"
+    if not os.path.isdir(le_base):
+        return False
+    for domain in os.listdir(le_base):
+        src_cert = os.path.join(le_base, domain, "fullchain.pem")
+        src_key  = os.path.join(le_base, domain, "privkey.pem")
+        if os.path.isfile(src_cert) and os.path.isfile(src_key):
+            os.makedirs(SSL_DIR, exist_ok=True)
+            with _lock:
+                shutil.copy2(src_cert, CERT_PATH)
+                shutil.copy2(src_key,  KEY_PATH)
+            os.chmod(KEY_PATH, 0o600)
+            log.info("Cert kopyalandı: %s → %s", domain, SSL_DIR)
+            return True
+    return False
+
+
+def setup_systemd_timer():
+    """
+    certbot yenilemesi için systemd timer kur (günde iki kez çalışır).
+    Başarıyla yenilenince oxware/ssl'e kopyalar ve servisi restart eder.
+
+    Returns:
+        dict: success, message
+    """
+    service_unit = """\
+[Unit]
+Description=OXware Certbot SSL Renewal
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '\
+  certbot renew --quiet && \
+  for d in /etc/letsencrypt/live/*/; do \
+    cp "$d/fullchain.pem" /etc/oxware/ssl/oxware.crt && \
+    cp "$d/privkey.pem"  /etc/oxware/ssl/oxware.key && \
+    chmod 600 /etc/oxware/ssl/oxware.key; \
+    break; \
+  done && \
+  systemctl restart oxware'
+"""
+    timer_unit = """\
+[Unit]
+Description=OXware Certbot SSL Renewal Timer
+
+[Timer]
+OnCalendar=*-*-* 00,12:00:00
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+"""
+    try:
+        with open("/etc/systemd/system/oxware-certbot.service", "w") as f:
+            f.write(service_unit)
+        with open("/etc/systemd/system/oxware-certbot.timer", "w") as f:
+            f.write(timer_unit)
+        subprocess.run(["systemctl", "daemon-reload"], check=True,
+                       capture_output=True, timeout=15)
+        subprocess.run(["systemctl", "enable", "--now", "oxware-certbot.timer"],
+                       check=True, capture_output=True, timeout=15)
+        log.info("oxware-certbot.timer kuruldu")
+        return {"success": True,
+                "message": "Systemd timer kuruldu — certbot 00:00 ve 12:00'da çalışır, sertifika otomatik kopyalanır ve servis restart edilir"}
+    except Exception as exc:
+        log.exception("setup_systemd_timer error: %s", exc)
+        return {"success": False, "message": str(exc)}
+
+
+def get_timer_status():
+    """systemd timer aktif mi kontrol et."""
+    try:
+        r = subprocess.run(
+            ["systemctl", "is-active", "oxware-certbot.timer"],
+            capture_output=True, text=True, timeout=10
+        )
+        active = r.stdout.strip() == "active"
+        next_run = None
+        if active:
+            r2 = subprocess.run(
+                ["systemctl", "show", "oxware-certbot.timer",
+                 "--property=NextElapseUSecRealtime"],
+                capture_output=True, text=True, timeout=10
+            )
+            # Basit parse — değer varsa döndür
+            val = r2.stdout.strip().split("=", 1)[-1] if "=" in r2.stdout else ""
+            next_run = val if val and val != "0" else None
+        return {"active": active, "next_run": next_run}
+    except Exception:
+        return {"active": False, "next_run": None}
 
 
 # ---------------------------------------------------------------------------

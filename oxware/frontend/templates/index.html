@@ -9257,11 +9257,42 @@ async function loadSslStatus() {
   const el = document.getElementById('sslStatusCard');
   if (!el) return;
   const info = d.cert_info || {};
+  const days = info.days_remaining;
+  const dayColor = days == null ? '' : days < 7 ? 'color:#ef4444;font-weight:700' : days < 30 ? 'color:#f59e0b;font-weight:600' : 'color:#22c55e';
+  // Timer durumu
+  let timerHtml = '';
+  try {
+    const t = await _api('/api/ssl/autorenew/status');
+    timerHtml = t.active
+      ? `<div class="stat-item"><span class="stat-label">Otomatik Yenileme</span><span style="color:#22c55e">✓ Aktif (systemd timer)</span></div>`
+      : `<div class="stat-item"><span class="stat-label">Otomatik Yenileme</span><span style="color:var(--text-muted)">Kurulu değil</span>
+           <button class="btn sm" style="margin-left:8px" onclick="setupAutoRenew()">⚙ Kur</button></div>`;
+  } catch(_) {}
   el.innerHTML = `
     <div class="stat-item"><span class="stat-label">Sertifika</span><span class="badge-${d.cert_exists?'success':'danger'}">${d.cert_exists?'Mevcut':'Yok'}</span></div>
-    ${info.not_after ? `<div class="stat-item"><span class="stat-label">Son Kullanım</span><span>${escHtml(info.not_after)}</span></div>` : ''}
-    ${info.days_remaining != null ? `<div class="stat-item"><span class="stat-label">Kalan Gün</span><span class="${info.days_remaining<30?'text-danger':''}">${info.days_remaining} gün</span></div>` : ''}
+    ${info.not_after ? `<div class="stat-item"><span class="stat-label">Son Kullanım</span><span>${escHtml(info.not_after.slice(0,10))}</span></div>` : ''}
+    ${days != null ? `<div class="stat-item"><span class="stat-label">Kalan Gün</span><span style="${dayColor}">${days} gün</span></div>` : ''}
+    ${timerHtml}
+    ${d.cert_exists ? `<div style="margin-top:8px"><button class="btn sm" onclick="manualRenewCert()">↻ Manuel Yenile</button></div>` : ''}
   `;
+}
+
+async function manualRenewCert() {
+  toast('Sertifika yenileniyor...', 'info');
+  try {
+    const d = await _api('/api/ssl/renew', 'POST');
+    toast(d.success ? '✓ Sertifika yenilendi, servis restart edildi' : ('Hata: ' + (d.output||d.error||'bilinmiyor')), d.success ? 'success' : 'error');
+    loadSslStatus();
+  } catch(e) { toast('Hata: ' + e.message, 'error'); }
+}
+
+async function setupAutoRenew() {
+  toast('Systemd timer kuruluyor...', 'info');
+  try {
+    const d = await _api('/api/ssl/autorenew/setup', 'POST');
+    toast(d.success ? '✓ ' + d.message : ('Hata: ' + (d.message||d.error)), d.success ? 'success' : 'error');
+    loadSslStatus();
+  } catch(e) { toast('Hata: ' + e.message, 'error'); }
 }
 
 async function requestLetsEncrypt() {
