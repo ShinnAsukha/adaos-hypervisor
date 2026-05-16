@@ -3114,7 +3114,7 @@
         <select id="net-mode" onchange="netModeChanged(this.value)">
           <option value="nat">NAT (Önerilen)</option>
           <option value="route">Route</option>
-          <option value="bridge">Bridge (Fiziksel Ağ)</option>
+          <option value="bridge">Passthrough (Fiziksel Interface)</option>
           <option value="isolated">İzole (İnternet Yok)</option>
         </select>
       </div>
@@ -3122,7 +3122,7 @@
       <div class="form-row" id="net-bridge-row" style="display:none">
         <label>Host Arayüzü <span style="font-size:10px;color:var(--text-muted)">(ip a ile öğren)</span></label>
         <input id="net-bridge-iface" placeholder="enp1s0" value="enp1s0">
-        <div class="form-hint" style="font-size:11px;color:var(--text-muted);margin-top:4px">⚠ Bridge modunda libvirt DHCP çalışmaz — sağlayıcının DHCP/IP'si kullanılır. Gateway/DHCP alanları yok sayılır.</div>
+        <div class="form-hint" style="font-size:11px;color:var(--text-muted);margin-top:4px">⚠ Passthrough modunda libvirt DHCP çalışmaz — VM'lere statik IP veya sağlayıcı DHCP'si kullanılır. Sağlayıcın ek MAC adresi izin vermesi gerekir.</div>
       </div>
       <div id="net-ip-section">
         <div class="form-grid">

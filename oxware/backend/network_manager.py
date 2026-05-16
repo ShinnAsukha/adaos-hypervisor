@@ -46,20 +46,23 @@ def create_network(name, forward_mode="nat", bridge_name=None,
                    dhcp_start="192.168.100.100", dhcp_end="192.168.100.200",
                    bridge_iface=None):
 
-    # Bridge modu: fiziksel arayüze direkt bridge — libvirt DHCP/IP yok
+    # Bridge / passthrough modu: fiziksel arayüzü doğrudan kullan
+    # libvirt bridge modunda mevcut bir bridge aygıtı (br0 gibi) gerekir.
+    # Fiziksel interface (ens160, enp1s0) için passthrough kullan — ayrı bridge kurmaya gerek yok.
     if forward_mode == "bridge":
         iface = bridge_iface or "enp1s0"
         xml = f"""<network>
   <name>{name}</name>
-  <forward mode='bridge'/>
-  <bridge name='{iface}'/>
+  <forward mode='passthrough'>
+    <interface dev='{iface}'/>
+  </forward>
 </network>"""
         conn = _connect()
         try:
             net = conn.networkDefineXML(xml)
             net.setAutostart(1)
             net.create()
-            return {"uuid": net.UUIDString(), "name": name, "status": "created", "mode": "bridge"}
+            return {"uuid": net.UUIDString(), "name": name, "status": "created", "mode": "passthrough"}
         finally:
             conn.close()
 
