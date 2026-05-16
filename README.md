@@ -1,6 +1,27 @@
 # OXware Hypervisor — Kurulum Kılavuzu
 
-> Sürüm: 2.2 · Hazırlayan: Ada Gürsoy
+> Sürüm: 2.3 · Hazırlayan: Ada Gürsoy
+
+---
+
+## Hızlı Başlangıç
+
+```bash
+# 1. Repo'yu sunucuya çek
+git clone https://github.com/ShinnAsukha/oxware-hypervisor.git /opt/oxware-src
+cd /opt/oxware-src
+
+# 2. Kur (root gerekli)
+sudo bash install.sh
+
+# 3. Tarayıcıdan eriş
+#    https://<sunucu-ip>:8006
+```
+
+> **Sorun mu var?** Sunucu yeniden başladıktan sonra SSH veya panel erişilemez hâle geldiyse:
+> ```bash
+> sudo bash repair.sh
+> ```
 
 ---
 
@@ -15,24 +36,25 @@
 7. [Web Arayüzüne Erişim](#7-web-arayüzüne-erişim)
 8. [IP Havuzu Oluşturma](#8-ip-havuzu-oluşturma)
 9. [İlk VM Oluşturma](#9-ilk-vm-oluşturma)
-10. [AI Ajan Kurulumu](#10-ai-ajan-kurulumu)
-11. [Telegram ve Discord Bildirimleri](#11-telegram-ve-discord-bildirimleri)
-12. [2FA (İki Faktörlü Doğrulama)](#12-2fa-iki-faktörlü-doğrulama)
-13. [Güvenlik Denetimi](#13-güvenlik-denetimi)
-14. [Otomatik Snapshot](#14-otomatik-snapshot)
-15. [Otomatik Güncelleme Kontrolü](#15-otomatik-güncelleme-kontrolü)
-16. [Parola Sıfırlama](#16-parola-sıfırlama)
-17. [Güvenlik Duvarı ve Portlar](#17-güvenlik-duvarı-ve-portlar)
-18. [Aktif Oturum Yönetimi (JWT Sessions)](#18-aktif-oturum-yönetimi-jwt-sessions)
-19. [IP Erişim Kısıtlaması (Allowlist)](#19-ip-erişim-kısıtlaması-allowlist)
-20. [VM Zamanlaması](#20-vm-zamanlaması)
-21. [VM Klonlama ve Toplu İşlemler](#21-vm-klonlama-ve-toplu-işlemler)
-22. [Prometheus Metrikleri](#22-prometheus-metrikleri)
-23. [PWA (Masaüstü / Mobil Uygulama)](#23-pwa-masaüstü--mobil-uygulama)
-24. [Domain Bağlama (Nginx + Let's Encrypt)](#24-domain-bağlama-nginx--lets-encrypt)
-25. [İnternet Bağlantısı Gereksinimleri](#25-i̇nternet-bağlantısı-gereksinimleri)
-26. [Sorun Giderme](#26-sorun-giderme)
-27. [AdaOS → OXware Canlı Sunucu Geçişi](#27-adaos--oxware-canlı-sunucu-geçişi)
+10. [VM Tipleri: VPS ve VDS](#10-vm-tipleri-vps-ve-vds)
+11. [AI Ajan Kurulumu](#11-ai-ajan-kurulumu)
+12. [Telegram ve Discord Bildirimleri](#12-telegram-ve-discord-bildirimleri)
+13. [2FA (İki Faktörlü Doğrulama)](#13-2fa-iki-faktörlü-doğrulama)
+14. [Güvenlik Denetimi](#14-güvenlik-denetimi)
+15. [Otomatik Snapshot ve Yedekleme Diski](#15-otomatik-snapshot-ve-yedekleme-diski)
+16. [Otomatik Güncelleme Kontrolü](#16-otomatik-güncelleme-kontrolü)
+17. [Parola Sıfırlama](#17-parola-sıfırlama)
+18. [Güvenlik Duvarı ve Portlar](#18-güvenlik-duvarı-ve-portlar)
+19. [Aktif Oturum Yönetimi (JWT Sessions)](#19-aktif-oturum-yönetimi-jwt-sessions)
+20. [IP Erişim Kısıtlaması (Allowlist)](#20-ip-erişim-kısıtlaması-allowlist)
+21. [VM Zamanlaması](#21-vm-zamanlaması)
+22. [VM Klonlama ve Toplu İşlemler](#22-vm-klonlama-ve-toplu-işlemler)
+23. [Prometheus Metrikleri](#23-prometheus-metrikleri)
+24. [PWA (Masaüstü / Mobil Uygulama)](#24-pwa-masaüstü--mobil-uygulama)
+25. [Domain Bağlama (Nginx + Let's Encrypt)](#25-domain-bağlama-nginx--lets-encrypt)
+26. [İnternet Bağlantısı Gereksinimleri](#26-i̇nternet-bağlantısı-gereksinimleri)
+27. [Sorun Giderme](#27-sorun-giderme)
+28. [AdaOS → OXware Canlı Sunucu Geçişi](#28-adaos--oxware-canlı-sunucu-geçişi)
 
 ---
 
@@ -395,7 +417,28 @@ curl -k -X POST https://localhost:8006/api/provision \
 
 ---
 
-## 10. AI Ajan Kurulumu
+## 10. VM Tipleri: VPS ve VDS
+
+VM oluştururken **Tip** alanı iki seçenek sunar:
+
+| Tip | CPU Modu | Açıklama |
+|-----|---------|----------|
+| **VPS — Paylaşımlı** | `host-model` | CPU'yu sanallaştırılmış model üzerinden paylaşır. Çoğu iş yükü için uygundur. |
+| **VDS — Özel (Dedicated)** | `host-passthrough` | Fiziksel CPU'yu doğrudan VM'e geçirir. Maksimum performans, iç içe sanallaştırma ve CPU feature'larına tam erişim. |
+
+### Disk Bus Tipi
+
+| Bus | Kullanım |
+|-----|---------|
+| **SATA** (önerilen) | Windows ve Linux kurulumlarında disk görünür — her zaman güvenli seçim |
+| **VirtIO** | Yalnızca Linux için; en yüksek I/O performansı; Windows'ta sürücü olmadan kurulum sırasında disk görünmez |
+| **IDE** | Eski işletim sistemleri (WinXP, Win7 vs.) için maksimum uyumluluk |
+
+> **Windows kuruyorsanız:** Bus tipi mutlaka **SATA** olsun. VirtIO seçilirse kurulum sırasında "disk bulunamadı" hatası alırsınız.
+
+---
+
+## 11. AI Ajan Kurulumu
 
 OXware, birden fazla AI sağlayıcısıyla entegre sistem izleme yapabilir.
 
@@ -457,7 +500,7 @@ sudo systemctl restart oxware
 
 ---
 
-## 11. Telegram ve Discord Bildirimleri
+## 12. Telegram ve Discord Bildirimleri
 
 ### Telegram Bot kurulumu
 
@@ -495,7 +538,7 @@ sudo systemctl restart oxware
 
 ---
 
-## 12. 2FA (İki Faktörlü Doğrulama)
+## 13. 2FA (İki Faktörlü Doğrulama)
 
 OXware, TOTP tabanlı (Google Authenticator, Authy vb.) 2FA destekler.
 
@@ -532,7 +575,7 @@ timedatectl set-ntp true
 
 ---
 
-## 13. Güvenlik Denetimi
+## 14. Güvenlik Denetimi
 
 **Güvenlik** sayfasındaki **"Güvenlik Denetimi"** kartı sistemi otomatik tarar.
 
@@ -591,7 +634,7 @@ curl -k -X DELETE -H "Authorization: Bearer <TOKEN>" \
 
 ---
 
-## 14. Otomatik Snapshot
+## 15. Otomatik Snapshot ve Yedekleme Diski
 
 Her gün belirlenen saatte tüm VM'lerin snapshot'ını otomatik alır, eski snapshot'ları temizler.
 
@@ -622,9 +665,26 @@ curl -k -X POST -H "Authorization: Bearer <TOKEN>" \
 
 Snapshot adlandırma: `oxw-autosnap-<VM_ADI>-YYYYMMDD-HHMMSS`
 
+### Yedekleme Diski
+
+Bir VM'e özel yedekleme diski bağlamak için:
+
+1. **Yedekleme** → **"Yedekleme Diski"** bölümüne gidin
+2. VM, etiket, boyut (GB) ve bus tipi seçin
+3. **"+ Oluştur ve Bağla"** — disk oluşturulur ve VM'e canlı bağlanır
+4. Tablo satırından **"✕ Sil"** ile disk + dosya birlikte kaldırılır
+
+```bash
+# API ile
+curl -k -X POST -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  https://localhost:8006/api/backup/disks \
+  -d '{"vm_id": "vm-01", "label": "backup", "size_gb": 100, "bus": "sata"}'
+```
+
 ---
 
-## 15. Otomatik Güncelleme Kontrolü
+## 16. Otomatik Güncelleme Kontrolü
 
 OXware her saat başı GitHub'dan yeni commit'leri kontrol eder ve AI analizi yapar.
 
@@ -656,7 +716,7 @@ curl -k -H "Authorization: Bearer <TOKEN>" \
 
 ---
 
-## 16. Parola Sıfırlama
+## 17. Parola Sıfırlama
 
 ### Web arayüzünden (token ile)
 
@@ -685,7 +745,7 @@ sudo systemctl restart oxware
 
 ---
 
-## 17. Güvenlik Duvarı ve Portlar
+## 18. Güvenlik Duvarı ve Portlar
 
 | Port | Protokol | Amaç |
 |------|----------|------|
@@ -717,7 +777,7 @@ sudo fail2ban-client status sshd
 
 ---
 
-## 18. Aktif Oturum Yönetimi (JWT Sessions)
+## 19. Aktif Oturum Yönetimi (JWT Sessions)
 
 OXware her girişte JWT token oluşturur ve sunucu tarafında takip eder.
 
@@ -744,7 +804,7 @@ curl -k -X DELETE -H "Authorization: Bearer <TOKEN>" \
 
 ---
 
-## 19. IP Erişim Kısıtlaması (Allowlist)
+## 20. IP Erişim Kısıtlaması (Allowlist)
 
 API ve web arayüzüne yalnızca belirli IP adreslerinden erişimi kısıtlayabilirsiniz.
 
@@ -782,7 +842,7 @@ sudo systemctl restart oxware
 
 ---
 
-## 20. VM Zamanlaması
+## 21. VM Zamanlaması
 
 VM'leri belirli saat ve günlerde otomatik olarak başlatın, durdurun veya yeniden başlatın.
 
@@ -819,7 +879,7 @@ Zamanlama kayıtları `/var/lib/oxware/vm_schedules.json` dosyasında saklanır.
 
 ---
 
-## 21. VM Klonlama ve Toplu İşlemler
+## 22. VM Klonlama ve Toplu İşlemler
 
 ### VM Klonlama
 
@@ -850,7 +910,7 @@ curl -k -X POST -H "Authorization: Bearer <TOKEN>" \
 
 ---
 
-## 22. Prometheus Metrikleri
+## 23. Prometheus Metrikleri
 
 OXware `/metrics` endpoint'i üzerinden Prometheus formatında metrik sunar.
 
@@ -895,7 +955,7 @@ scrape_configs:
 
 ---
 
-## 23. PWA (Masaüstü / Mobil Uygulama)
+## 24. PWA (Masaüstü / Mobil Uygulama)
 
 OXware, Progressive Web App (PWA) olarak masaüstüne veya telefona eklenebilir.
 
@@ -912,7 +972,7 @@ OXware, Progressive Web App (PWA) olarak masaüstüne veya telefona eklenebilir.
 
 ---
 
-## 24. Domain Bağlama (Nginx + Let's Encrypt)
+## 25. Domain Bağlama (Nginx + Let's Encrypt)
 
 OXware varsayılan olarak `https://<IP>:8006` adresinde çalışır. Özel domain ve ücretsiz SSL sertifikası için iki yöntem var.
 
@@ -1031,7 +1091,7 @@ Erişim: `https://oxware.domain.com:8006`
 
 ---
 
-## 25. İnternet Bağlantısı Gereksinimleri
+## 26. İnternet Bağlantısı Gereksinimleri
 
 OXware'in temel işlevleri tamamen **lokal ağda** çalışır. İnternet yalnızca belirli ek özellikler için gerekir.
 
@@ -1088,7 +1148,81 @@ ollama pull llama3
 
 ---
 
-## 26. Sorun Giderme
+## 27. Sorun Giderme
+
+### ⚡ Hızlı Onarım — repair.sh
+
+Yeniden başlatma sonrası SSH kesilmesi, ağ sorunları, servis başlamıyorsa:
+
+```bash
+# Web konsol veya fiziksel erişimden:
+cd /opt/oxware-src   # veya OXware klasörünüz
+sudo bash repair.sh
+```
+
+`repair.sh` tek komutla şunları düzeltir:
+- SSH servisi ve yapılandırması (`PermitRootLogin yes`)
+- Hostname sıfırlanması (cloud-init)
+- UFW / iptables-legacy çakışması
+- KVM modülleri ve libvirt ağı
+- OXware systemd servisi
+
+---
+
+### Yeniden başlatma sonrası SSH bağlanamıyorum
+
+```bash
+# Web konsol veya fiziksel terminalde:
+systemctl restart ssh
+
+# sshd_config kontrol:
+grep "PermitRootLogin\|PasswordAuth" /etc/ssh/sshd_config
+
+# UFW 22. portu kapalıysa:
+ufw allow 22/tcp
+ufw reload
+
+# SSH dinliyor mu?
+ss -tlnp | grep ':22'
+```
+
+### Yeniden başlatma sonrası hostname "localhost" oluyor
+
+```bash
+# Hostname kalıcı yap
+hostnamectl set-hostname oxware-server
+
+# cloud-init sıfırlamasını engelle
+echo 'preserve_hostname: true' > /etc/cloud/cloud.cfg.d/99_hostname.cfg
+echo 'manage_etc_hosts: false' >> /etc/cloud/cloud.cfg.d/99_hostname.cfg
+```
+
+### Yeniden başlatma sonrası UFW başlamıyor (FAILED)
+
+Ubuntu 20.04+ nftables kullanır; UFW iptables bekler:
+
+```bash
+# iptables-legacy geçişi
+update-alternatives --set iptables  /usr/sbin/iptables-legacy
+update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+
+# UFW yeniden kur
+ufw --force reset
+ufw allow 22/tcp
+ufw allow 8006/tcp
+ufw --force enable
+systemctl enable ufw
+```
+
+### Yeniden başlatma sonrası libvirt ağı başlamıyor
+
+```bash
+virsh net-autostart default
+virsh net-start default
+systemctl enable --now libvirtd
+```
+
+---
 
 ### Servis çalışmıyor
 
@@ -1199,7 +1333,7 @@ Veya web arayüzünden: **Güncellemeler → Şimdi Kontrol Et**
 
 ---
 
-## 27. AdaOS → OXware Canlı Sunucu Geçişi
+## 28. AdaOS → OXware Canlı Sunucu Geçişi
 
 > Bu bölüm, halihazırda **AdaOS** kurulu çalışan bir üretim sunucusunu  
 > **OXware**'e geçirmek için adım adım kılavuzdur.  

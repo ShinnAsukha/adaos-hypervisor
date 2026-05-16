@@ -560,20 +560,33 @@
 grep -Ec "vmx|svm" /proc/cpuinfo
 # 0 çıkarsa BIOS'ta aktif etmeniz gerekir</code></pre>
 
-        <h2>Otomatik Kurulum (Önerilen)</h2>
+        <h2>Hızlı Kurulum — 3 Adım</h2>
         <ol class="steps">
-          <li><div class="step-content"><h4>Ubuntu 22.04 LTS sunucuya SSH ile bağlanın</h4><p>Root veya sudo yetkili kullanıcı ile giriş yapın.</p></div></li>
-          <li><div class="step-content"><h4>OXware dosyalarını sunucuya kopyalayın</h4>
-            <pre><code>scp -r ./OXware root@&lt;ip&gt;:~/OXware</code></pre>
+          <li><div class="step-content"><h4>Ubuntu 22.04 LTS sunucuya SSH ile bağlanın</h4>
+            <p>Root veya sudo yetkili kullanıcı ile giriş yapın.</p>
           </div></li>
-          <li><div class="step-content"><h4>Kurulum scriptini çalıştırın</h4>
-            <pre><code>cd ~/OXware
+          <li><div class="step-content"><h4>OXware'i indirin ve kurun</h4>
+            <pre><code># Git ile (önerilen)
+git clone https://github.com/ShinnAsukha/oxware-hypervisor.git /opt/oxware-src
+cd /opt/oxware-src
 sudo bash install.sh</code></pre>
+            <p>Alternatif: SCP ile dosya kopyalama</p>
+            <pre><code>scp -r ./OXware root@&lt;ip&gt;:~/OXware
+cd ~/OXware && sudo bash install.sh</code></pre>
           </div></li>
           <li><div class="step-content"><h4>Tarayıcıdan erişin</h4>
             <pre><code>https://&lt;sunucu-ip&gt;:8006</code></pre>
+            <p>Self-signed sertifika uyarısı normal — "Gelişmiş → Devam et" ile geçin.</p>
           </div></li>
         </ol>
+
+        <div class="alert alert-warning" style="margin-top:18px">
+          <span>🔧</span>
+          <div><strong>Yeniden başlatma sonrası sorun mu var?</strong> SSH kesilmesi, ağ kopması veya panel erişilememesi durumunda web konsol ya da fiziksel terminalden:
+            <pre><code>sudo bash repair.sh</code></pre>
+            Bu script SSH, UFW, hostname ve OXware servisini tek seferde onarır.
+          </div>
+        </div>
 
         <h2>Manuel Kurulum</h2>
         <h3>1. Sistem Güncelleme ve Paketler</h3>
@@ -1377,13 +1390,62 @@ PASSWORD=YeniParola123!</code></pre>
         <p>Sık karşılaşılan hatalar ve çözüm yöntemleri.</p>
       </div>
       <div class="doc-body">
+
+        <h2>⚡ Hızlı Onarım — repair.sh</h2>
+        <div class="alert alert-warning">
+          <span>🔧</span>
+          <div>Yeniden başlatma sonrası SSH kesilmesi, ağ sorunu veya panel erişilememesi durumunda <strong>web konsol</strong> veya fiziksel terminalde tek komut:</div>
+        </div>
+        <pre><code>cd /opt/oxware-src   # OXware klasörünüz
+sudo bash repair.sh</code></pre>
+        <p><code>repair.sh</code> şunları otomatik onarır:</p>
+        <table>
+          <tr><th>Sorun</th><th>Düzeltme</th></tr>
+          <tr><td>SSH bağlanamıyorum</td><td>SSH servisi başlatılır, PermitRootLogin etkinleştirilir</td></tr>
+          <tr><td>Hostname "localhost" oluyor</td><td>Hostname kalıcı ayarlanır, cloud-init sıfırlaması engellenir</td></tr>
+          <tr><td>UFW FAILED hatası</td><td>iptables-legacy geçişi yapılır, UFW yeniden konfigüre edilir</td></tr>
+          <tr><td>libvirt ağı başlamıyor</td><td>virsh net-autostart, KVM modülleri yüklenir</td></tr>
+          <tr><td>OXware servisi başlamıyor</td><td>Systemd servisi yeniden oluşturulur ve başlatılır</td></tr>
+        </table>
+
+        <h2>Yeniden Başlatma Sonrası SSH Bağlanamıyorum</h2>
+        <p>Web konsol üzerinden (sunucu panelinden tarayıcı konsol) oturum açın:</p>
+        <pre><code># SSH servisi başlat
+systemctl restart ssh
+
+# Port açık mı?
+ss -tlnp | grep ':22'
+
+# UFW 22 kapalıysa
+ufw allow 22/tcp && ufw reload
+
+# sshd_config kontrol
+grep "PermitRootLogin\|PasswordAuth" /etc/ssh/sshd_config</code></pre>
+
+        <h2>Hostname Yeniden Başlatmada "localhost" Oluyor</h2>
+        <pre><code>hostnamectl set-hostname oxware-server
+
+# cloud-init sıfırlamasını engelle
+cat > /etc/cloud/cloud.cfg.d/99_hostname.cfg &lt;&lt; 'EOF'
+preserve_hostname: true
+manage_etc_hosts: false
+EOF</code></pre>
+
+        <h2>UFW "FAILED" Hatası (Boot)</h2>
+        <p>Ubuntu 20.04+ nftables kullanır; UFW iptables bekler. Çözüm:</p>
+        <pre><code>update-alternatives --set iptables  /usr/sbin/iptables-legacy
+update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+ufw --force reset
+ufw allow 22/tcp && ufw allow 8006/tcp
+ufw --force enable && systemctl enable ufw</code></pre>
+
         <h2>Servis Başlamıyor</h2>
         <pre><code>sudo systemctl status oxware
 sudo journalctl -u oxware -n 50 --no-pager
 
 # Doğrudan Python ile çalıştır (tam hata görüntüle)
 sudo systemctl stop oxware
-cd /root/OXware/oxware/backend
+cd /opt/oxware-src/oxware/backend
 /opt/oxware/venv/bin/python app.py</code></pre>
 
         <h2>Config Dosyası Hatası</h2>
