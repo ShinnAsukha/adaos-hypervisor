@@ -274,13 +274,13 @@ def update_pool(name: str, gateway: str = None, start_ip: str = None, end_ip: st
     return pool
 
 
-def manual_assign(ip: str, mac: str, vm_name: str = "", pool_name: str = "") -> dict:
+def manual_assign(ip: str, mac: str, vm_name: str = "", pool_name: str = "", vm_id: str = "") -> dict:
     """Manuel IP ataması ekle."""
     with _lock:
         data = _load()
         pool = data["pools"].get(pool_name, {})
         data["assignments"][ip] = {
-            "vm_id":       mac,
+            "vm_id":       vm_id or mac,
             "vm_name":     vm_name,
             "pool":        pool_name,
             "mac":         mac,

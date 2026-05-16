@@ -4505,12 +4505,12 @@ async function validateLicense() {
     const d = await r.json();
     if (d.valid) {
       msg.style.cssText = 'display:block;color:#22c55e';
-      msg.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (d.message || 'Lisans başarıyla doğrulandı');
+      msg.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + escHtml(d.message || 'Lisans başarıyla doğrulandı');
       toast('Lisans aktif edildi!', 'success');
       await checkLicenseStatus();
     } else {
       msg.style.cssText = 'display:block;color:#ef4444';
-      msg.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> ' + (d.error || 'Geçersiz lisans kodu');
+      msg.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> ' + escHtml(d.error || 'Geçersiz lisans kodu');
       toast(d.error || 'Geçersiz lisans kodu', 'error');
     }
   } catch(e) {
@@ -6371,7 +6371,7 @@ async function loadTrendAnalysis(periods=['7d','30d']) {
         <div class="card"><div class="card-title">Son 30 Gün</div><div style="height:160px"><canvas id="trend30"></canvas></div></div>
       </div>`;
     setTimeout(() => { makeChart('trend7', d7.data||[], '7 Günlük Trend'); makeChart('trend30', d30.data||[], '30 Günlük Trend'); }, 50);
-  } catch(e) { el.innerHTML = `<p class="text-muted">Trend verisi alınamadı: ${e.message}</p>`; }
+  } catch(e) { el.innerHTML = `<p class="text-muted">Trend verisi alınamadı: ${escHtml(e.message||String(e))}</p>`; }
 }
 
 async function deleteVM(id, name) {
@@ -8351,7 +8351,7 @@ async function loadSessions() {
           <i class="fa-solid fa-ban"></i>
         </button>` : '<span style="font-size:10px;color:#ef4444;padding:0 4px">İptal</span>'}
       </div>`).join('');
-  } catch(e) { el.innerHTML = `<div style="font-size:11px;color:var(--red-lt)">${e.message}</div>`; }
+  } catch(e) { el.innerHTML = `<div style="font-size:11px;color:var(--red-lt)">${escHtml(e.message||String(e))}</div>`; }
 }
 
 async function revokeSession(sessionId) {
@@ -8441,7 +8441,7 @@ async function loadVmSchedules() {
         <td><button class="btn sm danger" onclick="deleteVmSchedule('${escHtml(s.id)}')">✕</button></td>
       </tr>`;
     }).join('');
-  } catch(e) { tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding:10px">${e.message}</td></tr>`; }
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding:10px">${escHtml(e.message||String(e))}</td></tr>`; }
 }
 
 async function deleteVmSchedule(id) {
@@ -9752,7 +9752,7 @@ async function loadPciDevices() {
         </div>
       </div>`
     ).join('');
-  } catch(e) { el.innerHTML = `<div style="color:#f43f5e">${e.message}</div>`; }
+  } catch(e) { el.innerHTML = `<div style="color:#f43f5e">${escHtml(e.message||String(e))}</div>`; }
 }
 async function attachPci(deviceId) {
   try {
@@ -9859,7 +9859,7 @@ async function openSpiceInfo(vmId, vmName) {
         <p style="color:#fbbf24;font-size:13px">⚠ ${escHtml(d.note)}</p>`;
     }
   } catch(e) {
-    document.getElementById('spice-info-content').innerHTML = `<div style="color:#f43f5e">Hata: ${e.message}</div>`;
+    document.getElementById('spice-info-content').innerHTML = `<div style="color:#f43f5e">Hata: ${escHtml(e.message||String(e))}</div>`;
   }
 }
 
@@ -9927,7 +9927,7 @@ async function loadMacList() {
         <td style="padding:4px;color:var(--fg2)">${escHtml(n.source)}</td>
       </tr>`).join('')}</tbody></table>`;
     sel.innerHTML = nics.map(n => `<option value="${escHtml(n.interface)}">${escHtml(n.interface)} (${escHtml(n.mac)})</option>`).join('');
-  } catch(e) { list.innerHTML = `<div style="color:#f43f5e">Yüklenemedi: ${e.message}</div>`; }
+  } catch(e) { list.innerHTML = `<div style="color:#f43f5e">Yüklenemedi: ${escHtml(e.message||String(e))}</div>`; }
 }
 async function generateMac() {
   try {

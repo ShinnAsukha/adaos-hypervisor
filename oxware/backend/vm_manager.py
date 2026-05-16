@@ -142,7 +142,7 @@ def _get_domain_stats(dom):
     try:
         state, reason = dom.state()
         info = dom.info()
-        mem_used = info[1]
+        mem_used = info[2]
         mem_total = info[1]
         cpu_time = info[4]
         return {
