@@ -2661,9 +2661,9 @@
                 <select id="idle-timeout-sel" onchange="saveIdleTimeout()" style="width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:12px">
                   <option value="0">Devre Dışı (Otomatik çıkış yok)</option>
                   <option value="5">5 dakika</option>
-                  <option value="10">10 dakika (Önerilen)</option>
+                  <option value="10">10 dakika</option>
                   <option value="15">15 dakika</option>
-                  <option value="30">30 dakika</option>
+                  <option value="30" selected>30 dakika (Varsayılan)</option>
                   <option value="60">1 saat</option>
                 </select>
               </div>
@@ -3549,9 +3549,31 @@ let cpuChart, ramChart, loadChart;
 // Support both old "adaos_token" and new "oxware_token" keys
 const TOKEN = () => localStorage.getItem("oxware_token") || localStorage.getItem("adaos_token");
 
+/* ══ JWT decode helper ══ */
+function _getTokenExp() {
+  const t = TOKEN();
+  if (!t) return 0;
+  try {
+    const payload = JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+    return payload.exp || 0;
+  } catch { return 0; }
+}
+function _tokenExpired() {
+  const exp = _getTokenExp();
+  return exp > 0 && exp < Math.floor(Date.now() / 1000);
+}
+
 /* ══ Auth Guard ══ */
 (function() {
   if (!TOKEN()) { window.location.href = "/login"; return; }
+  if (_tokenExpired()) {
+    // Token var ama süresi dolmuş — temizle ve /login'e at
+    localStorage.removeItem("oxware_token"); localStorage.removeItem("adaos_token");
+    localStorage.removeItem("oxware_user");  localStorage.removeItem("adaos_user");
+    localStorage.removeItem("oxware_role");  localStorage.removeItem("adaos_role");
+    window.location.href = "/login";
+    return;
+  }
   const user = localStorage.getItem("oxware_user") || localStorage.getItem("adaos_user") || "admin";
   const role = localStorage.getItem("oxware_role") || localStorage.getItem("adaos_role") || "administrator";
   document.getElementById("tbUsername").textContent = user;
@@ -3667,7 +3689,9 @@ let _idleWarnTimer = null;
 let _idleWarnShown = false;
 
 function _getIdleTimeoutMs() {
-  const mins = parseInt(localStorage.getItem("oxware_idle_timeout") || "0");
+  // Default: 30 dakika (ilk kez açıldıysa localStorage'de değer yoksa 30 dk kullan)
+  const stored = localStorage.getItem("oxware_idle_timeout");
+  const mins = parseInt(stored !== null ? stored : "30");
   return mins > 0 ? mins * 60 * 1000 : 0;
 }
 
@@ -3720,6 +3744,15 @@ function _startIdleMonitor() {
 
 _startIdleMonitor();
 
+/* ══ Periodic JWT expiry check (her 2 dakika) ══ */
+setInterval(function _authPing() {
+  if (!TOKEN()) { _forceLogout(); return; }
+  if (_tokenExpired()) {
+    toast('Oturum süresi doldu — tekrar giriş yapılıyor...', 'info');
+    setTimeout(_forceLogout, 1200);
+  }
+}, 2 * 60 * 1000); // 2 dakika
+
 function saveIdleTimeout() {
   const sel = document.getElementById('idle-timeout-sel');
   if (!sel) return;
@@ -3732,9 +3765,10 @@ function saveIdleTimeout() {
   }
 }
 
-// Initialize idle timeout select from localStorage
+// Initialize idle timeout select from localStorage (default 30 dk)
 (function() {
-  const saved = localStorage.getItem('oxware_idle_timeout') || '0';
+  const stored = localStorage.getItem('oxware_idle_timeout');
+  const saved = stored !== null ? stored : '30';
   document.addEventListener('DOMContentLoaded', () => {
     const sel = document.getElementById('idle-timeout-sel');
     if (sel) sel.value = saved;
