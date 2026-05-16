@@ -6734,8 +6734,8 @@ async function loadNetworks() {
     document.getElementById("net-tbody").innerHTML = nets.length ? nets.map(n => `<tr>
       <td><strong>${escHtml(n.name)}</strong></td>
       <td>${n.active ? '<span class="badge active"><span class="badge-dot"></span>Aktif</span>' : '<span class="badge inactive">Pasif</span>'}</td>
-      <td>${n.mode || "nat"}</td>
-      <td>${escHtml(n.gateway || "—")}/${n.netmask || "—"}</td>
+      <td>${escHtml(n.forward_mode || n.mode || "nat")}</td>
+      <td>${escHtml(n.ip || n.gateway || "—")}/${escHtml(n.netmask || "—")}</td>
       <td><code>${escHtml(n.bridge || "—")}</code></td>
       <td>${n.dhcp ? `${n.dhcp.start}–${n.dhcp.end}` : "—"}</td>
       <td>
