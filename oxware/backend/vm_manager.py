@@ -393,6 +393,14 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
     vnc_port = _next_vnc_port()
     disk_dev = "vda" if disk_bus == "virtio" else "sda"
 
+    # Windows tespiti: ISO adı veya os_variant "win" içeriyorsa
+    _iso_name = os.path.basename(iso_path or "").lower()
+    is_windows = (
+        "win" in _iso_name or "windows" in _iso_name or
+        "win" in os_variant.lower()
+    )
+    nic_model = "e1000" if is_windows else "virtio"
+
     os.makedirs(config.DISK_DIR, exist_ok=True)
 
     # Disk oluştur
@@ -434,12 +442,21 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
   <features>
     <acpi/>
     <apic/>
-    <vmport state='off'/>
+    <vmport state='off'/>{"" if not is_windows else """
+    <hyperv mode='custom'>
+      <relaxed state='on'/>
+      <vapic state='on'/>
+      <spinlocks state='on' retries='8191'/>
+      <vpindex state='on'/>
+      <synic state='on'/>
+      <stimer state='on'/>
+      <reset state='on'/>
+    </hyperv>"""}
   </features>
   <cpu mode='{cpu_mode}' check='{cpu_check}'>
 {cpu_model_xml}
   </cpu>
-  <clock offset='utc'>
+  <clock offset='{"localtime" if is_windows else "utc"}'>
     <timer name='rtc' tickpolicy='catchup'/>
     <timer name='pit' tickpolicy='delay'/>
     <timer name='hpet' present='no'/>
@@ -461,7 +478,7 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
     <interface type='network'>
       <mac address='{vm_mac}' />
       <source network='{network}'/>
-      <model type='virtio'/>
+      <model type='{nic_model}'/>
     </interface>
     <serial type='pty'>
       <target type='isa-serial' port='0'>
