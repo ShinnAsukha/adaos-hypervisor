@@ -344,12 +344,12 @@ set timeout=3
 set default=0
 
 menuentry "OXware Hypervisor Installer" {
-    linux   $VMLINUZ_PATH boot=casper quiet loglevel=0 console=tty1 net.ifnames=0 biosdevname=0 systemd.show_status=false systemd.unit=multi-user.target ---
+    linux   $VMLINUZ_PATH boot=casper quiet loglevel=0 console=tty1 net.ifnames=0 biosdevname=0 systemd.show_status=false systemd.unit=multi-user.target cloud-init=disabled rd.cloud-init.disabled systemd.mask=cloud-init.service systemd.mask=cloud-init-local.service systemd.mask=cloud-config.service systemd.mask=cloud-final.service systemd.mask=cloud-init.target ---
     initrd  $INITRD_PATH
 }
 
 menuentry "OXware Installer (Debug)" {
-    linux   $VMLINUZ_PATH boot=casper console=tty1 net.ifnames=0 biosdevname=0 nomodeset ---
+    linux   $VMLINUZ_PATH boot=casper console=tty1 net.ifnames=0 biosdevname=0 nomodeset cloud-init=disabled rd.cloud-init.disabled ---
     initrd  $INITRD_PATH
 }
 GRUBEOF

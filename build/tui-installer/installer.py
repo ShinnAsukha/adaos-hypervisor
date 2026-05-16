@@ -620,89 +620,100 @@ def draw_step3(scr):
             "Bu bilgiler web arayüzü ve SSH girişi için kullanılacak.",
             curses.color_pair(C_DIM))
 
-    fields = [
-        ("Sunucu Adı  ", "hostname",  20),
-        ("Kullanıcı   ", "username",  20),
-        ("Şifre       ", "password",  24),
-        ("Şifre (tekrar)", "password2", 24),
+    # Her field tek satırda — extra info aynı satırda sağda göster
+    # Böylece 4 field = 4 satır, sığar
+    ADM_FIELDS = [
+        ("Sunucu Adı  ", "hostname",  20, False),
+        ("Kullanıcı   ", "username",  20, False),
+        ("Şifre       ", "password",  24, True),
+        ("Şifre Tekrar", "password2", 24, True),
     ]
-    FW    = 26
-    field_y = ty + 5
+    FW      = 24
+    field_y = ty + 4
 
-    for i, (label, attr, width) in enumerate(fields):
-        fy       = field_y + i * 2
-        val      = getattr(st, attr, "")
-        is_pw    = attr.startswith("password")
-        disp     = ("*" * len(val) if is_pw else val + " " * FW)[:FW]
-        active   = (i == _adm_field)
+    for i, (label, attr, width, is_pw) in enumerate(ADM_FIELDS):
+        fy     = field_y + i * 2
+        val    = getattr(st, attr, "")
+        disp   = ("*" * len(val) if is_pw else val + " " * FW)[:FW]
+        active = (i == _adm_field)
 
-        # Label
         safeadd(scr, fy, lx, label, curses.color_pair(C_LABEL))
-        # Field
         fattr = (curses.color_pair(C_FIELD_ON) | curses.A_BOLD) if active else curses.color_pair(C_FIELD)
-        safeadd(scr, fy, lx + 14, disp, fattr)
+        safeadd(scr, fy, lx + 13, disp, fattr)
 
-        # Extras
-        if active:
-            safeadd(scr, fy, lx + 14 + FW + 1, "← Enter: düzenle", curses.color_pair(C_DIM))
-
+        # Extra info on next line
+        extra_y = fy + 1
         if attr == "hostname" and val and not _valid_hostname(val):
-            safeadd(scr, fy + 1, lx + 14, "⚠ harf, rakam, tire kullan",
+            safeadd(scr, extra_y, lx + 13, "⚠ harf, rakam, tire kullanın",
                     curses.color_pair(C_WARN))
         elif attr == "password" and val:
             strength, sc = _pw_strength(val)
-            safeadd(scr, fy + 1, lx + 14, f"Güç: {strength}",
+            safeadd(scr, extra_y, lx + 13, f"Güç: {strength}",
                     curses.color_pair(sc))
         elif attr == "password2" and val:
-            match = "✓ Şifreler eşleşiyor" if val == st.password else "✗ Şifreler eşleşmiyor"
-            mc    = C_OK if val == st.password else C_ERR
-            safeadd(scr, fy + 1, lx + 14, match, curses.color_pair(mc))
+            ok_str = "✓ Eşleşiyor" if val == st.password else "✗ Eşleşmiyor"
+            mc     = C_OK if val == st.password else C_ERR
+            safeadd(scr, extra_y, lx + 13, ok_str, curses.color_pair(mc))
+
+    # Hint
+    safeadd(scr, field_y + len(ADM_FIELDS) * 2 + 1, lx,
+            "Enter: alanı düzenle   →: devam et",
+            curses.color_pair(C_DIM))
 
     if st.err_msg:
-        safeadd(scr, by - 2, lx, f"✗  {st.err_msg}",
+        safeadd(scr, by - 1, lx, f"✗  {st.err_msg}",
                 curses.color_pair(C_ERR) | curses.A_BOLD)
 
-    draw_footer(scr, "[↑/↓] Alan   [Enter] Düzenle   [←] Geri   [→/Enter] İleri")
+    draw_footer(scr, "[↑/↓] Alan   [Enter] Düzenle   [←] Geri   [→] İleri (doğrulama)")
 
+
+_ADM_FIELDS_META = [
+    ("hostname",  20, False),
+    ("username",  20, False),
+    ("password",  24, True),
+    ("password2", 24, True),
+]
 
 def handle_step3(scr, ch):
     global _adm_field
-    nf = 4
+    nf = len(_ADM_FIELDS_META)
 
     if ch == curses.KEY_UP:
         _adm_field = max(0, _adm_field - 1)
+        st.err_msg = ""
     elif ch == curses.KEY_DOWN:
         _adm_field = min(nf - 1, _adm_field + 1)
-    elif ch in (ord('\n'), ord('\r')) and _adm_field < nf - 1:
-        # If on last field, try to advance — handled below
-        # For other fields, enter edit mode
-        fields = [
-            ("hostname", 20, False),
-            ("username", 20, False),
-            ("password", 24, True),
-            ("password2", 24, True),
-        ]
-        attr, width, is_pw = fields[_adm_field]
-        fy = content_area(scr)[0] + 5 + _adm_field * 2
-        val, ok = read_field(scr, fy, 2 + 14, width, getattr(st, attr, ""), password=is_pw)
+        st.err_msg = ""
+    elif ch in (ord('\n'), ord('\r')):
+        # Enter ALWAYS edits current field (including last)
+        attr, width, is_pw = _ADM_FIELDS_META[_adm_field]
+        ty = content_area(scr)[0]
+        fy = ty + 4 + _adm_field * 2
+        val, ok = read_field(scr, fy, 1 + 13, width,
+                             getattr(st, attr, ""), password=is_pw)
         if ok:
             setattr(st, attr, val)
-        _adm_field = min(nf - 1, _adm_field + 1)
-        return True
-    elif ch == curses.KEY_RIGHT or (_adm_field == nf - 1 and ch in (ord('\n'), ord('\r'))):
-        # Validate
+            # Auto-advance to next field after confirming
+            _adm_field = min(nf - 1, _adm_field + 1)
+        st.err_msg = ""
+    elif ch == curses.KEY_RIGHT:
+        # RIGHT validates and advances step
         st.err_msg = ""
         if not st.hostname or not _valid_hostname(st.hostname):
             st.err_msg = "Geçersiz sunucu adı (harf/rakam/tire)"
+            _adm_field = 0
             return True
         if not st.username or len(st.username) < 2:
             st.err_msg = "Kullanıcı adı en az 2 karakter"
+            _adm_field = 1
             return True
         if len(st.password) < 6:
             st.err_msg = "Şifre en az 6 karakter"
+            _adm_field = 2
             return True
         if st.password != st.password2:
             st.err_msg = "Şifreler eşleşmiyor"
+            _adm_field = 3
             return True
         st.step = 4
     elif ch == curses.KEY_LEFT:
