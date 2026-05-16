@@ -271,12 +271,67 @@ def _generate_mac() -> str:
     return '52:54:00:{:02x}:{:02x}:{:02x}'.format(*os.urandom(3))
 
 
+def _flush_dnsmasq_lease(mac: str):
+    """dnsmasq lease dosyasından MAC'e ait dynamic lease'i sil + HUP gönder."""
+    lease_files = [
+        "/var/lib/libvirt/dnsmasq/default.leases",
+        "/var/lib/misc/dnsmasq.leases",
+    ]
+    for lf in lease_files:
+        if not os.path.exists(lf):
+            continue
+        try:
+            with open(lf) as f:
+                lines = f.readlines()
+            new_lines = [l for l in lines if mac.lower() not in l.lower()]
+            if len(new_lines) != len(lines):
+                with open(lf, "w") as f:
+                    f.writelines(new_lines)
+                _log.info("Lease silindi: %s → %s", mac, lf)
+        except Exception as e:
+            _log.warning("Lease silinemedi %s: %s", lf, e)
+    # dnsmasq'a HUP gönder — lease dosyasını yeniden yüklesin
+    try:
+        subprocess.run(["kill", "-HUP", "$(pgrep dnsmasq)"],
+                       shell=True, capture_output=True, timeout=5)
+        subprocess.run(["pkill", "-HUP", "dnsmasq"],
+                       capture_output=True, timeout=5)
+    except Exception:
+        pass
+
+
 def add_dhcp_host(network: str, mac: str, ip: str, hostname: str = "") -> bool:
     """Libvirt ağına static DHCP kaydı ekle (MAC→IP). dnsmasq anında görür."""
     host_xml = f'<host mac="{mac}" ip="{ip}"'
     if hostname:
         host_xml += f' name="{hostname}"'
     host_xml += '/>'
+
+    # Önce aynı MAC için var olan eski kayıtları temizle
+    try:
+        dump = subprocess.run(
+            ["virsh", "net-dumpxml", network],
+            capture_output=True, text=True, timeout=10
+        )
+        import xml.etree.ElementTree as _ET
+        root = _ET.fromstring(dump.stdout)
+        for host in root.findall(".//dhcp/host"):
+            if host.get("mac", "").lower() == mac.lower():
+                old_ip = host.get("ip", "")
+                if old_ip != ip:
+                    old_xml = f'<host mac="{mac}" ip="{old_ip}"/>'
+                    subprocess.run(
+                        ["virsh", "net-update", network, "delete", "ip-dhcp-host",
+                         old_xml, "--live", "--config"],
+                        capture_output=True, timeout=10
+                    )
+                    _log.info("Eski DHCP entry silindi: %s → %s", mac, old_ip)
+    except Exception as _ce:
+        _log.warning("Eski entry temizleme hatası: %s", _ce)
+
+    # Eski dynamic lease'i de sil
+    _flush_dnsmasq_lease(mac)
+
     try:
         r = subprocess.run(
             ["virsh", "net-update", network, "add", "ip-dhcp-host",
@@ -286,7 +341,6 @@ def add_dhcp_host(network: str, mac: str, ip: str, hostname: str = "") -> bool:
         if r.returncode == 0:
             _log.info("DHCP host eklendi: %s → %s (%s)", mac, ip, network)
             return True
-        # Already exists → not an error
         if "already exists" in r.stderr.lower() or "already" in r.stdout.lower():
             _log.info("DHCP host zaten mevcut: %s → %s", mac, ip)
             return True
