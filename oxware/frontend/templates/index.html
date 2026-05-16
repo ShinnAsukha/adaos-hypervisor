@@ -4541,9 +4541,16 @@ async function startIsoFetch() {
           clearInterval(_isoFetchTimer); _isoFetchTimer = null;
           document.getElementById('iso-fetch-bar').style.width = '100%';
           document.getElementById('iso-fetch-pct').textContent = '100%';
-          toast(`ISO indirildi: ${fname}`, 'success');
+          // Küçük dosya uyarısı — Microsoft gibi redirect korumalı linklerde HTML sayfası iner
+          const sizeMB = s.size ? s.size / 1048576 : 0;
+          if (sizeMB > 0 && sizeMB < 100) {
+            toast(`⚠️ ISO çok küçük (${sizeMB.toFixed(1)} MB) — indirme başarısız olmuş olabilir. Microsoft linkleri için tarayıcıdan direkt CDN linki kopyalayın.`, 'error');
+            document.getElementById('iso-fetch-status').textContent = `⚠️ Şüpheli boyut: ${sizeMB.toFixed(1)} MB — link geçersiz olabilir`;
+          } else {
+            toast(`ISO indirildi: ${fname}`, 'success');
+          }
           btn.disabled = false;
-          setTimeout(() => { closeIsoFetchModal(); loadISOList(); }, 1500);
+          setTimeout(() => { closeIsoFetchModal(); loadISOList(); }, sizeMB < 100 ? 4000 : 1500);
         } else if (s.status === 'error') {
           clearInterval(_isoFetchTimer); _isoFetchTimer = null;
           toast(`İndirme hatası: ${s.error}`, 'error');
