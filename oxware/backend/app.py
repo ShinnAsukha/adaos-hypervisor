@@ -1790,6 +1790,125 @@ def api_vm_enable_ssh(vm_id):
     except Exception as e:
         return err(str(e), 500)
 
+@app.route("/api/vms/<vm_id>/nat-sync", methods=["POST"])
+@require_auth
+def api_vm_nat_sync(vm_id):
+    """VM'in mevcut IP'sini ARP'tan okuyup DNAT'ı hemen güncelle (manuel tetikleme)."""
+    try:
+        vm = vm_manager.get_vm(vm_id)
+        vm_name = vm.get("name", vm_id)
+        mac = vm.get("mac", "")
+        if not mac:
+            return err("VM MAC adresi bulunamadı", 400)
+
+        # Public IP'yi IPAM'dan bul
+        assignments = ip_pool_mgr.list_assignments()
+        pub_entry = next(
+            (a for a in assignments if a.get("mac") == mac and a.get("pool") != "__internal__"),
+            None
+        )
+        if not pub_entry:
+            return err("Bu VM için public IP ataması bulunamadı", 404)
+        public_ip = pub_entry["ip"]
+
+        # ARP tablosundan gerçek IP'yi bul
+        actual_ip = None
+        try:
+            arp_r = subprocess.run(["arp", "-n"], capture_output=True, text=True, timeout=5)
+            for line in arp_r.stdout.splitlines():
+                if mac.lower() in line.lower():
+                    parts = line.split()
+                    if parts and "." in parts[0]:
+                        actual_ip = parts[0]
+                        break
+        except Exception as _ae:
+            log.warning("ARP okuma hatası: %s", _ae)
+
+        # ARP'ta yoksa lease dosyasına bak
+        if not actual_ip:
+            lease_paths = [
+                "/var/lib/libvirt/dnsmasq/default.leases",
+                "/var/lib/dnsmasq/default.leases",
+                "/var/run/dnsmasq/dnsmasq.leases",
+            ]
+            for lp in lease_paths:
+                try:
+                    with open(lp) as f:
+                        for line in f:
+                            parts = line.split()
+                            if len(parts) >= 3 and parts[1].lower() == mac.lower():
+                                actual_ip = parts[2]
+                                break
+                except Exception:
+                    pass
+                if actual_ip:
+                    break
+
+        if not actual_ip:
+            # virsh domifaddr ile de dene
+            try:
+                r2 = subprocess.run(
+                    ["virsh", "domifaddr", vm_name, "--source", "arp"],
+                    capture_output=True, text=True, timeout=10
+                )
+                for line in r2.stdout.splitlines():
+                    if "." in line and "/" in line:
+                        parts = line.split()
+                        for p in parts:
+                            if "/" in p and "." in p:
+                                actual_ip = p.split("/")[0]
+                                break
+                    if actual_ip:
+                        break
+            except Exception:
+                pass
+
+        if not actual_ip:
+            return jsonify({
+                "success": False,
+                "error": "VM henüz IP almamış — VM açık ve ağa bağlı olduğundan emin olun.",
+                "public_ip": public_ip,
+                "mac": mac,
+            }), 200
+
+        # Eski stale DNAT'ı temizle ve yeni DNAT kur
+        try:
+            r = subprocess.run(["iptables", "-t", "nat", "-S", "PREROUTING"],
+                               capture_output=True, text=True, timeout=5)
+            for line in r.stdout.splitlines():
+                if f"-d {public_ip}" in line and "-j DNAT" in line and f"--to-destination {actual_ip}" not in line:
+                    del_parts = line.strip().replace("-A ", "-D ", 1).split()
+                    subprocess.run(["iptables", "-t", "nat"] + del_parts, capture_output=True, timeout=5)
+        except Exception:
+            pass
+
+        _setup_nat(public_ip, actual_ip)
+
+        # IPAM __internal__ kaydını güncelle
+        try:
+            data = ip_pool_mgr._load()
+            for ip, a in list(data["assignments"].items()):
+                if a.get("pool") == "__internal__" and a.get("mac") == mac:
+                    if ip != actual_ip:
+                        del data["assignments"][ip]
+                        data["assignments"][actual_ip] = {**a, "ip": actual_ip}
+                        ip_pool_mgr._save(data)
+                    break
+        except Exception:
+            pass
+
+        log.info("Manuel NAT sync: %s → %s (public %s)", vm_name, actual_ip, public_ip)
+        return jsonify({
+            "success": True,
+            "vm_name": vm_name,
+            "internal_ip": actual_ip,
+            "public_ip": public_ip,
+            "message": f"NAT güncellendi: {public_ip} → {actual_ip}",
+        }), 200
+    except Exception as e:
+        return err(str(e), 500)
+
+
 @app.route("/api/vms/<vm_id>/console")
 @require_auth
 def api_vm_console(vm_id):

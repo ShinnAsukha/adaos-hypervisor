@@ -5620,6 +5620,7 @@ async function loadVMDetail(vmId) {
       actHtml += `<button class="vd-btn danger" onclick="vmForceStop('${v.id}')">⏻ Zorla Durdur</button>`;
     }
     actHtml += `<button class="vd-btn" onclick="vmEnableSsh('${v.id}')" title="QEMU Guest Agent üzerinden SSH servisi etkinleştir" style="background:var(--surface2);border:1px solid var(--border2)">🔑 SSH Etkinleştir</button>`;
+    actHtml += `<button class="vd-btn" onclick="vmNatSync('${v.id}')" title="VM IP'sini ARP'tan okuyup NAT/DNAT'ı hemen güncelle" style="background:var(--surface2);border:1px solid var(--border2)">🔄 NAT Sync</button>`;
     actHtml += `<button class="vd-btn danger" onclick="deleteVM('${v.id}','${escHtml(v.name)}')">✕ Sil</button>`;
     document.getElementById("vd-actions").innerHTML = actHtml;
 
@@ -6463,6 +6464,20 @@ async function vmEnableSsh(id) {
     }
   } catch (e) {
     toast("SSH etkinleştirilemedi: " + escHtml(e.message || String(e)), "error");
+  }
+}
+
+async function vmNatSync(id) {
+  toast("NAT sync başlatılıyor...", "info");
+  try {
+    const d = await api(`/vms/${id}/nat-sync`, { method: "POST" });
+    if (d.success) {
+      toast(`NAT sync tamam ✓ — ${d.internal_ip} → ${d.public_ip}`, "success");
+    } else {
+      toast("NAT sync: " + escHtml(d.error || "VM henüz IP almamış"), "warn");
+    }
+  } catch (e) {
+    toast("NAT sync hatası: " + escHtml(e.message || String(e)), "error");
   }
 }
 
