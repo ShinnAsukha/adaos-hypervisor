@@ -1947,4 +1947,195 @@ Body: {"command": "2 vCPU, 4GB RAM, 40GB disk, Debian 12"}
 
 ---
 
+## 41. Kaynak Havuzları (Resource Pools)
+
+VM'leri mantıksal gruplara ayırın ve her gruba CPU/RAM kotası atayın.
+
+### API
+
+```bash
+# Havuzları listele
+GET /api/pools
+
+# Yeni havuz oluştur
+POST /api/pools
+Body: {"name": "web-tier", "cpu_limit_pct": 60, "ram_limit_mb": 8192, "description": "Web VM grubu"}
+
+# Havuzu sil
+DELETE /api/pools/<pool_id>
+```
+
+### Havuz yapısı
+
+| Alan | Açıklama |
+|------|----------|
+| `name` | Havuz adı |
+| `cpu_limit_pct` | CPU üst sınırı (0-100, 100=sınırsız) |
+| `ram_limit_mb` | RAM üst sınırı MB (0=sınırsız) |
+| `vm_ids` | Havuzdaki VM UUID listesi |
+
+Havuz verileri `/var/lib/oxware/resource_pools.json` dosyasında saklanır.
+
+---
+
+## 42. Ağ QoS — Bant Genişliği Kısıtlama
+
+VM başına NIC düzeyinde gelen/giden trafik kısıtlaması (virsh domiftune).
+
+### API
+
+```bash
+# VM NIC listesi
+GET /api/vms/<vm_name>/nics
+
+# QoS uygula
+PUT /api/vms/<vm_name>/nics/<iface>/qos
+Body: {"inbound_kbps": 10240, "outbound_kbps": 5120}
+
+# QoS temizle (sınırsız)
+DELETE /api/vms/<vm_name>/nics/<iface>/qos
+```
+
+### Notlar
+- `0` = sınırsız (kısıtlama kaldır)
+- Maksimum 10 Gbps (10 000 000 Kbps) kabul edilir
+- VM çalışırken canlı uygulanır, yeniden başlatma gerekmez
+- UI: İzleme sekmesi → "Ağ Bant Genişliği (QoS)" kartı
+
+---
+
+## 43. Canlı Disk Taşıma (Storage Migration)
+
+VM çalışırken diski başka bir depolama yoluna taşır (`virsh blockcopy`).
+
+### API
+
+```bash
+# Taşıma başlat
+POST /api/vms/<vm_name>/migrate-disk
+Body: {"disk_target": "vda", "dest_path": "/pool2/vm.qcow2", "format": "qcow2"}
+
+# Taşıma durumu
+GET /api/storage/migrations
+GET /api/storage/migrations/<job_id>
+
+# VM disk listesi
+GET /api/vms/<vm_name>/disks
+```
+
+### İş durumları
+
+| Durum | Anlamı |
+|-------|--------|
+| `queued` | Kuyruğa alındı |
+| `running` | Kopyalama devam ediyor |
+| `completed` | Taşıma tamamlandı |
+| `failed` | Hata oluştu |
+
+### Güvenlik kısıtlamaları
+- `dest_path` mutlak yol (`/` ile başlamalı) ve `..` içermemeli
+- `format` yalnızca `qcow2` veya `raw`
+- `disk_target` yalnızca alfanümerik karakter ve `-_`
+
+---
+
+## 44. Canlı Hotplug (CPU / RAM)
+
+VM çalışırken vCPU veya RAM ekleme/çıkarma.
+
+### API
+
+```bash
+# vCPU ekle/çıkar (live)
+POST /api/vms/<vm_name>/hotplug
+Body: {"type": "vcpu", "count": 4}
+
+# RAM değiştir (balloon, live)
+POST /api/vms/<vm_name>/hotplug
+Body: {"type": "memory", "mb": 4096}
+```
+
+### Sınırlamalar
+- vCPU için VM'de `maxvcpus` tanımlı olmalı
+- RAM için balloon sürücüsü (virtio-balloon) gerekir
+- VM kapalıyken değişiklik kalıcı hale gelir
+
+---
+
+## 45. Kapasite Tahmini (AI Forecast)
+
+Geçmiş kaynak kullanım trendine dayalı tahminleme.
+
+### API
+
+```bash
+# Tahmin al (GET veya POST)
+GET /api/ai/forecast?days=30
+POST /api/ai/forecast
+Body: {"days": 30}
+
+# Alternatif URL (aynı endpoint)
+GET /api/ai/predict/capacity?days=30
+```
+
+### Yanıt
+
+```json
+{
+  "forecast": {
+    "cpu_pct": 78.3,
+    "mem_pct": 65.1,
+    "days_until_full": 42,
+    "recommendation": "CPU kapasitesi 42 gün içinde kritik eşiğe ulaşabilir."
+  }
+}
+```
+
+UI: AI sekmesi → "Kapasite Tahmini" kartı → Gün sayısı girin → "Tahmin Et".
+
+---
+
+## 46. Güvenlik Duvarı (nftables) — Güncel Notlar
+
+`firewall_manager.py` `get_status()` hem `active` hem `available` anahtarını döndürür:
+
+```json
+{"active": true, "available": true, "rule_count": 12}
+```
+
+`nft` kurulu değilse `available: false` döner ve UI "Pasif" gösterir.
+
+---
+
+## 47. Sürükle-Bırak Dashboard
+
+Anasayfa dashboardu widget'ları yeniden sıralanabilir.
+
+### Kullanım
+1. Dashboard sağ üstündeki **✏️ Düzenle** butonuna tıkla
+2. Widget başlıklarından tutup sürükle
+3. **✓ Kaydet** ile sıralamayı localStorage'a kaydet
+
+### Mevcut widget'lar
+- Hızlı istatistikler (CPU/RAM/Disk/VM)
+- Performans geçmişi
+- VM listesi
+- Uyarı geçmişi
+- IDS durumu
+- HA kümesi durumu
+
+---
+
+## 48. Hotkey & Global Arama — Özet
+
+| Kısayol | İşlev |
+|---------|-------|
+| `Ctrl+K` | Global arama overlay |
+| `Ctrl+Shift+?` | Klavye kısayolları modalı |
+| `Escape` | Açık overlay/modal kapat |
+
+Global arama VM adı, sekme adı ve menü öğelerini tarar; sonuca tıklayarak doğrudan gidilir.
+
+---
+
 *OXware Hypervisor — Açık kaynak, üretim kalitesinde KVM tabanlı sanallaştırma platformu.*
