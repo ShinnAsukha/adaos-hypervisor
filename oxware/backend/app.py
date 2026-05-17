@@ -90,6 +90,10 @@ sec_hard        = _safe_import("security_hardening")
 vm_sched        = _safe_import("vm_scheduler")
 sess_mgr        = _safe_import("session_manager")
 hook_mgr        = _safe_import("hook_manager")
+pool_mgr        = _safe_import("resource_pool_manager")
+hotplug_mgr     = _safe_import("hotplug_manager")
+stor_mig        = _safe_import("storage_migration")
+net_qos         = _safe_import("network_qos")
 
 # ── Flask ─────────────────────────────────────────────────────────────────────
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend", "templates")
@@ -6916,6 +6920,169 @@ def api_vm_mac_change(vm_id):
 def api_vm_mac_generate(vm_id):
     """QEMU için geçerli rastgele MAC adresi üret."""
     return ok(mac=_generate_qemu_mac())
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  RESOURCE POOLS
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/pools", methods=["GET"])
+@require_auth
+def api_pools_list():
+    if not pool_mgr: return ok({"pools": []})
+    return ok({"pools": pool_mgr.list_pools()})
+
+@app.route("/api/pools", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_pools_create():
+    if not pool_mgr: return err("Resource pool manager unavailable")
+    d = request.get_json() or {}
+    return ok(pool_mgr.create_pool(**d))
+
+@app.route("/api/pools/<pool_id>", methods=["PUT"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_pools_update(pool_id):
+    if not pool_mgr: return err("Resource pool manager unavailable")
+    d = request.get_json() or {}
+    result = pool_mgr.update_pool(pool_id, **d)
+    if result is None: return err("Pool bulunamadı", 404)
+    return ok(result)
+
+@app.route("/api/pools/<pool_id>", methods=["DELETE"])
+@require_auth
+@require_role("admin", "administrator")
+def api_pools_delete(pool_id):
+    if not pool_mgr: return err("Resource pool manager unavailable")
+    if pool_mgr.delete_pool(pool_id):
+        return ok({"deleted": True})
+    return err("Pool bulunamadı", 404)
+
+@app.route("/api/pools/<pool_id>/vms", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_pools_add_vm(pool_id):
+    if not pool_mgr: return err("Resource pool manager unavailable")
+    d = request.get_json() or {}
+    vm_id = d.get("vm_id")
+    if not vm_id: return err("vm_id gerekli")
+    return ok({"added": pool_mgr.add_vm_to_pool(pool_id, vm_id)})
+
+@app.route("/api/pools/<pool_id>/vms/<vm_id>", methods=["DELETE"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_pools_remove_vm(pool_id, vm_id):
+    if not pool_mgr: return err("Resource pool manager unavailable")
+    return ok({"removed": pool_mgr.remove_vm_from_pool(pool_id, vm_id)})
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  HOT-PLUG
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/vms/<vm_name>/hotplug", methods=["GET"])
+@require_auth
+def api_hotplug_info(vm_name):
+    if not hotplug_mgr: return ok({"vcpu": {}, "memory": {}})
+    return ok({
+        "vcpu": hotplug_mgr.get_vcpu_info(vm_name),
+        "memory": hotplug_mgr.get_mem_info(vm_name),
+    })
+
+@app.route("/api/vms/<vm_name>/hotplug/vcpu", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_hotplug_vcpu(vm_name):
+    if not hotplug_mgr: return err("Hotplug manager unavailable")
+    d = request.get_json() or {}
+    count = d.get("count")
+    if count is None: return err("count gerekli")
+    return ok(hotplug_mgr.hotplug_vcpu(vm_name, count))
+
+@app.route("/api/vms/<vm_name>/hotplug/memory", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_hotplug_memory(vm_name):
+    if not hotplug_mgr: return err("Hotplug manager unavailable")
+    d = request.get_json() or {}
+    ram_mb = d.get("ram_mb")
+    if ram_mb is None: return err("ram_mb gerekli")
+    return ok(hotplug_mgr.hotplug_memory(vm_name, ram_mb))
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  STORAGE MIGRATION
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/storage/pools", methods=["GET"])
+@require_auth
+def api_storage_pools():
+    if not stor_mig: return ok({"pools": []})
+    return ok({"pools": stor_mig.list_storage_pools()})
+
+@app.route("/api/vms/<vm_name>/disks", methods=["GET"])
+@require_auth
+def api_vm_disks(vm_name):
+    if not stor_mig: return ok({"disks": []})
+    return ok({"disks": stor_mig.get_vm_disks(vm_name)})
+
+@app.route("/api/vms/<vm_name>/migrate-disk", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_vm_migrate_disk(vm_name):
+    if not stor_mig: return err("Storage migration manager unavailable")
+    d = request.get_json() or {}
+    disk_target = d.get("disk_target")
+    dest_path = d.get("dest_path")
+    if not disk_target or not dest_path:
+        return err("disk_target ve dest_path gerekli")
+    fmt = d.get("format", "qcow2")
+    return ok(stor_mig.start_migration(vm_name, disk_target, dest_path, fmt))
+
+@app.route("/api/storage/migrations", methods=["GET"])
+@require_auth
+def api_storage_migrations_list():
+    if not stor_mig: return ok({"migrations": []})
+    return ok({"migrations": stor_mig.list_migrations()})
+
+@app.route("/api/storage/migrations/<job_id>", methods=["GET"])
+@require_auth
+def api_storage_migration_status(job_id):
+    if not stor_mig: return err("Storage migration manager unavailable")
+    job = stor_mig.get_migration_status(job_id)
+    if job is None: return err("Migration job bulunamadı", 404)
+    return ok(job)
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  NETWORK QOS
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/vms/<vm_name>/nics", methods=["GET"])
+@require_auth
+def api_vm_nics_list(vm_name):
+    if not net_qos: return ok({"nics": []})
+    return ok({"nics": net_qos.list_vm_nics(vm_name)})
+
+@app.route("/api/vms/<vm_name>/nics/<iface>/qos", methods=["GET"])
+@require_auth
+def api_vm_nic_qos_get(vm_name, iface):
+    if not net_qos: return ok({})
+    return ok(net_qos.get_nic_qos(vm_name, iface))
+
+@app.route("/api/vms/<vm_name>/nics/<iface>/qos", methods=["PUT"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_vm_nic_qos_set(vm_name, iface):
+    if not net_qos: return err("Network QoS manager unavailable")
+    d = request.get_json() or {}
+    inbound_kbps = d.get("inbound_kbps", 0)
+    outbound_kbps = d.get("outbound_kbps", 0)
+    return ok(net_qos.set_nic_qos(vm_name, iface, inbound_kbps, outbound_kbps))
+
+@app.route("/api/vms/<vm_name>/nics/<iface>/qos", methods=["DELETE"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_vm_nic_qos_clear(vm_name, iface):
+    if not net_qos: return err("Network QoS manager unavailable")
+    return ok(net_qos.clear_nic_qos(vm_name, iface))
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
