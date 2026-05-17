@@ -2685,6 +2685,59 @@
               </div>
             </div>
           </div>
+
+          <!-- Hook Scripts -->
+          <div class="card" style="margin-top:14px">
+            <div class="card-title"><i class="fa-solid fa-terminal" style="color:var(--accent-lt);margin-right:6px"></i>Hook Script Yönetimi</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+              VM yaşam döngüsü olaylarında otomatik çalışan yerel bash scriptleri.
+              Scriptler <code>/etc/oxware/hooks/{event}/</code> dizinine kaydedilir ve <code>VM_ID</code>, <code>VM_NAME</code>, <code>VM_STATE</code> değişkenleriyle çalıştırılır.
+            </p>
+            <div style="margin-bottom:10px">
+              <button class="btn-primary" onclick="openHookModal()">
+                <i class="fa-solid fa-plus" style="margin-right:4px"></i>Yeni Hook Ekle
+              </button>
+            </div>
+            <div id="hooksAccordion" style="display:flex;flex-direction:column;gap:8px">
+              <div style="color:var(--text-muted);font-size:12px;padding:8px 0">Yükleniyor...</div>
+            </div>
+          </div>
+
+          <!-- Hook Script Modal -->
+          <div id="hookModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center">
+            <div style="background:var(--surface1);border:1px solid var(--border1);border-radius:10px;padding:24px;width:640px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.5)">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <span style="font-size:15px;font-weight:600;color:var(--text)"><i class="fa-solid fa-terminal" style="color:var(--accent-lt);margin-right:6px"></i>Hook Script</span>
+                <button class="btn-danger" style="padding:4px 10px;font-size:12px" onclick="closeHookModal()">✕</button>
+              </div>
+              <div class="form-row" style="margin-bottom:10px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Olay</label>
+                <select id="hookEventSel" class="form-control" style="width:100%">
+                  <option value="pre-start">pre-start</option>
+                  <option value="post-start">post-start</option>
+                  <option value="pre-stop">pre-stop</option>
+                  <option value="post-stop">post-stop</option>
+                  <option value="pre-delete">pre-delete</option>
+                  <option value="post-delete">post-delete</option>
+                </select>
+              </div>
+              <div class="form-row" style="margin-bottom:10px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Script Adı (.sh ile bitmeli)</label>
+                <input id="hookNameInp" type="text" class="form-control" placeholder="10-notify.sh" style="width:100%;box-sizing:border-box">
+              </div>
+              <div class="form-row" style="margin-bottom:14px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">İçerik</label>
+                <textarea id="hookContentInp" rows="14" class="form-control"
+                  style="width:100%;box-sizing:border-box;font-family:monospace;font-size:12px;resize:vertical;background:var(--surface2);color:var(--text);border:1px solid var(--border2);border-radius:5px;padding:10px"
+                  placeholder="#!/bin/bash&#10;echo &quot;VM $VM_ID ($VM_NAME) — $VM_STATE&quot;"></textarea>
+              </div>
+              <div style="display:flex;gap:8px;justify-content:flex-end">
+                <button class="btn" onclick="closeHookModal()">İptal</button>
+                <button class="btn-primary" onclick="saveHook()"><i class="fa-solid fa-floppy-disk" style="margin-right:4px"></i>Kaydet</button>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- ─────── tab-settings ─────── -->
@@ -8596,7 +8649,7 @@ async function loadTabData(tabId) {
     case 'tab-ai':           loadAiRecommendations(); loadAnomalies(); loadAIAgents(); break;
     case 'tab-security':     load2faStatus(); loadAuditLog(); loadApiKeys(); loadLdapConfig(); checkLicenseStatus(); loadAutoSnapConfig(); loadSessions(); loadSecurityLockouts(); loadIpAllowlist(); break;
     case 'tab-cve':          cveInit(); break;
-    case 'tab-integrations': loadWebhooks(); loadS3Config(); loadEmailConfig(); loadVlans(); break;
+    case 'tab-integrations': loadWebhooks(); loadS3Config(); loadEmailConfig(); loadVlans(); loadHooks(); break;
     case 'tab-settings':     loadSdnStatus(); loadSslStatus(); loadScalerPolicies(); loadQuotas(); loadVmSchedules(); break;
   }
 }
@@ -9378,6 +9431,101 @@ async function deleteWebhook(id) {
   if (!confirm('Sil?')) return;
   await _api(`/api/webhooks/${id}`, 'DELETE');
   loadWebhooks();
+}
+
+/* ══════════════════ Hook Scripts ══════════════════ */
+const HOOK_EVENTS = ['pre-start','post-start','pre-stop','post-stop','pre-delete','post-delete'];
+
+async function loadHooks() {
+  const container = document.getElementById('hooksAccordion');
+  if (!container) return;
+  const d = await _api('/api/hooks');
+  const hooks = d.hooks || {};
+  if (!Object.keys(hooks).length) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0">Hook bulunamadı</div>';
+    return;
+  }
+  container.innerHTML = HOOK_EVENTS.map(ev => {
+    const scripts = hooks[ev] || [];
+    const rows = scripts.length
+      ? scripts.map(s => `
+          <tr>
+            <td style="font-family:monospace;font-size:12px">${escHtml(s.name)}</td>
+            <td style="font-size:11px;color:var(--text-muted)">${s.size} B</td>
+            <td><span style="font-size:11px;padding:2px 6px;border-radius:3px;background:${s.executable ? 'rgba(var(--success-rgb),.15)' : 'rgba(var(--warn-rgb),.15)'};color:${s.executable ? 'var(--success)' : 'var(--warn)'}">${s.executable ? 'çalıştırılabilir' : 'çalıştırılamaz'}</span></td>
+            <td style="display:flex;gap:4px">
+              <button class="btn-sm" onclick="editHook('${escHtml(ev)}','${escHtml(s.name)}')">Düzenle</button>
+              <button class="btn-danger" style="padding:3px 8px;font-size:11px" onclick="deleteHook('${escHtml(ev)}','${escHtml(s.name)}')">✕</button>
+            </td>
+          </tr>`).join('')
+      : `<tr><td colspan="4" style="font-size:11px;color:var(--text-muted);padding:6px 0">Script yok</td></tr>`;
+    return `
+      <div style="border:1px solid var(--border2);border-radius:7px;overflow:hidden">
+        <div style="background:var(--surface2);padding:8px 12px;font-size:12px;font-weight:600;color:var(--accent-lt);display:flex;justify-content:space-between;align-items:center">
+          <span><i class="fa-solid fa-bolt" style="margin-right:6px;opacity:.7"></i>${escHtml(ev)}</span>
+          <span style="background:var(--surface3);border-radius:10px;padding:1px 8px;font-size:11px;color:var(--text-muted)">${scripts.length}</span>
+        </div>
+        <div style="padding:10px 12px;background:var(--surface1)">
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr style="font-size:11px;color:var(--text-muted)"><th style="text-align:left;padding-bottom:4px">Ad</th><th style="text-align:left">Boyut</th><th style="text-align:left">Durum</th><th style="text-align:left">İşlem</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openHookModal(event, name, content) {
+  const modal = document.getElementById('hookModal');
+  modal.style.display = 'flex';
+  const evSel = document.getElementById('hookEventSel');
+  const nameInp = document.getElementById('hookNameInp');
+  const contentInp = document.getElementById('hookContentInp');
+  if (event) {
+    evSel.value = event;
+    evSel.disabled = true;
+  } else {
+    evSel.value = 'pre-start';
+    evSel.disabled = false;
+  }
+  nameInp.value = name || '';
+  nameInp.readOnly = !!name;
+  contentInp.value = content !== undefined ? content : '#!/bin/bash\n# VM_ID, VM_NAME, VM_STATE are available as environment variables\n\necho "Hook: $VM_STATE on $VM_NAME ($VM_ID)"\n';
+}
+
+function closeHookModal() {
+  const modal = document.getElementById('hookModal');
+  modal.style.display = 'none';
+  document.getElementById('hookEventSel').disabled = false;
+  document.getElementById('hookNameInp').readOnly = false;
+}
+
+async function editHook(event, name) {
+  const d = await _api(`/api/hooks/${encodeURIComponent(event)}/${encodeURIComponent(name)}`);
+  if (d.status !== 'ok') { toast(d.error || 'Yüklenemedi', 'error'); return; }
+  openHookModal(event, name, d.content);
+}
+
+async function saveHook() {
+  const event = document.getElementById('hookEventSel').value;
+  const name  = document.getElementById('hookNameInp').value.trim();
+  const content = document.getElementById('hookContentInp').value;
+  if (!name) { toast('Script adı gerekli', 'error'); return; }
+  const d = await _api(`/api/hooks/${encodeURIComponent(event)}/${encodeURIComponent(name)}`, 'POST', {content});
+  if (d.status === 'ok') {
+    toast('Hook kaydedildi', 'success');
+    closeHookModal();
+    loadHooks();
+  } else {
+    toast(d.error || 'Hata', 'error');
+  }
+}
+
+async function deleteHook(event, name) {
+  if (!confirm(`"${name}" hookunu sil?`)) return;
+  const d = await _api(`/api/hooks/${encodeURIComponent(event)}/${encodeURIComponent(name)}`, 'DELETE');
+  if (d.status === 'ok') { toast('Hook silindi', 'success'); loadHooks(); }
+  else toast(d.error || 'Hata', 'error');
 }
 
 /* ══════════════════ S3/MinIO ══════════════════ */

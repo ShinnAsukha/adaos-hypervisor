@@ -89,6 +89,7 @@ auto_snap       = _safe_import("auto_snapshot")
 sec_hard        = _safe_import("security_hardening")
 vm_sched        = _safe_import("vm_scheduler")
 sess_mgr        = _safe_import("session_manager")
+hook_mgr        = _safe_import("hook_manager")
 
 # ── Flask ─────────────────────────────────────────────────────────────────────
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend", "templates")
@@ -1147,6 +1148,31 @@ def api_login():
             _auth_ok = user_manager.verify_user(username, password)
         except Exception:
             _auth_ok = False
+    # ── LDAP fallback ─────────────────────────────────────────────────────────
+    _ldap_role = None
+    if not _auth_ok and ldap_mgr:
+        try:
+            _ldap_result = ldap_mgr.authenticate(username, password)
+            if _ldap_result and _ldap_result.get("authenticated"):
+                _auth_ok   = True
+                _ldap_role = _ldap_result.get("role", "viewer")
+                # Auto-provision LDAP user into local user store so sessions work
+                try:
+                    if not user_manager.get_user(username):
+                        user_manager.create_user(
+                            username=username,
+                            password=None,  # no local password — LDAP only
+                            role=_ldap_role,
+                            display_name=_ldap_result.get("display_name", username),
+                            ldap=True,
+                        )
+                    else:
+                        user_manager.update_user(username, role=_ldap_role)
+                except Exception:
+                    pass
+                ev.info(f"LDAP girişi başarılı: {username} / rol={_ldap_role}", category="auth")
+        except Exception as _le:
+            log.warning("LDAP authenticate error: %s", _le)
     if not _auth_ok:
         if sec_hard:
             sec_hard.record_failed_login(username)
@@ -1285,7 +1311,18 @@ def api_2fa_disable():
 def api_me():
     username = get_jwt_identity()
     info = cred_mgr.get_credential_info()
-    return ok(username=username, **info)
+    # Resolve role for RBAC frontend use
+    try:
+        _primary_admin = cred_mgr.get_username() if hasattr(cred_mgr, "get_username") else ""
+        if username == _primary_admin:
+            _role = "administrator"
+        else:
+            _role = user_manager.get_user_role(username)
+    except Exception:
+        _role = "viewer"
+    _user = user_manager.get_user(username) if hasattr(user_manager, "get_user") else None
+    _display = (_user or {}).get("display_name", username) if _user else username
+    return ok(username=username, role=_role, display_name=_display, **info)
 
 @app.route("/api/auth/change-password", methods=["POST"])
 @require_auth
@@ -1391,6 +1428,7 @@ def api_get_vm(vm_id):
 
 @app.route("/api/vms", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_create_vm():
     data = request.get_json() or {}
     try:
@@ -1483,10 +1521,15 @@ def api_create_vm():
 
 @app.route("/api/vms/<vm_id>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_delete_vm(vm_id):
     delete_disk = request.args.get("delete_disk", "true").lower() == "true"
     try:
         vm = vm_manager.get_vm(vm_id)
+        _vm_name_del = vm.get("name", vm_id) if vm else vm_id
+        if hook_mgr:
+            try: hook_mgr.run_hooks("pre-delete", vm_id, _vm_name_del)
+            except Exception as _he: log.warning("pre-delete hook hatası vm=%s: %s", vm_id, _he)
         # Tek seferinde fetch — race condition önle
         assignment     = ip_pool_mgr.get_vm_assignment(vm_id)
         mac            = assignment.get("mac", "") if assignment else ""
@@ -1530,37 +1573,67 @@ def api_delete_vm(vm_id):
                 uptime_tracker.delete_uptime(vm_id)
             except Exception:
                 pass
+        if hook_mgr:
+            try: hook_mgr.run_hooks("post-delete", vm_id, _vm_name_del)
+            except Exception as _he: log.warning("post-delete hook hatası vm=%s: %s", vm_id, _he)
         return ok(**result)
     except Exception as e:
         return err(e, 500)
 
 @app.route("/api/vms/<vm_id>/start", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_start_vm(vm_id):
     try:
+        _vm_name_start = ""
+        try:
+            _vm_start_info = vm_manager.get_vm(vm_id)
+            _vm_name_start = _vm_start_info.get("name", vm_id) if _vm_start_info else vm_id
+        except Exception:
+            _vm_name_start = vm_id
+        if hook_mgr:
+            try: hook_mgr.run_hooks("pre-start", vm_id, _vm_name_start)
+            except Exception as _he: log.warning("pre-start hook hatası vm=%s: %s", vm_id, _he)
         r = vm_manager.start_vm(vm_id)
         ev.vm_event("VM başlatıldı", vm_id)
         if webhook_mgr: webhook_mgr.trigger("vm.started", {"vm_id": vm_id})
         if uptime_tracker: uptime_tracker.record_start(vm_id, "")
+        if hook_mgr:
+            try: hook_mgr.run_hooks("post-start", vm_id, _vm_name_start)
+            except Exception as _he: log.warning("post-start hook hatası vm=%s: %s", vm_id, _he)
         return ok(**r)
     except Exception as e:
         return err(e, 500)
 
 @app.route("/api/vms/<vm_id>/stop", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_stop_vm(vm_id):
     force = request.args.get("force", "false").lower() == "true"
     try:
+        _vm_name_stop = ""
+        try:
+            _vm_stop_info = vm_manager.get_vm(vm_id)
+            _vm_name_stop = _vm_stop_info.get("name", vm_id) if _vm_stop_info else vm_id
+        except Exception:
+            _vm_name_stop = vm_id
+        if hook_mgr:
+            try: hook_mgr.run_hooks("pre-stop", vm_id, _vm_name_stop)
+            except Exception as _he: log.warning("pre-stop hook hatası vm=%s: %s", vm_id, _he)
         r = vm_manager.stop_vm(vm_id, force=force)
         ev.vm_event("VM durduruldu", vm_id, level="WARNING")
         if webhook_mgr: webhook_mgr.trigger("vm.stopped", {"vm_id": vm_id})
         if uptime_tracker: uptime_tracker.record_stop(vm_id)
+        if hook_mgr:
+            try: hook_mgr.run_hooks("post-stop", vm_id, _vm_name_stop)
+            except Exception as _he: log.warning("post-stop hook hatası vm=%s: %s", vm_id, _he)
         return ok(**r)
     except Exception as e:
         return err(e, 500)
 
 @app.route("/api/vms/<vm_id>/reboot", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_reboot_vm(vm_id):
     force = request.args.get("force", "false").lower() == "true"
     try:
@@ -1570,6 +1643,7 @@ def api_reboot_vm(vm_id):
 
 @app.route("/api/vms/<vm_id>/pause", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_pause_vm(vm_id):
     try:
         return ok(**vm_manager.pause_vm(vm_id))
@@ -1578,6 +1652,7 @@ def api_pause_vm(vm_id):
 
 @app.route("/api/vms/<vm_id>/resume", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_resume_vm(vm_id):
     try:
         return ok(**vm_manager.resume_vm(vm_id))
@@ -1594,6 +1669,7 @@ def api_vm_stats(vm_id):
 
 @app.route("/api/vms/<vm_id>/clone", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_clone_vm(vm_id):
     data = request.get_json() or {}
     new_name = (data.get("new_name") or data.get("name") or "").strip()
@@ -1618,6 +1694,7 @@ def api_vm_hardware_get(vm_id):
 
 @app.route("/api/vms/<vm_id>/hardware/vcpus", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_hot_vcpus(vm_id):
     data = request.get_json() or {}
     count = int(data.get("count", 1))
@@ -1632,6 +1709,7 @@ def api_vm_hot_vcpus(vm_id):
 
 @app.route("/api/vms/<vm_id>/hardware/memory", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_hot_memory(vm_id):
     data = request.get_json() or {}
     mb = int(data.get("mb", 512))
@@ -1646,6 +1724,7 @@ def api_vm_hot_memory(vm_id):
 
 @app.route("/api/vms/<vm_id>/hardware/cpu-mode", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_cpu_mode(vm_id):
     data = request.get_json() or {}
     mode = data.get("mode", "host-passthrough")
@@ -1658,6 +1737,7 @@ def api_vm_cpu_mode(vm_id):
 
 @app.route("/api/vms/<vm_id>/hardware/nested-virt", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_nested_virt(vm_id):
     data = request.get_json() or {}
     enabled = bool(data.get("enabled", False))
@@ -1670,6 +1750,7 @@ def api_vm_nested_virt(vm_id):
 
 @app.route("/api/vms/<vm_id>/hardware/disk/attach", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_disk_attach(vm_id):
     data = request.get_json() or {}
     size_gb  = int(data.get("size_gb", 10))
@@ -1685,6 +1766,7 @@ def api_vm_disk_attach(vm_id):
 
 @app.route("/api/vms/<vm_id>/hardware/disk/<target_dev>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_disk_detach(vm_id, target_dev):
     try:
         result = vm_manager.hot_detach_disk(vm_id, target_dev)
@@ -1695,6 +1777,7 @@ def api_vm_disk_detach(vm_id, target_dev):
 
 @app.route("/api/vms/<vm_id>/hardware/nic/attach", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_nic_attach(vm_id):
     data = request.get_json() or {}
     network = data.get("network", "default")
@@ -1708,6 +1791,7 @@ def api_vm_nic_attach(vm_id):
 
 @app.route("/api/vms/<vm_id>/hardware/nic/<path:mac>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_nic_detach(vm_id, mac):
     try:
         result = vm_manager.hot_detach_nic(vm_id, mac)
@@ -1718,6 +1802,7 @@ def api_vm_nic_detach(vm_id, mac):
 
 @app.route("/api/vms/<vm_id>/autostart", methods=["PUT"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_autostart(vm_id):
     data = request.get_json() or {}
     return ok(**vm_manager.set_autostart(vm_id, bool(data.get("enabled", False))))
@@ -2042,6 +2127,7 @@ def api_list_networks():
 
 @app.route("/api/networks", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_create_network():
     data = request.get_json() or {}
     if "name" not in data:
@@ -2062,6 +2148,7 @@ def api_create_network():
 
 @app.route("/api/networks/<net_uuid>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_delete_network(net_uuid):
     try:
         return ok(**network_manager.delete_network(net_uuid))
@@ -2070,6 +2157,7 @@ def api_delete_network(net_uuid):
 
 @app.route("/api/networks/<net_uuid>/start", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_start_network(net_uuid):
     try:
         return ok(**network_manager.start_network(net_uuid))
@@ -2078,6 +2166,7 @@ def api_start_network(net_uuid):
 
 @app.route("/api/networks/<net_uuid>/stop", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_stop_network(net_uuid):
     try:
         return ok(**network_manager.stop_network(net_uuid))
@@ -2086,6 +2175,7 @@ def api_stop_network(net_uuid):
 
 @app.route("/api/networks/<net_uuid>/autostart", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_network_autostart(net_uuid):
     data = request.get_json() or {}
     enabled = bool(data.get("enabled", False))
@@ -3222,6 +3312,7 @@ def api_list_snapshots_v2(vm_id):
 
 @app.route("/api/vms/<vm_id>/snapshots", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_take_snapshot_v2(vm_id):
     try:
         vm_id = security.validate_uuid(vm_id, "vm_id")
@@ -3243,6 +3334,7 @@ def api_take_snapshot_v2(vm_id):
 
 @app.route("/api/vms/<vm_id>/snapshots/<snap_name>/revert", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_revert_snapshot_v2(vm_id, snap_name):
     try:
         vm_id     = security.validate_uuid(vm_id, "vm_id")
@@ -3262,6 +3354,7 @@ def api_revert_snapshot_v2(vm_id, snap_name):
 
 @app.route("/api/vms/<vm_id>/snapshots/<snap_name>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_delete_snapshot_v2(vm_id, snap_name):
     try:
         vm_id     = security.validate_uuid(vm_id, "vm_id")
@@ -4499,6 +4592,42 @@ def api_webhook_deliveries(wid):
     if not webhook_mgr: return ok({"deliveries": []})
     return ok({"deliveries": webhook_mgr.get_deliveries(wid)})
 
+# ── Hook Scripts ──────────────────────────────────────────────────────────────
+@app.route("/api/hooks", methods=["GET"])
+@require_auth
+def api_hooks_list():
+    if not hook_mgr: return ok({"hooks": {}})
+    return ok({"hooks": hook_mgr.list_hooks()})
+
+@app.route("/api/hooks/<event>/<name>", methods=["GET"])
+@require_auth
+def api_hook_get(event, name):
+    if not hook_mgr: return err("Hook yöneticisi kullanılamıyor")
+    content = hook_mgr.get_hook(event, name)
+    if content is None: return err("Hook bulunamadı", 404)
+    return ok({"content": content})
+
+@app.route("/api/hooks/<event>/<name>", methods=["POST", "PUT"])
+@require_auth
+def api_hook_save(event, name):
+    if not hook_mgr: return err("Hook yöneticisi kullanılamıyor")
+    d = request.get_json() or {}
+    try:
+        hook_mgr.save_hook(event, name, d.get("content", ""))
+    except ValueError as ve:
+        return err(str(ve), 400)
+    return ok()
+
+@app.route("/api/hooks/<event>/<name>", methods=["DELETE"])
+@require_auth
+def api_hook_delete(event, name):
+    if not hook_mgr: return err("Hook yöneticisi kullanılamıyor")
+    try:
+        hook_mgr.delete_hook(event, name)
+    except ValueError as ve:
+        return err(str(ve), 400)
+    return ok()
+
 # ── AI Planner ────────────────────────────────────────────────────────────────
 @app.route("/api/ai/recommendations", methods=["GET"])
 @require_auth
@@ -4720,6 +4849,18 @@ def api_ldap_config():
     if not ldap_mgr: return ok({"available": False, "enabled": False})
     if request.method == "GET":
         return ok(ldap_mgr.get_config())
+    # POST: save config — administrator only
+    _ldap_username = get_jwt_identity()
+    try:
+        _ldap_primary = cred_mgr.get_username() if hasattr(cred_mgr, "get_username") else ""
+        if _ldap_username == _ldap_primary:
+            _ldap_role = "administrator"
+        else:
+            _ldap_role = user_manager.get_user_role(_ldap_username)
+    except Exception:
+        _ldap_role = "viewer"
+    if _ldap_role not in ("admin", "administrator"):
+        return err("Bu işlem için yetki gerekli", 403)
     d = request.json or {}
     return ok(ldap_mgr.save_config(**d))
 
@@ -5088,6 +5229,7 @@ def prometheus_metrics():
 # ── Bulk VM İşlemleri ─────────────────────────────────────────────────────────
 @app.route("/api/vms/bulk", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vms_bulk():
     data    = request.get_json() or {}
     vm_ids  = data.get("vm_ids", [])
@@ -5116,6 +5258,7 @@ def api_vms_bulk():
 # ── VM Disk Genişletme ────────────────────────────────────────────────────────
 @app.route("/api/vms/<vm_id>/disk/resize", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_disk_resize(vm_id):
     """
     VM diskini genişlet.
@@ -5464,6 +5607,7 @@ def server_error(e):
 # ── Live Migration ────────────────────────────────────────────────────────────
 @app.route("/api/vms/migrate", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_migrate():
     data = request.get_json() or {}
     vm_id = data.get("vm_id", "")
