@@ -712,6 +712,12 @@
       <div class="tb-stat">VM <span class="val" id="tb-vms">0/0</span></div>
     </div>
 
+    <!-- Global Search Button (Ctrl+K) -->
+    <button class="tb-action" onclick="openGlobalSearchOverlay()" title="Ara (Ctrl+K)" style="gap:6px">
+      <span style="font-size:15px">🔍</span>
+      <kbd style="background:var(--surface2);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;font-size:10px;color:var(--text-muted)">Ctrl+K</kbd>
+    </button>
+
     <div class="tb-actions">
       <button class="tb-action primary" onclick="openCreateVMModal()">
         <svg viewBox="0 0 16 16"><path d="M8 4a.5.5 0 01.5.5v3h3a.5.5 0 010 1h-3v3a.5.5 0 01-1 0v-3h-3a.5.5 0 010-1h3v-3A.5.5 0 018 4z"/></svg>
@@ -1173,6 +1179,7 @@
             <button class="btn" onclick="loadVMs()">↻ Yenile</button>
             <button class="btn" onclick="openModal('modal-vm-template')">📋 Şablonlar</button>
             <button class="btn primary" onclick="openCreateVMModal()">+ Yeni VM</button>
+            <button class="btn" onclick="openAiVmModal()" style="color:var(--accent-lt)" title="AI ile VM oluştur">🤖 AI ile Oluştur</button>
             <button class="btn" onclick="openImportOvaModal()" style="color:#34d399">⬆ OVA Import</button>
             <input id="vmTagFilter" type="text" placeholder="🏷 Etiket filtrele..." style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:13px;min-width:160px" oninput="filterVmsByTag(this.value)">
           </div>
@@ -2196,6 +2203,38 @@
               <tbody id="idsAlertsTbody"><tr><td colspan="5" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody>
             </table>
           </div>
+
+          <!-- ── Uyarı Kuralları ── -->
+          <div class="card" style="margin-top:14px">
+            <div class="card-title" style="display:flex;align-items:center;gap:8px">
+              <span>🔔</span> Uyarı Kuralları
+              <button class="btn sm" onclick="openAlertRuleModal()" style="margin-left:auto">+ Yeni Kural</button>
+              <button class="btn sm" onclick="loadAlertRules()">↻</button>
+            </div>
+            <div id="alert-rules-list" style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+              <div style="color:var(--text-muted);font-size:12px">Yükleniyor...</div>
+            </div>
+            <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px">Son Uyarılar</div>
+              <div id="alert-history-list" style="font-size:12px;color:var(--text-muted)">—</div>
+            </div>
+          </div>
+
+          <!-- ── Maliyet Tahmini ── -->
+          <div class="card" style="margin-top:14px">
+            <div class="card-title" style="display:flex;align-items:center;gap:8px">
+              <span>💰</span> Maliyet Tahmini
+              <button class="btn sm" onclick="openCostConfig()" style="margin-left:auto">⚙ Ayarlar</button>
+              <button class="btn sm" onclick="loadCostEstimate()">↻</button>
+            </div>
+            <div id="cost-total-display" style="font-size:28px;font-weight:700;color:var(--accent-lt);margin:10px 0">—</div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>VM</th><th>vCPU</th><th>RAM (MB)</th><th>Disk (GB)</th><th>Aylık Maliyet</th></tr></thead>
+                <tbody id="cost-vm-tbody"><tr><td colspan="5" class="text-center text-muted" style="padding:10px">Yükleniyor...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <!-- ─────── tab-ai ─────── -->
@@ -2508,6 +2547,45 @@
                 <div style="margin-left:auto;font-size:10px;color:var(--text-muted)" id="pt-duration"></div>
               </div>
               <div id="pentest-findings"></div>
+            </div>
+          </div>
+
+          <!-- ── Kimlik Bilgisi Vault ── -->
+          <div class="card" style="margin-top:14px">
+            <div class="card-title" style="display:flex;align-items:center;gap:8px">
+              <span>🔐</span> Kimlik Bilgisi Vault
+              <button class="btn sm" onclick="openVaultModal()" style="margin-left:auto">+ Ekle</button>
+              <button class="btn sm" onclick="loadVault()">↻</button>
+            </div>
+            <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">VM başına saklanan kimlik bilgileri. Şifreler tarayıcıda maskelenir, sunucuda şifreli tutulur.</p>
+            <div id="vault-list" style="display:flex;flex-direction:column;gap:8px">
+              <div style="color:var(--text-muted);font-size:12px">Yükleniyor...</div>
+            </div>
+          </div>
+
+          <!-- ── Güvenlik Skoru ── -->
+          <div class="card" style="margin-top:14px">
+            <div class="card-title" style="display:flex;align-items:center;gap:8px">
+              <span>🛡️</span> Güvenlik Skoru
+              <button class="btn sm" onclick="loadSecurityScores()" style="margin-left:auto">Tümünü Tara</button>
+            </div>
+            <div id="security-score-host" style="margin:12px 0;padding:12px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;gap:16px">
+              <div style="text-align:center;min-width:80px">
+                <div style="font-size:36px;font-weight:700" id="host-score-grade">—</div>
+                <div style="font-size:11px;color:var(--text-muted)">Host Skoru</div>
+              </div>
+              <div style="flex:1">
+                <div style="background:rgba(255,255,255,.07);border-radius:6px;height:8px;overflow:hidden">
+                  <div id="host-score-bar" style="height:100%;border-radius:6px;background:var(--accent);width:0%;transition:width .5s"></div>
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:4px" id="host-score-val">—</div>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>VM</th><th>Skor</th><th>Not</th><th>Sorunlar</th><th>Detay</th></tr></thead>
+                <tbody id="vm-security-scores-tbody"><tr><td colspan="5" class="text-center text-muted" style="padding:10px">Tara düğmesine basın</td></tr></tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -4149,6 +4227,46 @@ const PAGE_STRINGS = {
     'Snapshot Yönetimi':'Snapshot Management',
     /* ── Topoloji ── */
     'Ağ Topoloji Haritası':'Network Topology Map',
+    /* ── Global Arama ── */
+    'Ara (Ctrl+K)':'Search (Ctrl+K)','Arama':'Search','Kapat':'Close',
+    'VM, ağ, disk, etiket ara...':'Search VMs, networks, disks, tags...',
+    '↑↓ Gezin':'↑↓ Navigate','Enter Seç':'Enter Select','Esc Kapat':'Esc Close',
+    /* ── Klavye Kısayolları ── */
+    'Klavye Kısayolları':'Keyboard Shortcuts',
+    'Arama Aç':'Open Search','VM Oluştur':'Create VM',
+    'Mevcut Sekmeyi Yenile':'Refresh Current Tab',
+    'VM Sekmesine Git':'Go to VMs Tab','Ağ Sekmesine Git':'Go to Networks Tab',
+    'Depolama Sekmesine Git':'Go to Storage Tab','İzleme Sekmesine Git':'Go to Monitoring Tab',
+    'Kısayolları Göster':'Show Shortcuts','Modali Kapat':'Close Modal',
+    /* ── VM Etiketler / Notlar ── */
+    'Etiketler':'Tags','Not':'Note','Kaydet':'Save','Sil':'Delete',
+    'Not & Etiket':'Notes & Tags','Son Güncelleme':'Last Updated',
+    'Etiket Ekle':'Add Tag','Not Ekle':'Add Note',
+    /* ── Vault ── */
+    'Kimlik Bilgisi Vault':'Credential Vault','Vault\'a Ekle':'Add to Vault',
+    'Kimlik Bilgisi Türü':'Credential Type','Kullanıcı Adı':'Username',
+    'Şifre Göster':'Show Password','Şifre Gizle':'Hide Password',
+    'Vault Kaydını Sil':'Delete Vault Entry',
+    /* ── Maliyet ── */
+    'Maliyet Tahmini':'Cost Estimate','Aylık Maliyet':'Monthly Cost',
+    'Maliyet Ayarları':'Cost Settings','CPU/vCPU/Saat':'CPU/vCPU/Hour',
+    'RAM/GB/Saat':'RAM/GB/Hour','Disk/GB/Ay':'Disk/GB/Month',
+    'Para Birimi':'Currency',
+    /* ── Uyarı Kuralları ── */
+    'Uyarı Kuralları':'Alert Rules','Yeni Kural':'New Rule',
+    'Kural Adı':'Rule Name','Metrik':'Metric','Eşik':'Threshold',
+    'Kapsam':'Scope','Aksiyon':'Action','Bekleme Süresi (dk)':'Cooldown (min)',
+    'CPU Kullanımı':'CPU Usage','Bellek':'Memory',
+    'E-posta':'Email','Webhook':'Webhook','Log':'Log',
+    'Son Uyarılar':'Recent Alerts','Kural Etkin':'Rule Enabled',
+    /* ── Güvenlik Skoru ── */
+    'Güvenlik Skoru':'Security Score','Host Skoru':'Host Score',
+    'Tümünü Tara':'Scan All','Sorunlar':'Issues','Detay':'Details',
+    /* ── AI VM Oluştur ── */
+    'AI ile VM Oluştur':'Create VM with AI',
+    'VM açıklayın (ör: Nginx web sunucusu, 2GB RAM, Ubuntu 22.04)':'Describe the VM (e.g. Nginx web server, 2GB RAM, Ubuntu 22.04)',
+    'AI Önerisi':'AI Suggestion','Uygula ve Oluştur':'Apply and Create',
+    'AI Planı Oluştur':'Generate AI Plan',
   },
   tr: {},  /* TR zaten varsayılan — boş bırak */
   es: {
