@@ -406,6 +406,21 @@
     .app-section-label{margin:14px 0 8px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:5px}
     .app-section-label i{font-size:12px}
 
+    /* Dashboard Drag-and-Drop Widgets */
+    .dash-widget{position:relative;margin-bottom:14px;border-radius:8px;transition:box-shadow .15s}
+    .dash-widget.dragging{opacity:.4;box-shadow:0 0 0 2px var(--accent)}
+    .dash-widget.drag-over{box-shadow:0 0 0 2px var(--accent-lt),0 4px 20px rgba(56,189,248,.2)}
+    .dash-widget-handle{display:none;position:absolute;top:0;left:0;right:0;height:24px;cursor:grab;background:linear-gradient(to bottom,rgba(56,189,248,.12),transparent);border-radius:8px 8px 0 0;z-index:2;align-items:center;justify-content:center;gap:4px;font-size:10px;color:var(--text-muted);user-select:none}
+    .dash-widget-handle:active{cursor:grabbing}
+    .dash-widget-handle::before{content:"⠿⠿⠿";letter-spacing:3px;opacity:.6}
+    .dash-edit-mode .dash-widget{cursor:default;border:1px dashed rgba(56,189,248,.3)}
+    .dash-edit-mode .dash-widget-handle{display:flex}
+    .dash-edit-mode .dash-widget:hover{box-shadow:0 0 0 1px var(--accent)}
+    #dash-edit-btn{margin-left:auto;font-size:11px}
+    #dash-edit-btn.active{background:var(--accent);color:#fff}
+    .dash-widget-label{display:none;position:absolute;top:4px;right:8px;font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;z-index:3}
+    .dash-edit-mode .dash-widget-label{display:block}
+
     /* Topology */
     #topo-canvas-wrap{position:relative;border:1px solid var(--border);border-radius:4px;background:var(--surface);overflow:hidden}
     #topo-svg{width:100%;height:100%;cursor:grab;display:block}
@@ -810,8 +825,14 @@
         <div class="page active" id="page-summary">
           <div class="node-hdr">
             <div class="node-hdr-title">Node '<span id="ns-hostname">oxware</span>'<span class="node-hdr-uptime">(Uptime: <span id="ns-uptime">—</span>)</span></div>
+            <button id="dash-edit-btn" class="btn sm" onclick="toggleDashEdit()" title="Widget sıralamasını düzenle">✏️ Düzenle</button>
           </div>
 
+          <div id="dashboard-container">
+
+          <div class="dash-widget" data-wid="resources">
+            <div class="dash-widget-handle"></div>
+            <div class="dash-widget-label">Kaynaklar</div>
           <div class="summary-grid">
             <!-- Left: Resources -->
             <div class="summary-panel">
@@ -871,7 +892,11 @@
               </table>
             </div>
           </div>
+          </div><!-- /dash-widget#resources -->
 
+          <div class="dash-widget" data-wid="cpu-chart">
+            <div class="dash-widget-handle"></div>
+            <div class="dash-widget-label">CPU Grafiği</div>
           <!-- CPU Chart -->
           <div class="chart-panel">
             <div class="chart-panel-hdr">
@@ -882,7 +907,11 @@
             </div>
             <div class="chart-container"><canvas id="cpuChart"></canvas></div>
           </div>
+          </div><!-- /dash-widget#cpu-chart -->
 
+          <div class="dash-widget" data-wid="ram-chart">
+            <div class="dash-widget-handle"></div>
+            <div class="dash-widget-label">RAM Grafiği</div>
           <!-- Memory Chart -->
           <div class="chart-panel">
             <div class="chart-panel-hdr">
@@ -893,7 +922,11 @@
             </div>
             <div class="chart-container"><canvas id="ramChart"></canvas></div>
           </div>
+          </div><!-- /dash-widget#ram-chart -->
 
+          <div class="dash-widget" data-wid="load-chart">
+            <div class="dash-widget-handle"></div>
+            <div class="dash-widget-label">Load Grafiği</div>
           <!-- Server Load Chart -->
           <div class="chart-panel">
             <div class="chart-panel-hdr">
@@ -904,7 +937,11 @@
             </div>
             <div class="chart-container"><canvas id="loadChart"></canvas></div>
           </div>
+          </div><!-- /dash-widget#load-chart -->
 
+          <div class="dash-widget" data-wid="quick-stats">
+            <div class="dash-widget-handle"></div>
+            <div class="dash-widget-label">Hızlı İstatistikler</div>
           <!-- Quick Stats Row -->
           <div id="dash-quick-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
             <div class="vm-stat-card green">
@@ -928,7 +965,11 @@
               <div class="vm-stat-sub">toplam</div>
             </div>
           </div>
+          </div><!-- /dash-widget#quick-stats -->
 
+          <div class="dash-widget" data-wid="vm-events">
+            <div class="dash-widget-handle"></div>
+            <div class="dash-widget-label">VM'ler & Olaylar</div>
           <!-- Top VMs + Recent Events (side by side) -->
           <div class="charts-row">
             <!-- Top Resource VMs -->
@@ -949,6 +990,9 @@
               </div>
             </div>
           </div>
+          </div><!-- /dash-widget#vm-events -->
+
+          </div><!-- /dashboard-container -->
         </div>
 
         <!-- ─────── VM Detail Page ─────── -->
@@ -11163,6 +11207,87 @@ async function applyAiSuggestion() {
     if (typeof toast === 'function') toast('AI önerisi uygulandı. Lütfen gözden geçirin.', 'success');
   }
 }
+
+/* ── Dashboard Drag-and-Drop ── */
+(function() {
+  const STORAGE_KEY = 'oxware-dashboard-order';
+  let _editMode = false;
+  let _dragSrc = null;
+
+  function getContainer() { return document.getElementById('dashboard-container'); }
+
+  function saveOrder() {
+    const c = getContainer(); if (!c) return;
+    const order = [...c.querySelectorAll('.dash-widget')].map(w => w.dataset.wid);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
+  }
+
+  function applyOrder() {
+    const c = getContainer(); if (!c) return;
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (!saved || !Array.isArray(saved)) return;
+    saved.forEach(wid => {
+      const el = c.querySelector(`.dash-widget[data-wid="${wid}"]`);
+      if (el) c.appendChild(el);
+    });
+  }
+
+  function bindDrag(widget) {
+    widget.setAttribute('draggable', 'true');
+    widget.addEventListener('dragstart', e => {
+      _dragSrc = widget;
+      widget.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    widget.addEventListener('dragend', () => {
+      widget.classList.remove('dragging');
+      getContainer()?.querySelectorAll('.dash-widget').forEach(w => w.classList.remove('drag-over'));
+      saveOrder();
+    });
+    widget.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (_dragSrc && _dragSrc !== widget) widget.classList.add('drag-over');
+    });
+    widget.addEventListener('dragleave', () => widget.classList.remove('drag-over'));
+    widget.addEventListener('drop', e => {
+      e.preventDefault();
+      widget.classList.remove('drag-over');
+      if (!_dragSrc || _dragSrc === widget) return;
+      const c = getContainer();
+      const kids = [...c.querySelectorAll('.dash-widget')];
+      const srcIdx = kids.indexOf(_dragSrc);
+      const tgtIdx = kids.indexOf(widget);
+      if (srcIdx < tgtIdx) c.insertBefore(_dragSrc, widget.nextSibling);
+      else c.insertBefore(_dragSrc, widget);
+    });
+  }
+
+  function initDashWidgets() {
+    const c = getContainer(); if (!c) return;
+    applyOrder();
+    c.querySelectorAll('.dash-widget').forEach(bindDrag);
+  }
+
+  window.toggleDashEdit = function() {
+    const c = getContainer(); if (!c) return;
+    _editMode = !_editMode;
+    c.classList.toggle('dash-edit-mode', _editMode);
+    const btn = document.getElementById('dash-edit-btn');
+    if (btn) {
+      btn.classList.toggle('active', _editMode);
+      btn.textContent = _editMode ? '✅ Tamam' : '✏️ Düzenle';
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', initDashWidgets);
+  // also call after summary loads since DOMContentLoaded may have fired
+  const _origLS = window.loadNodeSummary;
+  if (typeof _origLS === 'function') {
+    window._dashInitDone = false;
+  }
+  setTimeout(initDashWidgets, 500);
+})();
 
 /* ── 10. Helper: load vault/alerts/cost when monitoring/security tab loads ── */
 const _origLoadPageData = typeof window._oxLoadPage === 'function' ? window._oxLoadPage : null;
