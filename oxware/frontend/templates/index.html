@@ -349,13 +349,13 @@
     /* ── Modal ── */
     .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;display:none;align-items:center;justify-content:center}
     .modal-overlay.open{display:flex}
-    .modal{background:var(--surface);border:1px solid var(--border2);border-radius:6px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto}
-    .modal-header{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .modal{background:var(--surface);border:1px solid var(--border2);border-radius:6px;width:480px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
+    .modal-header{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
     .modal-header h2,.modal-header h3{font-size:13px;font-weight:700}
     .modal-close{background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:2px 6px;border-radius:3px}
     .modal-close:hover{background:var(--surface2);color:var(--text)}
-    .modal-body{padding:18px}
-    .modal-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+    .modal-body{padding:18px;overflow-y:auto;flex:1;min-height:0}
+    .modal-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;background:var(--surface)}
 
     /* ── Toast ── */
     #toast-container{position:fixed;bottom:calc(var(--taskbar-h) + 18px);right:18px;transition:bottom .1s;z-index:2000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
@@ -623,7 +623,9 @@
       .page{padding:10px!important}
       .section-header{flex-wrap:wrap;gap:6px}
       /* modal */
-      .modal{width:95vw!important;max-height:90vh!important}
+      .modal{width:95vw!important;max-height:90dvh!important;max-height:90vh!important}
+      .modal-overlay{align-items:flex-end!important}
+      .modal{border-bottom-left-radius:0!important;border-bottom-right-radius:0!important;width:100%!important;max-width:100%!important;max-height:85dvh!important;max-height:85vh!important}
       /* table */
       .table-wrap{font-size:11px;overflow-x:auto}
       thead th,tbody td{padding:6px 8px!important}
