@@ -1820,6 +1820,7 @@ def _is_windows_vm(vm_name: str) -> bool:
 
 @app.route("/api/vms/<vm_id>/enable-ssh", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_enable_ssh(vm_id):
     """QEMU Guest Agent üzerinden VM'de SSH (Linux) veya RDP (Windows) bilgisi döndür."""
     _GUEST_AGENT_INSTALL = (
@@ -1907,6 +1908,7 @@ def api_vm_enable_ssh(vm_id):
 
 @app.route("/api/vms/<vm_id>/nat-sync", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_nat_sync(vm_id):
     """VM'in mevcut IP'sini ARP'tan okuyup DNAT'ı hemen güncelle (manuel tetikleme)."""
     try:
@@ -5800,6 +5802,7 @@ def api_vm_metadata_get(vm_id):
 
 @app.route("/api/vms/<vm_id>/metadata", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_metadata_set(vm_id):
     d = request.get_json() or {}
     meta = _load_meta()
@@ -5823,6 +5826,7 @@ def api_all_metadata():
 # ── CD-ROM Hot-Swap ───────────────────────────────────────────────────────────
 @app.route("/api/vms/<vm_id>/cdrom", methods=["PUT"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_cdrom(vm_id):
     import libvirt as _lv_cd
     import xml.etree.ElementTree as _ET_cd
@@ -5934,6 +5938,7 @@ def api_cpu_pinning_get(vm_id):
 
 @app.route("/api/vms/<vm_id>/cpu-pinning", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_cpu_pinning_set(vm_id):
     d = request.get_json() or {}
     vcpu = d.get("vcpu", 0)
@@ -5954,6 +5959,7 @@ def api_cpu_pinning_set(vm_id):
 
 @app.route("/api/vms/<vm_id>/cpu-pinning", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_cpu_pinning_clear(vm_id):
     """Tüm pinning'i kaldır — tüm vCPU'ları tüm pCPU'lara serbest bırak."""
     try:
@@ -5974,6 +5980,7 @@ def api_cpu_pinning_clear(vm_id):
 # ── NIC Hot-Add/Remove ────────────────────────────────────────────────────────
 @app.route("/api/vms/<vm_id>/nics", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_nic_add(vm_id):
     d = request.get_json() or {}
     network = d.get("network", "default")
@@ -5993,6 +6000,7 @@ def api_vm_nic_add(vm_id):
 
 @app.route("/api/vms/<vm_id>/nics/<mac>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_nic_remove(vm_id, mac):
     try:
         r = subprocess.run(
@@ -6010,6 +6018,7 @@ def api_vm_nic_remove(vm_id, mac):
 # ── Disk Hot-Add ──────────────────────────────────────────────────────────────
 @app.route("/api/vms/<vm_id>/disks/attach", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_disk_attach_v2(vm_id):
     d = request.get_json() or {}
     size_gb = int(d.get("size_gb", 10))
@@ -6044,6 +6053,7 @@ def api_vm_disk_attach_v2(vm_id):
 # ── OVA Export ────────────────────────────────────────────────────────────────
 @app.route("/api/vms/<vm_id>/export", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_export(vm_id):
     """VM'i OVA benzeri tar arşivine aktar (XML + disk)."""
     import threading as _thr, tarfile, datetime as _dt
@@ -6193,6 +6203,7 @@ def _send_magic_packet(mac: str) -> None:
 
 @app.route("/api/vms/<vm_id>/wol", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_wol(vm_id):
     """Wake-on-LAN: kapalı VM'i uzaktan aç."""
     r = subprocess.run(["virsh", "dominfo", vm_id], capture_output=True, text=True)
@@ -6274,6 +6285,7 @@ def api_vm_fw_get(vm_id):
 
 @app.route("/api/vms/<vm_id>/firewall", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_fw_post(vm_id):
     body = request.get_json(silent=True) or {}
     rules = body.get("rules", [])
@@ -6289,6 +6301,7 @@ def api_vm_fw_post(vm_id):
 
 @app.route("/api/vms/<vm_id>/firewall", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_fw_delete(vm_id):
     data = _fw_load()
     data.pop(vm_id, None)
@@ -6299,6 +6312,7 @@ def api_vm_fw_delete(vm_id):
 # ── Maintenance Mode ───────────────────────────────────────────────────────────
 @app.route("/api/vms/<vm_id>/maintenance", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_maintenance(vm_id):
     """VM bakım modunu aç/kapat."""
     body = request.get_json(silent=True) or {}
@@ -6350,6 +6364,7 @@ def api_host_pci_devices():
 
 @app.route("/api/vms/<vm_id>/pci/attach", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_pci_attach(vm_id):
     body = request.get_json(silent=True) or {}
     device_id = body.get("device_id", "")
@@ -6384,6 +6399,7 @@ def api_vm_pci_attach(vm_id):
 
 @app.route("/api/vms/<vm_id>/pci/<path:device_id>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_pci_detach(vm_id, device_id):
     r = subprocess.run(["virsh", "nodedev-dumpxml", device_id], capture_output=True, text=True)
     if r.returncode != 0:
@@ -6566,6 +6582,7 @@ def api_vm_mac_list(vm_id):
 
 @app.route("/api/vms/<vm_id>/nics/mac", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_mac_change(vm_id):
     """
     VM NIC MAC adresini değiştir.
