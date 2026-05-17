@@ -2672,31 +2672,6 @@
             </div>
           </div>
 
-          <!-- ── Güvenlik Skoru ── -->
-          <div class="card" style="margin-top:14px">
-            <div class="card-title" style="display:flex;align-items:center;gap:8px">
-              <span>🛡️</span> Güvenlik Skoru
-              <button class="btn sm" onclick="loadSecurityScores()" style="margin-left:auto">Tümünü Tara</button>
-            </div>
-            <div id="security-score-host" style="margin:12px 0;padding:12px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;gap:16px">
-              <div style="text-align:center;min-width:80px">
-                <div style="font-size:36px;font-weight:700" id="host-score-grade">—</div>
-                <div style="font-size:11px;color:var(--text-muted)">Host Skoru</div>
-              </div>
-              <div style="flex:1">
-                <div style="background:rgba(255,255,255,.07);border-radius:6px;height:8px;overflow:hidden">
-                  <div id="host-score-bar" style="height:100%;border-radius:6px;background:var(--accent);width:0%;transition:width .5s"></div>
-                </div>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:4px" id="host-score-val">—</div>
-              </div>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>VM</th><th>Skor</th><th>Not</th><th>Sorunlar</th><th>Detay</th></tr></thead>
-                <tbody id="vm-security-scores-tbody"><tr><td colspan="5" class="text-center text-muted" style="padding:10px">Tara düğmesine basın</td></tr></tbody>
-              </table>
-            </div>
-          </div>
         </div>
 
         <!-- ─────── tab-cve ─────── -->
@@ -8892,7 +8867,7 @@ async function loadTabData(tabId) {
     case 'tab-proxy':        loadNginxSites(); break;
     case 'tab-monitoring':   loadPerfHistory('1h'); loadSmartData(); loadUptimes(); loadIdsStatus(); loadTrendAnalysis(); loadHAStatus(); loadAlertRules(); loadCostEstimate(); loadAlertHistory(); loadNetworkQos(); loadStorageMigrations(); break;
     case 'tab-ai':           loadAiRecommendations(); loadAnomalies(); loadAIAgents(); break;
-    case 'tab-security':     load2faStatus(); loadAuditLog(); loadApiKeys(); loadLdapConfig(); checkLicenseStatus(); loadAutoSnapConfig(); loadSessions(); loadSecurityLockouts(); loadIpAllowlist(); loadVault(); loadSecurityScores(); break;
+    case 'tab-security':     load2faStatus(); loadAuditLog(); loadApiKeys(); loadLdapConfig(); checkLicenseStatus(); loadAutoSnapConfig(); loadSessions(); loadSecurityLockouts(); loadIpAllowlist(); loadVault(); break;
     case 'tab-settings':     loadSdnStatus(); loadSslStatus(); loadScalerPolicies(); loadQuotas(); loadVmSchedules(); loadResourcePools(); _initSmigVmSel(); break;
     case 'tab-cve':          cveInit(); break;
     case 'tab-integrations': loadWebhooks(); loadS3Config(); loadEmailConfig(); loadVlans(); loadHooks(); break;
@@ -11162,95 +11137,6 @@ async function loadAlertHistory() {
   el.innerHTML = '<span style="color:var(--text-muted);font-size:11px">Henüz tetiklenen uyarı yok.</span>';
 }
 
-/* ── 8. Security Score ──────────────────────────────────────────── */
-async function loadSecurityScores() {
-  const hostGrade = document.getElementById('host-score-grade');
-  const hostBar = document.getElementById('host-score-bar');
-  const hostVal = document.getElementById('host-score-val');
-  const tbody = document.getElementById('vm-security-scores-tbody');
-
-  if (hostGrade) hostGrade.textContent = '⏳';
-
-  try {
-    // Use existing security audit for host score
-    const d = await _api('/api/security/audit');
-    const score = d.summary?.score ?? 0;
-    const grade = score >= 90 ? 'A' : score >= 75 ? 'B' : score >= 60 ? 'C' : score >= 40 ? 'D' : 'F';
-    const gradeColor = score >= 75 ? '#22c55e' : score >= 50 ? '#eab308' : '#ef4444';
-    if (hostGrade) { hostGrade.textContent = grade; hostGrade.style.color = gradeColor; }
-    if (hostBar) { hostBar.style.width = score + '%'; hostBar.style.background = gradeColor; }
-    if (hostVal) hostVal.textContent = `${score}/100 puan · ${d.summary?.fail || 0} başarısız, ${d.summary?.warn || 0} uyarı`;
-  } catch(e) {
-    if (hostGrade) hostGrade.textContent = '?';
-  }
-
-  // VM scores — try backend endpoint or generate from cache
-  if (!tbody) return;
-  try {
-    const d = await _api('/api/security/vm-scores');
-    if (d && d.vm_scores) {
-      _renderVmSecurityScores(d.vm_scores);
-      return;
-    }
-  } catch {}
-
-  // Fallback: generate synthetic scores from VM states
-  if (!_gsCacheVMs.length) {
-    try { const dd = await api('/vms'); _gsCacheVMs = dd.vms || []; } catch {}
-  }
-  const synthetic = _gsCacheVMs.map(v => ({
-    vm_id: v.id,
-    vm_name: v.name,
-    score: 70 + Math.floor(Math.random() * 20),
-    issues: Math.floor(Math.random() * 5),
-    details: ['Güncel olmayan paketler olabilir','SSH key doğrulaması önerilir','Güvenlik duvarı kurallarını kontrol edin']
-  }));
-  _renderVmSecurityScores(synthetic);
-}
-
-function _renderVmSecurityScores(vmScores) {
-  const tbody = document.getElementById('vm-security-scores-tbody');
-  if (!tbody) return;
-  tbody.innerHTML = vmScores.map(v => {
-    const s = v.score || 0;
-    const grade = s >= 90 ? 'A' : s >= 75 ? 'B' : s >= 60 ? 'C' : s >= 40 ? 'D' : 'F';
-    const col = s >= 75 ? '#22c55e' : s >= 50 ? '#eab308' : '#ef4444';
-    return `<tr>
-      <td>${escHtml(v.vm_name)}</td>
-      <td>
-        <div style="display:flex;align-items:center;gap:6px">
-          <div style="background:rgba(255,255,255,.07);border-radius:3px;height:6px;width:80px;overflow:hidden">
-            <div style="height:100%;border-radius:3px;background:${col};width:${s}%"></div>
-          </div>
-          <span style="font-size:11px;color:var(--text-muted)">${s}</span>
-        </div>
-      </td>
-      <td><span style="font-weight:700;color:${col}">${grade}</span></td>
-      <td><span style="font-size:12px;color:${(v.issues||0)>0?'#f97316':'#22c55e'}">${v.issues||0}</span></td>
-      <td><button class="btn sm sec-detail-btn" data-vmid="${escHtml(v.vm_id)}" data-vmname="${escHtml(v.vm_name)}" data-details="${encodeURIComponent(JSON.stringify(v.details||[]))}" style="font-size:10px" onclick="openSecurityDetailFromBtn(this)">Detay</button></td>
-    </tr>`;
-  }).join('') || '<tr><td colspan="5" class="text-center text-muted">Veri yok</td></tr>';
-}
-
-function openSecurityDetailFromBtn(btn) {
-  const vm_id = btn.dataset.vmid;
-  const vm_name = btn.dataset.vmname;
-  let details = [];
-  try { details = JSON.parse(decodeURIComponent(btn.dataset.details || '[]')); } catch(e) {}
-  openSecurityDetail(vm_id, vm_name, details);
-}
-
-function openSecurityDetail(vm_id, vm_name, details) {
-  document.getElementById('sec-detail-vmname').textContent = vm_name;
-  const issuesList = document.getElementById('sec-detail-issues');
-  if (issuesList) {
-    const items = Array.isArray(details) ? details : [];
-    issuesList.innerHTML = items.length
-      ? items.map(i => `<div style="padding:8px 12px;background:var(--surface2);border-radius:6px;font-size:13px"><span style="color:#f97316;margin-right:8px">⚠</span>${escHtml(i)}</div>`).join('')
-      : '<div style="color:var(--text-muted);font-size:13px">Sorun tespit edilmedi.</div>';
-  }
-  document.getElementById('modal-security-detail').style.display = 'flex';
-}
 
 /* ── 9. AI VM Create ────────────────────────────────────────────── */
 let _aiVmSuggestion = null;
