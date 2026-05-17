@@ -5160,6 +5160,9 @@ function buildContextNav(type) {
     <div class="ctx-item" data-page="tab-settings" onclick="navigate('tab-settings');closeMobileNav()">
       <i class="fa-solid fa-gear fa-fw"></i>${t('settings')}
     </div>
+    <a href="/api/swagger" target="_blank" class="ctx-item" style="text-decoration:none;color:inherit" title="Interaktif API Dökümantasyonu">
+      <i class="fa-solid fa-code fa-fw"></i>API Docs
+    </a>
   </div>` : ''}
 
   ${isOperator && !isAdmin ? `
@@ -10199,7 +10202,15 @@ async function openPciModal(vmId, vmName) {
   _pciVmId = vmId;
   document.getElementById('pci-vmname').textContent = vmName;
   document.getElementById('modal-pci').style.display = 'flex';
-  await loadPciDevices();
+  _pciUsbTab('pci');
+}
+function _pciUsbTab(tab) {
+  document.getElementById('pci-tab-pci').classList.toggle('active', tab === 'pci');
+  document.getElementById('pci-tab-usb').classList.toggle('active', tab === 'usb');
+  document.getElementById('pci-pane-pci').style.display = tab === 'pci' ? '' : 'none';
+  document.getElementById('pci-pane-usb').style.display = tab === 'usb' ? '' : 'none';
+  if (tab === 'pci') loadPciDevices();
+  else loadUsbDevices();
 }
 async function loadPciDevices() {
   const el = document.getElementById('pci-device-list');
@@ -10207,20 +10218,34 @@ async function loadPciDevices() {
   try {
     const d = await _api('/api/host/pci-devices');
     _pciDevices = d.devices || [];
-    if (_pciDevices.length === 0) {
-      el.innerHTML = '<div style="color:var(--fg2)">PCI cihaz bulunamadı.</div>';
-      return;
-    }
-    el.innerHTML = _pciDevices.map((dev, i) =>
-      `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid var(--border);font-size:13px">
-        <div>
-          <b>${escHtml(dev.description)}</b><br>
-          <span style="color:var(--fg2);font-size:11px">${escHtml(dev.id)} — bus:${dev.bus} slot:${dev.slot} func:${dev.func}</span>
+    if (!_pciDevices.length) { el.innerHTML = '<div style="color:var(--fg2)">PCI cihaz bulunamadı.</div>'; return; }
+    el.innerHTML = _pciDevices.map(dev =>
+      `<div class="feat-row">
+        <div style="flex:1">
+          <b style="font-size:12px">${escHtml(dev.description)}</b><br>
+          <span style="color:var(--text-muted);font-size:10px">${escHtml(dev.id)} — bus:${dev.bus} slot:${dev.slot} fn:${dev.func}</span>
         </div>
-        <div style="display:flex;gap:6px">
-          <button class="btn sm success" onclick="attachPci('${escHtml(dev.id)}')">+ Ekle</button>
-          <button class="btn sm danger" onclick="detachPci('${escHtml(dev.id)}')">− Kaldır</button>
+        <button class="btn sm" style="color:#22c55e" onclick="attachPci('${escHtml(dev.id)}')">+ Ekle</button>
+        <button class="btn sm" style="color:#ef4444" onclick="detachPci('${escHtml(dev.id)}')">− Kaldır</button>
+      </div>`
+    ).join('');
+  } catch(e) { el.innerHTML = `<div style="color:#f43f5e">${escHtml(e.message||String(e))}</div>`; }
+}
+async function loadUsbDevices() {
+  const el = document.getElementById('usb-device-list');
+  el.innerHTML = '<div style="color:var(--fg2);font-size:13px">Yükleniyor...</div>';
+  try {
+    const d = await _api('/api/host/usb-devices');
+    const devs = d.devices || [];
+    if (!devs.length) { el.innerHTML = '<div style="color:var(--fg2)">USB cihaz bulunamadı.</div>'; return; }
+    el.innerHTML = devs.map(dev =>
+      `<div class="feat-row">
+        <div style="flex:1">
+          <b style="font-size:12px">${escHtml(dev.description)}</b><br>
+          <span style="color:var(--text-muted);font-size:10px">${escHtml(dev.id)} — bus:${dev.bus} dev:${dev.device}</span>
         </div>
+        <button class="btn sm" style="color:#22c55e" onclick="attachUsb('${escHtml(dev.id)}')">+ Ekle</button>
+        <button class="btn sm" style="color:#ef4444" onclick="detachUsb('${escHtml(dev.id)}')">− Kaldır</button>
       </div>`
     ).join('');
   } catch(e) { el.innerHTML = `<div style="color:#f43f5e">${escHtml(e.message||String(e))}</div>`; }
@@ -10236,6 +10261,18 @@ async function detachPci(deviceId) {
     await _api(`/api/vms/${_pciVmId}/pci/${encodeURIComponent(deviceId)}`, 'DELETE');
     toast('PCI cihaz kaldırıldı', 'success');
   } catch(e) { toast('Kaldırılamadı: ' + e.message, 'error'); }
+}
+async function attachUsb(deviceId) {
+  try {
+    await _api(`/api/vms/${_pciVmId}/usb/attach`, 'POST', { device_id: deviceId });
+    toast('USB cihaz eklendi', 'success');
+  } catch(e) { toast('USB eklenemedi: ' + e.message, 'error'); }
+}
+async function detachUsb(deviceId) {
+  try {
+    await _api(`/api/vms/${_pciVmId}/usb/${encodeURIComponent(deviceId)}`, 'DELETE');
+    toast('USB cihaz kaldırıldı', 'success');
+  } catch(e) { toast('USB kaldırılamadı: ' + e.message, 'error'); }
 }
 
 // ── VM Firewall ─────────────────────────────────────────────────────────────
@@ -11523,11 +11560,19 @@ function cveCopyCard(btn, id, severity, score, product, desc, refs) {
 
 <!-- PCI Passthrough Modal -->
 <div id="modal-pci" class="modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
-  <div class="modal" style="max-width:620px">
-    <h3>🔌 PCI/USB Passthrough — <span id="pci-vmname"></span></h3>
-    <p style="color:var(--fg2);font-size:13px">Host PCI cihazını doğrudan VM'e aktar. VM kapalıyken daha güvenlidir.</p>
-    <div style="margin:8px 0"><button class="btn sm" onclick="loadPciDevices()">↻ Cihazları Yenile</button></div>
-    <div id="pci-device-list" style="max-height:300px;overflow-y:auto;margin:8px 0"></div>
+  <div class="modal" style="max-width:660px">
+    <h3>🔌 PCI / USB Passthrough — <span id="pci-vmname"></span></h3>
+    <p style="color:var(--fg2);font-size:12px;margin-bottom:12px">Host cihazını doğrudan VM'e aktar. VM kapalıyken daha güvenlidir.</p>
+    <div class="sub-tabs" style="margin-bottom:12px">
+      <div class="sub-tab active" id="pci-tab-pci" onclick="_pciUsbTab('pci')">🖥️ PCI</div>
+      <div class="sub-tab" id="pci-tab-usb" onclick="_pciUsbTab('usb')">🔌 USB</div>
+    </div>
+    <div id="pci-pane-pci">
+      <div id="pci-device-list" style="max-height:320px;overflow-y:auto"></div>
+    </div>
+    <div id="pci-pane-usb" style="display:none">
+      <div id="usb-device-list" style="max-height:320px;overflow-y:auto"></div>
+    </div>
     <div style="text-align:right;margin-top:14px"><button class="btn" onclick="document.getElementById('modal-pci').style.display='none'">Kapat</button></div>
   </div>
 </div>

@@ -1467,26 +1467,34 @@ def api_create_vm():
     except (ValueError, TypeError) as e:
         return err(str(e))
     try:
-        # Build cloud-init userdata if app install requested
-        ci_userdata = data.get("ci_userdata", "")
+        # Build cloud-init config
+        ci_obj = data.get("cloud_init") or {}
+        ci_user     = security.sanitize_str(ci_obj.get("user", ""), 64)
+        ci_password = ci_obj.get("password", "")[:128]
+        ci_ssh_key  = ci_obj.get("ssh_key", "")[:4096]
+        ci_hostname = security.sanitize_str(ci_obj.get("hostname", ""), 64)
+        ci_userdata = ci_obj.get("user_data", "") or data.get("ci_userdata", "")
         if app_install:
             app_script = _get_app_install_script(app_install)
             if app_script:
                 ci_userdata = (ci_userdata + "\n" + app_script).strip() if ci_userdata else app_script
 
+        cloud_init = None
+        if any([ci_user, ci_password, ci_ssh_key, ci_hostname, ci_userdata]):
+            cloud_init = {
+                "user":      ci_user or None,
+                "password":  ci_password or None,
+                "ssh_key":   ci_ssh_key or None,
+                "hostname":  ci_hostname or name,
+                "user_data": ci_userdata or None,
+            }
+
         create_kwargs = dict(
             name=name, memory_mb=memory_mb, vcpus=vcpus, disk_gb=disk_gb,
             iso_path=iso_path, network=network, disk_format=disk_format,
             os_variant=os_variant, boot_order=boot_order, disk_bus=disk_bus,
-            cpu_mode=cpu_mode,
+            cpu_mode=cpu_mode, cloud_init=cloud_init,
         )
-        # Pass cloud-init data if vm_manager supports it
-        try:
-            import inspect as _inspect
-            if "ci_userdata" in _inspect.signature(vm_manager.create_vm).parameters:
-                create_kwargs["ci_userdata"] = ci_userdata
-        except Exception:
-            pass
 
         result = vm_manager.create_vm(**create_kwargs)
         vm_id  = result["id"]
@@ -6663,6 +6671,102 @@ def api_vm_pci_detach(vm_id, device_id):
     if r2.returncode != 0:
         return jsonify({"error": r2.stderr.strip()}), 500
     ev.info(f"PCI passthrough kaldırıldı: {vm_id} → {device_id}", category="vm")
+    return jsonify({"ok": True})
+
+# ── USB Passthrough ────────────────────────────────────────────────────────────
+
+@app.route("/api/host/usb-devices", methods=["GET"])
+@require_auth
+def api_host_usb_devices():
+    """Host USB cihazlarını listele."""
+    import re as _re_u
+    r = subprocess.run(["virsh", "nodedev-list", "--cap", "usb_device"], capture_output=True, text=True)
+    devices = []
+    for line in r.stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        info = subprocess.run(["virsh", "nodedev-dumpxml", line], capture_output=True, text=True)
+        vendor = product = ""
+        bus = device = ""
+        for il in info.stdout.splitlines():
+            il = il.strip()
+            if "<vendor " in il:
+                m = _re_u.search(r">([^<]+)<", il)
+                if m: vendor = m.group(1).strip()
+            elif "<product " in il:
+                m = _re_u.search(r">([^<]+)<", il)
+                if m: product = m.group(1).strip()
+            elif "<bus>" in il:
+                m = _re_u.search(r">([^<]+)<", il)
+                if m: bus = m.group(1).strip()
+            elif "<device>" in il:
+                m = _re_u.search(r">([^<]+)<", il)
+                if m: device = m.group(1).strip()
+        desc = f"{vendor} {product}".strip() or line
+        devices.append({"id": line, "description": desc, "bus": bus, "device": device})
+    return jsonify({"devices": devices})
+
+
+@app.route("/api/vms/<vm_id>/usb/attach", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_vm_usb_attach(vm_id):
+    body = request.get_json(silent=True) or {}
+    device_id = body.get("device_id", "")
+    if not device_id:
+        return jsonify({"error": "device_id gerekli"}), 400
+    r = subprocess.run(["virsh", "nodedev-dumpxml", device_id], capture_output=True, text=True)
+    if r.returncode != 0:
+        return jsonify({"error": "Cihaz bulunamadı"}), 404
+    import re as _re_u2
+    bus_m = _re_u2.search(r"<bus>(\d+)</bus>", r.stdout)
+    dev_m = _re_u2.search(r"<device>(\d+)</device>", r.stdout)
+    if not bus_m or not dev_m:
+        return jsonify({"error": "USB adresi parse edilemedi"}), 500
+    hostdev_xml = f"""<hostdev mode='subsystem' type='usb' managed='yes'>
+  <source>
+    <address bus='{bus_m.group(1)}' device='{dev_m.group(1)}'/>
+  </source>
+</hostdev>"""
+    import tempfile as _tmp_u
+    with _tmp_u.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
+        f.write(hostdev_xml)
+        tmp_path = f.name
+    r2 = subprocess.run(["virsh", "attach-device", vm_id, tmp_path, "--live", "--config"], capture_output=True, text=True)
+    os.unlink(tmp_path)
+    if r2.returncode != 0:
+        return jsonify({"error": r2.stderr.strip()}), 500
+    ev.info(f"USB passthrough eklendi: {vm_id} → {device_id}", category="vm")
+    return jsonify({"ok": True})
+
+
+@app.route("/api/vms/<vm_id>/usb/<path:device_id>", methods=["DELETE"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_vm_usb_detach(vm_id, device_id):
+    r = subprocess.run(["virsh", "nodedev-dumpxml", device_id], capture_output=True, text=True)
+    if r.returncode != 0:
+        return jsonify({"error": "Cihaz bulunamadı"}), 404
+    import re as _re_u3
+    bus_m = _re_u3.search(r"<bus>(\d+)</bus>", r.stdout)
+    dev_m = _re_u3.search(r"<device>(\d+)</device>", r.stdout)
+    if not bus_m or not dev_m:
+        return jsonify({"error": "USB adresi parse edilemedi"}), 500
+    hostdev_xml = f"""<hostdev mode='subsystem' type='usb' managed='yes'>
+  <source>
+    <address bus='{bus_m.group(1)}' device='{dev_m.group(1)}'/>
+  </source>
+</hostdev>"""
+    import tempfile as _tmp_u2
+    with _tmp_u2.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
+        f.write(hostdev_xml)
+        tmp_path = f.name
+    r2 = subprocess.run(["virsh", "detach-device", vm_id, tmp_path, "--live", "--config"], capture_output=True, text=True)
+    os.unlink(tmp_path)
+    if r2.returncode != 0:
+        return jsonify({"error": r2.stderr.strip()}), 500
+    ev.info(f"USB passthrough kaldırıldı: {vm_id} → {device_id}", category="vm")
     return jsonify({"ok": True})
 
 # ── SPICE Console ──────────────────────────────────────────────────────────────

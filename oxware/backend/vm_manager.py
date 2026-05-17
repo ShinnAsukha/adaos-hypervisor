@@ -391,10 +391,69 @@ def remove_dhcp_host(network: str, mac: str, ip: str) -> bool:
         return False
 
 
+def _build_cloud_init_iso(vm_name: str, ci: dict) -> str | None:
+    """cloud-init NoCloud ISO oluştur. Yol döndürür veya None."""
+    import shutil as _sh, tempfile as _tf, textwrap as _tw
+    try:
+        ci_dir = _tf.mkdtemp(prefix=f"ci-{vm_name}-")
+        hostname = ci.get("hostname") or vm_name
+
+        # meta-data
+        meta = f"instance-id: {vm_name}\nlocal-hostname: {hostname}\n"
+
+        # user-data YAML
+        lines = ["#cloud-config"]
+        if ci.get("user"):
+            user_block = f"""users:
+  - name: {ci['user']}
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash"""
+            if ci.get("ssh_key"):
+                user_block += f"\n    ssh_authorized_keys:\n      - {ci['ssh_key'].strip()}"
+            if ci.get("password"):
+                user_block += f"\n    lock_passwd: false"
+                lines.append("chpasswd:")
+                lines.append(f"  list: |\n    {ci['user']}:{ci['password']}")
+                lines.append("  expire: false")
+            lines.append(user_block)
+        elif ci.get("ssh_key"):
+            lines.append(f"ssh_authorized_keys:\n  - {ci['ssh_key'].strip()}")
+        if ci.get("user_data"):
+            lines.append(ci["user_data"].strip())
+
+        user_data = "\n".join(lines) + "\n"
+
+        with open(os.path.join(ci_dir, "meta-data"), "w") as f:
+            f.write(meta)
+        with open(os.path.join(ci_dir, "user-data"), "w") as f:
+            f.write(user_data)
+
+        iso_path = os.path.join("/tmp", f"ci-{vm_name}.iso")
+        # try genisoimage, then mkisofs, then cloud-localds
+        for cmd in (
+            ["genisoimage", "-output", iso_path, "-volid", "cidata", "-joliet", "-rock",
+             os.path.join(ci_dir, "user-data"), os.path.join(ci_dir, "meta-data")],
+            ["mkisofs", "-output", iso_path, "-volid", "cidata", "-joliet", "-rock",
+             os.path.join(ci_dir, "user-data"), os.path.join(ci_dir, "meta-data")],
+            ["cloud-localds", iso_path,
+             os.path.join(ci_dir, "user-data"), os.path.join(ci_dir, "meta-data")],
+        ):
+            r = subprocess.run(cmd, capture_output=True)
+            if r.returncode == 0 and os.path.exists(iso_path):
+                _sh.rmtree(ci_dir, ignore_errors=True)
+                return iso_path
+        _sh.rmtree(ci_dir, ignore_errors=True)
+        log.warning("cloud-init ISO oluşturulamadı (genisoimage/mkisofs/cloud-localds bulunamadı)")
+        return None
+    except Exception as e:
+        log.error("_build_cloud_init_iso hatası: %s", e)
+        return None
+
+
 def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
               network="default", disk_format="qcow2", os_variant="generic",
               boot_order="cdrom,hd", mac: str = None, disk_bus: str = "sata",
-              cpu_mode: str = "host-model"):
+              cpu_mode: str = "host-model", cloud_init: dict = None):
 
     vm_uuid  = str(uuid.uuid4())
     vm_mac   = mac or _generate_mac()          # stable MAC for DHCP static entry
@@ -411,6 +470,11 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
     nic_model = "e1000" if is_windows else "virtio"
 
     os.makedirs(config.DISK_DIR, exist_ok=True)
+
+    # Cloud-init ISO (optional)
+    ci_iso_path = None
+    if cloud_init and not is_windows:
+        ci_iso_path = _build_cloud_init_iso(name, cloud_init)
 
     # Disk oluştur
     subprocess.run(
@@ -430,6 +494,16 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
       <driver name='qemu' type='raw'/>
       <source file='{iso_path}'/>
       <target dev='{cdrom_dev}' bus='sata'/>
+      <readonly/>
+    </disk>"""
+
+    ci_block = ""
+    if ci_iso_path and os.path.exists(ci_iso_path):
+        ci_block = f"""
+    <disk type='file' device='cdrom'>
+      <driver name='qemu' type='raw'/>
+      <source file='{ci_iso_path}'/>
+      <target dev='sdc' bus='sata'/>
       <readonly/>
     </disk>"""
 
@@ -486,7 +560,7 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
       <driver name='qemu' type='{disk_format}' cache='none' io='native'/>
       <source file='{disk_path}'/>
       <target dev='{disk_dev}' bus='{disk_bus}'/>
-    </disk>{iso_block}
+    </disk>{iso_block}{ci_block}
     <interface type='network'>
       <mac address='{vm_mac}' />
       <source network='{network}'/>
