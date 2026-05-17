@@ -90,6 +90,12 @@ class State:
         self.confirm_pw  = ""
         self.keyboard_layout  = "tr"
         self.keyboard_variant = ""
+        self.locale           = "tr_TR.UTF-8"
+        self.timezone         = "Europe/Istanbul"
+        self.ssh_enabled      = True
+        self.ssh_port         = 22
+        self.ssh_root         = False
+        self.ssh_passwd_auth  = True
 
 state = State()
 
@@ -1039,10 +1045,15 @@ def do_install(progress_cb):
     grub_default_file.parent.mkdir(parents=True, exist_ok=True)
     grub_default_file.write_text(grub_default_content)
 
-    # Set locale/timezone to avoid apt dpkg errors
-    run_chroot("locale-gen en_US.UTF-8", check=False)
-    run_chroot("update-locale LANG=en_US.UTF-8", check=False)
-    run_chroot("ln -sf /usr/share/zoneinfo/UTC /etc/localtime", check=False)
+    # Set locale/timezone
+    _locale = getattr(state, 'locale',   'tr_TR.UTF-8')
+    _tz     = getattr(state, 'timezone', 'Europe/Istanbul')
+    run_chroot(f"locale-gen {_locale}", check=False)
+    if _locale != 'en_US.UTF-8':
+        run_chroot("locale-gen en_US.UTF-8", check=False)
+    run_chroot(f"update-locale LANG={_locale}", check=False)
+    run_chroot(f"ln -sf /usr/share/zoneinfo/{_tz} /etc/localtime", check=False)
+    run_chroot(f"bash -c \"echo '{_tz}' > /etc/timezone\"", check=False)
 
     # Keyboard layout
     progress_cb(74, "Klavye düzeni yapılandırılıyor...")
@@ -1122,11 +1133,36 @@ server {
         text=True, check=False
     )
 
+    # SSH configuration
+    progress_cb(86, "SSH yapılandırılıyor...")
+    _ssh_en     = getattr(state, 'ssh_enabled',    True)
+    _ssh_port   = getattr(state, 'ssh_port',       22)
+    _ssh_root   = getattr(state, 'ssh_root',       False)
+    _ssh_passwd = getattr(state, 'ssh_passwd_auth', True)
+    sshd_extra = (
+        "\n# OXware installer configuration\n"
+        f"Port {_ssh_port}\n"
+        f"PermitRootLogin {'yes' if _ssh_root else 'prohibit-password'}\n"
+        f"PasswordAuthentication {'yes' if _ssh_passwd else 'no'}\n"
+        "PubkeyAuthentication yes\n"
+        "ChallengeResponseAuthentication no\n"
+        "PrintMotd no\n"
+    )
+    sshd_cfg_path = Path(f"{TARGET_MOUNT}/etc/ssh/sshd_config")
+    if sshd_cfg_path.exists():
+        sshd_cfg_path.write_text(sshd_cfg_path.read_text() + sshd_extra)
+    else:
+        sshd_cfg_path.parent.mkdir(parents=True, exist_ok=True)
+        sshd_cfg_path.write_text(sshd_extra)
+
     progress_cb(87, "Enabling services …")
     run_chroot("systemctl enable libvirtd",   check=False)
     run_chroot("systemctl enable nginx",      check=False)
     run_chroot("systemctl enable oxware",     check=False)
-    run_chroot("systemctl enable ssh",        check=False)
+    if _ssh_en:
+        run_chroot("systemctl enable ssh",    check=False)
+    else:
+        run_chroot("systemctl disable ssh",   check=False)
     run_chroot("systemctl enable netplan-wpa-supplicant", check=False)
     run_chroot(
         "cd /etc/nginx/sites-enabled && "
@@ -1470,6 +1506,12 @@ def _headless_main(config_file: str):
     state.dns      = cfg.get('net_dns', '8.8.8.8')
     state.keyboard_layout  = cfg.get('keyboard_layout',  'tr')
     state.keyboard_variant = cfg.get('keyboard_variant', '')
+    state.locale           = cfg.get('locale',        'tr_TR.UTF-8')
+    state.timezone         = cfg.get('timezone',       'Europe/Istanbul')
+    state.ssh_enabled      = cfg.get('ssh_enabled',   True)
+    state.ssh_port         = int(cfg.get('ssh_port',  22))
+    state.ssh_root         = cfg.get('ssh_root',      False)
+    state.ssh_passwd_auth  = cfg.get('ssh_passwd_auth', True)
 
     def progress_cb(pct, msg):
         print(_json.dumps({'pct': pct, 'msg': msg}), flush=True)

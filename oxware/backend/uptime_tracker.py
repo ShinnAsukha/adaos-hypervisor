@@ -192,6 +192,16 @@ def get_all_uptimes():
     return [get_uptime(vm_id) for vm_id in data]
 
 
+def delete_uptime(vm_id):
+    """Remove uptime record for a deleted VM."""
+    with _lock:
+        data = _load()
+        if vm_id in data:
+            del data[vm_id]
+            _save(data)
+            log.info("Uptime record deleted: %s", vm_id)
+
+
 # ---------------------------------------------------------------------------
 # virsh synchronisation
 # ---------------------------------------------------------------------------

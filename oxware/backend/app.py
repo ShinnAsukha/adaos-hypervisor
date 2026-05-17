@@ -1525,6 +1525,11 @@ def api_delete_vm(vm_id):
         if mac:
             ip_pool_mgr.release_ip(mac)  # __internal__ entries stored with mac as vm_id
         ev.vm_event(f"VM silindi: {vm.get('name')}", vm_id, level="WARNING")
+        if uptime_tracker:
+            try:
+                uptime_tracker.delete_uptime(vm_id)
+            except Exception:
+                pass
         return ok(**result)
     except Exception as e:
         return err(e, 500)
@@ -4684,7 +4689,23 @@ def api_s3_stats():
 @require_auth
 def api_uptime_all():
     if not uptime_tracker: return ok({"uptimes": []})
-    return ok({"uptimes": uptime_tracker.get_all_uptimes()})
+    all_uptimes = uptime_tracker.get_all_uptimes()
+    # Filter: only return VMs that currently exist in libvirt
+    try:
+        existing  = vm_manager.list_vms() if vm_manager else []
+        ex_ids    = {v.get("id",   "") for v in existing}
+        ex_names  = {v.get("name", "") for v in existing}
+        all_uptimes = [
+            u for u in all_uptimes
+            if u and (
+                u.get("vm_id") in ex_ids   or
+                u.get("vm_id") in ex_names or
+                u.get("name",  "") in ex_names
+            )
+        ]
+    except Exception as _ue:
+        log.warning("uptime filter error: %s", _ue)
+    return ok({"uptimes": all_uptimes})
 
 @app.route("/api/uptime/<vm_id>", methods=["GET"])
 @require_auth

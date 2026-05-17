@@ -47,13 +47,16 @@ Devam etmek sözleşmeyi kabul etmek anlamına gelir.
 """
 
 STEPS = [
-    ("1", "Lisans"),
-    ("2", "Disk"),
-    ("3", "Ağ"),
-    ("4", "Yönetici"),
-    ("5", "Klavye"),
-    ("6", "Özet"),
-    ("7", "Kurulum"),
+    ("1",  "Lisans"),
+    ("2",  "Disk"),
+    ("3",  "Ağ"),
+    ("4",  "Yönetici"),
+    ("5",  "Klavye"),
+    ("6",  "Dil"),
+    ("7",  "Saat"),
+    ("8",  "SSH"),
+    ("9",  "Özet"),
+    ("10", "Kurulum"),
 ]
 
 FS_TYPES = ["ext4", "xfs", "btrfs"]
@@ -75,6 +78,52 @@ KEYBOARD_LAYOUTS = [
     ("ar",  "العربية",      "ar", ""),
 ]
 _kb_sel = 0
+
+# (locale_id, display_name)
+LOCALE_LIST = [
+    ("tr_TR.UTF-8", "Türkçe (Türkiye)"),
+    ("en_US.UTF-8", "English (United States)"),
+    ("en_GB.UTF-8", "English (United Kingdom)"),
+    ("de_DE.UTF-8", "Deutsch (Deutschland)"),
+    ("fr_FR.UTF-8", "Français (France)"),
+    ("es_ES.UTF-8", "Español (España)"),
+    ("it_IT.UTF-8", "Italiano (Italia)"),
+    ("ru_RU.UTF-8", "Русский (Россия)"),
+    ("pt_BR.UTF-8", "Português (Brasil)"),
+    ("pl_PL.UTF-8", "Polski (Polska)"),
+    ("nl_NL.UTF-8", "Nederlands (Nederland)"),
+    ("ar_SA.UTF-8", "العربية (السعودية)"),
+    ("zh_CN.UTF-8", "中文 (中国)"),
+    ("ja_JP.UTF-8", "日本語 (日本)"),
+]
+_locale_sel = 0
+
+TIMEZONE_LIST = [
+    "Africa/Cairo", "Africa/Johannesburg", "Africa/Lagos",
+    "America/Anchorage", "America/Argentina/Buenos_Aires",
+    "America/Chicago", "America/Denver", "America/Los_Angeles",
+    "America/Mexico_City", "America/New_York", "America/Sao_Paulo",
+    "America/Toronto", "America/Vancouver",
+    "Asia/Baghdad", "Asia/Bangkok", "Asia/Dubai",
+    "Asia/Hong_Kong", "Asia/Jakarta", "Asia/Karachi", "Asia/Kolkata",
+    "Asia/Kuala_Lumpur", "Asia/Manila", "Asia/Riyadh", "Asia/Seoul",
+    "Asia/Shanghai", "Asia/Singapore", "Asia/Tehran", "Asia/Tokyo",
+    "Australia/Adelaide", "Australia/Melbourne",
+    "Australia/Perth", "Australia/Sydney",
+    "Europe/Amsterdam", "Europe/Athens", "Europe/Belgrade",
+    "Europe/Berlin", "Europe/Brussels", "Europe/Budapest",
+    "Europe/Copenhagen", "Europe/Dublin", "Europe/Helsinki",
+    "Europe/Istanbul", "Europe/Kiev", "Europe/Lisbon",
+    "Europe/London", "Europe/Madrid", "Europe/Moscow",
+    "Europe/Oslo", "Europe/Paris", "Europe/Prague",
+    "Europe/Rome", "Europe/Sofia", "Europe/Stockholm",
+    "Europe/Warsaw", "Europe/Zurich",
+    "Pacific/Auckland", "Pacific/Honolulu",
+    "UTC",
+]
+_tz_filter = ""
+_tz_sel    = 0
+_ssh_field = 0
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  COLOR PAIRS
@@ -144,6 +193,14 @@ class State:
     password   = ""
     password2  = ""
     keyboard   = "tr"   # keyboard layout id
+    # locale & timezone
+    locale    = "tr_TR.UTF-8"
+    timezone  = "Europe/Istanbul"
+    # SSH
+    ssh_enabled    = True
+    ssh_port       = 22
+    ssh_root       = False
+    ssh_passwd_auth = True
     # runtime
     disks      = []
     ifaces     = []
@@ -270,20 +327,51 @@ def draw_header(scr):
     # Separator row 1
     hline(scr, 1, curses.color_pair(C_BORDER))
 
-    # Step tabs row 2
-    tab_x = 1
+    # Step tabs row 2 — sliding window (handles many steps on narrow terminals)
+    _h2, _w2 = scr.getmaxyx()
+    all_tabs  = []
     for i, (num, name) in enumerate(STEPS):
         if i < st.step:
-            label = f" ✓{num}.{name} "
-            attr  = curses.color_pair(C_STEP_DON) | curses.A_BOLD
+            all_tabs.append((f" ✓{num}.{name} ", curses.color_pair(C_STEP_DON) | curses.A_BOLD))
         elif i == st.step:
-            label = f" ►{num}.{name} "
-            attr  = curses.color_pair(C_STEP_ACT) | curses.A_BOLD
+            all_tabs.append((f" ►{num}.{name} ", curses.color_pair(C_STEP_ACT) | curses.A_BOLD))
         else:
-            label = f"  {num}.{name} "
-            attr  = curses.color_pair(C_STEP_IDL) | curses.A_DIM
+            all_tabs.append((f"  {num}.{name} ", curses.color_pair(C_STEP_IDL) | curses.A_DIM))
+
+    total_w = sum(len(t[0]) + 1 for t in all_tabs)
+    avail_w = max(10, _w2 - 2)
+    tab_x   = 1
+
+    if total_w <= avail_w:
+        vis = list(range(len(all_tabs)))
+    else:
+        vis  = [st.step]
+        used = len(all_tabs[st.step][0]) + 1
+        left, right = st.step - 1, st.step + 1
+        while left >= 0 or right < len(all_tabs):
+            if left >= 0:
+                need = len(all_tabs[left][0]) + 1
+                if used + need + 3 <= avail_w:
+                    vis.append(left); used += need; left -= 1
+                else:
+                    left = -1
+            if right < len(all_tabs):
+                need = len(all_tabs[right][0]) + 1
+                if used + need + 3 <= avail_w:
+                    vis.append(right); used += need; right += 1
+                else:
+                    right = len(all_tabs)
+        vis = sorted(vis)
+
+    if vis and vis[0] > 0:
+        safeadd(scr, 2, tab_x, "‹ ", curses.color_pair(C_STEP_IDL) | curses.A_DIM)
+        tab_x += 2
+    for i in vis:
+        label, attr = all_tabs[i]
         safeadd(scr, 2, tab_x, label, attr)
         tab_x += len(label) + 1
+    if vis and vis[-1] < len(all_tabs) - 1:
+        safeadd(scr, 2, tab_x, " ›", curses.color_pair(C_STEP_IDL) | curses.A_DIM)
 
     hline(scr, 3, curses.color_pair(C_BORDER))
 
@@ -806,9 +894,250 @@ def handle_step4(scr, ch):
     return True
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  STEP 5 — ÖZET
+#  STEP 5 — DİL (LOCALE)
 # ─────────────────────────────────────────────────────────────────────────────
 def draw_step5(scr):
+    global _locale_sel
+    draw_header(scr)
+    ty, lx, by, rx, cth, ctw = content_area(scr)
+
+    safeadd(scr, ty + 1, lx, "Sistem Dili",
+            curses.color_pair(C_TITLE) | curses.A_BOLD)
+    safeadd(scr, ty + 2, lx,
+            "Kurulacak sistemin dil ve yerel ayarını seçin.",
+            curses.color_pair(C_DIM))
+    safeadd(scr, ty + 3, lx,
+            f"  {'#':<4} {'DİL':<32} YEREL",
+            curses.color_pair(C_LABEL) | curses.A_BOLD | curses.A_UNDERLINE)
+
+    list_top = ty + 4
+    list_bot = by - 2
+    n_vis    = max(1, list_bot - list_top)
+    start    = max(0, _locale_sel - n_vis // 2)
+    start    = min(start, max(0, len(LOCALE_LIST) - n_vis))
+
+    for i, (lid, lname) in enumerate(LOCALE_LIST[start:start + n_vis]):
+        abs_i  = start + i
+        row    = list_top + i
+        marker = "▶" if abs_i == _locale_sel else " "
+        line   = f"{marker} {abs_i+1:<3} {lname:<32}{lid}"
+        if abs_i == _locale_sel:
+            fill_row(scr, row, curses.color_pair(C_SEL))
+            safeadd(scr, row, lx, line, curses.color_pair(C_SEL) | curses.A_BOLD)
+        else:
+            attr = curses.color_pair(C_OK) if lid == st.locale else curses.color_pair(C_TITLE)
+            safeadd(scr, row, lx, line, attr)
+
+    draw_footer(scr, "[↑/↓] Seç   [Enter/→] Onayla   [←] Geri")
+
+
+def handle_step5(scr, ch):
+    global _locale_sel
+    n = len(LOCALE_LIST)
+    if ch == curses.KEY_UP:
+        _locale_sel = max(0, _locale_sel - 1)
+    elif ch == curses.KEY_DOWN:
+        _locale_sel = min(n - 1, _locale_sel + 1)
+    elif ch in (curses.KEY_RIGHT, ord('\n'), ord('\r')):
+        st.locale = LOCALE_LIST[_locale_sel][0]
+        st.step = 6
+    elif ch == curses.KEY_LEFT:
+        st.step = 4
+    elif ch == curses.KEY_F10:
+        return False
+    return True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  STEP 6 — SAAT DİLİMİ (TIMEZONE)
+# ─────────────────────────────────────────────────────────────────────────────
+def _tz_filtered():
+    if not _tz_filter:
+        return TIMEZONE_LIST
+    fl = _tz_filter.lower()
+    return [tz for tz in TIMEZONE_LIST if fl in tz.lower()]
+
+
+def draw_step6(scr):
+    global _tz_filter, _tz_sel
+    draw_header(scr)
+    ty, lx, by, rx, cth, ctw = content_area(scr)
+
+    safeadd(scr, ty + 1, lx, "Zaman Dilimi",
+            curses.color_pair(C_TITLE) | curses.A_BOLD)
+    safeadd(scr, ty + 2, lx,
+            "Aramak için yazın. Ok tuşları ile seçin.",
+            curses.color_pair(C_DIM))
+
+    filter_label = "Ara: "
+    safeadd(scr, ty + 3, lx, filter_label, curses.color_pair(C_LABEL))
+    filter_display = (_tz_filter + " " * 30)[:30]
+    safeadd(scr, ty + 3, lx + len(filter_label), filter_display,
+            curses.color_pair(C_FIELD_ON) | curses.A_BOLD)
+
+    filtered = _tz_filtered()
+    if filtered and _tz_sel >= len(filtered):
+        _tz_sel = max(0, len(filtered) - 1)
+
+    safeadd(scr, ty + 4, lx,
+            f"  {'#':<4} ZAMAN DİLİMİ  ({len(filtered)} sonuç)",
+            curses.color_pair(C_LABEL) | curses.A_BOLD | curses.A_UNDERLINE)
+
+    list_top = ty + 5
+    list_bot = by - 2
+    n_vis    = max(1, list_bot - list_top)
+    start    = max(0, _tz_sel - n_vis // 2)
+    start    = min(start, max(0, len(filtered) - n_vis))
+
+    for i, tz in enumerate(filtered[start:start + n_vis]):
+        abs_i  = start + i
+        row    = list_top + i
+        marker = "▶" if abs_i == _tz_sel else " "
+        line   = f"{marker} {abs_i+1:<3} {tz}"
+        if abs_i == _tz_sel:
+            fill_row(scr, row, curses.color_pair(C_SEL))
+            safeadd(scr, row, lx, line, curses.color_pair(C_SEL) | curses.A_BOLD)
+        else:
+            attr = curses.color_pair(C_OK) if tz == st.timezone else curses.color_pair(C_TITLE)
+            safeadd(scr, row, lx, line, attr)
+
+    if filtered and _tz_sel < len(filtered):
+        safeadd(scr, by - 1, lx,
+                f"Seçili: {filtered[_tz_sel]}",
+                curses.color_pair(C_OK) | curses.A_BOLD)
+
+    draw_footer(scr, "[Yaz] Filtrele   [↑/↓] Seç   [→/Enter] Onayla   [Esc] Temizle   [←] Geri")
+
+
+def handle_step6(scr, ch):
+    global _tz_filter, _tz_sel
+    filtered = _tz_filtered()
+
+    if ch == curses.KEY_UP:
+        _tz_sel = max(0, _tz_sel - 1)
+    elif ch == curses.KEY_DOWN:
+        _tz_sel = min(max(0, len(filtered) - 1), _tz_sel + 1)
+    elif ch == 27:
+        _tz_filter = ""
+        _tz_sel    = 0
+    elif ch in (curses.KEY_BACKSPACE, 127, 8):
+        _tz_filter = _tz_filter[:-1]
+        _tz_sel    = 0
+    elif ch in (curses.KEY_RIGHT, ord('\n'), ord('\r')):
+        if filtered and _tz_sel < len(filtered):
+            st.timezone = filtered[_tz_sel]
+        st.step = 7
+    elif ch == curses.KEY_LEFT:
+        st.step = 5
+    elif ch == curses.KEY_F10:
+        return False
+    elif 32 <= ch <= 126:
+        _tz_filter += chr(ch)
+        _tz_sel = 0
+        new_filtered = _tz_filtered()
+        for idx, tz in enumerate(new_filtered):
+            if tz == st.timezone:
+                _tz_sel = idx
+                break
+    return True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  STEP 7 — SSH YAPILANDIRMASI
+# ─────────────────────────────────────────────────────────────────────────────
+_SSH_ITEMS = [
+    ("SSH Sunucusu   ", "toggle", "ssh_enabled",    "OpenSSH sunucusu kurulum sonrası etkin olsun mu?"),
+    ("SSH Port       ", "int",    "ssh_port",        "Varsayılan: 22  (önerilir: 22 veya 2222-65535)"),
+    ("Root Girişi    ", "toggle", "ssh_root",        "SSH ile doğrudan root girişine izin ver"),
+    ("Şifre Girişi   ", "toggle", "ssh_passwd_auth", "Şifre ile kimlik doğrulamaya izin ver (önerilir: Etkin)"),
+]
+
+
+def draw_step7(scr):
+    global _ssh_field
+    draw_header(scr)
+    ty, lx, by, rx, cth, ctw = content_area(scr)
+
+    safeadd(scr, ty + 1, lx, "SSH Yapılandırması",
+            curses.color_pair(C_TITLE) | curses.A_BOLD)
+    safeadd(scr, ty + 2, lx,
+            "Güvenli kabuk erişim ayarları. Ok tuşları ile gezin.",
+            curses.color_pair(C_DIM))
+
+    field_y = ty + 4
+    for i, (label, ftype, attr, hint) in enumerate(_SSH_ITEMS):
+        fy     = field_y + i * 3
+        active = (i == _ssh_field)
+        safeadd(scr, fy, lx, label, curses.color_pair(C_LABEL))
+
+        val = getattr(st, attr)
+        if ftype == "toggle":
+            icon  = "[✓] Etkin" if val else "[ ] Devre Dışı"
+            color = C_OK if val else C_STEP_IDL
+            fattr = (curses.color_pair(C_SEL) | curses.A_BOLD) if active else curses.color_pair(color)
+            safeadd(scr, fy, lx + 16, icon, fattr)
+            if active:
+                safeadd(scr, fy, lx + 30, "← Space/Enter: değiştir", curses.color_pair(C_DIM))
+        elif ftype == "int":
+            disp  = str(val)
+            field = (disp + " " * 10)[:10]
+            fattr = (curses.color_pair(C_FIELD_ON) | curses.A_BOLD) if active else curses.color_pair(C_FIELD)
+            safeadd(scr, fy, lx + 16, field, fattr)
+            if active:
+                safeadd(scr, fy, lx + 28, "← Enter: düzenle", curses.color_pair(C_DIM))
+
+        if active:
+            safeadd(scr, fy + 1, lx + 2, hint, curses.color_pair(C_DIM))
+
+    if st.err_msg:
+        safeadd(scr, by - 1, lx, f"✗  {st.err_msg}",
+                curses.color_pair(C_ERR) | curses.A_BOLD)
+
+    draw_footer(scr, "[↑/↓] Alan   [Space/Enter] Değiştir/Düzenle   [←] Geri   [→] İleri")
+
+
+def handle_step7(scr, ch):
+    global _ssh_field
+    n = len(_SSH_ITEMS)
+    if ch == curses.KEY_UP:
+        _ssh_field = max(0, _ssh_field - 1)
+        st.err_msg = ""
+    elif ch == curses.KEY_DOWN:
+        _ssh_field = min(n - 1, _ssh_field + 1)
+        st.err_msg = ""
+    elif ch in (ord(' '), ord('\n'), ord('\r')):
+        label, ftype, attr, hint = _SSH_ITEMS[_ssh_field]
+        if ftype == "toggle":
+            setattr(st, attr, not getattr(st, attr))
+            st.err_msg = ""
+        elif ftype == "int":
+            _ty, _lx = content_area(scr)[:2]
+            fy = _ty + 4 + _ssh_field * 3
+            val, ok = read_field(scr, fy, _lx + 16, 10, str(getattr(st, attr)))
+            if ok:
+                try:
+                    p = int(val)
+                    if not (1 <= p <= 65535):
+                        raise ValueError
+                    setattr(st, attr, p)
+                    st.err_msg = ""
+                except ValueError:
+                    st.err_msg = "Port 1-65535 arasında olmalı"
+    elif ch == curses.KEY_RIGHT:
+        st.err_msg = ""
+        st.step = 8
+    elif ch == curses.KEY_LEFT:
+        st.err_msg = ""
+        st.step = 6
+    elif ch == curses.KEY_F10:
+        return False
+    return True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  STEP 9 — ÖZET
+# ─────────────────────────────────────────────────────────────────────────────
+def draw_step8(scr):
     draw_header(scr)
     ty, lx, by, rx, cth, ctw = content_area(scr)
     h, w = scr.getmaxyx()
@@ -820,6 +1149,10 @@ def draw_step5(scr):
             curses.color_pair(C_DIM))
 
     _kb_name = next((kn for ki, kn, _, _ in KEYBOARD_LAYOUTS if ki == st.keyboard), st.keyboard)
+    _locale_name = next((ln for li, ln in LOCALE_LIST if li == st.locale), st.locale)
+    _ssh_status = "Etkin" if st.ssh_enabled else "Devre Dışı"
+    _ssh_root_str = "Evet" if st.ssh_root else "Hayır"
+    _ssh_pass_str = "Evet" if st.ssh_passwd_auth else "Hayır"
     rows = [
         ("Disk",          f"{st.disk}  ({st.disk_size})"),
         ("Dosya Sistemi", f"{st.fs_type}" + ("  +swap 4GB" if st.swap else "")),
@@ -830,8 +1163,11 @@ def draw_step5(scr):
         ("DNS",          st.net_dns if st.net_mode == "static" else "DHCP"),
         ("Sunucu Adı",   st.hostname),
         ("Kullanıcı",    st.username),
-        ("Klavye",       _kb_name),
         ("Şifre",        "*" * len(st.password)),
+        ("Klavye",       _kb_name),
+        ("Dil",          _locale_name),
+        ("Zaman Dilimi", st.timezone),
+        ("SSH",          f"{_ssh_status}  port={st.ssh_port}  root={_ssh_root_str}  şifre={_ssh_pass_str}"),
     ]
 
     box_y = ty + 4
@@ -852,9 +1188,9 @@ def draw_step5(scr):
     draw_footer(scr, "[←] Geri   [→ / Enter] Kurulumu BAŞLAT")
 
 
-def handle_step5(scr, ch):
+def handle_step8(scr, ch):
     if ch in (curses.KEY_RIGHT, ord('\n'), ord('\r')):
-        st.step  = 6
+        st.step  = 9
         st.pct   = 0
         st.msg   = "Başlatılıyor..."
         st.done  = False
@@ -862,19 +1198,19 @@ def handle_step5(scr, ch):
         st.log_lines = []
         threading.Thread(target=_run_install, daemon=True).start()
     elif ch == curses.KEY_LEFT:
-        st.step = 4
+        st.step = 7
     elif ch == curses.KEY_F10:
         return False
     return True
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  STEP 6 — KURULUM İLERLEMESİ
+#  STEP 10 — KURULUM İLERLEMESİ
 # ─────────────────────────────────────────────────────────────────────────────
 _SPIN = ["⠋", "⠙", "⠸", "⠴", "⠦", "⠇"]
 _spin_i = 0
 _reboot_countdown = None
 
-def draw_step6(scr):
+def draw_step9(scr):
     global _spin_i, _reboot_countdown
     draw_header(scr)
     ty, lx, by, rx, cth, ctw = content_area(scr)
@@ -960,7 +1296,7 @@ def draw_step6(scr):
     draw_footer(scr, "Kurulum devam ediyor, lütfen bekleyin...")
 
 
-def handle_step6(scr, ch):
+def handle_step9(scr, ch):
     global _reboot_countdown
     if st.done and st.error:
         if ch in (ord('q'), ord('Q'), curses.KEY_F10):
@@ -999,6 +1335,12 @@ def _run_install():
         "keyboard":         st.keyboard,
         "keyboard_layout":  _kb_entry[2],
         "keyboard_variant": _kb_entry[3],
+        "locale":           st.locale,
+        "timezone":         st.timezone,
+        "ssh_enabled":      st.ssh_enabled,
+        "ssh_port":         st.ssh_port,
+        "ssh_root":         st.ssh_root,
+        "ssh_passwd_auth":  st.ssh_passwd_auth,
     }
 
     cfg_path = "/tmp/oxware-install.json"
@@ -1077,8 +1419,10 @@ def _run_install():
 # ─────────────────────────────────────────────────────────────────────────────
 #  DISPATCH TABLE
 # ─────────────────────────────────────────────────────────────────────────────
-DRAWERS  = [draw_step0, draw_step1, draw_step2, draw_step3, draw_step4, draw_step5, draw_step6]
-HANDLERS = [handle_step0, handle_step1, handle_step2, handle_step3, handle_step4, handle_step5, handle_step6]
+DRAWERS  = [draw_step0, draw_step1, draw_step2, draw_step3, draw_step4,
+            draw_step5, draw_step6, draw_step7, draw_step8, draw_step9]
+HANDLERS = [handle_step0, handle_step1, handle_step2, handle_step3, handle_step4,
+            handle_step5, handle_step6, handle_step7, handle_step8, handle_step9]
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  CONFIRM QUIT OVERLAY
@@ -1147,7 +1491,7 @@ def main(scr):
         scr.refresh()
 
         # Timeout for spinner refresh on install step
-        if st.step == 6:
+        if st.step == 9:
             scr.timeout(250)
         else:
             scr.timeout(-1)
@@ -1158,7 +1502,7 @@ def main(scr):
 
         keep_going = HANDLERS[st.step](scr, ch)
         if not keep_going:
-            if st.step == 6 and st.done:
+            if st.step == 9 and st.done:
                 break
             elif confirm_quit(scr):
                 break
