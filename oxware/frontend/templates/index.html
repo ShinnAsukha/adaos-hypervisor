@@ -2329,6 +2329,14 @@
                 <input id="nlCommandInput" type="text" class="form-control" placeholder="VM oluştur, servisi durdur..." onkeydown="if(event.key==='Enter')sendNlCommand()">
                 <button class="btn-primary" onclick="sendNlCommand()">Gönder</button>
               </div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+                <button class="btn sm" onclick="sendNlCommand('Çalışan VM listesini göster')" style="font-size:11px">📋 VM listesi</button>
+                <button class="btn sm" onclick="sendNlCommand('CPU kullanımı en yüksek VM hangisi?')" style="font-size:11px">🔥 En yüksek CPU</button>
+                <button class="btn sm" onclick="sendNlCommand('Disk alanı dolmak üzere olan VM var mı?')" style="font-size:11px">💽 Disk uyarısı</button>
+                <button class="btn sm" onclick="sendNlCommand('Sistem genel durumunu analiz et')" style="font-size:11px">🩺 Sistem durumu</button>
+                <button class="btn sm" onclick="sendNlCommand('Kapalı VM\'leri listele')" style="font-size:11px">⏹ Kapalı VM\'ler</button>
+                <button class="btn sm" onclick="sendNlCommand('RAM kullanımı kritik VM var mı?')" style="font-size:11px">🧠 RAM kritik</button>
+              </div>
               <div id="nlResult"></div>
             </div>
           </div>
@@ -9348,26 +9356,58 @@ async function loadAiRecommendations() {
 async function runAiAnalysis() {
   const btn = document.getElementById('aiAnalyzeBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Analiz ediliyor...'; }
-  await _api('/api/ai/analyze', 'POST');
-  if (btn) { btn.disabled = false; btn.textContent = '🔍 Analiz Et'; }
-  loadAiRecommendations();
-  toast('AI analizi tamamlandı', 'success');
+  try {
+    const d = await _api('/api/ai/analyze', 'POST');
+    if (btn) { btn.disabled = false; btn.textContent = '🔍 Analiz Et'; }
+    // Use direct analyze result if it has recommendations, otherwise fetch separately
+    const el = document.getElementById('aiRecsContainer');
+    const recs = d?.recommendations || d?.data?.recommendations || [];
+    if (el && recs.length) {
+      el.innerHTML = recs.map(r => `
+        <div class="card" style="margin-bottom:10px;border-left:3px solid ${r.type==='critical'?'#f85149':r.type==='warning'?'#d29922':'#3fb950'}">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <strong>${escHtml(r.title||r.message||'Öneri')}</strong>
+            <span style="font-size:10px;padding:1px 8px;border-radius:10px;background:${r.type==='critical'?'rgba(248,81,73,.15)':r.type==='warning'?'rgba(210,153,34,.15)':'rgba(63,185,80,.12)'}; color:${r.type==='critical'?'#f85149':r.type==='warning'?'#d29922':'#3fb950'}">${escHtml(r.type||'info')}</span>
+          </div>
+          <p class="text-muted" style="margin-top:6px;font-size:11px">${escHtml(r.description||r.detail||'')}</p>
+          ${r.action ? `<code style="font-size:11px">${escHtml(r.action)}</code>` : ''}
+        </div>
+      `).join('');
+    } else {
+      await loadAiRecommendations();
+    }
+    toast('AI analizi tamamlandı', 'success');
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '🔍 Analiz Et'; }
+    toast('AI analiz hatası: ' + e.message, 'error');
+  }
 }
 
-async function sendNlCommand() {
+async function sendNlCommand(presetCmd) {
   const input = document.getElementById('nlCommandInput');
-  const cmd = input?.value?.trim();
+  const cmd = presetCmd || input?.value?.trim();
   if (!cmd) return;
-  const d = await _api('/api/ai/nl', 'POST', {command: cmd});
   const result = document.getElementById('nlResult');
-  if (result) result.innerHTML = `
-    <div class="card" style="margin-top:10px">
-      <div><strong>Aksiyon:</strong> <code>${escHtml(d.action||'—')}</code></div>
-      <div style="margin-top:6px;font-size:12px">${escHtml(d.human_response||d.message||'')}</div>
-      ${d.confirmation_required ? '<button class="btn-primary" style="margin-top:10px" onclick="confirmNlAction()">✓ Onayla ve Çalıştır</button>' : ''}
-    </div>
-  `;
-  if (input) input.value = '';
+  if (result) result.innerHTML = '<div style="color:var(--text-muted);font-size:12px;margin-top:8px">İşleniyor...</div>';
+  try {
+    const d = await _api('/api/ai/nl', 'POST', {command: cmd});
+    if (!d) { if (result) result.innerHTML = '<div style="color:#ef4444;font-size:12px;margin-top:8px">Bağlantı hatası veya oturum süresi doldu.</div>'; return; }
+    if (d.error || d.status === 'error') {
+      if (result) result.innerHTML = `<div style="color:#ef4444;font-size:12px;margin-top:8px;padding:10px;border:1px solid rgba(239,68,68,.3);border-radius:6px">⚠ ${escHtml(d.error||d.message||'Bilinmeyen hata')}</div>`;
+      return;
+    }
+    if (result) result.innerHTML = `
+      <div style="margin-top:10px;padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
+        <div style="font-size:12px;margin-bottom:6px"><strong>Aksiyon:</strong> <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">${escHtml(d.action||d.command||'—')}</code></div>
+        ${d.human_response||d.message ? `<div style="font-size:12px;color:var(--text-muted)">${escHtml(d.human_response||d.message)}</div>` : ''}
+        ${d.result ? `<div style="margin-top:6px;font-size:11px;color:#22c55e">✓ ${escHtml(String(d.result))}</div>` : ''}
+        ${d.confirmation_required ? `<button class="btn-primary" style="margin-top:10px;font-size:12px" onclick="confirmNlAction()">✓ Onayla ve Çalıştır</button>` : ''}
+      </div>
+    `;
+    if (input && !presetCmd) input.value = '';
+  } catch(e) {
+    if (result) result.innerHTML = `<div style="color:#ef4444;font-size:12px;margin-top:8px">Hata: ${escHtml(e.message)}</div>`;
+  }
 }
 
 async function loadAnomalies() {
@@ -11153,9 +11193,17 @@ function _renderVmSecurityScores(vmScores) {
       </td>
       <td><span style="font-weight:700;color:${col}">${grade}</span></td>
       <td><span style="font-size:12px;color:${(v.issues||0)>0?'#f97316':'#22c55e'}">${v.issues||0}</span></td>
-      <td><button class="btn sm" onclick="openSecurityDetail('${escHtml(v.vm_id)}','${escHtml(v.vm_name)}',${JSON.stringify(v.details||[]).replace(/'/g,"\\'")})" style="font-size:10px">Detay</button></td>
+      <td><button class="btn sm sec-detail-btn" data-vmid="${escHtml(v.vm_id)}" data-vmname="${escHtml(v.vm_name)}" data-details="${encodeURIComponent(JSON.stringify(v.details||[]))}" style="font-size:10px" onclick="openSecurityDetailFromBtn(this)">Detay</button></td>
     </tr>`;
   }).join('') || '<tr><td colspan="5" class="text-center text-muted">Veri yok</td></tr>';
+}
+
+function openSecurityDetailFromBtn(btn) {
+  const vm_id = btn.dataset.vmid;
+  const vm_name = btn.dataset.vmname;
+  let details = [];
+  try { details = JSON.parse(decodeURIComponent(btn.dataset.details || '[]')); } catch(e) {}
+  openSecurityDetail(vm_id, vm_name, details);
 }
 
 function openSecurityDetail(vm_id, vm_name, details) {
