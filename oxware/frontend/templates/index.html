@@ -2279,6 +2279,34 @@
               </table>
             </div>
           </div>
+
+          <!-- ── Network QoS ── -->
+          <div class="card" style="margin-top:14px">
+            <div class="card-title" style="display:flex;align-items:center;gap:8px">
+              <span>🌐</span> Ağ Bant Genişliği (QoS)
+              <button class="btn sm" onclick="loadNetworkQos()" style="margin-left:auto">↻</button>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">VM başına NIC bant genişliği kısıtlaması. 0 = sınırsız.</div>
+            <div id="qos-vm-list" style="display:flex;flex-direction:column;gap:8px">
+              <div style="color:var(--text-muted);font-size:12px">Yükleniyor...</div>
+            </div>
+          </div>
+
+          <!-- ── Storage Migration ── -->
+          <div class="card" style="margin-top:14px">
+            <div class="card-title" style="display:flex;align-items:center;gap:8px">
+              <span>💽</span> Canlı Disk Taşıma
+              <button class="btn sm" onclick="loadStorageMigrations()" style="margin-left:auto">↻</button>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">VM çalışırken disk başka depolama havuzuna taşınır (virsh blockcopy).</div>
+            <div id="storage-pools-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+              <select id="smig-vm-sel" style="flex:1;min-width:140px;padding:6px;border-radius:5px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:12px"><option>VM seç...</option></select>
+              <select id="smig-disk-sel" style="flex:1;min-width:100px;padding:6px;border-radius:5px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:12px" onchange=""><option>Disk...</option></select>
+              <input id="smig-dest" type="text" placeholder="/var/lib/libvirt/images/new.qcow2" style="flex:2;min-width:200px;padding:6px;border-radius:5px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:12px">
+              <button class="btn sm primary" onclick="startStorageMigration()">Taşı</button>
+            </div>
+            <div id="smig-jobs-list" style="font-size:12px;color:var(--text-muted)">—</div>
+          </div>
         </div>
 
         <!-- ─────── tab-ai ─────── -->
@@ -2900,6 +2928,19 @@
                 <div class="form-row"><label>E-posta</label><input id="leEmail" type="text" class="form-control" placeholder="admin@example.com"></div>
                 <button class="btn-primary" onclick="requestLetsEncrypt()">🔒 Sertifika Al</button>
               </div>
+            </div>
+          </div>
+
+          <!-- Resource Pools -->
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-title" style="display:flex;align-items:center;gap:8px">
+              <span>🗂️</span> Kaynak Havuzları
+              <button class="btn sm" onclick="openCreatePoolModal()" style="margin-left:auto">+ Yeni Havuz</button>
+              <button class="btn sm" onclick="loadResourcePools()">↻</button>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">VM'leri gruplara ayırın ve her gruba CPU/RAM kotası belirleyin.</div>
+            <div id="resource-pools-list" style="display:flex;flex-direction:column;gap:8px">
+              <div style="color:var(--text-muted);font-size:12px">Yükleniyor...</div>
             </div>
           </div>
 
@@ -8807,12 +8848,12 @@ async function loadTabData(tabId) {
     case 'tab-dns':          loadDnsHosts(); loadDhcpLeases(); break;
     case 'tab-ipam':         loadIpamPage(); break;
     case 'tab-proxy':        loadNginxSites(); break;
-    case 'tab-monitoring':   loadPerfHistory('1h'); loadSmartData(); loadUptimes(); loadIdsStatus(); loadTrendAnalysis(); loadHAStatus(); loadAlertRules(); loadCostEstimate(); loadAlertHistory(); break;
+    case 'tab-monitoring':   loadPerfHistory('1h'); loadSmartData(); loadUptimes(); loadIdsStatus(); loadTrendAnalysis(); loadHAStatus(); loadAlertRules(); loadCostEstimate(); loadAlertHistory(); loadNetworkQos(); loadStorageMigrations(); break;
     case 'tab-ai':           loadAiRecommendations(); loadAnomalies(); loadAIAgents(); break;
     case 'tab-security':     load2faStatus(); loadAuditLog(); loadApiKeys(); loadLdapConfig(); checkLicenseStatus(); loadAutoSnapConfig(); loadSessions(); loadSecurityLockouts(); loadIpAllowlist(); loadVault(); loadSecurityScores(); break;
+    case 'tab-settings':     loadSdnStatus(); loadSslStatus(); loadScalerPolicies(); loadQuotas(); loadVmSchedules(); loadResourcePools(); _initSmigVmSel(); break;
     case 'tab-cve':          cveInit(); break;
     case 'tab-integrations': loadWebhooks(); loadS3Config(); loadEmailConfig(); loadVlans(); loadHooks(); break;
-    case 'tab-settings':     loadSdnStatus(); loadSslStatus(); loadScalerPolicies(); loadQuotas(); loadVmSchedules(); break;
   }
 }
 
@@ -11306,6 +11347,127 @@ const _origLoadPageData = typeof window._oxLoadPage === 'function' ? window._oxL
     if (tab === 'tab-security') { loadVault(); }
   });
 })();
+
+/* ── Resource Pools ── */
+async function loadResourcePools() {
+  const el = document.getElementById('resource-pools-list'); if (!el) return;
+  try {
+    const pools = await api('/pools');
+    if (!pools.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:12px">Havuz yok. "+ Yeni Havuz" ile oluşturun.</div>'; return; }
+    el.innerHTML = pools.map(p => `
+      <div style="border:1px solid var(--border);border-radius:6px;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:120px">
+          <div style="font-weight:600;font-size:13px">${p.name}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${p.description || '—'}</div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted)">CPU: <b style="color:var(--text)">${p.cpu_limit_pct}%</b></div>
+        <div style="font-size:11px;color:var(--text-muted)">RAM: <b style="color:var(--text)">${p.ram_limit_mb ? p.ram_limit_mb+' MB' : 'Sınırsız'}</b></div>
+        <div style="font-size:11px;color:var(--text-muted)">VM: <b style="color:var(--text)">${p.vm_ids?.length || 0}</b></div>
+        <button class="btn sm" onclick="deletePool('${p.id}')" style="color:#ef4444">Sil</button>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = `<div style="color:#ef4444;font-size:12px">${e.message}</div>`; }
+}
+
+function openCreatePoolModal() {
+  const name = prompt('Havuz adı:'); if (!name) return;
+  const cpu = parseInt(prompt('CPU limiti % (0-100, 100=sınırsız):', '100')) || 100;
+  const ram = parseInt(prompt('RAM limiti MB (0=sınırsız):', '0')) || 0;
+  api('/pools', {method:'POST', body:{name, cpu_limit_pct:cpu, ram_limit_mb:ram}})
+    .then(() => { toast('Havuz oluşturuldu','success'); loadResourcePools(); })
+    .catch(e => toast('Hata: '+e.message,'error'));
+}
+
+async function deletePool(id) {
+  if (!confirm('Bu havuzu silmek istiyor musunuz?')) return;
+  try { await api(`/pools/${id}`,{method:'DELETE'}); toast('Havuz silindi','success'); loadResourcePools(); }
+  catch(e) { toast('Hata: '+e.message,'error'); }
+}
+
+/* ── Network QoS ── */
+async function loadNetworkQos() {
+  const el = document.getElementById('qos-vm-list'); if (!el) return;
+  el.innerHTML = '<div style="color:var(--text-muted);font-size:12px">Yükleniyor...</div>';
+  try {
+    const vms = _gsCacheVMs.length ? _gsCacheVMs : (await api('/vms')).vms || [];
+    if (!vms.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:12px">VM bulunamadı.</div>'; return; }
+    const rows = await Promise.all(vms.slice(0,10).map(async vm => {
+      let nics = [];
+      try { nics = await api(`/vms/${vm.name || vm.id}/nics`); } catch(e) {}
+      if (!nics.length) return '';
+      return nics.map(nic => `
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:12px;min-width:100px;font-weight:600">${vm.name||vm.id}</span>
+          <span style="font-size:11px;color:var(--text-muted);min-width:60px">${nic}</span>
+          <input type="number" placeholder="In (Kbps)" id="qos-in-${vm.name}-${nic}" style="width:90px;padding:4px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:11px" min="0">
+          <input type="number" placeholder="Out (Kbps)" id="qos-out-${vm.name}-${nic}" style="width:90px;padding:4px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:11px" min="0">
+          <button class="btn sm" onclick="applyQos('${vm.name||vm.id}','${nic}')">Uygula</button>
+          <button class="btn sm" onclick="clearQos('${vm.name||vm.id}','${nic}')" style="color:#ef4444">Temizle</button>
+        </div>`).join('');
+    }));
+    el.innerHTML = rows.join('') || '<div style="color:var(--text-muted);font-size:12px">NIC bulunamadı.</div>';
+  } catch(e) { el.innerHTML = `<div style="color:#ef4444;font-size:12px">${e.message}</div>`; }
+}
+
+async function applyQos(vmName, iface) {
+  const inK = parseInt(document.getElementById(`qos-in-${vmName}-${iface}`)?.value||0)||0;
+  const outK = parseInt(document.getElementById(`qos-out-${vmName}-${iface}`)?.value||0)||0;
+  try {
+    await api(`/vms/${vmName}/nics/${iface}/qos`, {method:'PUT', body:{inbound_kbps:inK, outbound_kbps:outK}});
+    toast(`QoS uygulandı: ${vmName}/${iface} — In:${inK} Out:${outK} Kbps`, 'success');
+  } catch(e) { toast('QoS hatası: '+e.message,'error'); }
+}
+
+async function clearQos(vmName, iface) {
+  try {
+    await api(`/vms/${vmName}/nics/${iface}/qos`, {method:'DELETE'});
+    toast(`QoS temizlendi: ${vmName}/${iface}`, 'success');
+  } catch(e) { toast('Temizleme hatası: '+e.message,'error'); }
+}
+
+/* ── Storage Migration ── */
+async function loadStorageMigrations() {
+  const el = document.getElementById('smig-jobs-list'); if (!el) return;
+  try {
+    const jobs = await api('/storage/migrations');
+    if (!jobs.length) { el.innerHTML = 'Aktif taşıma işlemi yok.'; return; }
+    el.innerHTML = jobs.map(j => `
+      <div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <span style="font-weight:600">${j.vm_name}</span> → <code>${j.dest_path}</code>
+        <span style="margin-left:8px;padding:1px 7px;border-radius:10px;font-size:10px;background:${j.status==='done'?'rgba(34,197,94,.15)':j.status==='error'?'rgba(239,68,68,.12)':'rgba(56,189,248,.12)'};color:${j.status==='done'?'#22c55e':j.status==='error'?'#ef4444':'var(--accent-lt)'}">${j.status}</span>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = `<div style="color:#ef4444">${e.message}</div>`; }
+}
+
+async function startStorageMigration() {
+  const vm = document.getElementById('smig-vm-sel')?.value;
+  const disk = document.getElementById('smig-disk-sel')?.value;
+  const dest = document.getElementById('smig-dest')?.value?.trim();
+  if (!vm || vm === 'VM seç...' || !dest) { toast('VM ve hedef yol gerekli','error'); return; }
+  try {
+    const r = await api(`/vms/${vm}/migrate-disk`, {method:'POST', body:{disk_target:disk, dest_path:dest, format:'qcow2'}});
+    toast(`Taşıma başlatıldı (job: ${r.job_id})`, 'success');
+    loadStorageMigrations();
+  } catch(e) { toast('Taşıma başlatılamadı: '+e.message,'error'); }
+}
+
+// populate vm select for storage migration
+async function _initSmigVmSel() {
+  const sel = document.getElementById('smig-vm-sel'); if (!sel) return;
+  try {
+    const vms = _gsCacheVMs.length ? _gsCacheVMs : (await api('/vms')).vms || [];
+    sel.innerHTML = '<option>VM seç...</option>' + vms.map(v=>`<option value="${v.name||v.id}">${v.name||v.id}</option>`).join('');
+    sel.onchange = async function() {
+      const diskSel = document.getElementById('smig-disk-sel');
+      try {
+        const disks = await api(`/vms/${this.value}/disks`);
+        diskSel.innerHTML = disks.map(d=>`<option value="${d.target}">${d.target} (${d.source_path})</option>`).join('');
+      } catch(e) { diskSel.innerHTML = '<option>Disk...</option>'; }
+    };
+  } catch(e) {}
+}
+
+// load resource pools and init smig when tab-settings opens
+const _origLoadSettings = typeof loadSettings === 'function' ? loadSettings : null;
 
 function cveCopyCard(btn, id, severity, score, product, desc, refs) {
   const nvdUrl = `https://nvd.nist.gov/vuln/detail/${id}`;
