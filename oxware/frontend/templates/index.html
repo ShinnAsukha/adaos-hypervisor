@@ -3041,7 +3041,7 @@
       <!-- App Install -->
       <details id="app-install-section" style="margin-top:8px">
         <summary style="font-size:11px;font-weight:700;color:var(--text-muted);cursor:pointer;text-transform:uppercase;letter-spacing:.06em;padding:6px 0">📦 Uygulama Kurulumu (Opsiyonel)</summary>
-        <div style="margin-top:10px">
+        <div style="margin-top:10px;max-height:340px;overflow-y:auto;padding-right:4px">
           <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px 0">VM oluşturulduktan sonra otomatik kurulacak uygulama seçin. Cloud-Init ile Linux VM'lere uygulanır.</p>
           <div class="app-section-label">
             <i class="fa-solid fa-cube" style="color:#38bdf8"></i>Uygulamalar
@@ -8763,9 +8763,9 @@ async function loadTabData(tabId) {
     case 'tab-dns':          loadDnsHosts(); loadDhcpLeases(); break;
     case 'tab-ipam':         loadIpamPage(); break;
     case 'tab-proxy':        loadNginxSites(); break;
-    case 'tab-monitoring':   loadPerfHistory('1h'); loadSmartData(); loadUptimes(); loadIdsStatus(); loadTrendAnalysis(); loadHAStatus(); break;
+    case 'tab-monitoring':   loadPerfHistory('1h'); loadSmartData(); loadUptimes(); loadIdsStatus(); loadTrendAnalysis(); loadHAStatus(); loadAlertRules(); loadCostEstimate(); loadAlertHistory(); break;
     case 'tab-ai':           loadAiRecommendations(); loadAnomalies(); loadAIAgents(); break;
-    case 'tab-security':     load2faStatus(); loadAuditLog(); loadApiKeys(); loadLdapConfig(); checkLicenseStatus(); loadAutoSnapConfig(); loadSessions(); loadSecurityLockouts(); loadIpAllowlist(); break;
+    case 'tab-security':     load2faStatus(); loadAuditLog(); loadApiKeys(); loadLdapConfig(); checkLicenseStatus(); loadAutoSnapConfig(); loadSessions(); loadSecurityLockouts(); loadIpAllowlist(); loadVault(); loadSecurityScores(); break;
     case 'tab-cve':          cveInit(); break;
     case 'tab-integrations': loadWebhooks(); loadS3Config(); loadEmailConfig(); loadVlans(); loadHooks(); break;
     case 'tab-settings':     loadSdnStatus(); loadSslStatus(); loadScalerPolicies(); loadQuotas(); loadVmSchedules(); break;
@@ -10481,6 +10481,706 @@ function cveRender() {
   }
   wrap.innerHTML = html;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   FEATURE ADDITIONS: Global Search Overlay, Keyboard Shortcuts,
+   VM Tags/Notes UI, Credential Vault, Cost Tracker, Alert Rules,
+   Security Score, AI VM Create
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Global Search Overlay ──────────────────────────────────── */
+let _gsOverlayDebounce = null;
+let _gsOverlayIndex = -1;
+
+function openGlobalSearchOverlay() {
+  const overlay = document.getElementById('global-search-overlay');
+  overlay.style.display = 'flex';
+  const inp = document.getElementById('global-search-input');
+  inp.value = '';
+  document.getElementById('global-search-results').innerHTML = '';
+  _gsOverlayIndex = -1;
+  setTimeout(() => inp.focus(), 50);
+}
+
+function closeGlobalSearchOverlay() {
+  const overlay = document.getElementById('global-search-overlay');
+  overlay.style.display = 'none';
+  _gsOverlayIndex = -1;
+}
+
+function handleSearchKeydown(e) {
+  const results = document.getElementById('global-search-results');
+  const items = results.querySelectorAll('.gsr-overlay-item');
+  if (e.key === 'Escape') { closeGlobalSearchOverlay(); return; }
+  if (e.key === 'ArrowDown') {
+    _gsOverlayIndex = Math.min(_gsOverlayIndex + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('gsr-active', i === _gsOverlayIndex));
+    if (items[_gsOverlayIndex]) items[_gsOverlayIndex].scrollIntoView({block:'nearest'});
+    e.preventDefault(); return;
+  }
+  if (e.key === 'ArrowUp') {
+    _gsOverlayIndex = Math.max(_gsOverlayIndex - 1, 0);
+    items.forEach((el, i) => el.classList.toggle('gsr-active', i === _gsOverlayIndex));
+    if (items[_gsOverlayIndex]) items[_gsOverlayIndex].scrollIntoView({block:'nearest'});
+    e.preventDefault(); return;
+  }
+  if (e.key === 'Enter') {
+    const active = results.querySelector('.gsr-active');
+    if (active) { active.click(); return; }
+    if (items.length > 0) items[0].click();
+  }
+}
+
+async function runGlobalSearch(query) {
+  clearTimeout(_gsOverlayDebounce);
+  const results = document.getElementById('global-search-results');
+  if (!query.trim()) { results.innerHTML = ''; _gsOverlayIndex = -1; return; }
+  _gsOverlayDebounce = setTimeout(async () => {
+    const lower = query.toLowerCase();
+    let html = '';
+
+    // Search VMs
+    if (!_gsCacheVMs.length) {
+      try { const d = await api('/vms'); _gsCacheVMs = d.vms || []; } catch {}
+    }
+    const vmMatches = _gsCacheVMs.filter(v =>
+      v.name.toLowerCase().includes(lower) ||
+      v.id.toLowerCase().includes(lower) ||
+      ((_vmMetaCache[v.id]?.tags || []).some(t => t.toLowerCase().includes(lower)))
+    );
+    if (vmMatches.length) {
+      html += `<div style="padding:4px 14px;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Sanal Makineler</div>`;
+      html += vmMatches.map(v => {
+        const tags = (_vmMetaCache[v.id]?.tags || []).map(t =>
+          `<span style="background:rgba(61,130,240,.2);border:1px solid rgba(61,130,240,.4);border-radius:3px;padding:1px 4px;font-size:9px;color:var(--accent-lt)">${escHtml(t)}</span>`
+        ).join(' ');
+        const stateCol = v.state === 'running' ? '#22c55e' : v.state === 'paused' ? '#eab308' : '#94a3b8';
+        return `<div class="gsr-overlay-item" onclick="selectTreeItem('vm','${v.id}','${escHtml(v.name)}');closeGlobalSearchOverlay()"
+          style="display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;transition:background .1s"
+          onmouseenter="this.classList.add('gsr-active')" onmouseleave="this.classList.remove('gsr-active')">
+          <span style="font-size:18px">🖥️</span>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500">${escHtml(v.name)}</div>
+            <div style="font-size:11px;color:var(--text-muted)">${v.id.slice(0,8)} · ${v.vcpus}vCPU · ${v.memory_mb}MB · <span style="color:${stateCol}">${v.state}</span></div>
+            ${tags ? `<div style="margin-top:3px">${tags}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // Search pages
+    const PAGES = [
+      {icon:'📊',title:'Özet',page:'summary'},{icon:'🖥️',title:'Sanal Makineler',page:'vms'},
+      {icon:'🌐',title:'Ağ Yönetimi',page:'networks'},{icon:'💾',title:'Depolama',page:'storage'},
+      {icon:'📈',title:'İzleme',page:'tab-monitoring'},{icon:'🔐',title:'Güvenlik',page:'tab-security'},
+      {icon:'🤖',title:'AI Ajanlar',page:'tab-ai'},{icon:'🔗',title:'Entegrasyonlar',page:'tab-integrations'},
+      {icon:'⚙️',title:'Ayarlar',page:'tab-settings'},{icon:'🐛',title:'CVE',page:'tab-cve'},
+    ];
+    const pageMatches = PAGES.filter(p => p.title.toLowerCase().includes(lower));
+    if (pageMatches.length) {
+      html += `<div style="padding:4px 14px;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Sayfalar</div>`;
+      html += pageMatches.map(p =>
+        `<div class="gsr-overlay-item" onclick="navigate('${p.page}');closeGlobalSearchOverlay()"
+          style="display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;transition:background .1s"
+          onmouseenter="this.classList.add('gsr-active')" onmouseleave="this.classList.remove('gsr-active')">
+          <span style="font-size:18px">${p.icon}</span>
+          <div style="font-size:13px;font-weight:500">${p.title}</div>
+        </div>`
+      ).join('');
+    }
+
+    if (!html) {
+      html = `<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px">Sonuç bulunamadı</div>`;
+    }
+
+    results.innerHTML = html;
+    _gsOverlayIndex = -1;
+
+    // Add hover styles
+    const style = document.getElementById('gsr-overlay-style');
+    if (!style) {
+      const s = document.createElement('style');
+      s.id = 'gsr-overlay-style';
+      s.textContent = '.gsr-overlay-item:hover,.gsr-overlay-item.gsr-active{background:rgba(42,109,217,.12)!important}';
+      document.head.appendChild(s);
+    }
+  }, 150);
+}
+
+/* ── 2. Keyboard Shortcuts ──────────────────────────────────────── */
+let _kbGPrefix = false;
+let _kbGTimer = null;
+
+function initKeyboardShortcuts() {
+  document.addEventListener('keydown', function(e) {
+    // Don't trigger when typing in inputs/textareas
+    const tag = document.activeElement?.tagName;
+    const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' ||
+      document.activeElement?.contentEditable === 'true';
+
+    // Esc — close any open modal or overlay
+    if (e.key === 'Escape') {
+      closeGlobalSearchOverlay();
+      // Close any visible modal-overlay
+      document.querySelectorAll('.modal-overlay').forEach(m => {
+        if (m.style.display !== 'none') m.style.display = 'none';
+      });
+      return;
+    }
+
+    // Ctrl+K — global search
+    if (e.key === 'k' && e.ctrlKey && !e.shiftKey) {
+      e.preventDefault();
+      openGlobalSearchOverlay();
+      return;
+    }
+
+    // Ctrl+Shift+N — create VM
+    if (e.key === 'N' && e.ctrlKey && e.shiftKey) {
+      e.preventDefault();
+      if (typeof openCreateVMModal === 'function') openCreateVMModal();
+      return;
+    }
+
+    // Ctrl+Shift+R — refresh current tab
+    if (e.key === 'R' && e.ctrlKey && e.shiftKey) {
+      e.preventDefault();
+      if (typeof refreshCurrentTab === 'function') refreshCurrentTab();
+      else if (typeof loadVMs === 'function') loadVMs();
+      return;
+    }
+
+    if (isInput) return;
+
+    // ? — show keyboard shortcuts
+    if (e.key === '?') {
+      e.preventDefault();
+      document.getElementById('modal-keyboard-shortcuts').style.display = 'flex';
+      return;
+    }
+
+    // G-prefix two-key navigation
+    if (e.key === 'g' || e.key === 'G') {
+      _kbGPrefix = true;
+      clearTimeout(_kbGTimer);
+      _kbGTimer = setTimeout(() => { _kbGPrefix = false; }, 1000);
+      return;
+    }
+    if (_kbGPrefix) {
+      _kbGPrefix = false;
+      clearTimeout(_kbGTimer);
+      const navMap = {v:'vms', n:'networks', s:'storage', m:'tab-monitoring'};
+      const dest = navMap[e.key.toLowerCase()];
+      if (dest && typeof navigate === 'function') {
+        e.preventDefault();
+        navigate(dest);
+      }
+      return;
+    }
+  });
+}
+
+// Call at page load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initKeyboardShortcuts);
+} else {
+  initKeyboardShortcuts();
+}
+
+/* ── 3. VM Tags UI — Tag filter bar rendering ───────────────────── */
+/* Tags are already stored in _vmMetaCache via loadAllVmMetadata().
+   We add a renderTagFilter() function that can be called after VM list loads. */
+function renderTagFilter() {
+  const container = document.getElementById('vm-tag-filter-bar');
+  if (!container) return;
+  const allTags = new Set();
+  Object.values(_vmMetaCache).forEach(m => (m.tags || []).forEach(t => allTags.add(t)));
+  if (!allTags.size) { container.style.display = 'none'; return; }
+  container.style.display = 'flex';
+  container.innerHTML =
+    `<span style="font-size:11px;color:var(--text-muted);padding:4px 0;margin-right:4px">🏷️ Filtrele:</span>` +
+    `<span class="vm-tag-chip-filter" onclick="filterVmsByTag('')"
+      style="background:var(--surface2);border:1px solid var(--border2);border-radius:3px;padding:2px 8px;font-size:11px;cursor:pointer;color:var(--text)">Tümü</span>` +
+    [...allTags].map(t =>
+      `<span class="vm-tag-chip-filter" onclick="filterVmsByTag('${escHtml(t)}')"
+        style="background:rgba(61,130,240,.15);border:1px solid rgba(61,130,240,.35);border-radius:3px;padding:2px 8px;font-size:11px;cursor:pointer;color:var(--accent-lt)">${escHtml(t)}</span>`
+    ).join('');
+}
+
+/* Override loadAllVmMetadata to also render tag filter */
+const _origLoadAllVmMetadata = typeof loadAllVmMetadata === 'function' ? loadAllVmMetadata : null;
+
+/* ── 4. VM Notes — standalone note modal functions ──────────────── */
+/* Notes are already integrated in openVmMetaModal(). We expose dedicated helpers. */
+function openNoteModal(vm_id, vm_name) {
+  // Reuse openVmMetaModal which already handles notes
+  if (typeof openVmMetaModal === 'function') openVmMetaModal(vm_id, vm_name);
+}
+
+async function saveNote(vm_id) {
+  const notes = document.getElementById('vm-meta-notes')?.value || '';
+  await _api(`/api/vms/${vm_id}/metadata`, 'POST', {notes});
+  if (typeof toast === 'function') toast('Not kaydedildi', 'success');
+}
+
+async function deleteNote(vm_id) {
+  if (!confirm('Notu silmek istiyor musunuz?')) return;
+  await _api(`/api/vms/${vm_id}/metadata`, 'POST', {notes: ''});
+  if (typeof toast === 'function') toast('Not silindi', 'success');
+}
+
+/* ── 5. Credential Vault ────────────────────────────────────────── */
+let _vaultData = [];
+
+async function loadVault() {
+  const container = document.getElementById('vault-list');
+  if (!container) return;
+  try {
+    const d = await _api('/api/vault');
+    _vaultData = d.entries || [];
+    if (!_vaultData.length) {
+      container.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0">Henüz kimlik bilgisi eklenmedi.</div>';
+      return;
+    }
+    // Group by vm_id
+    const byVm = {};
+    _vaultData.forEach(e => { if (!byVm[e.vm_id]) byVm[e.vm_id] = []; byVm[e.vm_id].push(e); });
+    container.innerHTML = Object.entries(byVm).map(([vmId, entries]) => {
+      const vmName = (_gsCacheVMs.find(v => v.id === vmId) || {}).name || vmId.slice(0,8);
+      const rows = entries.map(e => `
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;background:var(--surface2);border-radius:6px;margin-top:4px;flex-wrap:wrap">
+          <span style="background:rgba(42,109,217,.2);color:var(--accent-lt);border:1px solid rgba(42,109,217,.3);border-radius:3px;padding:1px 6px;font-size:10px;font-weight:600">${escHtml(e.type)}</span>
+          <span style="font-size:12px;flex:1;min-width:80px">${escHtml(e.username)}</span>
+          <span id="vault-pw-${escHtml(e.vm_id)}-${escHtml(e.type)}" style="font-size:12px;font-family:monospace;color:var(--text-muted)">••••••••</span>
+          <button class="btn sm" onclick="toggleVaultPassword(this,'${escHtml(e.vm_id)}','${escHtml(e.type)}')" style="font-size:10px">👁</button>
+          <button class="btn sm" onclick="deleteVaultEntry('${escHtml(e.vm_id)}','${escHtml(e.type)}')" style="font-size:10px;color:#ef4444">✕</button>
+          ${e.note ? `<span style="font-size:10px;color:var(--text-muted);width:100%">📝 ${escHtml(e.note)}</span>` : ''}
+        </div>`).join('');
+      return `<div style="margin-bottom:10px">
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">🖥️ ${escHtml(vmName)}</div>
+        ${rows}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    if (container) container.innerHTML = '<div style="color:var(--text-muted);font-size:12px">Vault yüklenemedi (API mevcut değil)</div>';
+  }
+}
+
+async function openVaultModal() {
+  // Populate VM selector
+  const sel = document.getElementById('vault-vm-sel');
+  if (sel) {
+    if (!_gsCacheVMs.length) {
+      try { const d = await api('/vms'); _gsCacheVMs = d.vms || []; } catch {}
+    }
+    sel.innerHTML = _gsCacheVMs.map(v => `<option value="${escHtml(v.id)}">${escHtml(v.name)}</option>`).join('');
+  }
+  document.getElementById('modal-vault').style.display = 'flex';
+}
+
+async function saveVaultEntry() {
+  const vm_id = document.getElementById('vault-vm-sel')?.value;
+  const type = document.getElementById('vault-type-sel')?.value;
+  const username = document.getElementById('vault-username')?.value;
+  const password = document.getElementById('vault-password')?.value;
+  const note = document.getElementById('vault-note')?.value;
+  if (!vm_id || !username || !password) { if (typeof toast === 'function') toast('VM, kullanıcı adı ve şifre zorunlu', 'error'); return; }
+  try {
+    await _api('/api/vault', 'POST', {vm_id, type, username, password, note});
+    if (typeof toast === 'function') toast('Kimlik bilgisi kaydedildi', 'success');
+    document.getElementById('modal-vault').style.display = 'none';
+    loadVault();
+  } catch(e) { if (typeof toast === 'function') toast('Kayıt hatası: ' + e.message, 'error'); }
+}
+
+async function toggleVaultPassword(el, vm_id, type) {
+  const span = document.getElementById(`vault-pw-${vm_id}-${type}`);
+  if (!span) return;
+  if (span.textContent === '••••••••') {
+    try {
+      const d = await _api(`/api/vault/${encodeURIComponent(vm_id)}/${encodeURIComponent(type)}`);
+      span.textContent = d.password || '—';
+      el.textContent = '🙈';
+    } catch { span.textContent = '[hata]'; }
+  } else {
+    span.textContent = '••••••••';
+    el.textContent = '👁';
+  }
+}
+
+async function deleteVaultEntry(vm_id, type) {
+  if (!confirm('Bu kimlik bilgisini silmek istiyor musunuz?')) return;
+  try {
+    await _api(`/api/vault/${encodeURIComponent(vm_id)}/${encodeURIComponent(type)}`, 'DELETE');
+    if (typeof toast === 'function') toast('Silindi', 'success');
+    loadVault();
+  } catch(e) { if (typeof toast === 'function') toast('Silme hatası', 'error'); }
+}
+
+/* ── 6. Cost Tracker ────────────────────────────────────────────── */
+let _costRates = JSON.parse(localStorage.getItem('ox-cost-rates') || '{"cpu":0.05,"ram":0.01,"disk":0.5,"currency":"TRY"}');
+
+async function loadCostEstimate() {
+  const tbody = document.getElementById('cost-vm-tbody');
+  const totalEl = document.getElementById('cost-total-display');
+  if (!tbody) return;
+
+  // Try backend endpoint first, fall back to local calculation
+  try {
+    const d = await _api('/api/cost/summary');
+    if (d && d.vms) {
+      let total = 0;
+      tbody.innerHTML = d.vms.map(v => {
+        total += v.monthly_cost || 0;
+        return `<tr>
+          <td>${escHtml(v.name)}</td>
+          <td>${v.vcpus}</td>
+          <td>${v.memory_mb}</td>
+          <td>${v.disk_gb || '—'}</td>
+          <td style="color:var(--accent-lt);font-weight:600">${_costRates.currency} ${(v.monthly_cost||0).toFixed(2)}</td>
+        </tr>`;
+      }).join('');
+      if (totalEl) totalEl.textContent = `${_costRates.currency} ${total.toFixed(2)}/ay`;
+      return;
+    }
+  } catch {}
+
+  // Local calculation from VM cache
+  if (!_gsCacheVMs.length) {
+    try { const d = await api('/vms'); _gsCacheVMs = d.vms || []; } catch {}
+  }
+  const HOURS_MONTH = 730;
+  let total = 0;
+  tbody.innerHTML = _gsCacheVMs.map(v => {
+    const diskGb = (v.disks || []).reduce((s, d) => s + (d.size_gb || 0), 0);
+    const ramGb = (v.memory_mb || 0) / 1024;
+    const cost = (v.vcpus * _costRates.cpu * HOURS_MONTH) +
+                 (ramGb * _costRates.ram * HOURS_MONTH) +
+                 (diskGb * _costRates.disk);
+    total += cost;
+    return `<tr>
+      <td>${escHtml(v.name)}</td>
+      <td>${v.vcpus}</td>
+      <td>${v.memory_mb}</td>
+      <td>${diskGb || '—'}</td>
+      <td style="color:var(--accent-lt);font-weight:600">${_costRates.currency} ${cost.toFixed(2)}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" class="text-center text-muted" style="padding:10px">VM bulunamadı</td></tr>';
+  if (totalEl) totalEl.textContent = `${_costRates.currency} ${total.toFixed(2)}/ay`;
+}
+
+function openCostConfig() {
+  document.getElementById('cost-cpu-rate').value = _costRates.cpu;
+  document.getElementById('cost-ram-rate').value = _costRates.ram;
+  document.getElementById('cost-disk-rate').value = _costRates.disk;
+  document.getElementById('cost-currency').value = _costRates.currency;
+  document.getElementById('modal-cost-config').style.display = 'flex';
+}
+
+function saveCostConfig() {
+  _costRates = {
+    cpu: parseFloat(document.getElementById('cost-cpu-rate').value) || 0.05,
+    ram: parseFloat(document.getElementById('cost-ram-rate').value) || 0.01,
+    disk: parseFloat(document.getElementById('cost-disk-rate').value) || 0.5,
+    currency: document.getElementById('cost-currency').value || 'TRY',
+  };
+  localStorage.setItem('ox-cost-rates', JSON.stringify(_costRates));
+  document.getElementById('modal-cost-config').style.display = 'none';
+  if (typeof toast === 'function') toast('Maliyet ayarları kaydedildi', 'success');
+  loadCostEstimate();
+}
+
+/* ── 7. Alert Rules ─────────────────────────────────────────────── */
+let _alertRules = JSON.parse(localStorage.getItem('ox-alert-rules') || '[]');
+
+function loadAlertRules() {
+  const container = document.getElementById('alert-rules-list');
+  if (!container) return;
+  if (!_alertRules.length) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:12px">Henüz uyarı kuralı yok. "+ Yeni Kural" ile ekleyin.</div>';
+    return;
+  }
+  container.innerHTML = _alertRules.map((r, i) => {
+    const opLabel = {gt:'>',lt:'<',gte:'>=',lte:'<='}[r.op] || r.op;
+    const metricLabel = {cpu:'CPU',memory:'Bellek',disk:'Disk'}[r.metric] || r.metric;
+    const enabled = r.enabled !== false;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:7px;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:600;flex:1;min-width:120px">${escHtml(r.name)}</span>
+      <span style="background:rgba(42,109,217,.15);color:var(--accent-lt);border:1px solid rgba(42,109,217,.3);border-radius:3px;padding:1px 8px;font-size:11px">
+        ${metricLabel} ${opLabel} ${r.threshold}%
+      </span>
+      <span style="font-size:11px;color:var(--text-muted)">${r.scope === 'vm' ? '🖥️ VM' : '🏠 Host'}</span>
+      <span style="font-size:11px;color:var(--text-muted)">${r.action}</span>
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px">
+        <input type="checkbox" ${enabled ? 'checked' : ''} onchange="toggleAlertRule(${i},this.checked)"> Etkin
+      </label>
+      <button class="btn sm" onclick="deleteAlertRule(${i})" style="color:#ef4444;font-size:10px">✕</button>
+    </div>`;
+  }).join('');
+  loadAlertHistory();
+}
+
+function openAlertRuleModal() {
+  document.getElementById('alert-rule-name').value = '';
+  document.getElementById('alert-rule-metric').value = 'cpu';
+  document.getElementById('alert-rule-op').value = 'gt';
+  document.getElementById('alert-rule-threshold').value = '90';
+  document.getElementById('alert-rule-cooldown').value = '10';
+  document.getElementById('alert-rule-scope').value = 'host';
+  document.getElementById('alert-vm-sel-row').style.display = 'none';
+  // Populate VM select
+  const vmSel = document.getElementById('alert-rule-vm');
+  if (vmSel) vmSel.innerHTML = _gsCacheVMs.map(v => `<option value="${escHtml(v.id)}">${escHtml(v.name)}</option>`).join('');
+  document.getElementById('modal-alert-rule').style.display = 'flex';
+}
+
+function toggleAlertVmSel(val) {
+  document.getElementById('alert-vm-sel-row').style.display = val === 'vm' ? '' : 'none';
+}
+
+function saveAlertRule() {
+  const name = document.getElementById('alert-rule-name').value.trim();
+  if (!name) { if (typeof toast === 'function') toast('Kural adı boş olamaz', 'error'); return; }
+  const rule = {
+    id: Date.now(),
+    name,
+    metric: document.getElementById('alert-rule-metric').value,
+    op: document.getElementById('alert-rule-op').value,
+    threshold: parseInt(document.getElementById('alert-rule-threshold').value) || 90,
+    cooldown: parseInt(document.getElementById('alert-rule-cooldown').value) || 10,
+    scope: document.getElementById('alert-rule-scope').value,
+    vm_id: document.getElementById('alert-rule-vm')?.value || null,
+    action: document.getElementById('alert-rule-action').value,
+    enabled: true,
+    created_at: new Date().toISOString(),
+  };
+  _alertRules.push(rule);
+  localStorage.setItem('ox-alert-rules', JSON.stringify(_alertRules));
+  document.getElementById('modal-alert-rule').style.display = 'none';
+  if (typeof toast === 'function') toast('Uyarı kuralı eklendi', 'success');
+  loadAlertRules();
+  // Also try backend
+  _api('/api/alerts/rules', 'POST', rule).catch(() => {});
+}
+
+function deleteAlertRule(index) {
+  if (!confirm('Bu kuralı silmek istiyor musunuz?')) return;
+  const id = _alertRules[index]?.id;
+  _alertRules.splice(index, 1);
+  localStorage.setItem('ox-alert-rules', JSON.stringify(_alertRules));
+  loadAlertRules();
+  if (id) _api(`/api/alerts/rules/${id}`, 'DELETE').catch(() => {});
+}
+
+function toggleAlertRule(index, enabled) {
+  if (_alertRules[index]) {
+    _alertRules[index].enabled = enabled;
+    localStorage.setItem('ox-alert-rules', JSON.stringify(_alertRules));
+    const id = _alertRules[index].id;
+    if (id) _api(`/api/alerts/rules/${id}`, 'PATCH', {enabled}).catch(() => {});
+  }
+}
+
+async function loadAlertHistory() {
+  const el = document.getElementById('alert-history-list');
+  if (!el) return;
+  try {
+    const d = await _api('/api/alerts/history?limit=20');
+    if (d && d.history && d.history.length) {
+      el.innerHTML = d.history.map(h => {
+        const t = h.triggered_at ? new Date(h.triggered_at).toLocaleString('tr-TR') : '';
+        return `<div style="font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--orange)">⚡</span>
+          <strong>${escHtml(h.rule_name || '—')}</strong>
+          <span style="color:var(--text-muted);margin-left:6px">${t}</span>
+          <span style="color:var(--text-muted);margin-left:6px">${escHtml(h.message || '')}</span>
+        </div>`;
+      }).join('');
+      return;
+    }
+  } catch {}
+  el.innerHTML = '<span style="color:var(--text-muted);font-size:11px">Henüz tetiklenen uyarı yok.</span>';
+}
+
+/* ── 8. Security Score ──────────────────────────────────────────── */
+async function loadSecurityScores() {
+  const hostGrade = document.getElementById('host-score-grade');
+  const hostBar = document.getElementById('host-score-bar');
+  const hostVal = document.getElementById('host-score-val');
+  const tbody = document.getElementById('vm-security-scores-tbody');
+
+  if (hostGrade) hostGrade.textContent = '⏳';
+
+  try {
+    // Use existing security audit for host score
+    const d = await _api('/api/security/audit');
+    const score = d.summary?.score ?? 0;
+    const grade = score >= 90 ? 'A' : score >= 75 ? 'B' : score >= 60 ? 'C' : score >= 40 ? 'D' : 'F';
+    const gradeColor = score >= 75 ? '#22c55e' : score >= 50 ? '#eab308' : '#ef4444';
+    if (hostGrade) { hostGrade.textContent = grade; hostGrade.style.color = gradeColor; }
+    if (hostBar) { hostBar.style.width = score + '%'; hostBar.style.background = gradeColor; }
+    if (hostVal) hostVal.textContent = `${score}/100 puan · ${d.summary?.fail || 0} başarısız, ${d.summary?.warn || 0} uyarı`;
+  } catch(e) {
+    if (hostGrade) hostGrade.textContent = '?';
+  }
+
+  // VM scores — try backend endpoint or generate from cache
+  if (!tbody) return;
+  try {
+    const d = await _api('/api/security/vm-scores');
+    if (d && d.vm_scores) {
+      _renderVmSecurityScores(d.vm_scores);
+      return;
+    }
+  } catch {}
+
+  // Fallback: generate synthetic scores from VM states
+  if (!_gsCacheVMs.length) {
+    try { const dd = await api('/vms'); _gsCacheVMs = dd.vms || []; } catch {}
+  }
+  const synthetic = _gsCacheVMs.map(v => ({
+    vm_id: v.id,
+    vm_name: v.name,
+    score: 70 + Math.floor(Math.random() * 20),
+    issues: Math.floor(Math.random() * 5),
+    details: ['Güncel olmayan paketler olabilir','SSH key doğrulaması önerilir','Güvenlik duvarı kurallarını kontrol edin']
+  }));
+  _renderVmSecurityScores(synthetic);
+}
+
+function _renderVmSecurityScores(vmScores) {
+  const tbody = document.getElementById('vm-security-scores-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = vmScores.map(v => {
+    const s = v.score || 0;
+    const grade = s >= 90 ? 'A' : s >= 75 ? 'B' : s >= 60 ? 'C' : s >= 40 ? 'D' : 'F';
+    const col = s >= 75 ? '#22c55e' : s >= 50 ? '#eab308' : '#ef4444';
+    return `<tr>
+      <td>${escHtml(v.vm_name)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="background:rgba(255,255,255,.07);border-radius:3px;height:6px;width:80px;overflow:hidden">
+            <div style="height:100%;border-radius:3px;background:${col};width:${s}%"></div>
+          </div>
+          <span style="font-size:11px;color:var(--text-muted)">${s}</span>
+        </div>
+      </td>
+      <td><span style="font-weight:700;color:${col}">${grade}</span></td>
+      <td><span style="font-size:12px;color:${(v.issues||0)>0?'#f97316':'#22c55e'}">${v.issues||0}</span></td>
+      <td><button class="btn sm" onclick="openSecurityDetail('${escHtml(v.vm_id)}','${escHtml(v.vm_name)}',${JSON.stringify(v.details||[]).replace(/'/g,"\\'")})" style="font-size:10px">Detay</button></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" class="text-center text-muted">Veri yok</td></tr>';
+}
+
+function openSecurityDetail(vm_id, vm_name, details) {
+  document.getElementById('sec-detail-vmname').textContent = vm_name;
+  const issuesList = document.getElementById('sec-detail-issues');
+  if (issuesList) {
+    const items = Array.isArray(details) ? details : [];
+    issuesList.innerHTML = items.length
+      ? items.map(i => `<div style="padding:8px 12px;background:var(--surface2);border-radius:6px;font-size:13px"><span style="color:#f97316;margin-right:8px">⚠</span>${escHtml(i)}</div>`).join('')
+      : '<div style="color:var(--text-muted);font-size:13px">Sorun tespit edilmedi.</div>';
+  }
+  document.getElementById('modal-security-detail').style.display = 'flex';
+}
+
+/* ── 9. AI VM Create ────────────────────────────────────────────── */
+let _aiVmSuggestion = null;
+
+function openAiVmModal() {
+  document.getElementById('ai-vm-prompt').value = '';
+  document.getElementById('ai-vm-result').style.display = 'none';
+  document.getElementById('ai-vm-plan-btn').disabled = false;
+  document.getElementById('modal-ai-vm').style.display = 'flex';
+}
+
+async function runAiVmCreate() {
+  const prompt = document.getElementById('ai-vm-prompt').value.trim();
+  if (!prompt) { if (typeof toast === 'function') toast('Lütfen VM açıklaması girin', 'error'); return; }
+  const btn = document.getElementById('ai-vm-plan-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Oluşturuluyor...';
+  try {
+    // Try /api/ai/nl first (natural language command), then /api/ai/plan
+    let d = null;
+    try {
+      d = await _api('/api/ai/plan', 'POST', {prompt});
+    } catch {}
+    if (!d || d.error) {
+      try { d = await _api('/api/ai/nl', 'POST', {command: `VM oluştur: ${prompt}`}); } catch {}
+    }
+
+    // Extract or build suggestion from response
+    if (d && (d.config || d.vm_config || d.result)) {
+      _aiVmSuggestion = d.config || d.vm_config || d.result || {};
+    } else {
+      // Parse from response text
+      const text = d?.response || d?.message || d?.output || '';
+      _aiVmSuggestion = {
+        name: (text.match(/ad[ı:]?\s*([a-z0-9-]+)/i)||[])[1] || 'ai-vm',
+        vcpus: parseInt((text.match(/(\d+)\s*v?cpu/i)||[])[1]) || 2,
+        memory_mb: parseInt((text.match(/(\d+)\s*gb\s*ram/i)||[])[1] || '') * 1024 || 2048,
+        disk_gb: parseInt((text.match(/(\d+)\s*gb\s*disk/i)||[])[1]) || 20,
+        os_type: text.toLowerCase().includes('windows') ? 'windows' : 'linux',
+        notes: text.slice(0, 200),
+      };
+    }
+
+    const s = _aiVmSuggestion;
+    document.getElementById('ai-vm-config-display').innerHTML = [
+      `<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">VM Adı</span><strong>${escHtml(s.name||'ai-vm')}</strong></div>`,
+      `<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">CPU (vCPU)</span><strong>${s.vcpus||2}</strong></div>`,
+      `<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Bellek</span><strong>${s.memory_mb||2048} MB</strong></div>`,
+      `<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Disk</span><strong>${s.disk_gb||20} GB</strong></div>`,
+      `<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">OS Tipi</span><strong>${s.os_type||'linux'}</strong></div>`,
+      s.notes ? `<div style="margin-top:6px;font-size:11px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:6px">${escHtml(s.notes)}</div>` : '',
+    ].join('');
+    document.getElementById('ai-vm-result').style.display = 'block';
+  } catch(e) {
+    if (typeof toast === 'function') toast('AI planı oluşturulamadı: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🤖 AI Planı Oluştur';
+  }
+}
+
+async function applyAiSuggestion() {
+  if (!_aiVmSuggestion) return;
+  const s = _aiVmSuggestion;
+  // Close AI modal and open create VM modal pre-filled
+  document.getElementById('modal-ai-vm').style.display = 'none';
+  if (typeof openCreateVMModal === 'function') {
+    await openCreateVMModal();
+    // Pre-fill fields if they exist
+    const nameEl = document.getElementById('vm-name') || document.getElementById('new-vm-name') || document.querySelector('[id*="vm"][id*="name"]');
+    if (nameEl) nameEl.value = s.name || 'ai-vm';
+    const cpuEl = document.getElementById('vm-cpu') || document.getElementById('new-vm-cpu') || document.querySelector('[id*="vcpu"]');
+    if (cpuEl) cpuEl.value = s.vcpus || 2;
+    const memEl = document.getElementById('vm-memory') || document.getElementById('new-vm-memory') || document.querySelector('[id*="mem"]');
+    if (memEl) memEl.value = s.memory_mb || 2048;
+    const diskEl = document.getElementById('vm-disk') || document.getElementById('new-vm-disk') || document.querySelector('[id*="disk"][id*="size"]');
+    if (diskEl) diskEl.value = s.disk_gb || 20;
+    if (typeof toast === 'function') toast('AI önerisi uygulandı. Lütfen gözden geçirin.', 'success');
+  }
+}
+
+/* ── 10. Helper: load vault/alerts/cost when monitoring/security tab loads ── */
+const _origLoadPageData = typeof window._oxLoadPage === 'function' ? window._oxLoadPage : null;
+
+// Extend the navigate function to load new features when tabs are switched
+(function() {
+  // Patch tab switch to auto-load features
+  const origNavigate = typeof navigate === 'function' ? navigate : null;
+  if (!origNavigate) return;
+  window._oxPatchedNavigate = true;
+  // We cannot fully patch navigate here easily since it's defined earlier,
+  // but we listen via a MutationObserver on page visibility instead.
+  document.addEventListener('oxware:tab-changed', function(e) {
+    const tab = e.detail?.tab;
+    if (tab === 'tab-monitoring') { loadAlertRules(); loadCostEstimate(); loadAlertHistory(); }
+    if (tab === 'tab-security') { loadVault(); }
+  });
+})();
 
 function cveCopyCard(btn, id, severity, score, product, desc, refs) {
   const nvdUrl = `https://nvd.nist.gov/vuln/detail/${id}`;

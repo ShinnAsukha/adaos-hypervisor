@@ -55,6 +55,18 @@ sudo bash install.sh
 26. [İnternet Bağlantısı Gereksinimleri](#26-i̇nternet-bağlantısı-gereksinimleri)
 27. [Sorun Giderme](#27-sorun-giderme)
 28. [AdaOS → OXware Canlı Sunucu Geçişi](#28-adaos--oxware-canlı-sunucu-geçişi)
+29. [VM Lifecycle Hook Scripts](#29-vm-lifecycle-hook-scripts)
+30. [LDAP / Active Directory Girişi](#30-ldap--active-directory-girişi)
+31. [RBAC — Rol Tabanlı Erişim Kontrolü](#31-rbac--rol-tabanlı-erişim-kontrolü)
+32. [VM Etiketleme ve Gruplama](#32-vm-etiketleme-ve-gruplama)
+33. [VM Notları](#33-vm-notları)
+34. [Kimlik Bilgisi Vault](#34-kimlik-bilgisi-vault)
+35. [Maliyet Takibi](#35-maliyet-takibi)
+36. [Uyarı Kuralları (Alert Rules)](#36-uyarı-kuralları-alert-rules)
+37. [Güvenlik Skoru](#37-güvenlik-skoru)
+38. [Global Arama ve Klavye Kısayolları](#38-global-arama-ve-klavye-kısayolları)
+39. [DNS Watchdog ve Otomatik İyileştirme](#39-dns-watchdog-ve-otomatik-i̇yileştirme)
+40. [AI ile VM Oluşturma](#40-ai-ile-vm-oluşturma)
 
 ---
 
@@ -1483,6 +1495,455 @@ echo "✓ Geçiş tamamlandı."
 | `/var/lib/adaos` | `/var/lib/oxware` |
 | `/var/log/adaos` | `/var/log/oxware` |
 | `systemctl ... adaos` | `systemctl ... oxware` |
+
+---
+
+## 29. VM Lifecycle Hook Scripts
+
+VM başlatma, durdurma ve silme olaylarında otomatik bash scriptleri çalıştırın.
+
+### Hook dizin yapısı
+
+```
+/etc/oxware/hooks/
+├── pre-start/      # VM başlatılmadan önce
+├── post-start/     # VM başlatıldıktan sonra
+├── pre-stop/       # VM durdurulmadan önce
+├── post-stop/      # VM durdurulduktan sonra
+├── pre-delete/     # VM silinmeden önce
+└── post-delete/    # VM silindikten sonra
+```
+
+Her dizindeki `.sh` dosyaları alfabetik sırayla çalıştırılır. Scriptler şu ortam değişkenlerini alır:
+
+| Değişken | Açıklama |
+|----------|----------|
+| `VM_ID` | Libvirt VM ID'si |
+| `VM_NAME` | VM adı |
+| `VM_STATE` | Olay adı (ör. `pre-start`) |
+
+Zaman aşımı: 30 saniye. Çıktılar: `/var/log/oxware/hooks.log`
+
+### Örnek hook scripti
+
+```bash
+#!/bin/bash
+# /etc/oxware/hooks/post-start/10-notify.sh
+curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
+  -d "chat_id=$CHAT_ID&text=VM $VM_NAME ($VM_ID) başlatıldı."
+```
+
+### API
+
+```bash
+# Hook listesi
+GET /api/hooks
+
+# Script içeriğini getir
+GET /api/hooks/<event>/<name>
+
+# Script kaydet / güncelle
+PUT /api/hooks/<event>/<name>
+Body: {"content": "#!/bin/bash\n..."}
+
+# Script sil
+DELETE /api/hooks/<event>/<name>
+
+# Hook'ları manuel tetikle
+POST /api/hooks/run
+Body: {"event": "pre-start", "vm_id": "vm-123", "vm_name": "webserver"}
+```
+
+Web arayüzde: **Entegrasyonlar → Hook Script Yönetimi**
+
+---
+
+## 30. LDAP / Active Directory Girişi
+
+OXware, şirket LDAP veya Active Directory sunucunuzla entegre olarak mevcut kullanıcıları kimlik doğrulayabilir.
+
+### Yapılandırma (Web UI)
+
+**Güvenlik sekmesi → LDAP Yapılandırması** bölümünden:
+
+| Alan | Örnek |
+|------|-------|
+| LDAP Sunucu | `ldap://192.168.1.10:389` |
+| Bind DN | `CN=oxware,OU=Service,DC=firma,DC=com` |
+| Bind Parola | `••••••••` |
+| Base DN | `DC=firma,DC=com` |
+| Kullanıcı Filtresi | `(sAMAccountName={username})` |
+| Rol Eşlemesi | `CN=IT-Admin` → `admin` |
+
+### Nasıl çalışır?
+
+1. Kullanıcı login formuna AD kullanıcı adı/parolasıyla girer.
+2. OXware önce yerel kullanıcı DB'yi dener.
+3. Yerel kullanıcı yoksa LDAP'a bind eder.
+4. LDAP doğrularsa kullanıcı otomatik oluşturulur (rol LDAP grubundan alınır).
+5. Sonraki girişlerde rol LDAP'tan güncellenir.
+
+```bash
+# LDAP bağlantısını test et
+POST /api/ldap/test
+Body: {"username": "testuser", "password": "testpass"}
+```
+
+---
+
+## 31. RBAC — Rol Tabanlı Erişim Kontrolü
+
+OXware üç rol destekler. Her rol hangi API endpoint'lerine erişebileceğini belirler.
+
+| Rol | Açıklama |
+|-----|----------|
+| `admin` | Tam erişim — tüm VM, ağ, kullanıcı, sistem işlemleri |
+| `operator` | VM başlat/durdur, snapshot, izleme — kullanıcı yönetimi yok |
+| `viewer` | Sadece okuma — VM listesi, metrikler, loglar |
+
+### Korunan işlemler (52 endpoint)
+
+- VM oluşturma / silme / klonlama
+- VM başlatma / durdurma / yeniden başlatma
+- Ağ oluşturma / silme
+- Kullanıcı yönetimi (oluştur/sil/rol değiştir)
+- PCI passthrough ekleme / kaldırma
+- NIC hot-plug
+- Snapshot silme
+- Hook script kaydetme / silme
+- Vault kimlik bilgisi ekleme / silme
+- Uyarı kuralı oluşturma / silme
+
+### Mevcut kullanıcı bilgisi
+
+```bash
+GET /api/auth/me
+# → {"username": "...", "role": "admin|operator|viewer", ...}
+```
+
+---
+
+## 32. VM Etiketleme ve Gruplama
+
+Her VM'e etiket ekleyerek gruplandırın ve filtreleyin.
+
+### Kurallar
+
+- VM başına maksimum **10 etiket**
+- Etiket uzunluğu maksimum **20 karakter**
+- Otomatik küçük harfe dönüştürülür
+- Alfanümerik, tire ve alt çizgi
+
+### API
+
+```bash
+# VM etiketlerini getir
+GET /api/vms/<vm_id>/tags
+
+# Etiket listesini güncelle
+PUT /api/vms/<vm_id>/tags
+Body: {"tags": ["web", "production", "nginx"]}
+
+# Etiket ekle
+POST /api/vms/<vm_id>/tags
+Body: {"tag": "nginx"}
+
+# Etiket sil
+DELETE /api/vms/<vm_id>/tags/<tag>
+
+# Belirli etikete sahip VM'leri listele
+GET /api/tags/<tag>/vms
+
+# Tüm etiketleri listele
+GET /api/tags
+```
+
+Web arayüzde: VM listesinin üstündeki **etiket filtresi** ile anlık filtreleme.
+
+---
+
+## 33. VM Notları
+
+Her VM için markdown destekli not alanı.
+
+- Maksimum **10.000 karakter**
+- VM detay modal'ından erişilebilir
+- Not olmayan VM'lerde boş görünür
+
+### API
+
+```bash
+# Notu getir
+GET /api/vms/<vm_id>/note
+
+# Notu kaydet / güncelle
+PUT /api/vms/<vm_id>/note
+Body: {"content": "Bu VM production web sunucusu..."}
+
+# Notu sil
+DELETE /api/vms/<vm_id>/note
+```
+
+---
+
+## 34. Kimlik Bilgisi Vault
+
+VM'lere ait SSH anahtarı, root parolası, web paneli kimlik bilgilerini şifreli saklayın.
+
+### Şifreleme
+
+- Anahtar: `/etc/oxware/vault.key` (ilk kullanımda oluşturulur, chmod 600)
+- Algoritma: **Fernet** (AES-128-CBC + HMAC-SHA256)
+- Veri: `/var/lib/oxware/vault.json`
+
+### Kimlik bilgisi tipleri
+
+| Tip | Açıklama |
+|-----|----------|
+| `root` | Root / sudo parolası |
+| `ssh_key` | SSH özel anahtar |
+| `web` | Web paneli giriş bilgisi |
+| `custom` | Özel |
+
+### API
+
+```bash
+# VM kimlik bilgilerini listele (parola maskeli)
+GET /api/vault/<vm_id>
+
+# Tüm vault içeriği (parola maskeli)
+GET /api/vault
+
+# Kimlik bilgisi ekle
+POST /api/vault/<vm_id>
+Body: {
+  "cred_type": "root",
+  "username": "root",
+  "password": "gizli123",
+  "notes": "Production DB sunucu"
+}
+
+# Kimlik bilgisi sil
+DELETE /api/vault/<vm_id>/<cred_type>
+```
+
+Web arayüzde: **Güvenlik → Kimlik Bilgisi Vault** — parolalar tarayıcıda maskelidir, 👁 ile göster.
+
+---
+
+## 35. Maliyet Takibi
+
+VM'lerin tahmini aylık maliyetini CPU/RAM/disk birim fiyatlarına göre hesaplayın.
+
+### Yapılandırma
+
+```bash
+# Mevcut tarife görüntüle
+GET /api/cost/config
+
+# Tarife güncelle
+PUT /api/cost/config
+Body: {
+  "cpu_rate":  0.005,   # vCPU başına saatlik USD
+  "ram_rate":  0.001,   # GB RAM başına saatlik USD
+  "disk_rate": 0.0001,  # GB disk başına saatlik USD
+  "currency":  "USD"
+}
+```
+
+### VM maliyet hesaplama
+
+```bash
+# Tek VM maliyet tahmini
+GET /api/cost/<vm_id>?hours=720
+
+# Tüm VM'ler özet
+GET /api/cost/summary
+# → {"total_monthly": 124.50, "vms": [...]}
+```
+
+Web arayüzde: **İzleme → Maliyet Tahmini** — aylık toplam + VM başına döküm tablosu.
+
+---
+
+## 36. Uyarı Kuralları (Alert Rules)
+
+CPU, RAM, disk kullanımı belirli eşiği aştığında bildirim alın veya webhook tetikleyin.
+
+### Kural yapısı
+
+| Alan | Açıklama |
+|------|----------|
+| `metric` | `cpu_pct` / `mem_pct` / `disk_pct` |
+| `operator` | `gt` / `lt` / `gte` / `lte` |
+| `threshold` | Eşik değeri (0–100) |
+| `cooldown_s` | Aynı kuralın tekrar tetiklenmesi için bekleme süresi (saniye) |
+| `webhook_url` | Tetiklenince POST atılacak URL (isteğe bağlı) |
+
+### API
+
+```bash
+# Kural listesi
+GET /api/alerts/rules
+
+# Yeni kural oluştur
+POST /api/alerts/rules
+Body: {
+  "name": "CPU Yüksek",
+  "metric": "cpu_pct",
+  "operator": "gt",
+  "threshold": 90,
+  "cooldown_s": 300,
+  "webhook_url": "https://hooks.slack.com/..."
+}
+
+# Kural güncelle
+PUT /api/alerts/rules/<rule_id>
+
+# Kural sil
+DELETE /api/alerts/rules/<rule_id>
+
+# Son uyarı geçmişi
+GET /api/alerts/history?n=50
+```
+
+Web arayüzde: **İzleme → Uyarı Kuralları**
+
+---
+
+## 37. Güvenlik Skoru
+
+Her VM ve host sistemi için otomatik güvenlik derecelendirmesi.
+
+### Değerlendirme kriterleri
+
+**VM skorlaması:**
+- SSH port 22 mi kullanılıyor? (−10 puan)
+- Root login aktif mi? (−20 puan)
+- Parola ile SSH girişi açık mı? (−15 puan)
+- Bilinen CVE sayısı
+- Güncel snapshot var mı? (+10 puan)
+- Güvenlik duvarı kuralı var mı? (+10 puan)
+
+**Host skorlaması:**
+- fail2ban aktif mi?
+- UFW aktif ve yapılandırılmış mı?
+- Bekleyen apt güvenlik güncellemesi var mı?
+
+### Notlar
+
+| Puan | Not |
+|------|-----|
+| 90–100 | **A** — Mükemmel |
+| 75–89 | **B** — İyi |
+| 60–74 | **C** — Orta |
+| 40–59 | **D** — Zayıf |
+| 0–39 | **F** — Kritik |
+
+### API
+
+```bash
+# Tüm VM'leri tara
+GET /api/security/score
+
+# Tek VM skoru
+GET /api/security/score/<vm_id>
+
+# Host sistem skoru
+GET /api/security/host-score
+```
+
+Web arayüzde: **Güvenlik → Güvenlik Skoru** — host skoru progress bar, VM'ler tablo.
+
+---
+
+## 38. Global Arama ve Klavye Kısayolları
+
+### Global Arama (Ctrl+K)
+
+Topbar'daki 🔍 düğmesine tıklayın veya `Ctrl+K` basın. VM adı, IP adresi, etiket veya sayfa adı ile arama yapın.
+
+- Sonuçlar: VM'ler (etiket chip'leriyle), sayfalar
+- Klavye: `↑↓` gezin, `Enter` git, `Esc` kapat
+- Canlı arama (150ms debounce)
+
+### Klavye Kısayolları
+
+| Kısayol | İşlev |
+|---------|-------|
+| `Ctrl+K` | Global arama aç |
+| `Ctrl+Shift+N` | Yeni VM oluştur |
+| `Ctrl+Shift+R` | Sayfayı yenile |
+| `G` → `V` | VM listesine git |
+| `G` → `N` | Ağ sayfasına git |
+| `G` → `S` | Depolama sayfasına git |
+| `G` → `M` | İzleme sekmesine git |
+| `?` | Kısayol listesini göster |
+| `Esc` | Açık modal'ı kapat |
+
+---
+
+## 39. DNS Watchdog ve Otomatik İyileştirme
+
+Sunucunuzda DNS çözümlemesi başarısız olduğunda sistem otomatik olarak iyileştirilir.
+
+### Nasıl çalışır?
+
+Her 5 dakikada bir `oxware-dns-watchdog.timer` tetiklenir:
+
+1. `8.8.8.8` ve `1.1.1.1`'e ping atar
+2. DNS başarısızsa `/etc/resolv.conf` yeniden yazar:
+   ```
+   nameserver 8.8.8.8
+   nameserver 1.1.1.1
+   nameserver 8.8.4.4
+   ```
+3. `systemd-resolved` yeniden başlatır
+4. `git pull` ile OXware güncellemelerini çeker
+5. OXware servisini yeniden başlatır
+
+### Statik DNS (kurulum sırasında)
+
+Installer, `systemd-resolved` symlink'ini kırarak statik resolv.conf yazar. DNS sorunu yaşamaz.
+
+```bash
+# Watchdog durumu
+systemctl status oxware-dns-watchdog.timer
+
+# Manuel tetikle
+sudo systemctl start oxware-dns-watchdog.service
+
+# Log görüntüle
+journalctl -u oxware-dns-watchdog -n 30
+```
+
+---
+
+## 40. AI ile VM Oluşturma
+
+Doğal dil komutlarıyla VM oluşturun.
+
+### Nasıl kullanılır?
+
+1. VM listesinde **🤖 AI ile Oluştur** düğmesine tıklayın.
+2. Ne istediğinizi yazın:
+   ```
+   2 GB RAM, 2 CPU, Ubuntu 22.04, web sunucusu için
+   ```
+3. AI yapılandırmayı önerir: CPU / RAM / Disk / OS
+4. **Uygula ve Oluştur** ile VM oluşturma formuna otomatik doldurulur.
+
+### Backend API
+
+```bash
+# AI VM planı oluştur
+POST /api/ai/plan
+Body: {"description": "2 GB RAM, web sunucusu için Ubuntu VM"}
+
+# Doğal dil komutu (fallback)
+POST /api/ai/nl
+Body: {"command": "2 vCPU, 4GB RAM, 40GB disk, Debian 12"}
+```
 
 ---
 
