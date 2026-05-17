@@ -421,7 +421,7 @@
       <span style="color:#8b949e;font-size:.8rem;margin-left:.5rem;font-family:monospace"></span>
     </div>
     <div class="terminal-body">
-      <div><span class="t-prompt">$</span> <span class="t-cmd">bash &lt;(curl -s https://raw.githubusercontent.com/ShinnAsukha/oxware-hypervisor/main/install.sh)</span></div>
+      <div><span class="t-prompt">$</span> <span class="t-cmd">git clone https://github.com/ShinnAsukha/oxware-hypervisor.git /opt/oxware &amp;&amp; sudo bash /opt/oxware/install.sh</span></div>
       <div style="margin-top:.5rem"><span class="t-ok">[✓]</span> <span class="t-out">KVM sanallaştırma aktif: VMX (Intel VT-x)</span></div>
       <div><span class="t-ok">[✓]</span> <span class="t-out">Python ortamı hazır: /opt/oxware/venv</span></div>
       <div><span class="t-ok">[✓]</span> <span class="t-out">libvirt yapılandırıldı</span></div>
@@ -630,8 +630,8 @@
   <p>Root erişimi olan herhangi bir Ubuntu/Debian sunucusunda çalışır.</p>
 
   <div class="install-box">
-    <span class="cmd">bash &lt;(curl -s https://raw.githubusercontent.com/ShinnAsukha/oxware-hypervisor/main/install.sh)</span>
-    <button class="copy-btn" onclick="navigator.clipboard.writeText('bash <(curl -s https://raw.githubusercontent.com/ShinnAsukha/oxware-hypervisor/main/install.sh)');this.textContent='✓ Kopyalandı';setTimeout(()=>this.textContent='Kopyala',2000)">Kopyala</button>
+    <span class="cmd">git clone https://github.com/ShinnAsukha/oxware-hypervisor.git /opt/oxware &amp;&amp; sudo bash /opt/oxware/install.sh</span>
+    <button class="copy-btn" onclick="navigator.clipboard.writeText('git clone https://github.com/ShinnAsukha/oxware-hypervisor.git /opt/oxware && sudo bash /opt/oxware/install.sh');this.textContent='✓ Kopyalandı';setTimeout(()=>this.textContent='Kopyala',2000)">Kopyala</button>
   </div>
 
   <div class="hero-btns">
