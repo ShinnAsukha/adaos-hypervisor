@@ -4875,10 +4875,16 @@ def api_ai_analyze():
     return ok(ai_planner.analyze_resources())
 
 @app.route("/api/ai/predict/capacity", methods=["GET"])
+@app.route("/api/ai/forecast", methods=["GET", "POST"])
 @require_auth
 def api_ai_predict():
     if not ai_planner: return ok({})
     days = int(request.args.get("days", 30))
+    if request.method == "POST":
+        try:
+            days = int((request.get_json(silent=True) or {}).get("days", days))
+        except Exception:
+            pass
     return ok(ai_planner.predict_capacity(days))
 
 @app.route("/api/ai/suggest/vm/<vm_id>", methods=["POST"])

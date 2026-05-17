@@ -58,7 +58,7 @@ def get_status():
     try:
         result = _run("nft", "list", "ruleset")
         if result is None:
-            return {"active": False, "error": "nft bulunamadı"}
+            return {"active": False, "available": False, "error": "nft bulunamadı"}
 
         active = result.returncode == 0
         rule_count = 0
@@ -67,12 +67,13 @@ def get_status():
 
         return {
             "active": active,
+            "available": active,
             "rule_count": rule_count,
             "returncode": result.returncode,
         }
     except Exception as exc:
         log.exception("get_status hatası: %s", exc)
-        return {"active": False, "error": str(exc)}
+        return {"active": False, "available": False, "error": str(exc)}
 
 
 def list_rules():

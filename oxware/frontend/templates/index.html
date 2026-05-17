@@ -691,6 +691,34 @@
       .page{padding:8px!important}
       .chart-container{height:140px!important}
     }
+
+    /* ── Feature cards (QoS, Resource Pool, Storage Migration) ── */
+    .feat-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 12px;border-bottom:1px solid var(--border);border-radius:6px;transition:background .12s}
+    .feat-row:last-child{border-bottom:none}
+    .feat-row:hover{background:var(--surface2)}
+    .feat-row-title{font-size:13px;font-weight:600;min-width:120px;color:var(--text)}
+    .feat-row-sub{font-size:11px;color:var(--text-muted);min-width:80px}
+    .feat-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+    .feat-tag-blue{background:rgba(56,189,248,.12);color:var(--accent-lt)}
+    .feat-tag-green{background:rgba(34,197,94,.12);color:#22c55e}
+    .feat-tag-red{background:rgba(239,68,68,.12);color:#ef4444}
+    .feat-tag-yellow{background:rgba(251,191,36,.12);color:#f59e0b}
+    .feat-tag-gray{background:var(--surface2);color:var(--text-muted)}
+    .feat-input{width:90px;padding:5px 8px;border-radius:5px;border:1px solid var(--border);background:var(--bg2,var(--surface));color:var(--fg,var(--text));font-size:11px}
+    .feat-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(56,189,248,.15)}
+    .pool-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);transition:border-color .12s}
+    .pool-row:hover{border-color:var(--accent-lt)}
+    .pool-row-info{flex:1;min-width:120px}
+    .pool-row-name{font-weight:700;font-size:13px}
+    .pool-row-desc{font-size:11px;color:var(--text-muted);margin-top:2px}
+    .pool-stat{font-size:11px;color:var(--text-muted);white-space:nowrap}
+    .pool-stat b{color:var(--text)}
+    .smig-job{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;border:1px solid var(--border);margin-bottom:6px;font-size:12px;background:var(--surface)}
+    .smig-job-vm{font-weight:700;min-width:80px}
+    .smig-job-path{flex:1;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .smig-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}
+    .smig-controls select,.smig-controls input{padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg2,var(--surface));color:var(--fg,var(--text));font-size:12px;min-width:0}
+    .smig-controls select:focus,.smig-controls input:focus{outline:none;border-color:var(--accent)}
   </style>
 </head>
 <body>
@@ -1011,7 +1039,7 @@
             <div class="vd-sep"></div>
             <div class="vd-info-row">
               <div class="vd-info-item">⚙️ &nbsp;<span class="vd-info-val" id="vd-cpu">—</span>&nbsp;<span style="opacity:.55">vCPU</span></div>
-              <div class="vd-info-item">🧠 &nbsp;<span class="vd-info-val" id="vd-mem">—</span>&nbsp;<span style="opacity:.55">MB RAM</span></div>
+              <div class="vd-info-item">🧠 &nbsp;<span class="vd-info-val" id="vd-mem">—</span>&nbsp;<span id="vd-mem-sub" style="opacity:.55">MB RAM</span></div>
               <div class="vd-info-item">💾 &nbsp;<span class="vd-info-val" id="vd-disk">—</span>&nbsp;<span id="vd-disk-sub" style="opacity:.55">GB</span></div>
               <div class="vd-info-item">⚡ &nbsp;<span class="vd-info-val" id="vd-state">—</span></div>
             </div>
@@ -2300,11 +2328,11 @@
               <button class="btn sm" onclick="loadStorageMigrations()" style="margin-left:auto">↻</button>
             </div>
             <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">VM çalışırken disk başka depolama havuzuna taşınır (virsh blockcopy).</div>
-            <div id="storage-pools-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-              <select id="smig-vm-sel" style="flex:1;min-width:140px;padding:6px;border-radius:5px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:12px"><option>VM seç...</option></select>
-              <select id="smig-disk-sel" style="flex:1;min-width:100px;padding:6px;border-radius:5px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:12px" onchange=""><option>Disk...</option></select>
-              <input id="smig-dest" type="text" placeholder="/var/lib/libvirt/images/new.qcow2" style="flex:2;min-width:200px;padding:6px;border-radius:5px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:12px">
-              <button class="btn sm primary" onclick="startStorageMigration()">Taşı</button>
+            <div class="smig-controls">
+              <select id="smig-vm-sel" style="flex:1;min-width:140px"><option>VM seç...</option></select>
+              <select id="smig-disk-sel" style="flex:1;min-width:100px"><option>Disk...</option></select>
+              <input id="smig-dest" type="text" placeholder="/var/lib/libvirt/images/new.qcow2" style="flex:2;min-width:200px">
+              <button class="btn-primary" onclick="startStorageMigration()">💽 Taşı</button>
             </div>
             <div id="smig-jobs-list" style="font-size:12px;color:var(--text-muted)">—</div>
           </div>
@@ -5872,7 +5900,12 @@ async function loadVMDetail(vmId) {
     document.getElementById("vd-state").textContent = v.state === "running" ? "Çalışıyor" : "Durdu";
     document.getElementById("vd-uptime").textContent = v.uptime || (v.state === "running" ? "Aktif" : "Kapalı");
     document.getElementById("vd-cpu").textContent = v.vcpus;
-    document.getElementById("vd-mem").textContent = v.memory_mb.toLocaleString();
+    const memUsed = v.memory_used_mb || 0;
+    const memTotal = v.memory_mb || 0;
+    document.getElementById("vd-mem").textContent = memTotal.toLocaleString();
+    document.getElementById("vd-mem-sub").textContent = v.state === 'running' && memUsed > 0
+      ? `MB (${memUsed} MB kullanımda)`
+      : 'MB toplam';
     const totalDisk = (v.disks || []).reduce((sum, d) => sum + (d.capacity_gb || 0), 0);
     document.getElementById("vd-disk").textContent = totalDisk.toFixed(1);
     document.getElementById("vd-disk-sub").textContent = `GB · ${(v.disks || []).length} disk`;
@@ -9041,7 +9074,8 @@ async function deleteBackupDisk(diskId) {
 async function loadFirewallStatus() {
   const d = await _api('/api/firewall/status');
   const el = document.getElementById('firewallStatus');
-  if (el) el.innerHTML = `<span class="badge-${d.available ? 'success':'danger'}">${d.available ? 'nftables Aktif':'Pasif'}</span>`;
+  const fw_on = d.active || d.available;
+  if (el) el.innerHTML = `<span class="badge-${fw_on ? 'success':'danger'}">${fw_on ? 'nftables Aktif':'Pasif'}</span>`;
 }
 
 async function loadFirewallRules() {
@@ -9427,7 +9461,7 @@ async function loadAnomalies() {
 
 async function loadForecast() {
   const days = parseInt(document.getElementById('forecastDays')?.value) || 30;
-  const d = await _api(`/api/ai/forecast?days=${days}`, 'POST', {days});
+  const d = await _api(`/api/ai/forecast?days=${days}`, 'GET');
   const el = document.getElementById('forecastResult');
   if (!el) return;
   if (d.forecast) {
@@ -11421,15 +11455,15 @@ async function loadResourcePools() {
     const pools = await api('/pools');
     if (!pools.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:12px">Havuz yok. "+ Yeni Havuz" ile oluşturun.</div>'; return; }
     el.innerHTML = pools.map(p => `
-      <div style="border:1px solid var(--border);border-radius:6px;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <div style="flex:1;min-width:120px">
-          <div style="font-weight:600;font-size:13px">${p.name}</div>
-          <div style="font-size:11px;color:var(--text-muted)">${p.description || '—'}</div>
+      <div class="pool-row">
+        <div class="pool-row-info">
+          <div class="pool-row-name">${escHtml(p.name)}</div>
+          ${p.description ? `<div class="pool-row-desc">${escHtml(p.description)}</div>` : ''}
         </div>
-        <div style="font-size:11px;color:var(--text-muted)">CPU: <b style="color:var(--text)">${p.cpu_limit_pct}%</b></div>
-        <div style="font-size:11px;color:var(--text-muted)">RAM: <b style="color:var(--text)">${p.ram_limit_mb ? p.ram_limit_mb+' MB' : 'Sınırsız'}</b></div>
-        <div style="font-size:11px;color:var(--text-muted)">VM: <b style="color:var(--text)">${p.vm_ids?.length || 0}</b></div>
-        <button class="btn sm" onclick="deletePool('${p.id}')" style="color:#ef4444">Sil</button>
+        <span class="pool-stat">CPU: <b>${p.cpu_limit_pct}%</b></span>
+        <span class="pool-stat">RAM: <b>${p.ram_limit_mb ? p.ram_limit_mb+' MB' : 'Sınırsız'}</b></span>
+        <span class="feat-tag feat-tag-blue">${p.vm_ids?.length || 0} VM</span>
+        <button class="btn sm" onclick="deletePool('${p.id}')" style="color:#ef4444;margin-left:auto">✕ Sil</button>
       </div>`).join('');
   } catch(e) { el.innerHTML = `<div style="color:#ef4444;font-size:12px">${e.message}</div>`; }
 }
@@ -11465,13 +11499,13 @@ async function loadNetworkQos() {
         const nicKey = nic.replace(/[^a-zA-Z0-9_-]/g,'_');
         const vmNameEsc = (vm.name||vm.id).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         const nicEsc = nic.replace(/&/g,'&amp;').replace(/</g,'&lt;');
-        return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--border)">
-          <span style="font-size:12px;min-width:100px;font-weight:600">${vmNameEsc}</span>
-          <span style="font-size:11px;color:var(--text-muted);min-width:60px">${nicEsc}</span>
-          <input type="number" placeholder="In (Kbps)" id="qos-in-${vmKey}-${nicKey}" style="width:90px;padding:4px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:11px" min="0">
-          <input type="number" placeholder="Out (Kbps)" id="qos-out-${vmKey}-${nicKey}" style="width:90px;padding:4px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:11px" min="0">
-          <button class="btn sm" data-vm="${vmKey}" data-nic="${nicKey}" data-vmreal="${vmNameEsc}" data-nicreal="${nicEsc}" onclick="_qosApply(this)">Uygula</button>
-          <button class="btn sm" data-vm="${vmKey}" data-nic="${nicKey}" data-vmreal="${vmNameEsc}" data-nicreal="${nicEsc}" onclick="_qosClear(this)" style="color:#ef4444">Temizle</button>
+        return `<div class="feat-row">
+          <span class="feat-row-title">${vmNameEsc}</span>
+          <span class="feat-row-sub">${nicEsc}</span>
+          <input type="number" placeholder="In (Kbps)" id="qos-in-${vmKey}-${nicKey}" class="feat-input" min="0">
+          <input type="number" placeholder="Out (Kbps)" id="qos-out-${vmKey}-${nicKey}" class="feat-input" min="0">
+          <button class="btn sm" data-vm="${vmKey}" data-nic="${nicKey}" data-vmreal="${vmNameEsc}" data-nicreal="${nicEsc}" onclick="_qosApply(this)">✓ Uygula</button>
+          <button class="btn sm" data-vm="${vmKey}" data-nic="${nicKey}" data-vmreal="${vmNameEsc}" data-nicreal="${nicEsc}" onclick="_qosClear(this)" style="color:#ef4444">✕ Temizle</button>
         </div>`;
       }).join('');
     }));
@@ -11504,11 +11538,16 @@ async function loadStorageMigrations() {
   try {
     const jobs = (await api('/storage/migrations')).migrations || [];
     if (!jobs.length) { el.innerHTML = 'Aktif taşıma işlemi yok.'; return; }
-    el.innerHTML = jobs.map(j => `
-      <div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
-        <span style="font-weight:600">${j.vm_name}</span> → <code>${j.dest_path}</code>
-        <span style="margin-left:8px;padding:1px 7px;border-radius:10px;font-size:10px;background:${j.status==='completed'?'rgba(34,197,94,.15)':j.status==='error'?'rgba(239,68,68,.12)':'rgba(56,189,248,.12)'};color:${j.status==='completed'?'#22c55e':j.status==='error'?'#ef4444':'var(--accent-lt)'}">${j.status}</span>
-      </div>`).join('');
+    el.innerHTML = jobs.map(j => {
+      const sc = j.status==='completed' ? 'feat-tag-green' : j.status==='failed' ? 'feat-tag-red' : 'feat-tag-blue';
+      return `<div class="smig-job">
+        <span class="smig-job-vm">${escHtml(j.vm_name)}</span>
+        <span style="color:var(--text-muted)">→</span>
+        <span class="smig-job-path" title="${escHtml(j.dest_path)}">${escHtml(j.dest_path)}</span>
+        <span class="feat-tag ${sc}">${j.status}</span>
+        ${j.error ? `<span style="font-size:10px;color:#ef4444;max-width:160px;overflow:hidden;text-overflow:ellipsis" title="${escHtml(j.error)}">${escHtml(j.error)}</span>` : ''}
+      </div>`;
+    }).join('');
   } catch(e) { el.innerHTML = `<div style="color:#ef4444">${e.message}</div>`; }
 }
 

@@ -54,6 +54,12 @@ def _systemctl(action: str, service: str = "suricata") -> tuple:
 
 def is_available() -> bool:
     """Suricata kurulu mu?"""
+    import shutil as _shutil
+    for _p in ("/usr/bin/suricata", "/usr/sbin/suricata", "/usr/local/bin/suricata"):
+        if os.path.isfile(_p):
+            return True
+    if _shutil.which("suricata"):
+        return True
     try:
         _, _, rc = _run("suricata", "--version")
         return rc == 0

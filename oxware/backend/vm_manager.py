@@ -175,10 +175,18 @@ def _parse_disk_info(xml_str):
             source = disk.find("source")
             target = disk.find("target")
             if source is not None and target is not None:
+                _fpath = source.get("file", "")
+                _cap_gb = 0.0
+                try:
+                    if _fpath and os.path.isfile(_fpath):
+                        _cap_gb = round(os.path.getsize(_fpath) / (1024 ** 3), 2)
+                except Exception:
+                    pass
                 disks.append({
-                    "path": source.get("file", ""),
+                    "path": _fpath,
                     "device": target.get("dev", ""),
                     "bus": target.get("bus", ""),
+                    "capacity_gb": _cap_gb,
                 })
     except Exception:
         pass
@@ -267,6 +275,7 @@ def get_vm(vm_id):
             "state": stats["state"],
             "vcpus": info[3],
             "memory_mb": info[1] // 1024,
+            "memory_used_mb": stats["memory_used_kb"] // 1024,
             "cpu_time": stats["cpu_time"],
             "disks": disks,
             "networks": nets,
