@@ -4630,6 +4630,233 @@ def api_hook_delete(event, name):
         return err(str(ve), 400)
     return ok()
 
+# ══════════════════════════════════════════════════════════════════════════════
+#  VM TAGS
+# ══════════════════════════════════════════════════════════════════════════════
+tag_mgr = _safe_import("tag_manager")
+
+@app.route("/api/vms/<vm_id>/tags", methods=["GET"])
+@require_auth
+def api_vm_tags_get(vm_id):
+    if not tag_mgr: return ok({"tags": []})
+    return ok({"tags": tag_mgr.get_tags(vm_id)})
+
+@app.route("/api/vms/<vm_id>/tags", methods=["POST"])
+@require_auth
+def api_vm_tags_set(vm_id):
+    d = request.get_json() or {}
+    if not tag_mgr: return err("Tag manager unavailable")
+    return ok({"tags": tag_mgr.set_tags(vm_id, d.get("tags", []))})
+
+@app.route("/api/vms/<vm_id>/tags/add", methods=["POST"])
+@require_auth
+def api_vm_tag_add(vm_id):
+    d = request.get_json() or {}
+    if not tag_mgr: return err("Tag manager unavailable")
+    return ok({"tags": tag_mgr.add_tag(vm_id, d.get("tag", ""))})
+
+@app.route("/api/vms/<vm_id>/tags/<tag>", methods=["DELETE"])
+@require_auth
+def api_vm_tag_remove(vm_id, tag):
+    if not tag_mgr: return err("Tag manager unavailable")
+    tag_mgr.remove_tag(vm_id, tag)
+    return ok()
+
+@app.route("/api/tags", methods=["GET"])
+@require_auth
+def api_tags_all():
+    if not tag_mgr: return ok({"tags": [], "vm_tags": {}})
+    return ok({"tags": tag_mgr.list_all_unique_tags(), "vm_tags": tag_mgr.get_all_tags()})
+
+@app.route("/api/tags/<tag>/vms", methods=["GET"])
+@require_auth
+def api_tag_vms(tag):
+    if not tag_mgr: return ok({"vms": []})
+    return ok({"vms": tag_mgr.get_vms_by_tag(tag)})
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  VM NOTES
+# ══════════════════════════════════════════════════════════════════════════════
+notes_mgr = _safe_import("notes_manager")
+
+@app.route("/api/vms/<vm_id>/note", methods=["GET"])
+@require_auth
+def api_vm_note_get(vm_id):
+    if not notes_mgr: return ok({"note": None})
+    return ok({"note": notes_mgr.get_note(vm_id)})
+
+@app.route("/api/vms/<vm_id>/note", methods=["POST"])
+@require_auth
+def api_vm_note_save(vm_id):
+    d = request.get_json() or {}
+    if not notes_mgr: return err("Notes manager unavailable")
+    return ok(notes_mgr.save_note(vm_id, d.get("content", "")))
+
+@app.route("/api/vms/<vm_id>/note", methods=["DELETE"])
+@require_auth
+def api_vm_note_delete(vm_id):
+    if not notes_mgr: return ok()
+    notes_mgr.delete_note(vm_id)
+    return ok()
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  CREDENTIAL VAULT
+# ══════════════════════════════════════════════════════════════════════════════
+vault_mgr = _safe_import("vault_manager")
+
+@app.route("/api/vms/<vm_id>/credentials", methods=["GET"])
+@require_auth
+def api_vault_list(vm_id):
+    if not vault_mgr: return ok({"credentials": []})
+    return ok({"credentials": vault_mgr.list_credentials(vm_id)})
+
+@app.route("/api/vms/<vm_id>/credentials", methods=["POST"])
+@require_auth
+def api_vault_store(vm_id):
+    d = request.get_json() or {}
+    if not vault_mgr: return err("Vault unavailable")
+    vault_mgr.store_credential(vm_id, d.get("cred_type","custom"),
+                               d.get("username",""), d.get("password",""),
+                               d.get("notes",""))
+    return ok()
+
+@app.route("/api/vms/<vm_id>/credentials/<cred_type>", methods=["GET"])
+@require_auth
+def api_vault_get(vm_id, cred_type):
+    if not vault_mgr: return err("Vault unavailable")
+    c = vault_mgr.get_credential(vm_id, cred_type)
+    if not c: return err("Credential not found", 404)
+    return ok(c)
+
+@app.route("/api/vms/<vm_id>/credentials/<cred_type>", methods=["DELETE"])
+@require_auth
+def api_vault_delete(vm_id, cred_type):
+    if not vault_mgr: return ok()
+    vault_mgr.delete_credential(vm_id, cred_type)
+    return ok()
+
+@app.route("/api/vault", methods=["GET"])
+@require_auth
+def api_vault_all():
+    if not vault_mgr: return ok({"vault": {}})
+    return ok({"vault": vault_mgr.list_all()})
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  COST TRACKER
+# ══════════════════════════════════════════════════════════════════════════════
+cost_mgr = _safe_import("cost_tracker")
+
+@app.route("/api/cost/config", methods=["GET"])
+@require_auth
+def api_cost_config_get():
+    if not cost_mgr: return ok({})
+    return ok(cost_mgr.get_config())
+
+@app.route("/api/cost/config", methods=["POST"])
+@require_auth
+def api_cost_config_save():
+    if not cost_mgr: return err("Cost tracker unavailable")
+    d = request.get_json() or {}
+    return ok(cost_mgr.save_config(**d))
+
+@app.route("/api/cost/estimate", methods=["GET"])
+@require_auth
+def api_cost_estimate():
+    if not cost_mgr: return ok({"monthly": 0})
+    return ok(cost_mgr.estimate_vm_cost(
+        request.args.get("vm_id",""),
+        request.args.get("vcpus",1),
+        request.args.get("ram_mb",1024),
+        request.args.get("disk_gb",10),
+        request.args.get("hours",720)))
+
+@app.route("/api/cost/summary", methods=["POST"])
+@require_auth
+def api_cost_summary():
+    if not cost_mgr: return ok({"total_monthly": 0, "vms": []})
+    d = request.get_json() or {}
+    return ok(cost_mgr.get_all_vm_costs(d.get("vms", [])))
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  ALERT RULES
+# ══════════════════════════════════════════════════════════════════════════════
+alert_mgr = _safe_import("alert_rules")
+
+@app.route("/api/alerts/rules", methods=["GET"])
+@require_auth
+def api_alert_rules_list():
+    if not alert_mgr: return ok({"rules": []})
+    return ok({"rules": alert_mgr.list_rules()})
+
+@app.route("/api/alerts/rules", methods=["POST"])
+@require_auth
+def api_alert_rule_create():
+    d = request.get_json() or {}
+    if not alert_mgr: return err("Alert manager unavailable")
+    try:
+        rule = alert_mgr.create_rule(**{k: d[k] for k in d if k in
+               ["name","metric","operator","threshold","scope","vm_id",
+                "action","action_config","cooldown_minutes"]})
+        return ok(rule)
+    except ValueError as e:
+        return err(str(e))
+
+@app.route("/api/alerts/rules/<rule_id>", methods=["PUT"])
+@require_auth
+def api_alert_rule_update(rule_id):
+    d = request.get_json() or {}
+    if not alert_mgr: return err("Alert manager unavailable")
+    alert_mgr.update_rule(rule_id, **d)
+    return ok()
+
+@app.route("/api/alerts/rules/<rule_id>", methods=["DELETE"])
+@require_auth
+def api_alert_rule_delete(rule_id):
+    if not alert_mgr: return ok()
+    alert_mgr.delete_rule(rule_id)
+    return ok()
+
+@app.route("/api/alerts/history", methods=["GET"])
+@require_auth
+def api_alert_history():
+    if not alert_mgr: return ok({"history": []})
+    n = int(request.args.get("n", 50))
+    return ok({"history": alert_mgr.get_history(n)})
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  SECURITY SCORE
+# ══════════════════════════════════════════════════════════════════════════════
+sec_score = _safe_import("security_score")
+
+@app.route("/api/security/score/<vm_id>", methods=["GET"])
+@require_auth
+def api_security_score_vm(vm_id):
+    if not sec_score: return ok({"score": None})
+    vm_info = {"ssh_port": 22, "root_login": False, "password_auth": True,
+               "cve_count": 0, "has_recent_snapshot": False, "has_firewall_rules": False}
+    try:
+        if vm_manager:
+            vm = vm_manager.get_vm(vm_id)
+            if vm: vm_info["has_recent_snapshot"] = bool(vm.get("snapshots"))
+    except Exception: pass
+    return ok(sec_score.score_vm(vm_id, vm_info))
+
+@app.route("/api/security/scores", methods=["GET"])
+@require_auth
+def api_security_scores_all():
+    if not sec_score: return ok({"scores": []})
+    vms = []
+    try:
+        if vm_manager: vms = vm_manager.list_vms() or []
+    except Exception: pass
+    return ok({"scores": sec_score.score_all_vms(vms)})
+
+@app.route("/api/security/host", methods=["GET"])
+@require_auth
+def api_security_host_score():
+    if not sec_score: return ok({"score": None})
+    return ok(sec_score.get_host_score())
+
 # ── AI Planner ────────────────────────────────────────────────────────────────
 @app.route("/api/ai/recommendations", methods=["GET"])
 @require_auth
