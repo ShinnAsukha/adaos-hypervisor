@@ -416,6 +416,7 @@
     .dash-edit-mode .dash-widget{cursor:default;border:1px dashed rgba(56,189,248,.3)}
     .dash-edit-mode .dash-widget-handle{display:flex}
     .dash-edit-mode .dash-widget:hover{box-shadow:0 0 0 1px var(--accent)}
+    .dash-edit-mode .dash-widget > *:not(.dash-widget-handle):not(.dash-widget-label){pointer-events:none;user-select:none}
     #dash-edit-btn{margin-left:auto;font-size:11px}
     #dash-edit-btn.active{background:var(--accent);color:#fff}
     .dash-widget-label{display:none;position:absolute;top:4px;right:8px;font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;z-index:3}
@@ -11275,24 +11276,41 @@ async function applyAiSuggestion() {
 
   function bindDrag(widget) {
     widget.setAttribute('draggable', 'true');
+
     widget.addEventListener('dragstart', e => {
       _dragSrc = widget;
       widget.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
+      // required by Firefox; Chrome works without but needs non-empty value
+      e.dataTransfer.setData('text/plain', widget.dataset.wid);
     });
+
     widget.addEventListener('dragend', () => {
+      _dragSrc = null;
       widget.classList.remove('dragging');
       getContainer()?.querySelectorAll('.dash-widget').forEach(w => w.classList.remove('drag-over'));
       saveOrder();
     });
+
+    widget.addEventListener('dragenter', e => {
+      e.preventDefault();
+      if (_dragSrc && _dragSrc !== widget) widget.classList.add('drag-over');
+    });
+
     widget.addEventListener('dragover', e => {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
       if (_dragSrc && _dragSrc !== widget) widget.classList.add('drag-over');
     });
-    widget.addEventListener('dragleave', () => widget.classList.remove('drag-over'));
+
+    // only remove highlight when cursor truly leaves widget (not just moves to a child)
+    widget.addEventListener('dragleave', e => {
+      if (!widget.contains(e.relatedTarget)) widget.classList.remove('drag-over');
+    });
+
     widget.addEventListener('drop', e => {
       e.preventDefault();
+      e.stopPropagation();
       widget.classList.remove('drag-over');
       if (!_dragSrc || _dragSrc === widget) return;
       const c = getContainer();
