@@ -1155,10 +1155,101 @@ server {
         sshd_cfg_path.parent.mkdir(parents=True, exist_ok=True)
         sshd_cfg_path.write_text(sshd_extra)
 
-    progress_cb(87, "Enabling services …")
-    run_chroot("systemctl enable libvirtd",   check=False)
-    run_chroot("systemctl enable nginx",      check=False)
-    run_chroot("systemctl enable oxware",     check=False)
+    # Static DNS — break systemd-resolved symlink, write permanent resolv.conf
+    progress_cb(87, "DNS kalıcı yapılandırılıyor...")
+    resolv_path = Path(f"{TARGET_MOUNT}/etc/resolv.conf")
+    if resolv_path.is_symlink():
+        resolv_path.unlink()
+    resolv_path.write_text(
+        "# OXware static DNS — set by installer\n"
+        "nameserver 8.8.8.8\n"
+        "nameserver 1.1.1.1\n"
+        "nameserver 8.8.4.4\n"
+    )
+
+    # DNS watchdog script
+    watchdog_script = """\
+#!/bin/bash
+# OXware DNS watchdog — runs every 5 min via systemd timer
+# If DNS fails, restores resolv.conf and triggers git pull + service restart
+
+LOGFILE="/var/log/oxware/dns-watchdog.log"
+RESOLV="/etc/resolv.conf"
+STATIC_DNS="nameserver 8.8.8.8\\nnameserver 1.1.1.1\\nnameserver 8.8.4.4"
+OXWARE_DIR="/opt/oxware"
+
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOGFILE"; }
+
+# Check DNS
+if ! getent hosts github.com > /dev/null 2>&1; then
+    log "DNS failed — restoring resolv.conf"
+    # Break symlink if present, write static
+    [ -L "$RESOLV" ] && rm -f "$RESOLV"
+    printf "$STATIC_DNS\\n" > "$RESOLV"
+    log "resolv.conf restored"
+
+    # Wait and recheck
+    sleep 3
+    if getent hosts github.com > /dev/null 2>&1; then
+        log "DNS recovered — running git pull"
+        cd "$OXWARE_DIR" && git pull --ff-only >> "$LOGFILE" 2>&1 && \\
+            systemctl restart oxware >> "$LOGFILE" 2>&1
+        log "oxware restarted after update"
+    else
+        log "DNS still failed after fix — check network"
+    fi
+else
+    # DNS OK — check if update available (silent)
+    cd "$OXWARE_DIR" && git fetch --quiet 2>/dev/null
+    LOCAL=$(git rev-parse HEAD 2>/dev/null)
+    REMOTE=$(git rev-parse '@{u}' 2>/dev/null)
+    if [ "$LOCAL" != "$REMOTE" ] && [ -n "$REMOTE" ]; then
+        log "Update available — pulling"
+        git pull --ff-only >> "$LOGFILE" 2>&1 && \\
+            systemctl restart oxware >> "$LOGFILE" 2>&1
+        log "oxware updated and restarted"
+    fi
+fi
+"""
+    scripts_dir = Path(f"{TARGET_MOUNT}/opt/oxware-scripts")
+    scripts_dir.mkdir(parents=True, exist_ok=True)
+    watchdog_path = scripts_dir / "dns-watchdog.sh"
+    watchdog_path.write_text(watchdog_script)
+    os.chmod(str(watchdog_path), 0o755)
+
+    # systemd service for watchdog
+    watchdog_svc = """\
+[Unit]
+Description=OXware DNS Watchdog & Auto-Update
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/oxware-scripts/dns-watchdog.sh
+StandardOutput=append:/var/log/oxware/dns-watchdog.log
+StandardError=append:/var/log/oxware/dns-watchdog.log
+"""
+    watchdog_timer = """\
+[Unit]
+Description=OXware DNS Watchdog Timer
+Requires=oxware-dns-watchdog.service
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
+"""
+    (svc_dir / "oxware-dns-watchdog.service").write_text(watchdog_svc)
+    (svc_dir / "oxware-dns-watchdog.timer").write_text(watchdog_timer)
+
+    progress_cb(88, "Enabling services …")
+    run_chroot("systemctl enable libvirtd",               check=False)
+    run_chroot("systemctl enable nginx",                  check=False)
+    run_chroot("systemctl enable oxware",                 check=False)
+    run_chroot("systemctl enable oxware-dns-watchdog.timer", check=False)
     if _ssh_en:
         run_chroot("systemctl enable ssh",    check=False)
     else:
