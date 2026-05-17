@@ -116,6 +116,13 @@ def _run_migration_job(job_id, vm_name, disk_target, dest_path, fmt):
 
 
 def start_migration(vm_name, disk_target, dest_path, format="qcow2"):
+    import re as _re
+    if not dest_path or ".." in dest_path or not dest_path.startswith("/"):
+        raise ValueError("dest_path mutlak yol olmalı ve '..' içermemeli")
+    if format not in ("qcow2", "raw"):
+        raise ValueError("format sadece qcow2 veya raw olabilir")
+    if not _re.match(r'^[a-zA-Z0-9_\-]+$', disk_target or ""):
+        raise ValueError("disk_target geçersiz")
     job_id = str(uuid.uuid4())
     job = {
         "job_id": job_id,

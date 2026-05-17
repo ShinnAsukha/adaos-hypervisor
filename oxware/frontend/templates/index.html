@@ -11392,35 +11392,43 @@ async function loadNetworkQos() {
     if (!vms.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:12px">VM bulunamadı.</div>'; return; }
     const rows = await Promise.all(vms.slice(0,10).map(async vm => {
       let nics = [];
-      try { nics = await api(`/vms/${vm.name || vm.id}/nics`); } catch(e) {}
+      try { nics = (await api(`/vms/${vm.name || vm.id}/nics`)).nics || []; } catch(e) {}
       if (!nics.length) return '';
-      return nics.map(nic => `
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--border)">
-          <span style="font-size:12px;min-width:100px;font-weight:600">${vm.name||vm.id}</span>
-          <span style="font-size:11px;color:var(--text-muted);min-width:60px">${nic}</span>
-          <input type="number" placeholder="In (Kbps)" id="qos-in-${vm.name}-${nic}" style="width:90px;padding:4px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:11px" min="0">
-          <input type="number" placeholder="Out (Kbps)" id="qos-out-${vm.name}-${nic}" style="width:90px;padding:4px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:11px" min="0">
-          <button class="btn sm" onclick="applyQos('${vm.name||vm.id}','${nic}')">Uygula</button>
-          <button class="btn sm" onclick="clearQos('${vm.name||vm.id}','${nic}')" style="color:#ef4444">Temizle</button>
-        </div>`).join('');
+      const vmKey = (vm.name||vm.id).replace(/[^a-zA-Z0-9_-]/g,'_');
+      return nics.map(nic => {
+        const nicKey = nic.replace(/[^a-zA-Z0-9_-]/g,'_');
+        const vmNameEsc = (vm.name||vm.id).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const nicEsc = nic.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+        return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:12px;min-width:100px;font-weight:600">${vmNameEsc}</span>
+          <span style="font-size:11px;color:var(--text-muted);min-width:60px">${nicEsc}</span>
+          <input type="number" placeholder="In (Kbps)" id="qos-in-${vmKey}-${nicKey}" style="width:90px;padding:4px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:11px" min="0">
+          <input type="number" placeholder="Out (Kbps)" id="qos-out-${vmKey}-${nicKey}" style="width:90px;padding:4px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:11px" min="0">
+          <button class="btn sm" data-vm="${vmKey}" data-nic="${nicKey}" data-vmreal="${vmNameEsc}" data-nicreal="${nicEsc}" onclick="_qosApply(this)">Uygula</button>
+          <button class="btn sm" data-vm="${vmKey}" data-nic="${nicKey}" data-vmreal="${vmNameEsc}" data-nicreal="${nicEsc}" onclick="_qosClear(this)" style="color:#ef4444">Temizle</button>
+        </div>`;
+      }).join('');
     }));
     el.innerHTML = rows.join('') || '<div style="color:var(--text-muted);font-size:12px">NIC bulunamadı.</div>';
   } catch(e) { el.innerHTML = `<div style="color:#ef4444;font-size:12px">${e.message}</div>`; }
 }
 
-async function applyQos(vmName, iface) {
-  const inK = parseInt(document.getElementById(`qos-in-${vmName}-${iface}`)?.value||0)||0;
-  const outK = parseInt(document.getElementById(`qos-out-${vmName}-${iface}`)?.value||0)||0;
+async function _qosApply(btn) {
+  const vmKey = btn.dataset.vm; const nicKey = btn.dataset.nic;
+  const vmReal = btn.dataset.vmreal; const nicReal = btn.dataset.nicreal;
+  const inK = parseInt(document.getElementById(`qos-in-${vmKey}-${nicKey}`)?.value||0)||0;
+  const outK = parseInt(document.getElementById(`qos-out-${vmKey}-${nicKey}`)?.value||0)||0;
   try {
-    await api(`/vms/${vmName}/nics/${iface}/qos`, {method:'PUT', body:{inbound_kbps:inK, outbound_kbps:outK}});
-    toast(`QoS uygulandı: ${vmName}/${iface} — In:${inK} Out:${outK} Kbps`, 'success');
+    await api(`/vms/${vmReal}/nics/${nicReal}/qos`, {method:'PUT', body:{inbound_kbps:inK, outbound_kbps:outK}});
+    toast(`QoS uygulandı: ${vmReal}/${nicReal} — In:${inK} Out:${outK} Kbps`, 'success');
   } catch(e) { toast('QoS hatası: '+e.message,'error'); }
 }
 
-async function clearQos(vmName, iface) {
+async function _qosClear(btn) {
+  const vmReal = btn.dataset.vmreal; const nicReal = btn.dataset.nicreal;
   try {
-    await api(`/vms/${vmName}/nics/${iface}/qos`, {method:'DELETE'});
-    toast(`QoS temizlendi: ${vmName}/${iface}`, 'success');
+    await api(`/vms/${vmReal}/nics/${nicReal}/qos`, {method:'DELETE'});
+    toast(`QoS temizlendi: ${vmReal}/${nicReal}`, 'success');
   } catch(e) { toast('Temizleme hatası: '+e.message,'error'); }
 }
 
@@ -11428,12 +11436,12 @@ async function clearQos(vmName, iface) {
 async function loadStorageMigrations() {
   const el = document.getElementById('smig-jobs-list'); if (!el) return;
   try {
-    const jobs = await api('/storage/migrations');
+    const jobs = (await api('/storage/migrations')).migrations || [];
     if (!jobs.length) { el.innerHTML = 'Aktif taşıma işlemi yok.'; return; }
     el.innerHTML = jobs.map(j => `
       <div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
         <span style="font-weight:600">${j.vm_name}</span> → <code>${j.dest_path}</code>
-        <span style="margin-left:8px;padding:1px 7px;border-radius:10px;font-size:10px;background:${j.status==='done'?'rgba(34,197,94,.15)':j.status==='error'?'rgba(239,68,68,.12)':'rgba(56,189,248,.12)'};color:${j.status==='done'?'#22c55e':j.status==='error'?'#ef4444':'var(--accent-lt)'}">${j.status}</span>
+        <span style="margin-left:8px;padding:1px 7px;border-radius:10px;font-size:10px;background:${j.status==='completed'?'rgba(34,197,94,.15)':j.status==='error'?'rgba(239,68,68,.12)':'rgba(56,189,248,.12)'};color:${j.status==='completed'?'#22c55e':j.status==='error'?'#ef4444':'var(--accent-lt)'}">${j.status}</span>
       </div>`).join('');
   } catch(e) { el.innerHTML = `<div style="color:#ef4444">${e.message}</div>`; }
 }
@@ -11459,7 +11467,7 @@ async function _initSmigVmSel() {
     sel.onchange = async function() {
       const diskSel = document.getElementById('smig-disk-sel');
       try {
-        const disks = await api(`/vms/${this.value}/disks`);
+        const disks = (await api(`/vms/${this.value}/disks`)).disks || [];
         diskSel.innerHTML = disks.map(d=>`<option value="${d.target}">${d.target} (${d.source_path})</option>`).join('');
       } catch(e) { diskSel.innerHTML = '<option>Disk...</option>'; }
     };

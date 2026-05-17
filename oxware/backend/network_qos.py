@@ -46,8 +46,10 @@ def get_nic_qos(vm_name, iface):
 
 
 def set_nic_qos(vm_name, iface, inbound_kbps=0, outbound_kbps=0):
-    inbound_kbps = int(inbound_kbps)
-    outbound_kbps = int(outbound_kbps)
+    inbound_kbps = max(0, int(inbound_kbps))
+    outbound_kbps = max(0, int(outbound_kbps))
+    if inbound_kbps > 10_000_000 or outbound_kbps > 10_000_000:
+        raise ValueError("Bant genişliği limiti 10 Gbps'i aşamaz")
     try:
         _run([
             "virsh", "domiftune", vm_name, iface,
