@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OXware Hypervisor — Documentation</title>
+  <title>OXware — Dokümantasyon</title>
+  <link rel="icon" type="image/png" href="sadeceikon.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -308,7 +309,7 @@
   <span class="topnav-divider">/</span>
   <span class="topnav-title">Documentation</span>
   <div class="topnav-right">
-    <a href="index.html"><i class="fas fa-home"></i> Home</a>
+    <a href="index.html"><i class="fas fa-arrow-left"></i> Panele Dön</a>
     <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank"><i class="fab fa-github"></i> GitHub</a>
   </div>
 </nav>
@@ -326,6 +327,7 @@
     <a href="#vm-management"><i class="fas fa-desktop"></i> VM Management</a>
     <a href="#vm-detail"><i class="fas fa-sliders"></i> VM Detail Page</a>
     <a href="#vm-console"><i class="fas fa-terminal"></i> VM Console</a>
+    <a href="#vm-import"><i class="fas fa-file-import"></i> ESXi / OVA Import</a>
 
     <div class="sidebar-section">Access &amp; Users</div>
     <a href="#rbac"><i class="fas fa-shield-halved"></i> RBAC</a>
@@ -482,6 +484,73 @@
 
       <h3>Notes &amp; Credentials Vault</h3>
       <p>Each VM has a <strong>Notes</strong> tab for free-text documentation and a <strong>Credentials Vault</strong> for storing SSH keys, passwords, and API tokens associated with that VM. Vault entries are AES-encrypted at rest.</p>
+    </section>
+
+    <!-- ESXi / OVA IMPORT -->
+    <section id="vm-import">
+      <h2>ESXi / OVA Import &amp; Migration</h2>
+      <p>OXware can import virtual machines from VMware ESXi, Proxmox, VirtualBox, and any other hypervisor that can export to standard formats. Disk conversion is handled automatically using <code>qemu-img</code>.</p>
+
+      <h3>Supported Formats</h3>
+      <table>
+        <thead><tr><th>Format</th><th>Source</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>.ova</code></td><td>VMware ESXi, VirtualBox, Proxmox</td><td>Recommended — single archive with disk + config</td></tr>
+          <tr><td><code>.ovf</code> + <code>.vmdk</code></td><td>VMware ESXi / Workstation</td><td>Upload the .ovf; .vmdk must be in the same archive</td></tr>
+          <tr><td><code>.vmdk</code></td><td>VMware ESXi / Workstation</td><td>Raw disk import; manual VM config applied</td></tr>
+          <tr><td><code>.qcow2</code> / <code>.img</code> / <code>.raw</code></td><td>Any KVM/QEMU host</td><td>Direct import, no conversion needed</td></tr>
+          <tr><td><code>.tar.gz</code></td><td>OXware OVA export</td><td>Full round-trip export/import between OXware nodes</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Method 1 — Web UI (OVA Import button)</h3>
+      <ol>
+        <li>Go to <strong>Virtual Machines</strong> dashboard.</li>
+        <li>Click <strong>↑ OVA Import</strong> button (top-right area, next to New VM).</li>
+        <li>Select your <code>.ova</code>, <code>.vmdk</code>, or supported file.</li>
+        <li>OXware extracts the archive, converts the disk to <code>qcow2</code> with <code>qemu-img convert</code>, defines the VM in libvirt, and adds it to the dashboard automatically.</li>
+      </ol>
+      <p>Default config applied on import: <strong>2 vCPU, 2 GB RAM, virtio NIC, VNC display</strong>. Adjust from VM Detail → Hardware after import.</p>
+
+      <h3>Method 2 — Direct SCP + Convert (faster for large disks)</h3>
+      <p>Skip the browser upload for very large disks (50 GB+). Copy the VMDK directly to the OXware host, convert manually, then register:</p>
+      <pre><code># 1. Copy VMDK from ESXi host
+scp root@esxi-host:/vmfs/volumes/datastore/myvm/myvm.vmdk \
+    /var/lib/oxware/imports/
+
+# 2. Convert to qcow2
+qemu-img convert -p -O qcow2 \
+    /var/lib/oxware/imports/myvm.vmdk \
+    /var/lib/libvirt/images/myvm.qcow2
+
+# 3. Register via API
+curl -X POST https://localhost:8006/api/import/ova \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -F "file=@/var/lib/oxware/imports/myvm.qcow2"</code></pre>
+
+      <h3>KVM → KVM Live Migration (between OXware nodes)</h3>
+      <p>Zero-downtime migration between two OXware servers running KVM. Both nodes must have SSH access to each other and shared or compatible storage.</p>
+      <pre><code>POST /api/vms/migrate
+{
+  "vm_id":      "myvm",
+  "target_host": "192.168.1.20",
+  "protocol":   "qemu+ssh"
+}</code></pre>
+      <p>This calls <code>virsh migrate --live --persistent</code> under the hood. The VM keeps running during transfer; downtime is typically &lt; 1 second at final memory sync.</p>
+
+      <h3>Downtime Summary</h3>
+      <table>
+        <thead><tr><th>Migration type</th><th>Downtime</th></tr></thead>
+        <tbody>
+          <tr><td>ESXi / Proxmox / VirtualBox → OXware (OVA import)</td><td>Minutes–hours (disk size dependent)</td></tr>
+          <tr><td>OXware node → OXware node (live migration)</td><td>&lt; 1 second</td></tr>
+          <tr><td>OXware node → OXware node (offline)</td><td>Seconds (stop → export → import → start)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Export from OXware</h3>
+      <p>From <strong>VM Detail → Overview → Export</strong>, download the VM as a <code>.tar.gz</code> (qcow2 disk + libvirt XML). Use this to move VMs between OXware nodes or keep an offline backup.</p>
+      <pre><code>POST /api/vms/{vm_id}/export</code></pre>
     </section>
 
     <!-- VM DETAIL -->
