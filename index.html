@@ -1,1289 +1,460 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OXware Hypervisor — Enterprise KVM Yönetim Platformu</title>
-<meta name="description" content="OXware Hypervisor — Kurumsal sınıf KVM/QEMU sanallaştırma yönetim platformu. Sanal makinelerinizi web tabanlı arayüzle kolayca yönetin.">
-<style>
-  :root {
-    --orange:     #E8690C;
-    --orange-dk:  #C4540A;
-    --orange-lt:  #F5830F;
-    --orange-pale:#FFF3EA;
-    --navy:       #1A1F36;
-    --navy-lt:    #2D3452;
-    --white:      #FFFFFF;
-    --gray-50:    #F8F9FA;
-    --gray-100:   #F1F3F5;
-    --gray-200:   #E9ECEF;
-    --gray-400:   #ADB5BD;
-    --gray-600:   #6C757D;
-    --gray-800:   #343A40;
-    --text:       #1A1A2E;
-    --text-muted: #6C757D;
-    --border:     #E2E6EA;
-    --shadow-sm:  0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
-    --shadow-md:  0 4px 16px rgba(0,0,0,0.10);
-    --shadow-lg:  0 8px 32px rgba(0,0,0,0.12);
-    --radius:     6px;
-    --radius-lg:  12px;
-  }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OXware Hypervisor — Enterprise KVM Management</title>
+  <meta name="description" content="Open-source KVM/QEMU hypervisor management platform. VM lifecycle, RBAC, noVNC console, monitoring, AI assistant and more." />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+      --danger: #f85149;
+      --radius: 8px;
+    }
 
-  body {
-    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-    color: var(--text);
-    background: var(--white);
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-  }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+    }
 
-  /* ─── TOP UTILITY BAR ─── */
-  .util-bar {
-    background: var(--navy);
-    padding: 6px 0;
-    font-size: 12px;
-    color: rgba(255,255,255,0.7);
-  }
-  .util-bar .inner {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 24px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 24px;
-  }
-  .util-bar a { color: rgba(255,255,255,0.7); text-decoration: none; }
-  .util-bar a:hover { color: var(--white); }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
 
-  /* ─── STICKY NAV ─── */
-  nav {
-    position: sticky;
-    top: 0;
-    z-index: 999;
-    background: var(--white);
-    border-bottom: 1px solid var(--border);
-    box-shadow: var(--shadow-sm);
-  }
-  .nav-inner {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 24px;
-    height: 64px;
-    display: flex;
-    align-items: center;
-    gap: 0;
-  }
-  .nav-logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    text-decoration: none;
-    margin-right: 40px;
-  }
-  .nav-logo-icon {
-    width: 36px;
-    height: 36px;
-    background: var(--orange);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 900;
-    font-size: 18px;
-    color: var(--white);
-    letter-spacing: -1px;
-  }
-  .nav-logo-text {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--navy);
-    letter-spacing: -0.3px;
-  }
-  .nav-logo-text span { color: var(--orange); }
-  .nav-links {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    flex: 1;
-  }
-  .nav-links a {
-    padding: 0 16px;
-    height: 64px;
-    display: flex;
-    align-items: center;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--gray-800);
-    border-bottom: 3px solid transparent;
-    transition: color .15s, border-color .15s;
-    white-space: nowrap;
-  }
-  .nav-links a:hover { color: var(--orange); border-bottom-color: var(--orange); }
-  .nav-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-left: auto;
-  }
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 22px;
-    border-radius: var(--radius);
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-    border: none;
-    transition: background .15s, transform .1s, box-shadow .15s;
-    white-space: nowrap;
-  }
-  .btn-primary {
-    background: var(--orange);
-    color: var(--white);
-    box-shadow: 0 2px 8px rgba(232,105,12,0.30);
-  }
-  .btn-primary:hover { background: var(--orange-dk); box-shadow: 0 4px 16px rgba(232,105,12,0.40); transform: translateY(-1px); }
-  .btn-outline {
-    background: transparent;
-    color: var(--orange);
-    border: 1.5px solid var(--orange);
-  }
-  .btn-outline:hover { background: var(--orange-pale); }
-  .btn-ghost {
-    background: transparent;
-    color: var(--gray-800);
-    border: 1.5px solid var(--border);
-  }
-  .btn-ghost:hover { background: var(--gray-100); }
-  .btn-lg { padding: 14px 32px; font-size: 16px; border-radius: var(--radius); }
-  .btn-white {
-    background: var(--white);
-    color: var(--orange);
-    font-weight: 700;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
-  }
-  .btn-white:hover { background: var(--orange-pale); transform: translateY(-1px); }
-  .btn-white-outline {
-    background: transparent;
-    color: var(--white);
-    border: 2px solid rgba(255,255,255,0.6);
-    font-weight: 600;
-  }
-  .btn-white-outline:hover { background: rgba(255,255,255,0.1); border-color: var(--white); }
+    /* NAV */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13, 17, 23, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
 
-  /* hamburger */
-  .ham { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
-  .ham span { display: block; width: 22px; height: 2px; background: var(--navy); margin: 5px 0; border-radius: 2px; transition: .2s; }
+    .nav-logo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
 
-  /* ─── HERO ─── */
-  .hero {
-    background: linear-gradient(135deg, var(--navy) 0%, #0f1729 40%, #1a2a52 100%);
-    padding: 80px 24px 90px;
-    position: relative;
-    overflow: hidden;
-  }
-  .hero::before {
-    content: '';
-    position: absolute;
-    top: -80px; right: -80px;
-    width: 500px; height: 500px;
-    background: radial-gradient(circle, rgba(232,105,12,0.15) 0%, transparent 70%);
-    pointer-events: none;
-  }
-  .hero::after {
-    content: '';
-    position: absolute;
-    bottom: -100px; left: -60px;
-    width: 400px; height: 400px;
-    background: radial-gradient(circle, rgba(232,105,12,0.08) 0%, transparent 70%);
-    pointer-events: none;
-  }
-  .hero-inner {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 64px;
-    align-items: center;
-    position: relative;
-    z-index: 1;
-  }
-  .hero-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(232,105,12,0.15);
-    border: 1px solid rgba(232,105,12,0.35);
-    color: #FFA05A;
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    margin-bottom: 20px;
-  }
-  .hero-badge::before { content: '●'; font-size: 8px; }
-  .hero h1 {
-    font-size: 48px;
-    font-weight: 800;
-    color: var(--white);
-    line-height: 1.12;
-    letter-spacing: -1px;
-    margin-bottom: 20px;
-  }
-  .hero h1 .accent { color: var(--orange-lt); }
-  .hero p {
-    font-size: 17px;
-    color: rgba(255,255,255,0.72);
-    max-width: 480px;
-    margin-bottom: 36px;
-    line-height: 1.65;
-  }
-  .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; }
-  .hero-stats {
-    display: flex;
-    gap: 36px;
-    margin-top: 52px;
-    padding-top: 32px;
-    border-top: 1px solid rgba(255,255,255,0.1);
-  }
-  .hero-stat-num {
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--white);
-  }
-  .hero-stat-num span { color: var(--orange-lt); }
-  .hero-stat-label { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+    .nav-logo i { font-size: 1rem; }
 
-  /* Dashboard mockup */
-  .hero-visual {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  .dashboard-mockup {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    width: 100%;
-    max-width: 520px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
-  }
-  .db-topbar {
-    background: rgba(255,255,255,0.06);
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-  }
-  .db-dot { width: 10px; height: 10px; border-radius: 50%; }
-  .db-dot.red { background: #FF5F57; }
-  .db-dot.yellow { background: #FFBD2E; }
-  .db-dot.green { background: #28C840; }
-  .db-url {
-    flex: 1;
-    background: rgba(255,255,255,0.06);
-    border-radius: 4px;
-    padding: 4px 10px;
-    font-size: 11px;
-    color: rgba(255,255,255,0.5);
-    text-align: center;
-  }
-  .db-body { padding: 16px; }
-  .db-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-  .db-card {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: var(--radius);
-    padding: 12px;
-  }
-  .db-card-label { font-size: 10px; color: rgba(255,255,255,0.4); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .db-card-val { font-size: 22px; font-weight: 700; color: var(--white); }
-  .db-card-val.orange { color: var(--orange-lt); }
-  .db-card-val.green { color: #4ADE80; }
-  .db-card-sub { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 2px; }
-  .db-vm-list { display: flex; flex-direction: column; gap: 6px; }
-  .db-vm-row {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 4px;
-    padding: 8px 10px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .db-vm-status { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-  .db-vm-status.on { background: #4ADE80; box-shadow: 0 0 6px #4ADE80; }
-  .db-vm-status.off { background: #6B7280; }
-  .db-vm-status.pause { background: #FCD34D; }
-  .db-vm-name { font-size: 12px; color: rgba(255,255,255,0.8); flex: 1; }
-  .db-vm-cpu { font-size: 10px; color: rgba(255,255,255,0.4); }
-  .db-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-top: 12px; overflow: hidden; }
-  .db-bar-fill { height: 100%; background: linear-gradient(90deg, var(--orange), var(--orange-lt)); border-radius: 2px; }
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+      list-style: none;
+    }
 
-  /* ─── TRUST BAR ─── */
-  .trust-bar {
-    background: var(--gray-50);
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    padding: 24px;
-  }
-  .trust-bar .inner {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    gap: 48px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .trust-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
-  .trust-logos { display: flex; gap: 36px; align-items: center; flex-wrap: wrap; justify-content: center; }
-  .trust-logo-item {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--gray-400);
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    opacity: 0.7;
-  }
+    .nav-links a {
+      color: var(--text);
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
 
-  /* ─── SECTIONS ─── */
-  section { padding: 80px 24px; }
-  .section-inner { max-width: 1200px; margin: 0 auto; }
-  .section-tag {
-    display: inline-block;
-    background: var(--orange-pale);
-    color: var(--orange-dk);
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    padding: 5px 12px;
-    border-radius: 20px;
-    margin-bottom: 14px;
-  }
-  .section-title {
-    font-size: 36px;
-    font-weight: 800;
-    color: var(--text);
-    letter-spacing: -0.5px;
-    margin-bottom: 14px;
-    line-height: 1.2;
-  }
-  .section-sub {
-    font-size: 17px;
-    color: var(--text-muted);
-    max-width: 560px;
-    line-height: 1.65;
-  }
-  .section-header { margin-bottom: 52px; }
-  .section-header.center { text-align: center; }
-  .section-header.center .section-sub { margin: 0 auto; }
-  .divider { width: 48px; height: 3px; background: var(--orange); border-radius: 2px; margin: 16px 0 0; }
-  .divider.center { margin: 16px auto 0; }
+    .nav-links a:hover { color: var(--accent); text-decoration: none; }
 
-  /* ─── FEATURE GRID ─── */
-  .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-  .feature-card {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 28px;
-    transition: box-shadow .2s, transform .2s, border-color .2s;
-  }
-  .feature-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: rgba(232,105,12,0.25); }
-  .feature-icon {
-    width: 48px; height: 48px;
-    background: var(--orange-pale);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 18px;
-    font-size: 22px;
-  }
-  .feature-title { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-  .feature-desc { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 1rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      border: none;
+    }
 
-  /* ─── PRODUCT SHOWCASE ─── */
-  .showcase-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 64px;
-    align-items: center;
-  }
-  .showcase-grid.reverse { direction: rtl; }
-  .showcase-grid.reverse > * { direction: ltr; }
-  .showcase-feature-list { list-style: none; margin-top: 24px; display: flex; flex-direction: column; gap: 12px; }
-  .showcase-feature-list li {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    font-size: 15px;
-    color: var(--text);
-  }
-  .check-icon {
-    width: 22px; height: 22px;
-    background: var(--orange);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--white);
-    font-size: 12px;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-  .showcase-visual {
-    background: var(--navy);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    box-shadow: var(--shadow-lg);
-    aspect-ratio: 16/10;
-    display: flex;
-    flex-direction: column;
-  }
-  .sv-topbar {
-    background: rgba(255,255,255,0.07);
-    padding: 10px 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border-bottom: 1px solid rgba(255,255,255,0.07);
-    flex-shrink: 0;
-  }
-  .sv-title { font-size: 11px; color: rgba(255,255,255,0.5); flex: 1; text-align: center; }
-  .sv-body { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
-  .sv-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 5px;
-    padding: 8px 12px;
-    font-size: 11px;
-    color: rgba(255,255,255,0.7);
-  }
-  .sv-badge {
-    padding: 2px 8px;
-    border-radius: 3px;
-    font-size: 10px;
-    font-weight: 600;
-    flex-shrink: 0;
-  }
-  .sv-badge.run { background: rgba(74,222,128,0.15); color: #4ADE80; }
-  .sv-badge.stop { background: rgba(107,114,128,0.2); color: #9CA3AF; }
-  .sv-badge.pause { background: rgba(252,211,77,0.15); color: #FCD34D; }
-  .sv-cpu-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; }
-  .sv-cpu-fill { height: 100%; background: var(--orange); border-radius: 2px; }
-  .sv-ram { font-size: 10px; color: rgba(255,255,255,0.35); white-space: nowrap; }
+    .btn:hover { opacity: 0.85; text-decoration: none; transform: translateY(-1px); }
 
-  /* ─── METRICS ─── */
-  .metrics-section { background: var(--navy); }
-  .metrics-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-lg); overflow: hidden; }
-  .metric-card { background: var(--navy); padding: 36px 28px; text-align: center; }
-  .metric-num { font-size: 44px; font-weight: 900; color: var(--orange-lt); letter-spacing: -1px; line-height: 1; }
-  .metric-label { font-size: 14px; color: rgba(255,255,255,0.55); margin-top: 10px; font-weight: 500; }
-  .metric-sub { font-size: 12px; color: rgba(255,255,255,0.3); margin-top: 4px; }
+    .btn-primary { background: var(--accent); color: #0d1117; }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-green { background: var(--accent2); color: #0d1117; }
 
-  /* ─── INSTALL SECTION ─── */
-  .install-section { background: var(--gray-50); }
-  .install-steps { display: grid; grid-template-columns: repeat(4,1fr); gap: 24px; position: relative; }
-  .install-steps::before {
-    content: '';
-    position: absolute;
-    top: 28px;
-    left: calc(25% / 2);
-    right: calc(25% / 2);
-    height: 2px;
-    background: linear-gradient(90deg, var(--orange) 0%, var(--border) 100%);
-    z-index: 0;
-  }
-  .install-step { text-align: center; position: relative; z-index: 1; }
-  .step-num {
-    width: 56px; height: 56px;
-    background: var(--orange);
-    color: var(--white);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    font-weight: 800;
-    margin: 0 auto 16px;
-    box-shadow: 0 4px 16px rgba(232,105,12,0.35);
-  }
-  .step-num.alt { background: var(--white); color: var(--orange); border: 2px solid var(--orange); }
-  .step-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-  .step-desc { font-size: 13px; color: var(--text-muted); }
+    /* HERO */
+    .hero {
+      text-align: center;
+      padding: 6rem 2rem 5rem;
+      max-width: 860px;
+      margin: 0 auto;
+    }
 
-  /* ─── SECURITY ─── */
-  .security-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 48px; }
-  .sec-card {
-    display: flex;
-    gap: 18px;
-    align-items: flex-start;
-    padding: 24px;
-    background: var(--gray-50);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    transition: border-color .2s;
-  }
-  .sec-card:hover { border-color: rgba(232,105,12,0.3); }
-  .sec-icon { font-size: 28px; flex-shrink: 0; }
-  .sec-title { font-size: 15px; font-weight: 700; margin-bottom: 5px; }
-  .sec-desc { font-size: 13px; color: var(--text-muted); line-height: 1.55; }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(88, 166, 255, 0.12);
+      color: var(--accent);
+      border: 1px solid rgba(88, 166, 255, 0.3);
+      border-radius: 2rem;
+      padding: 0.25rem 0.9rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
 
-  /* ─── CTA BAND ─── */
-  .cta-band {
-    background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dk) 50%, #B04308 100%);
-    padding: 72px 24px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-  }
-  .cta-band::before {
-    content: '';
-    position: absolute;
-    top: -60px; right: -40px;
-    width: 320px; height: 320px;
-    background: rgba(255,255,255,0.08);
-    border-radius: 50%;
-  }
-  .cta-band::after {
-    content: '';
-    position: absolute;
-    bottom: -80px; left: -60px;
-    width: 280px; height: 280px;
-    background: rgba(255,255,255,0.06);
-    border-radius: 50%;
-  }
-  .cta-inner { max-width: 720px; margin: 0 auto; position: relative; z-index: 1; }
-  .cta-tag { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; }
-  .cta-title { font-size: 38px; font-weight: 800; color: var(--white); margin-bottom: 16px; letter-spacing: -0.5px; }
-  .cta-sub { font-size: 16px; color: rgba(255,255,255,0.82); margin-bottom: 36px; }
-  .cta-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.15;
+      color: #f0f6fc;
+      margin-bottom: 1.25rem;
+      letter-spacing: -1px;
+    }
 
-  /* ─── TECH STACK ─── */
-  .tech-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 16px; }
-  .tech-chip {
-    background: var(--gray-50);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 10px;
-    text-align: center;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-muted);
-    transition: border-color .15s, color .15s, background .15s;
-    cursor: default;
-  }
-  .tech-chip:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-pale); }
-  .tech-chip .tech-icon { font-size: 20px; display: block; margin-bottom: 6px; }
+    h1 span { color: var(--accent); }
 
-  /* ─── FOOTER ─── */
-  footer {
-    background: var(--navy);
-    color: rgba(255,255,255,0.6);
-    padding: 56px 24px 28px;
-  }
-  .footer-inner { max-width: 1200px; margin: 0 auto; }
-  .footer-top {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr;
-    gap: 48px;
-    padding-bottom: 40px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    margin-bottom: 28px;
-  }
-  .footer-brand p { font-size: 13px; line-height: 1.65; margin-top: 12px; color: rgba(255,255,255,0.45); max-width: 280px; }
-  .footer-col-title { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
-  .footer-links { display: flex; flex-direction: column; gap: 8px; }
-  .footer-links a { font-size: 13px; color: rgba(255,255,255,0.45); text-decoration: none; transition: color .15s; }
-  .footer-links a:hover { color: var(--orange-lt); }
-  .footer-bottom { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-  .footer-copy { font-size: 12px; }
-  .footer-badges { display: flex; gap: 8px; }
-  .f-badge {
-    padding: 4px 10px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 4px;
-    font-size: 11px;
-    color: rgba(255,255,255,0.5);
-  }
-  .footer-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; }
-  .footer-logo-icon { width: 30px; height: 30px; background: var(--orange); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; color: var(--white); }
-  .footer-logo-text { font-size: 15px; font-weight: 700; color: var(--white); }
+    .hero p {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto 2.5rem;
+    }
 
-  /* ─── ANNOUNCEMENT BAR ─── */
-  .announce-bar {
-    background: var(--orange);
-    padding: 10px 24px;
-    text-align: center;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--white);
-  }
-  .announce-bar a { color: var(--white); font-weight: 700; text-decoration: underline; }
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
 
-  /* ─── RESPONSIVE ─── */
-  @media (max-width: 1024px) {
-    .feature-grid { grid-template-columns: repeat(2,1fr); }
-    .tech-grid { grid-template-columns: repeat(4,1fr); }
-    .footer-top { grid-template-columns: 1fr 1fr; }
-    .metrics-grid { grid-template-columns: repeat(2,1fr); }
-    .install-steps { grid-template-columns: repeat(2,1fr); }
-    .install-steps::before { display: none; }
-  }
-  @media (max-width: 768px) {
-    .hero-inner { grid-template-columns: 1fr; gap: 40px; }
-    .hero h1 { font-size: 34px; }
-    .hero-visual { display: none; }
-    .showcase-grid { grid-template-columns: 1fr; gap: 32px; }
-    .showcase-grid.reverse { direction: ltr; }
-    .feature-grid { grid-template-columns: 1fr; }
-    .security-grid { grid-template-columns: 1fr; }
-    .tech-grid { grid-template-columns: repeat(3,1fr); }
-    .footer-top { grid-template-columns: 1fr; gap: 32px; }
-    .metrics-grid { grid-template-columns: 1fr 1fr; }
-    .section-title { font-size: 28px; }
-    .cta-title { font-size: 28px; }
-    .install-steps { grid-template-columns: 1fr 1fr; }
-    .nav-links { display: none; }
-    .ham { display: block; }
-    .util-bar { display: none; }
-    .hero-stats { flex-wrap: wrap; gap: 24px; }
-  }
-  @media (max-width: 480px) {
-    .hero h1 { font-size: 28px; }
-    .tech-grid { grid-template-columns: repeat(2,1fr); }
-    .metrics-grid { grid-template-columns: 1fr; }
-    .install-steps { grid-template-columns: 1fr; }
-    .footer-top { gap: 24px; }
-    .footer-bottom { flex-direction: column; text-align: center; }
-  }
+    .hero-actions .btn { padding: 0.65rem 1.5rem; font-size: 0.95rem; }
 
-  /* mobile nav */
-  .mobile-nav {
-    display: none;
-    flex-direction: column;
-    background: var(--white);
-    border-top: 1px solid var(--border);
-    padding: 12px 0;
-    box-shadow: var(--shadow-md);
-  }
-  .mobile-nav.open { display: flex; }
-  .mobile-nav a {
-    padding: 11px 24px;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--gray-800);
-    text-decoration: none;
-    border-left: 3px solid transparent;
-  }
-  .mobile-nav a:hover { color: var(--orange); border-left-color: var(--orange); background: var(--orange-pale); }
+    /* STATS BAR */
+    .stats-bar {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      flex-wrap: wrap;
+      padding: 1.5rem 2rem;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
 
-  /* animate-in */
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-  .fade-up { animation: fadeUp .5s ease both; }
-  .delay-1 { animation-delay: .1s; }
-  .delay-2 { animation-delay: .2s; }
-  .delay-3 { animation-delay: .3s; }
-</style>
+    .stat { text-align: center; }
+    .stat-value { font-size: 1.5rem; font-weight: 700; color: #f0f6fc; }
+    .stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* FEATURES */
+    .section { padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; }
+
+    .section-title {
+      text-align: center;
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #f0f6fc;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-sub {
+      text-align: center;
+      color: var(--muted);
+      margin-bottom: 3rem;
+      font-size: 0.95rem;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      transition: border-color 0.25s, transform 0.2s;
+    }
+
+    .feature-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-3px);
+    }
+
+    .feature-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius);
+      background: rgba(88, 166, 255, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+
+    .feature-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #f0f6fc;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-card p { font-size: 0.875rem; color: var(--muted); line-height: 1.55; }
+
+    /* TECH STACK */
+    .stack-section {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+
+    .stack-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+    }
+
+    .stack-badges {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+
+    .badge {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 2rem;
+      padding: 0.4rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .badge i { font-size: 0.9rem; }
+    .badge.py i { color: #3572A5; }
+    .badge.flask i { color: #aaa; }
+    .badge.kvm i { color: #E34234; }
+    .badge.vnc i { color: #0DB7ED; }
+    .badge.lv i { color: #cc4125; }
+    .badge.jwt i { color: #D63AFF; }
+
+    /* QUICK START */
+    .quickstart-section {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 5rem 2rem;
+    }
+
+    pre {
+      background: #010409;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      overflow-x: auto;
+      font-size: 0.875rem;
+      line-height: 1.7;
+      color: #e6edf3;
+      margin-top: 1.5rem;
+    }
+
+    .comment { color: #8b949e; }
+    .cmd { color: #3fb950; }
+    .url { color: #58a6ff; }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2.5rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .footer-left { color: var(--muted); font-size: 0.85rem; }
+    .footer-links { display: flex; gap: 1.25rem; font-size: 0.85rem; }
+    .footer-links a { color: var(--muted); }
+    .footer-links a:hover { color: var(--accent); text-decoration: none; }
+
+    @media (max-width: 600px) {
+      nav { padding: 0 1rem; }
+      .hero { padding: 4rem 1.25rem 3rem; }
+      .stats-bar { gap: 1.5rem; }
+      footer { flex-direction: column; text-align: center; }
+    }
+  </style>
 </head>
 <body>
 
-<!-- Announcement -->
-<div class="announce-bar">
-  🚀 <strong>OXware Hypervisor 2.0</strong> yayında — <a href="#download">ISO'yu indirin</a> ve kuruluma başlayın
-</div>
-
-<!-- Utility bar -->
-<div class="util-bar">
-  <div class="inner">
-    <a href="https://github.com/ShinnAsukha/oxware-hypervisor">GitHub</a>
-    <a href="/docs">Dokümantasyon</a>
-    <a href="#download">İndirme</a>
-    <a href="https://github.com/ShinnAsukha/oxware-hypervisor/issues">Destek</a>
-  </div>
-</div>
-
-<!-- Nav -->
+<!-- NAV -->
 <nav>
-  <div class="nav-inner">
-    <a href="#" class="nav-logo">
-      <div class="nav-logo-icon">OX</div>
-      <div class="nav-logo-text">OX<span>ware</span></div>
-    </a>
-    <div class="nav-links">
-      <a href="#features">Özellikler</a>
-      <a href="#product">Platform</a>
-      <a href="#security">Güvenlik</a>
-      <a href="#install">Kurulum</a>
-      <a href="https://github.com/ShinnAsukha/oxware-hypervisor">GitHub</a>
-    </div>
-    <div class="nav-actions">
-      <a href="https://github.com/ShinnAsukha/oxware-hypervisor" class="btn btn-ghost">Kaynak Kod</a>
-      <a href="#download" class="btn btn-primary">ISO İndir</a>
-      <button class="ham" onclick="document.querySelector('.mobile-nav').classList.toggle('open')" aria-label="Menü">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
+  <div class="nav-logo">
+    <i class="fas fa-server"></i> OXware
   </div>
-  <div class="mobile-nav">
-    <a href="#features">Özellikler</a>
-    <a href="#product">Platform</a>
-    <a href="#security">Güvenlik</a>
-    <a href="#install">Kurulum</a>
-    <a href="https://github.com/ShinnAsukha/oxware-hypervisor">GitHub</a>
-    <a href="#download" style="color:var(--orange);font-weight:700;">ISO İndir →</a>
-  </div>
+  <ul class="nav-links">
+    <li><a href="docs.html">Docs</a></li>
+    <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank">GitHub</a></li>
+    <li>
+      <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" class="btn btn-primary">
+        <i class="fas fa-download"></i> Download
+      </a>
+    </li>
+  </ul>
 </nav>
 
-<!-- Hero -->
+<!-- HERO -->
 <section class="hero">
-  <div class="hero-inner">
-    <div>
-      <div class="hero-badge fade-up">Sürüm 2.0 Yayında</div>
-      <h1 class="fade-up delay-1">Kurumsal <span class="accent">KVM</span><br>Hypervisor<br>Yönetim Platformu</h1>
-      <p class="fade-up delay-2">Web tabanlı arayüzle sanal makinelerinizi kolayca yönetin. KVM donanım hızlandırması, anlık snapshot, PCIe passthrough ve HTTPS güvenli erişim — tek pakette.</p>
-      <div class="hero-actions fade-up delay-3">
-        <a href="#download" class="btn btn-lg btn-white">ISO İndir &darr;</a>
-        <a href="https://github.com/ShinnAsukha/oxware-hypervisor" class="btn btn-lg btn-white-outline">Kaynak Kod →</a>
-      </div>
-      <div class="hero-stats fade-up">
-        <div>
-          <div class="hero-stat-num">KVM<span>/QEMU</span></div>
-          <div class="hero-stat-label">Sanallaştırma Altyapısı</div>
-        </div>
-        <div>
-          <div class="hero-stat-num"><span>&lt;</span>5dk</div>
-          <div class="hero-stat-label">Kurulum Süresi</div>
-        </div>
-        <div>
-          <div class="hero-stat-num">HTTPS<span>+2FA</span></div>
-          <div class="hero-stat-label">Güvenli Erişim</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Dashboard mockup -->
-    <div class="hero-visual fade-up delay-2">
-      <div class="dashboard-mockup">
-        <div class="db-topbar">
-          <div class="db-dot red"></div>
-          <div class="db-dot yellow"></div>
-          <div class="db-dot green"></div>
-          <div class="db-url">https://192.168.1.10:8006</div>
-        </div>
-        <div class="db-body">
-          <div class="db-grid">
-            <div class="db-card">
-              <div class="db-card-label">Çalışan VM</div>
-              <div class="db-card-val orange">7</div>
-              <div class="db-card-sub">12 toplam</div>
-            </div>
-            <div class="db-card">
-              <div class="db-card-label">CPU Kullanımı</div>
-              <div class="db-card-val">34<span style="font-size:14px;color:rgba(255,255,255,0.4)">%</span></div>
-              <div class="db-card-sub">16 çekirdek</div>
-            </div>
-            <div class="db-card">
-              <div class="db-card-label">RAM</div>
-              <div class="db-card-val green">48G</div>
-              <div class="db-card-sub">64GB toplam</div>
-            </div>
-            <div class="db-card">
-              <div class="db-card-label">Disk I/O</div>
-              <div class="db-card-val" style="font-size:16px;padding-top:4px">1.2<span style="font-size:12px;color:rgba(255,255,255,0.4)"> GB/s</span></div>
-              <div class="db-card-sub">NVMe SSD</div>
-            </div>
-          </div>
-          <div class="db-vm-list">
-            <div class="db-vm-row">
-              <div class="db-vm-status on"></div>
-              <div class="db-vm-name">ubuntu-web-01</div>
-              <div class="db-vm-cpu">4 vCPU</div>
-              <div class="sv-badge run">RUNNING</div>
-            </div>
-            <div class="db-vm-row">
-              <div class="db-vm-status on"></div>
-              <div class="db-vm-name">windows-db-02</div>
-              <div class="db-vm-cpu">8 vCPU</div>
-              <div class="sv-badge run">RUNNING</div>
-            </div>
-            <div class="db-vm-row">
-              <div class="db-vm-status pause"></div>
-              <div class="db-vm-name">dev-test-env</div>
-              <div class="db-vm-cpu">2 vCPU</div>
-              <div class="sv-badge pause">PAUSED</div>
-            </div>
-            <div class="db-vm-row">
-              <div class="db-vm-status off"></div>
-              <div class="db-vm-name">backup-node-03</div>
-              <div class="db-vm-cpu">4 vCPU</div>
-              <div class="sv-badge stop">STOPPED</div>
-            </div>
-          </div>
-          <div class="db-bar">
-            <div class="db-bar-fill" style="width:34%"></div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <div class="hero-badge">Open Source · v2.3</div>
+  <h1>Enterprise <span>KVM Hypervisor</span> Management</h1>
+  <p>
+    A full-featured, self-hosted virtualization platform built on KVM/QEMU.
+    Manage VMs, users, networking, storage, and security — all from a single dark-themed web UI.
+  </p>
+  <div class="hero-actions">
+    <a href="docs.html" class="btn btn-primary"><i class="fas fa-book-open"></i> Get Started</a>
+    <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" class="btn btn-green"><i class="fas fa-compact-disc"></i> Download ISO</a>
+    <a href="https://github.com/ShinnAsukha/oxware-hypervisor" class="btn btn-outline"><i class="fab fa-github"></i> View on GitHub</a>
   </div>
 </section>
 
-<!-- Trust bar -->
-<div class="trust-bar">
-  <div class="inner">
-    <div class="trust-label">Desteklenen Altyapılar</div>
-    <div class="trust-logos">
-      <div class="trust-logo-item">KVM</div>
-      <div class="trust-logo-item">QEMU</div>
-      <div class="trust-logo-item">libvirt</div>
-      <div class="trust-logo-item">noVNC</div>
-      <div class="trust-logo-item">Ubuntu 22.04</div>
-      <div class="trust-logo-item">Python 3.10+</div>
-    </div>
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-value">4</div>
+    <div class="stat-label">RBAC Roles</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">40+</div>
+    <div class="stat-label">API Endpoints</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">5</div>
+    <div class="stat-label">UI Languages</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">MIT</div>
+    <div class="stat-label">License</div>
   </div>
 </div>
 
-<!-- Features -->
-<section id="features">
-  <div class="section-inner">
-    <div class="section-header center">
-      <div class="section-tag">Platform Özellikleri</div>
-      <h2 class="section-title">Kurumsal Sanallaştırma için<br>İhtiyacınız Olan Her Şey</h2>
-      <p class="section-sub">OXware Hypervisor, veri merkezleri ve bulut altyapıları için tasarlanmış, tam kapsamlı bir KVM yönetim çözümüdür.</p>
-      <div class="divider center"></div>
+<!-- FEATURES -->
+<section class="section">
+  <h2 class="section-title">Everything you need to run a hypervisor</h2>
+  <p class="section-sub">From bare-metal to VM in minutes. No licensing fees, no vendor lock-in.</p>
+  <div class="feature-grid">
+
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fas fa-desktop"></i></div>
+      <h3>VM Management</h3>
+      <p>Full KVM/QEMU lifecycle — create, start, stop, pause, reboot, clone, and delete. Bulk operations, templates, CPU pinning, vCPU hot-plug, and scheduling.</p>
     </div>
 
-    <div class="feature-grid">
-      <div class="feature-card">
-        <div class="feature-icon">⚡</div>
-        <div class="feature-title">KVM Donanım Hızlandırması</div>
-        <div class="feature-desc">Native KVM sanallaştırması ile %95'e varan donanım performansı. CPU pinning, NUMA ve VirtIO sürücüleri dahil.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🌐</div>
-        <div class="feature-title">Web Tabanlı Yönetim</div>
-        <div class="feature-desc">Herhangi bir tarayıcıdan HTTPS üzerinden güvenli erişim. Responsive tasarım ile mobil ve masaüstü desteği.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">📸</div>
-        <div class="feature-title">Anlık Snapshot & Klonlama</div>
-        <div class="feature-desc">Saniyeler içinde VM durumunu kaydedin, geri yükleyin veya klonlayın. Sıfır kesinti ile üretim ortamı yönetimi.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🖥️</div>
-        <div class="feature-title">noVNC Konsol Erişimi</div>
-        <div class="feature-desc">Plugin gerektirmeden tarayıcı üzerinden tam grafik konsol. Şifreli WebSocket bağlantısı ile güvenli erişim.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🔌</div>
-        <div class="feature-title">PCIe Passthrough</div>
-        <div class="feature-desc">GPU, NIC ve özel donanımları VM'lere doğrudan bağlayın. IOMMU desteği ile izole edilmiş donanım erişimi.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">📡</div>
-        <div class="feature-title">REST API</div>
-        <div class="feature-desc">JWT kimlik doğrulamalı tam REST API. WiseCP, WHMCS ve özel otomasyon sistemleriyle entegrasyon.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🔐</div>
-        <div class="feature-title">İki Faktörlü Kimlik Doğrulama</div>
-        <div class="feature-desc">TOTP tabanlı 2FA ile hesap güvenliği. QR kod ile kolay kurulum, tüm authenticator uygulamalarıyla uyumlu.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">📊</div>
-        <div class="feature-title">Gerçek Zamanlı İzleme</div>
-        <div class="feature-desc">CPU, RAM, disk ve ağ kullanımını WebSocket üzerinden canlı olarak izleyin. Grafik tabanlı kaynak analizi.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">💿</div>
-        <div class="feature-title">ISO Yönetimi</div>
-        <div class="feature-desc">Sunucuya ISO yükleyin, CD/DVD olarak VM'lere bağlayın. Desteklenen tüm işletim sistemleriyle kurulum.</div>
-      </div>
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fas fa-shield-halved"></i></div>
+      <h3>Role-Based Access Control</h3>
+      <p>Four built-in roles: administrator, operator, viewer, and vm-user. Assign specific VMs to vm-user accounts so tenants only see what they own.</p>
     </div>
+
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fas fa-terminal"></i></div>
+      <h3>VNC &amp; SSH Console</h3>
+      <p>Embedded noVNC console in a dedicated window with pointer lock, Ctrl+Alt+Del, and fullscreen. Web-based SSH terminal for direct shell access.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+      <h3>Monitoring &amp; Alerts</h3>
+      <p>Live CPU, RAM, disk I/O, and network metrics. Alert rules with Telegram, Discord, and email notifications. Anomaly detection and Prometheus endpoint.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fas fa-network-wired"></i></div>
+      <h3>Network Management</h3>
+      <p>IP pool management (CIDR), NAT and bridge modes, per-VM QoS bandwidth limits, DNS watchdog, HAProxy integration, and nftables firewall per VM.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fas fa-robot"></i></div>
+      <h3>AI Assistant</h3>
+      <p>Create VMs using natural language. Capacity forecasting predicts resource needs from historical trends. Auto-scaler adjusts VM resources based on load.</p>
+    </div>
+
   </div>
 </section>
 
-<!-- Product showcase 1 -->
-<section id="product" style="background:var(--gray-50);">
-  <div class="section-inner">
-    <div class="showcase-grid">
-      <div>
-        <div class="section-tag">Sanal Makine Yönetimi</div>
-        <h2 class="section-title">Tüm VM'lerinizi<br>Tek Arayüzden Yönetin</h2>
-        <p class="section-sub">Oluşturun, başlatın, durdurun, izleyin. OXware'in sezgisel arayüzü karmaşık sanallaştırma görevlerini basitleştirir.</p>
-        <ul class="showcase-feature-list">
-          <li><div class="check-icon">✓</div><div>VM oluşturma sihirbazı — ISO, disk, ağ, CPU/RAM yapılandırması</div></li>
-          <li><div class="check-icon">✓</div><div>Anlık durum göstergeleri ve gerçek zamanlı kaynak metrikleri</div></li>
-          <li><div class="check-icon">✓</div><div>Toplu işlem desteği — seçili VM'lere aynı anda komut gönderin</div></li>
-          <li><div class="check-icon">✓</div><div>ACPI shutdown, Force Stop, Restart ve Pause desteği</div></li>
-        </ul>
-      </div>
-      <div>
-        <div class="showcase-visual">
-          <div class="sv-topbar">
-            <div class="db-dot red"></div>
-            <div class="db-dot yellow"></div>
-            <div class="db-dot green"></div>
-            <div class="sv-title">VM Listesi — OXware Dashboard</div>
-          </div>
-          <div class="sv-body">
-            <div class="sv-row">
-              <div class="db-vm-status on"></div>
-              <span style="flex:1;font-size:12px;color:rgba(255,255,255,0.8)">web-server-01</span>
-              <div class="sv-badge run">RUNNING</div>
-              <div class="sv-cpu-bar"><div class="sv-cpu-fill" style="width:42%"></div></div>
-              <div class="sv-ram">4GB RAM</div>
-            </div>
-            <div class="sv-row">
-              <div class="db-vm-status on"></div>
-              <span style="flex:1;font-size:12px;color:rgba(255,255,255,0.8)">database-master</span>
-              <div class="sv-badge run">RUNNING</div>
-              <div class="sv-cpu-bar"><div class="sv-cpu-fill" style="width:68%"></div></div>
-              <div class="sv-ram">16GB RAM</div>
-            </div>
-            <div class="sv-row">
-              <div class="db-vm-status pause"></div>
-              <span style="flex:1;font-size:12px;color:rgba(255,255,255,0.8)">staging-env</span>
-              <div class="sv-badge pause">PAUSED</div>
-              <div class="sv-cpu-bar"><div class="sv-cpu-fill" style="width:0%"></div></div>
-              <div class="sv-ram">8GB RAM</div>
-            </div>
-            <div class="sv-row">
-              <div class="db-vm-status off"></div>
-              <span style="flex:1;font-size:12px;color:rgba(255,255,255,0.8)">backup-worker</span>
-              <div class="sv-badge stop">STOPPED</div>
-              <div class="sv-cpu-bar"><div class="sv-cpu-fill" style="width:0%"></div></div>
-              <div class="sv-ram">4GB RAM</div>
-            </div>
-            <div class="sv-row">
-              <div class="db-vm-status on"></div>
-              <span style="flex:1;font-size:12px;color:rgba(255,255,255,0.8)">k8s-node-01</span>
-              <div class="sv-badge run">RUNNING</div>
-              <div class="sv-cpu-bar"><div class="sv-cpu-fill" style="width:55%"></div></div>
-              <div class="sv-ram">32GB RAM</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+<!-- TECH STACK -->
+<div class="stack-section">
+  <div class="stack-label">Built with</div>
+  <div class="stack-badges">
+    <span class="badge py"><i class="fab fa-python"></i> Python 3</span>
+    <span class="badge flask"><i class="fas fa-flask"></i> Flask + SocketIO</span>
+    <span class="badge kvm"><i class="fas fa-microchip"></i> KVM / QEMU</span>
+    <span class="badge vnc"><i class="fas fa-display"></i> noVNC</span>
+    <span class="badge lv"><i class="fas fa-server"></i> libvirt</span>
+    <span class="badge jwt"><i class="fas fa-key"></i> JWT Auth</span>
+  </div>
+</div>
+
+<!-- QUICK START -->
+<section class="quickstart-section">
+  <h2 class="section-title">Quick Start</h2>
+  <p class="section-sub">Three commands and you're running.</p>
+  <pre><span class="comment"># Clone the repository</span>
+<span class="cmd">git clone</span> https://github.com/ShinnAsukha/oxware-hypervisor.git /opt/oxware-src
+
+<span class="comment"># Run the installer (requires root, Ubuntu 22.04 LTS)</span>
+<span class="cmd">cd</span> /opt/oxware-src <span class="cmd">&amp;&amp; sudo bash</span> install.sh
+
+<span class="comment"># Open the web UI</span>
+<span class="url">https://&lt;server-ip&gt;:8006</span>  <span class="comment"># complete the setup wizard on first boot</span></pre>
+
+  <div style="text-align:center; margin-top: 2rem;">
+    <a href="docs.html" class="btn btn-primary" style="padding: 0.7rem 2rem; font-size: 1rem;">
+      <i class="fas fa-book-open"></i> Read the full documentation
+    </a>
   </div>
 </section>
 
-<!-- Product showcase 2 -->
-<section>
-  <div class="section-inner">
-    <div class="showcase-grid reverse">
-      <div>
-        <div class="section-tag">Ağ Yönetimi</div>
-        <h2 class="section-title">Esnek Ağ<br>Yapılandırması</h2>
-        <p class="section-sub">Bridge, NAT ve isolated network modları. Her VM için özel IP ataması, VLAN desteği ve bant genişliği kontrolü.</p>
-        <ul class="showcase-feature-list">
-          <li><div class="check-icon">✓</div><div>Bridge networking — VM'ler doğrudan fiziksel ağa bağlanır</div></li>
-          <li><div class="check-icon">✓</div><div>NAT modu — iç ağ izolasyonu ile internet erişimi</div></li>
-          <li><div class="check-icon">✓</div><div>VirtIO ağ adaptörü ile maksimum throughput</div></li>
-          <li><div class="check-icon">✓</div><div>Çoklu ağ arayüzü desteği per VM</div></li>
-        </ul>
-      </div>
-      <div>
-        <div class="showcase-visual" style="background:linear-gradient(135deg,#0a1628,#0d2340);">
-          <div class="sv-topbar">
-            <div class="db-dot red"></div>
-            <div class="db-dot yellow"></div>
-            <div class="db-dot green"></div>
-            <div class="sv-title">Ağ Yapılandırması</div>
-          </div>
-          <div class="sv-body" style="justify-content:center;">
-            <div style="text-align:center;padding:12px 0;">
-              <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:16px;text-transform:uppercase;letter-spacing:1px">Network Topolojisi</div>
-              <div style="display:flex;flex-direction:column;gap:8px;align-items:center;">
-                <div style="background:rgba(232,105,12,0.15);border:1px solid rgba(232,105,12,0.3);border-radius:6px;padding:8px 24px;font-size:12px;color:#FFA05A;font-weight:600">🌐 WAN / İnternet</div>
-                <div style="width:2px;height:16px;background:rgba(255,255,255,0.15)"></div>
-                <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 24px;font-size:12px;color:rgba(255,255,255,0.7);font-weight:600">🔀 OXware Bridge (br0)</div>
-                <div style="display:flex;gap:16px;align-items:flex-start;margin-top:4px;">
-                  <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-                    <div style="width:1px;height:16px;background:rgba(255,255,255,0.15)"></div>
-                    <div style="background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);border-radius:5px;padding:6px 12px;font-size:11px;color:#4ADE80">VM-01<br><span style="color:rgba(255,255,255,0.3)">10.0.0.11</span></div>
-                  </div>
-                  <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-                    <div style="width:1px;height:16px;background:rgba(255,255,255,0.15)"></div>
-                    <div style="background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);border-radius:5px;padding:6px 12px;font-size:11px;color:#4ADE80">VM-02<br><span style="color:rgba(255,255,255,0.3)">10.0.0.12</span></div>
-                  </div>
-                  <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-                    <div style="width:1px;height:16px;background:rgba(255,255,255,0.15)"></div>
-                    <div style="background:rgba(107,114,128,0.1);border:1px solid rgba(107,114,128,0.2);border-radius:5px;padding:6px 12px;font-size:11px;color:#9CA3AF">VM-03<br><span style="color:rgba(255,255,255,0.3)">STOPPED</span></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Metrics -->
-<section class="metrics-section">
-  <div class="section-inner">
-    <div class="section-header center">
-      <div class="section-tag" style="background:rgba(232,105,12,0.15);color:#FFA05A">Performans Rakamları</div>
-      <h2 class="section-title" style="color:var(--white)">Sayılarla OXware</h2>
-      <div class="divider center"></div>
-    </div>
-    <div class="metrics-grid">
-      <div class="metric-card">
-        <div class="metric-num">&lt;5ms</div>
-        <div class="metric-label">API Yanıt Süresi</div>
-        <div class="metric-sub">Ortalama endpoint latency</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-num">95%</div>
-        <div class="metric-label">Donanım Performansı</div>
-        <div class="metric-sub">Native KVM ile bare-metal'e yakın</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-num">256+</div>
-        <div class="metric-label">Eş Zamanlı VM</div>
-        <div class="metric-sub">Tek sunucu üzerinde</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-num">TLS 1.3</div>
-        <div class="metric-label">Şifreleme Standardı</div>
-        <div class="metric-sub">HTTPS + WSS zorunlu</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Security -->
-<section id="security">
-  <div class="section-inner">
-    <div class="section-header">
-      <div class="section-tag">Güvenlik</div>
-      <h2 class="section-title">Kurumsal Güvenlik<br>Standartları</h2>
-      <p class="section-sub">OXware Hypervisor sıfırdan güvenlik odaklı tasarlanmıştır. Çok katmanlı koruma ve şifreleme dahil.</p>
-      <div class="divider"></div>
-    </div>
-
-    <div class="security-grid">
-      <div class="sec-card">
-        <div class="sec-icon">🔒</div>
-        <div>
-          <div class="sec-title">TLS 1.2+ Zorunlu Şifreleme</div>
-          <div class="sec-desc">Tüm bağlantılar TLS üzerinden şifrelenir. HTTP → HTTPS otomatik yönlendirme. Öz-imzalı sertifika veya Let's Encrypt desteği.</div>
-        </div>
-      </div>
-      <div class="sec-card">
-        <div class="sec-icon">📲</div>
-        <div>
-          <div class="sec-title">TOTP İki Faktörlü Doğrulama</div>
-          <div class="sec-desc">Google Authenticator, Authy ve uyumlu tüm TOTP uygulamalarıyla çalışır. Başlangıç kodu yalnızca bir kez gösterilir.</div>
-        </div>
-      </div>
-      <div class="sec-card">
-        <div class="sec-icon">🔑</div>
-        <div>
-          <div class="sec-title">PBKDF2 Şifre Hashleme</div>
-          <div class="sec-desc">Şifreler 256.000 iterasyon PBKDF2-SHA256 ile hashlenir. Rainbow table saldırılarına karşı salt eklenir.</div>
-        </div>
-      </div>
-      <div class="sec-card">
-        <div class="sec-icon">👤</div>
-        <div>
-          <div class="sec-title">Rol Tabanlı Erişim Kontrolü</div>
-          <div class="sec-desc">admin ve user rolleri. API endpoint'leri rol denetimiyle korunur. Her işlem için yetki kontrolü.</div>
-        </div>
-      </div>
-      <div class="sec-card">
-        <div class="sec-icon">🛡️</div>
-        <div>
-          <div class="sec-title">JWT Token Yönetimi</div>
-          <div class="sec-desc">Kısa ömürlü JWT access token + refresh token mimarisi. Oturum sonlandırma ve token iptal mekanizması.</div>
-        </div>
-      </div>
-      <div class="sec-card">
-        <div class="sec-icon">🔗</div>
-        <div>
-          <div class="sec-title">API Anahtarı Yönetimi</div>
-          <div class="sec-desc">Programatik erişim için API anahtarı oluşturun, iptal edin. WiseCP ve WHMCS entegrasyonu için hazır.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Install -->
-<section id="install" class="install-section">
-  <div class="section-inner">
-    <div class="section-header center">
-      <div class="section-tag">Kurulum</div>
-      <h2 class="section-title">4 Adımda Hazır</h2>
-      <p class="section-sub">OXware Hypervisor grafiksel Calamares installer ile 5-15 dakika içinde kurulur.</p>
-      <div class="divider center"></div>
-    </div>
-
-    <div class="install-steps">
-      <div class="install-step">
-        <div class="step-num">1</div>
-        <div class="step-title">ISO İndir</div>
-        <div class="step-desc">OXware-Hypervisor ISO dosyasını indirin (~1.5GB, amd64)</div>
-      </div>
-      <div class="install-step">
-        <div class="step-num">2</div>
-        <div class="step-title">USB'ye Yaz</div>
-        <div class="step-desc">Rufus (Windows) veya <code style="font-size:11px;background:#e9ecef;padding:1px 4px;border-radius:3px">dd</code> komutu (Linux) ile USB'ye yazın</div>
-      </div>
-      <div class="install-step">
-        <div class="step-num">3</div>
-        <div class="step-title">Grafiksel Kurulum</div>
-        <div class="step-desc">Calamares yüklenir: disk seç, kullanıcı oluştur, onayla. ~10 dakika.</div>
-      </div>
-      <div class="install-step">
-        <div class="step-num alt">4</div>
-        <div class="step-title">Web Arayüzü Açık</div>
-        <div class="step-desc"><code style="font-size:11px;background:#e9ecef;padding:1px 4px;border-radius:3px">https://&lt;server-ip&gt;:8006</code> adresinden yönetim paneline erişin</div>
-      </div>
-    </div>
-
-    <div style="margin-top:48px;background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
-      <div style="flex:1;min-width:200px;">
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">Clone ile otomatik kurulum</div>
-        <div style="font-size:13px;color:var(--text-muted);">OXware kodlarını sunucunuza kopyalayarak kurabilirsiniz.</div>
-      </div>
-      <code style="background:var(--navy);color:#4ADE80;padding:12px 20px;border-radius:var(--radius);font-size:13px;white-space:nowrap;">git clone https://github.com/ShinnAsukha/oxware-hypervisor /opt/oxware && sudo bash install.sh</code>
-    </div>
-  </div>
-</section>
-
-<!-- Tech stack -->
-<section>
-  <div class="section-inner">
-    <div class="section-header center">
-      <div class="section-tag">Teknoloji Yığını</div>
-      <h2 class="section-title">Açık Kaynak Temeller</h2>
-      <div class="divider center"></div>
-    </div>
-    <div class="tech-grid">
-      <div class="tech-chip"><span class="tech-icon">🔵</span>KVM</div>
-      <div class="tech-chip"><span class="tech-icon">🟠</span>QEMU</div>
-      <div class="tech-chip"><span class="tech-icon">🟢</span>libvirt</div>
-      <div class="tech-chip"><span class="tech-icon">🐍</span>Python 3</div>
-      <div class="tech-chip"><span class="tech-icon">⚗️</span>Flask</div>
-      <div class="tech-chip"><span class="tech-icon">🌐</span>noVNC</div>
-      <div class="tech-chip"><span class="tech-icon">🔒</span>TLS 1.3</div>
-      <div class="tech-chip"><span class="tech-icon">📦</span>Calamares</div>
-      <div class="tech-chip"><span class="tech-icon">🐧</span>Ubuntu 22.04</div>
-      <div class="tech-chip"><span class="tech-icon">🔌</span>WebSocket</div>
-      <div class="tech-chip"><span class="tech-icon">🔑</span>JWT</div>
-      <div class="tech-chip"><span class="tech-icon">🎨</span>Qt5</div>
-    </div>
-  </div>
-</section>
-
-<!-- Download CTA -->
-<section id="download" class="cta-band">
-  <div class="cta-inner">
-    <div class="cta-tag">Ücretsiz & Açık Kaynak</div>
-    <h2 class="cta-title">OXware Hypervisor'ü<br>Hemen İndirin</h2>
-    <p class="cta-sub">Lisans ücreti yok. Tam kurumsal özellikler. Topluluk desteği ve aktif geliştirme.</p>
-    <div class="cta-actions">
-      <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" class="btn btn-lg btn-white">⬇ ISO İndir (amd64)</a>
-      <a href="https://github.com/ShinnAsukha/oxware-hypervisor" class="btn btn-lg btn-white-outline">GitHub Reposu →</a>
-    </div>
-    <p style="margin-top:20px;font-size:12px;color:rgba(255,255,255,0.55);">OXware-Hypervisor-2.0.x-amd64.iso · ~1.5 GB · SHA256 doğrulaması dahil</p>
-  </div>
-</section>
-
-<!-- Footer -->
+<!-- FOOTER -->
 <footer>
-  <div class="footer-inner">
-    <div class="footer-top">
-      <div class="footer-brand">
-        <a href="#" class="footer-logo">
-          <div class="footer-logo-icon">OX</div>
-          <div class="footer-logo-text">OXware Hypervisor</div>
-        </a>
-        <p>Kurumsal sınıf KVM sanallaştırma yönetim platformu. Açık kaynak, ücretsiz ve topluluğa dayalı geliştirme.</p>
-      </div>
-      <div>
-        <div class="footer-col-title">Platform</div>
-        <div class="footer-links">
-          <a href="#features">Özellikler</a>
-          <a href="#product">VM Yönetimi</a>
-          <a href="#security">Güvenlik</a>
-          <a href="#install">Kurulum</a>
-        </div>
-      </div>
-      <div>
-        <div class="footer-col-title">Geliştirme</div>
-        <div class="footer-links">
-          <a href="https://github.com/ShinnAsukha/oxware-hypervisor">GitHub</a>
-          <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases">Releases</a>
-          <a href="https://github.com/ShinnAsukha/oxware-hypervisor/issues">Bug Report</a>
-          <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/build/README.md">Dokümantasyon</a>
-        </div>
-      </div>
-      <div>
-        <div class="footer-col-title">Teknoloji</div>
-        <div class="footer-links">
-          <a href="#">KVM / QEMU</a>
-          <a href="#">libvirt</a>
-          <a href="#">Calamares</a>
-          <a href="#">noVNC</a>
-        </div>
-      </div>
-    </div>
-    <div class="footer-bottom">
-      <div class="footer-copy">© 2026 OXware Hypervisor — MIT Lisansı altında açık kaynak</div>
-      <div class="footer-badges">
-        <div class="f-badge">MIT License</div>
-        <div class="f-badge">v2.0.0</div>
-        <div class="f-badge">Ubuntu 22.04</div>
-      </div>
-    </div>
+  <div class="footer-left">
+    &copy; 2024 OXware Hypervisor &mdash; Released under the <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE">MIT License</a>.
+    Hosted at <a href="https://oxware.topworkflows">oxware.topworkflows</a>.
+  </div>
+  <div class="footer-links">
+    <a href="docs.html"><i class="fas fa-book"></i> Docs</a>
+    <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank"><i class="fab fa-github"></i> GitHub</a>
+    <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" target="_blank"><i class="fas fa-download"></i> Releases</a>
+    <a href="https://github.com/ShinnAsukha/oxware-hypervisor/issues" target="_blank"><i class="fas fa-bug"></i> Issues</a>
   </div>
 </footer>
-
-<script>
-  // Smooth scroll for anchor links
-  document.querySelectorAll('a[href^="#"]').forEach(a => {
-    a.addEventListener('click', e => {
-      const target = document.querySelector(a.getAttribute('href'));
-      if (target) {
-        e.preventDefault();
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        document.querySelector('.mobile-nav')?.classList.remove('open');
-      }
-    });
-  });
-
-  // Nav shadow on scroll
-  const nav = document.querySelector('nav');
-  window.addEventListener('scroll', () => {
-    nav.style.boxShadow = window.scrollY > 10
-      ? '0 4px 20px rgba(0,0,0,0.12)'
-      : '0 1px 3px rgba(0,0,0,0.08)';
-  });
-</script>
 
 </body>
 </html>
