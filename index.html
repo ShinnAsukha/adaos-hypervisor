@@ -54,8 +54,10 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      text-decoration: none;
     }
 
+    .nav-logo img { width: 28px; height: 28px; object-fit: contain; filter: drop-shadow(0 0 6px rgba(88,166,255,.5)); }
     .nav-logo i { font-size: 1rem; }
 
     .nav-links {
@@ -95,11 +97,16 @@
 
     /* HERO */
     .hero {
-      text-align: center;
-      padding: 6rem 2rem 5rem;
-      max-width: 860px;
+      padding: 5rem 2rem 4rem;
+      max-width: 1160px;
       margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: center;
     }
+
+    .hero-left { }
 
     .hero-badge {
       display: inline-block;
@@ -116,7 +123,7 @@
     }
 
     h1 {
-      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-size: clamp(2rem, 4vw, 3rem);
       font-weight: 800;
       line-height: 1.15;
       color: #f0f6fc;
@@ -127,20 +134,120 @@
     h1 span { color: var(--accent); }
 
     .hero p {
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       color: var(--muted);
-      max-width: 600px;
-      margin: 0 auto 2.5rem;
+      max-width: 520px;
+      margin-bottom: 2.5rem;
     }
 
     .hero-actions {
       display: flex;
       gap: 1rem;
-      justify-content: center;
       flex-wrap: wrap;
     }
 
     .hero-actions .btn { padding: 0.65rem 1.5rem; font-size: 0.95rem; }
+
+    /* DASHBOARD MOCKUP */
+    .hero-visual {
+      position: relative;
+    }
+
+    .dashboard-mockup {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(88,166,255,0.1);
+    }
+
+    .db-topbar {
+      background: #0d1117;
+      border-bottom: 1px solid #30363d;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .db-dot { width: 11px; height: 11px; border-radius: 50%; }
+    .db-dot.red    { background: #f85149; }
+    .db-dot.yellow { background: #d29922; }
+    .db-dot.green  { background: #3fb950; }
+
+    .db-url {
+      margin-left: 8px;
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 5px;
+      padding: 3px 10px;
+      font-size: 11px;
+      color: #8b949e;
+      font-family: monospace;
+    }
+
+    .db-body { padding: 14px; }
+
+    .db-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .db-card {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 7px;
+      padding: 10px 10px 8px;
+    }
+
+    .db-card-label { font-size: 9px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+    .db-card-val   { font-size: 18px; font-weight: 700; color: #f0f6fc; line-height: 1; }
+    .db-card-val.orange { color: #f0883e; }
+    .db-card-val.green  { color: #3fb950; }
+    .db-card-val.blue   { color: #58a6ff; }
+    .db-card-sub   { font-size: 9px; color: #484f58; margin-top: 3px; }
+
+    .db-vm-list { margin-bottom: 10px; }
+
+    .db-vm-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 5px;
+      margin-bottom: 3px;
+      background: #0d1117;
+      border: 1px solid #21262d;
+      font-size: 11px;
+    }
+
+    .db-vm-status {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .db-vm-status.on    { background: #3fb950; box-shadow: 0 0 5px #3fb950; }
+    .db-vm-status.pause { background: #d29922; }
+    .db-vm-status.off   { background: #484f58; }
+
+    .db-vm-name { flex: 1; color: #c9d1d9; font-family: monospace; }
+    .db-vm-cpu  { color: #8b949e; width: 52px; text-align: right; }
+
+    .sv-badge {
+      padding: 2px 7px; border-radius: 3px; font-size: 9px; font-weight: 700;
+      letter-spacing: .5px; text-transform: uppercase;
+    }
+    .sv-badge.run   { background: rgba(63,185,80,.15);  color: #3fb950; }
+    .sv-badge.pause { background: rgba(210,153,34,.15); color: #d29922; }
+    .sv-badge.stop  { background: rgba(72,79,88,.2);    color: #8b949e; }
+
+    .db-cpu-bar { height: 5px; background: #21262d; border-radius: 3px; overflow: hidden; }
+    .db-cpu-fill { height: 100%; background: linear-gradient(90deg, #58a6ff, #3fb950); border-radius: 3px; }
+
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; padding: 4rem 1.25rem 3rem; }
+      .hero-visual { display: none; }
+    }
 
     /* STATS BAR */
     .stats-bar {
@@ -315,9 +422,10 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo">
-    <i class="fas fa-server"></i> OXware
-  </div>
+  <a href="index.html" class="nav-logo">
+    <img src="sadeceikon.png" alt="OXware" onerror="this.style.display='none'">
+    OXware
+  </a>
   <ul class="nav-links">
     <li><a href="docs.html">Docs</a></li>
     <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank">GitHub</a></li>
@@ -331,16 +439,82 @@
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-badge">Open Source · v2.3</div>
-  <h1>Enterprise <span>KVM Hypervisor</span> Management</h1>
-  <p>
-    A full-featured, self-hosted virtualization platform built on KVM/QEMU.
-    Manage VMs, users, networking, storage, and security — all from a single dark-themed web UI.
-  </p>
-  <div class="hero-actions">
-    <a href="docs.html" class="btn btn-primary"><i class="fas fa-book-open"></i> Get Started</a>
-    <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" class="btn btn-green"><i class="fas fa-compact-disc"></i> Download ISO</a>
-    <a href="https://github.com/ShinnAsukha/oxware-hypervisor" class="btn btn-outline"><i class="fab fa-github"></i> View on GitHub</a>
+  <!-- LEFT -->
+  <div class="hero-left">
+    <div class="hero-badge">Open Source · v2.3</div>
+    <h1>Enterprise <span>KVM Hypervisor</span> Management</h1>
+    <p>
+      A full-featured, self-hosted virtualization platform built on KVM/QEMU.
+      Manage VMs, users, networking, storage, and security — all from a single dark-themed web UI.
+    </p>
+    <div class="hero-actions">
+      <a href="docs.html" class="btn btn-primary"><i class="fas fa-book-open"></i> Get Started</a>
+      <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" class="btn btn-green"><i class="fas fa-compact-disc"></i> Download ISO</a>
+      <a href="https://github.com/ShinnAsukha/oxware-hypervisor" class="btn btn-outline"><i class="fab fa-github"></i> View on GitHub</a>
+    </div>
+  </div>
+
+  <!-- RIGHT — dashboard mockup -->
+  <div class="hero-visual">
+    <div class="dashboard-mockup">
+      <div class="db-topbar">
+        <div class="db-dot red"></div>
+        <div class="db-dot yellow"></div>
+        <div class="db-dot green"></div>
+        <div class="db-url">https://192.168.1.10:8006</div>
+      </div>
+      <div class="db-body">
+        <div class="db-grid">
+          <div class="db-card">
+            <div class="db-card-label">Running VMs</div>
+            <div class="db-card-val orange">7</div>
+            <div class="db-card-sub">12 total</div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-label">CPU Usage</div>
+            <div class="db-card-val blue">34<span style="font-size:11px;color:#484f58">%</span></div>
+            <div class="db-card-sub">16 cores</div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-label">Memory</div>
+            <div class="db-card-val green">48<span style="font-size:11px;color:#484f58">GB</span></div>
+            <div class="db-card-sub">/ 64 GB total</div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-label">Disk I/O</div>
+            <div class="db-card-val" style="font-size:15px;padding-top:3px">1.2<span style="font-size:10px;color:#484f58"> GB/s</span></div>
+            <div class="db-card-sub">NVMe SSD</div>
+          </div>
+        </div>
+        <div class="db-vm-list">
+          <div class="db-vm-row">
+            <div class="db-vm-status on"></div>
+            <div class="db-vm-name">ubuntu-web-01</div>
+            <div class="db-vm-cpu">4 vCPU</div>
+            <span class="sv-badge run">RUNNING</span>
+          </div>
+          <div class="db-vm-row">
+            <div class="db-vm-status on"></div>
+            <div class="db-vm-name">windows-db-02</div>
+            <div class="db-vm-cpu">8 vCPU</div>
+            <span class="sv-badge run">RUNNING</span>
+          </div>
+          <div class="db-vm-row">
+            <div class="db-vm-status pause"></div>
+            <div class="db-vm-name">dev-test-env</div>
+            <div class="db-vm-cpu">2 vCPU</div>
+            <span class="sv-badge pause">PAUSED</span>
+          </div>
+          <div class="db-vm-row">
+            <div class="db-vm-status off"></div>
+            <div class="db-vm-name">backup-node-03</div>
+            <div class="db-vm-cpu">4 vCPU</div>
+            <span class="sv-badge stop">STOPPED</span>
+          </div>
+        </div>
+        <div class="db-cpu-bar"><div class="db-cpu-fill" style="width:34%"></div></div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -445,8 +619,8 @@
 <!-- FOOTER -->
 <footer>
   <div class="footer-left">
-    &copy; 2026 OXware Hypervisor &mdash; Released under the <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE">MIT License</a>.
-    Hosted at <a href="https://fab.net.tr">fab.net.tr</a>.
+    &copy; 2024 OXware Hypervisor &mdash; Released under the <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE">MIT License</a>.
+    Hosted at <a href="https://oxware.topworkflows">oxware.topworkflows</a>.
   </div>
   <div class="footer-links">
     <a href="docs.html"><i class="fas fa-book"></i> Docs</a>
