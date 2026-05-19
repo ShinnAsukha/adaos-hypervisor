@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OXware Hypervisor — Enterprise KVM Management</title>
   <meta name="description" content="Open-source KVM/QEMU hypervisor management platform. VM lifecycle, RBAC, noVNC console, monitoring, AI assistant and more." />
+  <link rel="icon" type="image/png" href="sadeceikon.png" />
+  <link rel="shortcut icon" type="image/png" href="sadeceikon.png" />
+  <link rel="apple-touch-icon" href="sadeceikon.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -392,6 +395,162 @@
     .cmd { color: #3fb950; }
     .url { color: #58a6ff; }
 
+    /* COMPARISON TABLE */
+    .compare-section {
+      padding: 5rem 2rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .compare-wrapper {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      min-width: 640px;
+    }
+
+    .compare-table thead tr {
+      background: #0d1117;
+    }
+
+    .compare-table th {
+      padding: 1.25rem 1.5rem;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.95rem;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .compare-table th:first-child {
+      text-align: left;
+      width: 220px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding-left: 1.75rem;
+    }
+
+    .th-oxware {
+      background: rgba(88,166,255,0.08);
+      color: var(--accent);
+      border-bottom-color: var(--accent) !important;
+      border-left: 1px solid rgba(88,166,255,0.2);
+      border-right: 1px solid rgba(88,166,255,0.2);
+    }
+
+    .th-oxware .th-logo {
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+    }
+
+    .th-oxware .th-logo img {
+      width: 20px; height: 20px; object-fit: contain;
+      filter: drop-shadow(0 0 5px rgba(88,166,255,0.6));
+    }
+
+    .th-proxmox {
+      background: rgba(240,136,62,0.06);
+      color: #f0883e;
+      border-bottom-color: #f0883e !important;
+    }
+
+    .th-vmware {
+      background: rgba(248,81,73,0.05);
+      color: #c96058;
+      border-bottom-color: #c96058 !important;
+    }
+
+    .compare-table tbody tr {
+      transition: background 0.15s;
+    }
+
+    .compare-table tbody tr:hover td {
+      background: rgba(88,166,255,0.04);
+    }
+
+    .compare-table td {
+      padding: 0.85rem 1.5rem;
+      border-bottom: 1px solid rgba(48,54,61,0.6);
+      background: var(--surface);
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.875rem;
+    }
+
+    .compare-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .compare-table td:first-child {
+      text-align: left;
+      color: var(--text);
+      font-weight: 500;
+      background: rgba(13,17,23,0.6);
+      padding-left: 1.75rem;
+      border-right: 1px solid rgba(48,54,61,0.4);
+    }
+
+    /* OXware column highlight */
+    .compare-table td.col-ox {
+      background: rgba(88,166,255,0.04);
+      border-left: 1px solid rgba(88,166,255,0.12);
+      border-right: 1px solid rgba(88,166,255,0.12);
+    }
+
+    .compare-table tbody tr:hover td.col-ox {
+      background: rgba(88,166,255,0.08);
+    }
+
+    /* Cell value types */
+    .cv-yes {
+      color: #3fb950;
+      font-size: 1rem;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+
+    .cv-no {
+      color: #f85149;
+      font-size: 1rem;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+
+    .cv-warn {
+      color: #d29922;
+      font-size: 0.85rem;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+    }
+
+    .cv-note {
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-top: 2px;
+      display: block;
+    }
+
+    /* Highlight badge on OXware unique features */
+    .ox-badge {
+      display: inline-block;
+      background: rgba(88,166,255,0.15);
+      color: var(--accent);
+      border: 1px solid rgba(88,166,255,0.3);
+      border-radius: 20px;
+      padding: 1px 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      margin-left: 6px;
+      vertical-align: middle;
+      letter-spacing: 0.3px;
+    }
+
     /* FOOTER */
     footer {
       border-top: 1px solid var(--border);
@@ -616,11 +775,143 @@
   </div>
 </section>
 
+<!-- COMPARISON -->
+<section class="compare-section">
+  <h2 class="section-title">OXware vs The Competition</h2>
+  <p class="section-sub">See how OXware stacks up against other hypervisor management platforms.</p>
+
+  <div class="compare-wrapper">
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th class="th-oxware">
+            <div class="th-logo">
+              <img src="sadeceikon.png" alt="OXware" onerror="this.style.display='none'">
+              OXware
+            </div>
+          </th>
+          <th class="th-proxmox"><i class="fas fa-server" style="margin-right:6px;font-size:.85rem"></i>Proxmox VE</th>
+          <th class="th-vmware"><i class="fas fa-cloud" style="margin-right:6px;font-size:.85rem"></i>VMware ESXi</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <tr>
+          <td>License</td>
+          <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i> MIT (free)</span></td>
+          <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> AGPL / paid sub</span></td>
+          <td><span class="cv-no"><i class="fas fa-times-circle"></i> Commercial</span></td>
+        </tr>
+
+        <tr>
+          <td>KVM / QEMU Backend</td>
+          <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-no"><i class="fas fa-times-circle"></i><span class="cv-note">Proprietary</span></span></td>
+        </tr>
+
+        <tr>
+          <td>Web UI</td>
+          <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i> Dark, modern SPA</span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+        </tr>
+
+        <tr>
+          <td>REST API</td>
+          <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i> Full</span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+        </tr>
+
+        <tr>
+          <td>AI Assistant <span class="ox-badge">UNIQUE</span></td>
+          <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
+          <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
+        </tr>
+
+        <tr>
+          <td>Built-in 2FA</td>
+          <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> Enterprise only</span></td>
+        </tr>
+
+        <tr>
+          <td>Live Migration</td>
+          <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i> vMotion</span></td>
+        </tr>
+
+        <tr>
+          <td>OVA / VMDK Import</td>
+          <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i> Auto UEFI detect</span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+        </tr>
+
+        <tr>
+          <td>Auto TLS Cert</td>
+          <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i></span></td>
+        </tr>
+
+        <tr>
+          <td>IP Pool / IPAM</td>
+          <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i></span></td>
+        </tr>
+
+        <tr>
+          <td>Per-VM Firewall</td>
+          <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i></span></td>
+        </tr>
+
+        <tr>
+          <td>Prometheus Metrics</td>
+          <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> Plugin only</span></td>
+        </tr>
+
+        <tr>
+          <td>LDAP / AD SSO</td>
+          <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+        </tr>
+
+        <tr>
+          <td>WiseCP / WHMCS <span class="ox-badge">UNIQUE</span></td>
+          <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> 3rd party</span></td>
+          <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
+        </tr>
+
+        <tr>
+          <td>Self-Hosted</td>
+          <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+        </tr>
+
+      </tbody>
+    </table>
+  </div>
+</section>
+
 <!-- FOOTER -->
 <footer>
   <div class="footer-left">
     &copy; 2026 OXware Hypervisor &mdash; Released under the <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE">MIT License</a>.
-    Hosted at <a href="https://fab.net.tr">fab.net.tr</a>.
+    Hosted by <a href="https://fab.net.tr" target="_blank" rel="noopener">fab.net.tr</a>.
   </div>
   <div class="footer-links">
     <a href="docs.html"><i class="fas fa-book"></i> Docs</a>
