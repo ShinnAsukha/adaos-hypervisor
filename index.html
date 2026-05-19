@@ -551,6 +551,213 @@
       letter-spacing: 0.3px;
     }
 
+     /* CHANGELOG */
+    .changelog-section {
+      padding: 5rem 2rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .changelog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .changelog-header-left { }
+
+    .changelog-refresh {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 1rem;
+      border-radius: var(--radius);
+      background: rgba(88,166,255,0.1);
+      border: 1px solid rgba(88,166,255,0.25);
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .changelog-refresh:hover { background: rgba(88,166,255,0.18); }
+    .changelog-refresh.spinning i { animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .changelog-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .cl-item {
+      border-bottom: 1px solid rgba(48,54,61,0.6);
+      background: var(--surface);
+      transition: background 0.15s;
+    }
+
+    .cl-item:last-child { border-bottom: none; }
+    .cl-item:hover { background: rgba(88,166,255,0.03); }
+
+    .cl-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.9rem 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .cl-type {
+      flex-shrink: 0;
+      width: 70px;
+      text-align: center;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    .cl-type.feat    { background: rgba(63,185,80,.15);   color: #3fb950; border: 1px solid rgba(63,185,80,.3); }
+    .cl-type.fix     { background: rgba(248,81,73,.13);   color: #f85149; border: 1px solid rgba(248,81,73,.3); }
+    .cl-type.refactor{ background: rgba(88,166,255,.12);  color: #58a6ff; border: 1px solid rgba(88,166,255,.3); }
+    .cl-type.chore   { background: rgba(139,148,158,.12); color: #8b949e; border: 1px solid rgba(139,148,158,.3); }
+    .cl-type.docs    { background: rgba(210,153,34,.13);  color: #d29922; border: 1px solid rgba(210,153,34,.3); }
+    .cl-type.other   { background: rgba(139,148,158,.08); color: #8b949e; border: 1px solid rgba(139,148,158,.2); }
+
+    .cl-msg {
+      flex: 1;
+      font-size: 0.9rem;
+      color: #e6edf3;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    .cl-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .cl-author {
+      font-size: 0.78rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .cl-date {
+      font-size: 0.75rem;
+      color: var(--muted);
+      white-space: nowrap;
+      min-width: 80px;
+      text-align: right;
+    }
+
+    .cl-sha {
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: rgba(88,166,255,0.6);
+      background: rgba(88,166,255,0.06);
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .cl-detail-btn {
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 3px 10px;
+      border-radius: 5px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .cl-detail-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .cl-detail-btn.open  { border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,0.08); }
+
+    .cl-detail-panel {
+      display: none;
+      padding: 1rem 1.25rem 1.25rem;
+      background: rgba(13,17,23,0.7);
+      border-top: 1px solid rgba(48,54,61,0.5);
+      font-size: 0.85rem;
+    }
+
+    .cl-detail-panel.open { display: block; }
+
+    .cl-full-msg {
+      white-space: pre-wrap;
+      color: #c9d1d9;
+      line-height: 1.7;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", monospace;
+      background: rgba(0,0,0,0.3);
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      border: 1px solid rgba(48,54,61,0.5);
+      margin-bottom: 0.75rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .cl-detail-meta {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .cl-detail-meta a { color: var(--accent); }
+    .cl-detail-meta span strong { color: var(--text); }
+
+    .cl-load-more {
+      display: flex;
+      justify-content: center;
+      padding: 1.25rem;
+      background: rgba(13,17,23,0.5);
+      border-top: 1px solid var(--border);
+    }
+
+    .cl-load-more-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1.5rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .cl-load-more-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .cl-load-more-btn:disabled { opacity: 0.4; cursor: default; }
+
+    .cl-empty {
+      text-align: center;
+      padding: 3rem 2rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
     /* FOOTER */
     footer {
       border-top: 1px solid var(--border);
@@ -907,6 +1114,23 @@
   </div>
 </section>
 
+  <!-- CHANGELOG -->
+<section class="changelog-section">
+  <div class="changelog-header">
+    <div class="changelog-header-left">
+      <h2 class="section-title" style="text-align:left;margin-bottom:0.35rem">Son Güncellemeler</h2>
+      <p style="color:var(--muted);font-size:0.9rem;margin:0">GitHub'dan canlı çekilen commit geçmişi</p>
+    </div>
+    <button class="changelog-refresh" onclick="loadChangelog(true)" id="cl-refresh-btn">
+      <i class="fas fa-rotate-right" id="cl-refresh-icon"></i> Yenile
+    </button>
+  </div>
+
+  <div id="changelog-container">
+    <div class="cl-empty"><i class="fas fa-circle-notch fa-spin" style="margin-right:8px"></i>Yükleniyor…</div>
+  </div>
+</section>
+
 <!-- FOOTER -->
 <footer>
   <div class="footer-left">
@@ -921,5 +1145,176 @@
   </div>
 </footer>
 
+<script>
+/* ── Changelog / Commit History ── */
+const CL_REPO    = "ShinnAsukha/oxware-hypervisor";
+const CL_BRANCH  = "main";
+const CL_PER_PAGE = 20;
+
+let _clPage     = 1;
+let _clAllLoaded = false;
+let _clCache    = [];
+
+function _clCommitType(msg) {
+  const m = msg.toLowerCase();
+  if (m.startsWith("feat"))     return "feat";
+  if (m.startsWith("fix"))      return "fix";
+  if (m.startsWith("refactor")) return "refactor";
+  if (m.startsWith("chore") || m.startsWith("ci") || m.startsWith("build")) return "chore";
+  if (m.startsWith("docs"))     return "docs";
+  return "other";
+}
+
+function _clTypeLbl(t) {
+  return { feat:"feat", fix:"fix", refactor:"refact", chore:"chore", docs:"docs", other:"commit" }[t] || t;
+}
+
+function _clRelTime(iso) {
+  const diff = (Date.now() - new Date(iso)) / 1000;
+  if (diff < 60)   return "az önce";
+  if (diff < 3600) return `${Math.floor(diff/60)}dk önce`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}s önce`;
+  if (diff < 2592000) return `${Math.floor(diff/86400)}g önce`;
+  return new Date(iso).toLocaleDateString("tr-TR", {day:"2-digit",month:"short",year:"numeric"});
+}
+
+function _clRenderList(commits, append) {
+  const container = document.getElementById("changelog-container");
+
+  if (!append) container.innerHTML = "";
+
+  if (!commits.length && !append) {
+    container.innerHTML = `<div class="cl-empty"><i class="fas fa-inbox" style="margin-right:8px"></i>Henüz commit bulunamadı.</div>`;
+    return;
+  }
+
+  let listEl = container.querySelector(".changelog-list");
+  if (!listEl) {
+    listEl = document.createElement("div");
+    listEl.className = "changelog-list";
+    container.appendChild(listEl);
+  }
+
+  // Remove old load-more wrapper before re-adding commits
+  const oldLoadMore = container.querySelector(".cl-load-more");
+  if (oldLoadMore) oldLoadMore.remove();
+
+  commits.forEach((c, i) => {
+    const sha     = c.sha.slice(0, 7);
+    const msgFull = c.commit.message;
+    const msgLine = msgFull.split("\n")[0];
+    const author  = c.commit.author.name;
+    const date    = c.commit.author.date;
+    const url     = c.html_url;
+    const type    = _clCommitType(msgLine);
+    const id      = `cl-${sha}-${_clCache.length + i}`;
+
+    const item = document.createElement("div");
+    item.className = "cl-item";
+    item.innerHTML = `
+      <div class="cl-row">
+        <span class="cl-type ${type}">${_clTypeLbl(type)}</span>
+        <span class="cl-msg" title="${msgLine.replace(/"/g,'&quot;')}">${_escHtml(msgLine)}</span>
+        <div class="cl-meta">
+          <span class="cl-author"><i class="fas fa-user-circle" style="margin-right:4px;opacity:.5"></i>${_escHtml(author)}</span>
+          <span class="cl-date">${_clRelTime(date)}</span>
+          <code class="cl-sha">${sha}</code>
+          <button class="cl-detail-btn" onclick="_clToggle('${id}')" id="btn-${id}">
+            <i class="fas fa-chevron-down" style="font-size:0.65rem;margin-right:4px"></i>Detay
+          </button>
+        </div>
+      </div>
+      <div class="cl-detail-panel" id="${id}">
+        <div class="cl-full-msg">${_escHtml(msgFull)}</div>
+        <div class="cl-detail-meta">
+          <span><strong>SHA:</strong> <code style="font-size:0.8rem">${c.sha}</code></span>
+          <span><strong>Yazar:</strong> ${_escHtml(author)}</span>
+          <span><strong>Tarih:</strong> ${new Date(date).toLocaleString("tr-TR")}</span>
+          <a href="${url}" target="_blank" rel="noopener">
+            <i class="fab fa-github" style="margin-right:4px"></i>GitHub'da görüntüle
+          </a>
+        </div>
+      </div>`;
+    listEl.appendChild(item);
+  });
+
+  // Load more button
+  if (!_clAllLoaded) {
+    const lm = document.createElement("div");
+    lm.className = "cl-load-more";
+    lm.id = "cl-load-more-wrap";
+    lm.innerHTML = `<button class="cl-load-more-btn" onclick="loadChangelog(false)" id="cl-load-more-btn">
+      <i class="fas fa-chevron-down"></i> Daha fazla yükle
+    </button>`;
+    container.appendChild(lm);
+  }
+}
+
+function _clToggle(id) {
+  const panel = document.getElementById(id);
+  const btn   = document.getElementById("btn-" + id);
+  if (!panel) return;
+  const isOpen = panel.classList.contains("open");
+  panel.classList.toggle("open", !isOpen);
+  btn.classList.toggle("open", !isOpen);
+  const icon = btn.querySelector("i");
+  if (icon) {
+    icon.style.transform = isOpen ? "" : "rotate(180deg)";
+    icon.style.transition = "transform 0.2s";
+  }
+}
+
+function _escHtml(str) {
+  return String(str)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+async function loadChangelog(reset) {
+  if (reset) { _clPage = 1; _clAllLoaded = false; _clCache = []; }
+
+  const refreshBtn  = document.getElementById("cl-refresh-btn");
+  const refreshIcon = document.getElementById("cl-refresh-icon");
+  const loadMoreBtn = document.getElementById("cl-load-more-btn");
+
+  if (refreshBtn) { refreshBtn.classList.add("spinning"); refreshBtn.disabled = true; }
+  if (loadMoreBtn) { loadMoreBtn.disabled = true; loadMoreBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Yükleniyor…`; }
+
+  try {
+    const url = `https://api.github.com/repos/${CL_REPO}/commits?sha=${CL_BRANCH}&per_page=${CL_PER_PAGE}&page=${_clPage}`;
+    const res = await fetch(url, { headers: { "Accept": "application/vnd.github.v3+json" } });
+
+    if (!res.ok) {
+      throw new Error(`GitHub API: HTTP ${res.status}`);
+    }
+
+    const commits = await res.json();
+
+    if (commits.length < CL_PER_PAGE) _clAllLoaded = true;
+
+    _clCache = _clCache.concat(commits);
+    _clRenderList(commits, _clPage > 1);
+    _clPage++;
+
+  } catch (e) {
+    const container = document.getElementById("changelog-container");
+    if (_clPage === 1) {
+      container.innerHTML = `<div class="cl-empty">
+        <i class="fas fa-triangle-exclamation" style="color:#d29922;margin-right:8px"></i>
+        Güncellemeler yüklenemedi: ${_escHtml(e.message)}
+        <br><small style="margin-top:6px;display:block">
+          <button onclick="loadChangelog(true)" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:inherit">Tekrar dene</button>
+        </small>
+      </div>`;
+    }
+  } finally {
+    if (refreshBtn) { refreshBtn.classList.remove("spinning"); refreshBtn.disabled = false; }
+  }
+}
+
+// Auto-load on page open
+document.addEventListener("DOMContentLoaded", () => loadChangelog(true));
+</script>
+  
 </body>
 </html>
