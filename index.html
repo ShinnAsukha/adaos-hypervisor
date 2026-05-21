@@ -1261,6 +1261,84 @@
       });
     }
 
+    // Yorumları ekrana basma fonksiyonu
+    function renderComments() {
+      commentsList.innerHTML = '';
+      
+      if (comments.length === 0) {
+        commentsList.innerHTML = '<div class="no-comments">No comments yet. Be the first to say something!</div>';
+        return;
+      }
+
+      [...comments].reverse().forEach(comment => {
+        const commentItem = document.createElement('div');
+        commentItem.className = 'comment-item';
+        
+        commentItem.innerHTML = `
+          <div class="comment-header">
+            <span class="comment-author"><i class="fas fa-user-circle"></i> ${escapeHTML(comment.author)}</span>
+            <div class="comment-actions">
+              <span class="comment-date">${formatDate(comment.date)}</span>
+              <button class="btn-delete" data-id="${comment.id}" title="Delete Comment">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </div>
+          </div>
+          <div class="comment-body">${escapeHTML(comment.text)}</div>
+        `;
+        
+        commentsList.appendChild(commentItem);
+      });
+
+      // Silme butonlarına tıklama olayını bağla
+      attachDeleteEvents();
+    }
+
+    // Yorum silme olayını yöneten fonksiyon
+    function attachDeleteEvents() {
+      const deleteButtons = document.querySelectorAll('.btn-delete');
+      deleteButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+          // Tıklanan butonun üzerindeki data-id değerini al (Sayı tipine çevirerek)
+          const commentId = Number(button.getAttribute('data-id'));
+          
+          // Kullanıcıya küçük bir onay sorusu sor (isteğe bağlı)
+          if (confirm('Are you sure you want to delete this comment?')) {
+            // İlgili ID'ye sahip olmayan yorumları filtrele (böylece o ID listeden silinir)
+            comments = comments.filter(c => c.id !== commentId);
+            
+            // LocalStorage'ı güncelle
+            localStorage.setItem('oxware_comments', JSON.stringify(comments));
+            
+            // Listeyi yeniden ekrana bas
+            renderComments();
+          }
+        });
+      });
+    }
+
+    /* DELETE BUTTON */
+    .comment-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-delete {
+      background: transparent;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    .btn-delete:hover {
+      background: rgba(248, 81, 73, 0.15);
+    }
+
     // Güvenlik (XSS) önlemi için HTML temizleme fonksiyonu
     function escapeHTML(str) {
       return str.replace(/[&<>'"]/g, 
