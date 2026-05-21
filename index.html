@@ -758,6 +758,94 @@
       font-size: 0.9rem;
     }
 
+    /* COMMENTS SECTION */
+    .comments-section {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .comment-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group input, .form-group textarea {
+      width: 100%;
+      background: #010409;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.75rem;
+      color: #e6edf3;
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+
+    .form-group input:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.15);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .comments-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .comment-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+
+    .comment-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .comment-author {
+      font-weight: 600;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .comment-date {
+      color: var(--muted);
+    }
+
+    .comment-body {
+      font-size: 0.9rem;
+      color: var(--text);
+      white-space: pre-wrap;
+    }
+
+    .no-comments {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+      padding: 2rem;
+    }
+
     /* FOOTER */
     footer {
       border-top: 1px solid var(--border);
@@ -1129,6 +1217,99 @@
   <div id="changelog-container">
     <div class="cl-empty"><i class="fas fa-circle-notch fa-spin" style="margin-right:8px"></i>Yükleniyor…</div>
   </div>
+</section>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const commentForm = document.getElementById('commentForm');
+    const commentsList = document.getElementById('commentsList');
+    const authorInput = document.getElementById('authorName');
+    const commentInput = document.getElementById('commentText');
+
+    // LocalStorage'dan yorumları yükle
+    let comments = JSON.parse(localStorage.getItem('oxware_comments')) || [];
+
+    // Tarihi biçimlendirme fonksiyonu
+    function formatDate(dateString) {
+      const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+      return new Date(dateString).toLocaleDateString('en-US', options);
+    }
+
+    // Yorumları ekrana basma fonksiyonu
+    function renderComments() {
+      commentsList.innerHTML = '';
+      
+      if (comments.length === 0) {
+        commentsList.innerHTML = '<div class="no-comments">No comments yet. Be the first to say something!</div>';
+        return;
+      }
+
+      // En yeni yorumu en üstte göstermek için ters çeviriyoruz
+      [...comments].reverse().forEach(comment => {
+        const commentItem = document.createElement('div');
+        commentItem.className = 'comment-item';
+        
+        commentItem.innerHTML = `
+          <div class="comment-header">
+            <span class="comment-author"><i class="fas fa-user-circle"></i> ${escapeHTML(comment.author)}</span>
+            <span class="comment-date">${formatDate(comment.date)}</span>
+          </div>
+          <div class="comment-body">${escapeHTML(comment.text)}</div>
+        `;
+        
+        commentsList.appendChild(commentItem);
+      });
+    }
+
+    // Güvenlik (XSS) önlemi için HTML temizleme fonksiyonu
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+      );
+    }
+
+    // Yeni yorum gönderme olayı
+    commentForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const newComment = {
+        id: Date.now(),
+        author: authorInput.value.trim(),
+        text: commentInput.value.trim(),
+        date: new Date().toISOString()
+      };
+
+      // Listeye ekle ve kaydet
+      comments.push(newComment);
+      localStorage.setItem('oxware_comments', JSON.stringify(comments));
+
+      // Arayüzü güncelle ve formu temizle
+      renderComments();
+      commentForm.reset();
+    });
+
+    // İlk açılışta yorumları yükle
+    renderComments();
+  });
+</script>
+  
+  <section class="comments-section">
+  <h2 class="section-title" style="text-align: left; margin-bottom: 1.5rem;">Community Comments</h2>
+  
+  <form id="commentForm" class="comment-form">
+    <div class="form-group">
+      <input type="text" id="authorName" placeholder="Your Name" required />
+    </div>
+    <div class="form-group">
+      <textarea id="commentText" placeholder="Write a comment..." required></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">
+      <i class="fas fa-paper-plane"></i> Post Comment
+    </button>
+  </form>
+
+  <div id="commentsList" class="comments-list">
+    </div>
 </section>
 
 <!-- FOOTER -->
