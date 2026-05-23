@@ -793,6 +793,7 @@
   </a>
   <ul class="nav-links">
     <li><a href="docs.html">Docs</a></li>
+    <li><a href="#screenshots">Screenshots</a></li>
     <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank">GitHub</a></li>
     <li>
       <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" class="btn btn-primary">
@@ -1154,6 +1155,25 @@
   </div>
 </section>
 
+<!-- SCREENSHOTS -->
+<section id="screenshots" style="max-width:1200px;margin:0 auto;padding:3rem 1.5rem 1rem">
+  <div style="text-align:center;margin-bottom:2rem">
+    <h2 style="font-size:1.4rem;font-weight:700;color:var(--text);margin-bottom:0.5rem">📸 Ekran Görüntüleri</h2>
+    <p style="color:var(--muted);font-size:0.9rem">OXware arayüzünden görüntüler</p>
+  </div>
+  <div id="screenshots-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+    <div style="text-align:center;padding:40px;color:var(--muted);font-size:0.875rem;grid-column:1/-1" id="screenshots-loading">
+      <i class="fas fa-circle-notch fa-spin" style="margin-right:8px"></i>Yükleniyor…
+    </div>
+  </div>
+  <!-- Lightbox -->
+  <div id="lightbox" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;cursor:pointer;align-items:center;justify-content:center">
+    <img id="lightbox-img" src="" style="max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.8)">
+    <div id="lightbox-cap" style="position:absolute;bottom:24px;left:0;right:0;text-align:center;color:#e6edf3;font-size:14px;background:rgba(0,0,0,.5);padding:8px"></div>
+    <button onclick="closeLightbox();event.stopPropagation()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,.1);border:none;color:#fff;font-size:22px;width:44px;height:44px;border-radius:50%;cursor:pointer">✕</button>
+  </div>
+</section>
+
 <!-- COMMENTS -->
 <section style="max-width:960px;margin:0 auto;padding:3rem 1.5rem 2rem">
   <h2 style="font-size:1.4rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;text-align:center">💬 Yorumlar &amp; Sorular</h2>
@@ -1354,7 +1374,71 @@ async function loadChangelog(reset) {
 }
 
 // Auto-load on page open
-document.addEventListener("DOMContentLoaded", () => loadChangelog(true));
+document.addEventListener("DOMContentLoaded", () => {
+  loadChangelog(true);
+  loadScreenshots();
+});
+
+/* ── Screenshots Gallery (#32) ── */
+async function loadScreenshots() {
+  const grid = document.getElementById('screenshots-grid');
+  if (!grid) return;
+  try {
+    // Load manifest from screenshots/manifest.json
+    const res = await fetch('screenshots/manifest.json');
+    if (!res.ok) throw new Error('manifest not found');
+    const data = await res.json();
+    const shots = data.screenshots || [];
+    if (!shots.length) {
+      grid.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">
+        Henüz ekran görüntüsü eklenmemiş.
+      </div>`;
+      return;
+    }
+    grid.innerHTML = shots.map((s, i) => `
+      <div onclick="openLightbox(${i})" style="cursor:pointer;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--surface);transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.4)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <img src="${_escHtml(s.thumb||s.src)}" alt="${_escHtml(s.title||'')}" loading="lazy"
+          style="width:100%;height:180px;object-fit:cover;display:block">
+        ${s.title ? `<div style="padding:10px 14px;font-size:13px;font-weight:600;color:var(--text)">${_escHtml(s.title)}</div>` : ''}
+        ${s.desc ? `<div style="padding:0 14px 10px;font-size:12px;color:var(--muted)">${_escHtml(s.desc)}</div>` : ''}
+      </div>
+    `).join('');
+    window._screenshotsData = shots;
+  } catch(e) {
+    // No manifest — show placeholder
+    grid.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1;font-size:0.9rem">
+      <i class="fas fa-images" style="font-size:2rem;margin-bottom:12px;display:block;opacity:.3"></i>
+      Ekran görüntüleri yakında eklenecek.<br>
+      <small style="font-size:11px;margin-top:8px;display:block">screenshots/manifest.json</small>
+    </div>`;
+  }
+}
+
+function openLightbox(idx) {
+  const shots = window._screenshotsData || [];
+  const s = shots[idx];
+  if (!s) return;
+  const lb = document.getElementById('lightbox');
+  const img = document.getElementById('lightbox-img');
+  const cap = document.getElementById('lightbox-cap');
+  img.src = s.src;
+  cap.textContent = s.title || '';
+  lb.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  window._lbIdx = idx;
+  // Keyboard nav
+  document.onkeydown = (e) => {
+    if (e.key === 'Escape') closeLightbox();
+    else if (e.key === 'ArrowRight') openLightbox((idx + 1) % shots.length);
+    else if (e.key === 'ArrowLeft') openLightbox((idx - 1 + shots.length) % shots.length);
+  };
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+  document.body.style.overflow = '';
+  document.onkeydown = null;
+}
 </script>
   
 </body>

@@ -1,0 +1,28 @@
+{
+  "screenshots": [
+    {
+      "src": "screenshots/dashboard.png",
+      "thumb": "screenshots/dashboard.png",
+      "title": "Ana Panel",
+      "desc": "OXware genel bakış — VM listesi, kaynak kullanımı ve sistem durumu"
+    },
+    {
+      "src": "screenshots/vm-detail.png",
+      "thumb": "screenshots/vm-detail.png",
+      "title": "VM Detay",
+      "desc": "VM konsolu, donanım ayarları ve canlı metrikler"
+    },
+    {
+      "src": "screenshots/monitoring.png",
+      "thumb": "screenshots/monitoring.png",
+      "title": "İzleme+",
+      "desc": "Gelişmiş performans grafikler, trend analizi ve ağ hız testi"
+    },
+    {
+      "src": "screenshots/network.png",
+      "thumb": "screenshots/network.png",
+      "title": "Ağ Yönetimi",
+      "desc": "Sanal ağlar, host arayüzleri, DHCP kiralar ve yönlendirme tablosu"
+    }
+  ]
+}
