@@ -321,6 +321,7 @@
     <div class="sidebar-section">Getting Started</div>
     <a href="#overview"><i class="fas fa-circle-info"></i> Overview</a>
     <a href="#installation"><i class="fas fa-download"></i> Installation</a>
+    <a href="#installation" style="padding-left:2rem;font-size:0.8rem;color:var(--muted)"><i class="fab fa-debian"></i> Debian 12</a>
     <a href="#first-login"><i class="fas fa-user-check"></i> First Login &amp; Wizard</a>
 
     <div class="sidebar-section">Virtual Machines</div>
@@ -358,7 +359,7 @@
     <!-- OVERVIEW -->
     <section id="overview">
       <h1>OXware Hypervisor Documentation</h1>
-      <p><strong>Version 2.3</strong></p>
+      <p><strong>Version 2.5</strong> — <span style="color:var(--accent2)">Latest</span></p>
       <p>
         OXware is an open-source hypervisor management platform built on KVM/QEMU and Ubuntu/Debian.
         It provides a complete web-based control plane for virtual machine lifecycle, role-based access,
@@ -382,7 +383,7 @@
           <tr><td>CPU</td><td>2 cores, VT-x / AMD-V required</td><td>8+ cores</td></tr>
           <tr><td>RAM</td><td>2 GB</td><td>32 GB+</td></tr>
           <tr><td>Disk</td><td>20 GB</td><td>500 GB+ SSD/NVMe</td></tr>
-          <tr><td>OS</td><td>Ubuntu 22.04 LTS (Jammy)</td><td>Ubuntu 22.04 LTS</td></tr>
+          <tr><td>OS</td><td>Ubuntu 22.04 LTS <strong>or</strong> Debian 12 (Bookworm)</td><td>Ubuntu 22.04 LTS</td></tr>
           <tr><td>Architecture</td><td>x86_64</td><td>x86_64</td></tr>
           <tr><td>Network</td><td>1x Ethernet</td><td>2x Ethernet (mgmt + VM)</td></tr>
         </tbody>
@@ -416,6 +417,30 @@
 <span class="cmd">cd</span> /opt/oxware-src
 <span class="cmd">sudo bash</span> install.sh</code></pre>
       <p>The script installs all dependencies (KVM, libvirt, qemu-utils, noVNC, Nginx, Python packages), configures systemd services, and generates a self-signed TLS certificate. The process takes 5–10 minutes depending on network speed.</p>
+
+      <h3>Method 3 — Script on existing Debian 12 (Bookworm) <span class="tag tag-green">Supported</span></h3>
+      <p>OXware fully supports Debian 12 Bookworm. The installer auto-detects the distribution and adjusts package names accordingly.</p>
+      <pre><code><span class="comment"># Gerekli ön paketler</span>
+<span class="cmd">sudo apt-get update</span> &amp;&amp; <span class="cmd">sudo apt-get install -y</span> git curl python3-venv
+
+<span class="cmd">git clone</span> https://github.com/ShinnAsukha/oxware-hypervisor.git /opt/oxware-src
+<span class="cmd">cd</span> /opt/oxware-src
+<span class="cmd">sudo bash</span> install.sh</code></pre>
+
+      <div class="callout callout-info">
+        <strong>Debian 12 notları</strong>
+        <ul style="margin-top:0.5rem">
+          <li><code>python3-venv</code> Debian'da ayrı bir paket — script otomatik kurar; pre-install önerilir.</li>
+          <li>Backports repo (<code>bookworm-backports</code>) en güncel libvirt/qemu için otomatik eklenir.</li>
+          <li>Bootable ISO (Method 1) zaten Debian 12 Live tabanlıdır — bare-metal kurulum için önerilendir.</li>
+          <li><code>/etc/machine-id</code> systemd ile gelir, OXware şifreleme anahtarı üretimi sorunsuz çalışır.</li>
+        </ul>
+      </div>
+
+      <pre><code><span class="comment"># KVM doğrulama (Debian 12)</span>
+<span class="cmd">sudo apt-get install -y</span> cpu-checker
+<span class="cmd">kvm-ok</span>
+<span class="comment"># "KVM acceleration can be used" görünmezse BIOS'ta VT-x / SVM'i aktif edin</span></code></pre>
 
       <h3>Repair</h3>
       <pre><code><span class="comment"># Restart all OXware services and repair broken symlinks</span>
@@ -673,6 +698,9 @@ curl -X POST https://localhost:8006/api/import/ova \
     <section id="networking">
       <h2>Networking</h2>
 
+      <h3>Network Stat Cards <span class="tag tag-green">v2.5</span></h3>
+      <p>The top of the Network page shows four colour-coded gradient stat cards: <strong>Sanal Ağlar</strong> (blue), <strong>Aktif Ağlar</strong> (green), <strong>Host Arayüzleri</strong> (purple), and <strong>Aktif Arayüzler</strong> (orange). Values update every time the page is loaded.</p>
+
       <h3>IP Pool Management</h3>
       <p>Navigate to <strong>Network → IP Pools</strong>. Define one or more CIDR blocks (e.g., <code>10.10.0.0/24</code>). OXware allocates IPs from the pool when creating VMs and tracks usage. You can also pin a static IP to a VM from the pool.</p>
 
@@ -762,19 +790,43 @@ curl -X POST https://localhost:8006/api/import/ova \
 
       <h3>Audit Log</h3>
       <p>All user actions (logins, VM operations, settings changes, failed auth attempts) are recorded in an immutable audit log. Navigate to <strong>Settings → Audit Log</strong> to search and export logs.</p>
+
+      <h3>Machine-ID Independent Credentials <span class="tag tag-green">v2.5</span></h3>
+      <p>OXware credentials are encrypted with a key derived from <code>/etc/machine-id</code>. If the machine-id changes (kernel update, disk clone, VM migration), admin login would fail. To prevent this:</p>
+      <ul>
+        <li>The admin <strong>username</strong> is additionally saved in plaintext to <code>/etc/oxware/.username</code> (mode 600).</li>
+        <li>If the encrypted <code>.auth</code> file cannot be decrypted, OXware reads the username fallback and logs a critical warning — the setup wizard does <em>not</em> re-open.</li>
+      </ul>
+
+      <h3>Password Reset File <span class="tag tag-green">v2.5</span></h3>
+      <p>If you lose access, a root user can reset credentials without reinstalling:</p>
+      <pre><code><span class="comment"># 1. Create the reset file (root only, mode 600 required)</span>
+<span class="cmd">printf</span> 'USERNAME=admin\nPASSWORD=new_secure_pass\n' \
+    | <span class="cmd">sudo tee</span> /etc/oxware/.passwd_reset
+<span class="cmd">sudo chmod</span> 600 /etc/oxware/.passwd_reset
+
+<span class="comment"># 2. Restart the service — reset is applied on startup, file is deleted</span>
+<span class="cmd">sudo systemctl restart</span> oxware</code></pre>
+      <div class="callout callout-warn">
+        <strong>Security checks</strong>
+        The reset file is rejected if it is not owned by root (uid 0) or if it is group/world-readable. It is deleted after processing regardless of success or failure.
+      </div>
     </section>
 
     <!-- MONITORING -->
     <section id="monitoring">
       <h2>Monitoring</h2>
 
+      <h3>Unified Monitoring Page <span class="tag tag-green">v2.5</span></h3>
+      <p>The <strong>İzleme</strong> page consolidates all observability in one view: system metrics, SMART disk health, HA cluster status, IDS/IPS alerts, VM uptime history, trend analysis, and cost estimation. Heavy sections load only when manually triggered — preventing the browser-freeze issue present in earlier versions.</p>
+
       <h3>Live Metrics</h3>
-      <p>The global <strong>Monitoring</strong> page shows a grid of live metric cards for all VMs: CPU%, RAM usage, disk I/O, and network I/O. Data is pushed to the browser via SocketIO every second.</p>
+      <p>The global <strong>Monitoring</strong> page shows a grid of live metric cards for all VMs: CPU%, RAM usage, disk I/O, and network I/O. Data refreshes every 30 seconds (optimised from 8 s to prevent cluster overload).</p>
       <p>Per-VM metrics are also available via the REST API:</p>
       <div class="endpoint"><span class="method get">GET</span> /api/vms/&lt;id&gt;/perf</div>
 
-      <h3>Performance History</h3>
-      <p>A background collector stores metric samples every 60 seconds in a local SQLite database. The monitoring charts display up to 24 hours of history. For longer retention, export to Prometheus (see below).</p>
+      <h3>Performance History Graphs <span class="tag tag-green">v2.5</span></h3>
+      <p>CPU and RAM trend charts with a range picker: <strong>1h, 6h, 24h, 7d, 30d</strong>. A background collector stores metric samples every 60 seconds in a local SQLite database. For longer retention, export to Prometheus (see below).</p>
 
       <h3>Alert Rules</h3>
       <p>Navigate to <strong>Monitoring → Alert Rules</strong> to create threshold-based rules. Each rule specifies:</p>
@@ -836,6 +888,17 @@ curl -X POST https://localhost:8006/api/import/ova \
     <!-- HOSTING -->
     <section id="hosting">
       <h2>Hosting Integration</h2>
+
+      <h3>DiyoCP Module <span class="tag tag-green">v2.5</span></h3>
+      <p>OXware includes a native provisioning module for <strong>DiyoCP</strong>, a Turkish hosting control panel. Download the module from <strong>Settings → Integrations → DiyoCP</strong> and copy it to your DiyoCP server's <code>modules/servers/oxware/</code> directory.</p>
+      <table>
+        <thead><tr><th>DiyoCP Server Setting</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Hostname</td><td>OXware API URL — e.g. <code>https://oxware.example.com</code></td></tr>
+          <tr><td>Password</td><td>OXware API key (starts with <code>oxw_</code>)</td></tr>
+        </tbody>
+      </table>
+      <p>Package config options: <code>cpu</code>, <code>ram_mb</code>, <code>disk_gb</code>, <code>os_template</code>, <code>network</code>. Supports: <strong>Create, Suspend, Unsuspend, Terminate, Resize, Status, Test Connection</strong>.</p>
 
       <h3>WiseCP Module</h3>
       <p>The WiseCP module allows hosting providers to provision OXware VMs directly from the WiseCP billing panel. Customers order a VPS product, WiseCP calls the OXware Provisioning API to create the VM, and credentials are delivered automatically.</p>
