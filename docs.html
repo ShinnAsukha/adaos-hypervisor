@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OXware — Dokümantasyon</title>
-  <link rel="icon" type="image/png" href="sadeceikon.png">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" type="image/png" href="/static/img/sadeceikon.png">
+  <link rel="stylesheet" href="/static/fontawesome.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -305,11 +305,11 @@
 
 <!-- TOP NAV -->
 <nav class="topnav">
-  <a href="index.html" class="topnav-logo"><i class="fas fa-server"></i> OXware</a>
+  <a href="/" class="topnav-logo"><i class="fas fa-server"></i> OXware</a>
   <span class="topnav-divider">/</span>
   <span class="topnav-title">Documentation</span>
   <div class="topnav-right">
-    <a href="index.html"><i class="fas fa-arrow-left"></i> Panele Dön</a>
+    <a href="/"><i class="fas fa-arrow-left"></i> Panele Dön</a>
     <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank"><i class="fab fa-github"></i> GitHub</a>
   </div>
 </nav>
@@ -336,19 +336,28 @@
 
     <div class="sidebar-section">Infrastructure</div>
     <a href="#networking"><i class="fas fa-network-wired"></i> Networking</a>
+    <a href="#networking" style="padding-left:2rem;font-size:0.8rem;color:var(--muted)"><i class="fas fa-bridge"></i> Bridge &amp; Static IP</a>
+    <a href="#networking" style="padding-left:2rem;font-size:0.8rem;color:var(--muted)"><i class="fas fa-calculator"></i> Subnet Calculator</a>
     <a href="#storage"><i class="fas fa-hard-drive"></i> Storage &amp; Snapshots</a>
     <a href="#security"><i class="fas fa-lock"></i> Security</a>
 
     <div class="sidebar-section">Observability</div>
-    <a href="#monitoring"><i class="fas fa-chart-line"></i> Monitoring</a>
+    <a href="#monitoring"><i class="fas fa-chart-line"></i> Monitoring+</a>
+    <a href="#speedtest"><i class="fas fa-gauge-high"></i> Network Speedtest</a>
     <a href="#notifications"><i class="fas fa-bell"></i> Notifications</a>
 
+    <div class="sidebar-section">Infrastructure</div>
+    <a href="#bgp"><i class="fas fa-diagram-project"></i> BGP Tunneling</a>
+    <a href="#backup"><i class="fas fa-box-archive"></i> Backup &amp; SFTP</a>
+    <a href="#vm-format"><i class="fas fa-hdd"></i> Disk Format &amp; Wipe</a>
+
     <div class="sidebar-section">Automation &amp; AI</div>
-    <a href="#ai"><i class="fas fa-robot"></i> AI Assistant</a>
+    <a href="#ai"><i class="fas fa-robot"></i> AI Assistant (OXY)</a>
     <a href="#hosting"><i class="fas fa-cloud"></i> Hosting Integration</a>
 
     <div class="sidebar-section">Reference</div>
-    <a href="#api"><i class="fas fa-code"></i> API Reference</a>
+    <a href="#api"><i class="fas fa-flask"></i> API Reference &amp; Explorer</a>
+    <a href="/api/docs" target="_blank" style="color:var(--accent-lt)"><i class="fas fa-external-link-alt"></i> Open API Explorer ↗</a>
     <a href="#config"><i class="fas fa-gear"></i> Configuration</a>
     <a href="#troubleshooting"><i class="fas fa-wrench"></i> Troubleshooting</a>
   </aside>
@@ -528,16 +537,31 @@
         </tbody>
       </table>
 
-      <h3>Method 1 — Web UI (OVA Import button)</h3>
+      <h3>Method 1 — Web UI (OVA Import button) <span class="tag">Updated v2.4</span></h3>
       <ol>
         <li>Go to <strong>Virtual Machines</strong> dashboard.</li>
         <li>Click <strong>↑ OVA Import</strong> button (top-right area, next to New VM).</li>
         <li>Select your <code>.ova</code>, <code>.vmdk</code>, or supported file.</li>
-        <li>OXware extracts the archive, converts the disk to <code>qcow2</code> with <code>qemu-img convert</code>, defines the VM in libvirt, and adds it to the dashboard automatically.</li>
+        <li>Select the <strong>target libvirt network</strong> from the dropdown (default, bridge, custom).</li>
+        <li>OXware extracts the archive, converts the disk to <code>qcow2</code>, auto-deduplicates the VM name on conflict, defines the VM in libvirt connected to the chosen network.</li>
       </ol>
-      <p>Default config applied on import: <strong>2 vCPU, 2 GB RAM, virtio NIC, VNC display</strong>. Adjust from VM Detail → Hardware after import.</p>
+      <p>Firmware (UEFI/BIOS), CPU, and RAM are auto-detected from VMX/OVF metadata when available. Adjust from VM Detail → Hardware after import.</p>
 
-      <h3>Method 2 — Direct SCP + Convert (faster for large disks)</h3>
+      <h3>Method 2 — SFTP Browser (ESXi direct) <span class="tag tag-green">New v2.4</span></h3>
+      <ol>
+        <li>Go to <strong>Settings → Backup → SFTP/ESXi Yedek</strong>.</li>
+        <li>Enter your ESXi host IP, SSH username, password or private key path.</li>
+        <li>Select the <strong>import network</strong> from the dropdown.</li>
+        <li>Click <strong>📂 Dosyaları Listele</strong> — OXware connects via SFTP and lists the remote filesystem.</li>
+        <li>Navigate to your datastore directory (e.g. <code>/vmfs/volumes/datastore1/myvm/</code>).</li>
+        <li>Click <strong>⬇ İndir+Import</strong> on any <code>.vmdk</code>, <code>.ova</code>, or <code>.qcow2</code> file.</li>
+        <li>OXware downloads the file in the background, converts it with <code>qemu-img</code>, and registers it in libvirt. Track progress in the Tasks panel.</li>
+      </ol>
+      <div class="callout callout-info">
+        <strong>No downtime:</strong> Import runs in a background thread. The UI remains fully usable while the download and conversion proceed.
+      </div>
+
+      <h3>Method 3 — Direct SCP + Convert (fastest for huge disks)</h3>
       <p>Skip the browser upload for very large disks (50 GB+). Copy the VMDK directly to the OXware host, convert manually, then register:</p>
       <pre><code># 1. Copy VMDK from ESXi host
 scp root@esxi-host:/vmfs/volumes/datastore/myvm/myvm.vmdk \
@@ -628,8 +652,38 @@ curl -X POST https://localhost:8006/api/import/ova \
         <li><strong>SPICE info</strong> — the info panel shows the SPICE/VNC connection parameters if you need to connect with a native client.</li>
       </ul>
 
-      <h3>SSH Console</h3>
-      <p>For VMs with an accessible SSH service, the <strong>SSH Console</strong> tab provides a web-based terminal (xterm.js) that opens a direct shell session without leaving the browser.</p>
+      <h3>Console Types</h3>
+      <p>OXware supports three console types, selectable from the VM Console tab:</p>
+      <table>
+        <thead><tr><th>Type</th><th>Protocol</th><th>Use Case</th><th>Requirements</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>noVNC</strong></td><td>VNC over WebSocket</td>
+            <td>Graphical desktops, BIOS/UEFI setup, any OS</td>
+            <td>Built-in — no setup needed</td>
+          </tr>
+          <tr>
+            <td><strong>xterm.js (Serial)</strong></td><td>virsh console → PTY</td>
+            <td>Headless servers, text-mode Linux, recovery</td>
+            <td>VM must have serial console: <code>&lt;console type='pty'&gt;</code></td>
+          </tr>
+          <tr>
+            <td><strong>SPICE</strong></td><td>SPICE protocol</td>
+            <td>High-performance, USB redirect, audio</td>
+            <td>VM XML: <code>&lt;graphics type='spice' port='-1' autoport='yes'/&gt;</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Paste Support</h3>
+      <ul>
+        <li><strong>noVNC:</strong> Click <em>📋 Yapıştır</em> toolbar button or press <kbd>Ctrl+Shift+V</kbd></li>
+        <li><strong>xterm.js / Shell:</strong> <kbd>Ctrl+Shift+V</kbd>, right-click, or the Paste button</li>
+      </ul>
+      <p class="callout callout-info">Browser clipboard API requires HTTPS and explicit permission. Chrome/Edge: allow clipboard access in the address bar lock icon.</p>
+
+      <h3>Host Shell Console</h3>
+      <p>The <strong>Shell Console</strong> page gives a root PTY shell directly on the hypervisor host — useful for emergency access and diagnostics.</p>
     </section>
 
     <!-- RBAC -->
@@ -656,7 +710,7 @@ curl -X POST https://localhost:8006/api/import/ova \
           </tr>
           <tr>
             <td><span class="tag-green tag">vm-user</span></td>
-            <td>Assigned VMs only</td><td>None</td><td>None</td><td>None</td><td>None</td>
+            <td>Assigned VMs only</td><td>None</td><td>None</td><td>None</td><td>None — OXY AI blocked</td>
           </tr>
         </tbody>
       </table>
@@ -727,6 +781,35 @@ curl -X POST https://localhost:8006/api/import/ova \
 
       <h3>Per-VM Firewall</h3>
       <p>See <a href="#vm-detail">VM Detail → Firewall tab</a>. Rules use nftables and take effect immediately.</p>
+
+      <h3>Bridge IP Isolation <span class="tag tag-green">v2.4</span></h3>
+      <p>Navigate to <strong>Network → Bridge &amp; IP İzolasyonu</strong>. Enter a bridge name (e.g. <code>oxbr0</code>), select the physical NIC, and click <strong>Kur</strong>. OXware will:</p>
+      <ol>
+        <li>Create the Linux bridge device with <code>ip link add oxbr0 type bridge</code></li>
+        <li>Attach the physical NIC as a bridge member</li>
+        <li>Bring the bridge up</li>
+        <li>Define a libvirt <code>forward mode='bridge'</code> network</li>
+      </ol>
+      <div class="callout callout-warn">
+        <strong>Warning:</strong> Attaching the management NIC to the bridge interrupts SSH/panel access until the bridge gets an IP (from upstream DHCP or a static assignment). Use the host console or a second NIC for management.
+      </div>
+
+      <h3>cloud-init Static IP <span class="tag tag-green">v2.4</span></h3>
+      <p>When creating a VM (advanced options), set <strong>Static IP / Gateway / Netmask / DNS</strong>. OXware generates a cloud-init <code>network-config v2</code> YAML and injects it via a NoCloud seed ISO. The VM configures its interface at first boot — no DHCP dependency.</p>
+      <pre><code><span class="comment"># Generated network-config v2</span>
+version: 2
+ethernets:
+  eth0:
+    addresses: [203.0.113.10/24]
+    gateway4: 203.0.113.1
+    nameservers:
+      addresses: [8.8.8.8, 1.1.1.1]</code></pre>
+
+      <h3>Network DHCP Live Edit <span class="tag tag-green">v2.4</span></h3>
+      <p>Click the <strong>✏</strong> button on any virtual network to open the edit modal. You can modify Gateway, Netmask, DHCP Start, and DHCP End. OXware stops the network, redefines it with updated XML, then restarts it — matching the <code>virsh net-destroy / net-define / net-start</code> workflow.</p>
+
+      <h3>Subnet Calculator <span class="tag tag-green">v2.4</span></h3>
+      <p>Available in <strong>Network → IPAM</strong> at the bottom of the page. Enter any CIDR (e.g. <code>10.0.1.0/22</code>) to instantly see: Network address, Broadcast, First/Last host, Host count, Subnet mask, Wildcard, IP class, RFC1918 status, and binary representation. No server round-trip.</p>
     </section>
 
     <!-- STORAGE -->
@@ -849,6 +932,100 @@ curl -X POST https://localhost:8006/api/import/ova \
       <p>The dashboard displays per-VM uptime percentage over the last 7 and 30 days. Downtime incidents are logged with cause (manual stop, crash, host reboot) for SLA reporting.</p>
     </section>
 
+    <!-- SPEEDTEST -->
+    <section id="speedtest">
+      <h2>Network Speedtest</h2>
+      <p>The built-in speedtest measures latency (ICMP ping) and download throughput (HTTP) from the hypervisor to known test servers. Accessible from <strong>Monitoring+ → Ağ Hız Testi</strong>.</p>
+
+      <h3>Test Servers</h3>
+      <table>
+        <thead><tr><th>Region</th><th>Name</th><th>Country</th></tr></thead>
+        <tbody>
+          <tr><td>🇹🇷 Turkey</td><td>İstanbul — Superonline</td><td>TR</td></tr>
+          <tr><td>🇹🇷 Turkey</td><td>İstanbul — Türk Telekom</td><td>TR</td></tr>
+          <tr><td>🇹🇷 Turkey</td><td>Ankara — Vodafone TR</td><td>TR</td></tr>
+          <tr><td>🇹🇷 Turkey</td><td>İzmir — Turkcell</td><td>TR</td></tr>
+          <tr><td>🇩🇪 Europe</td><td>Frankfurt — Linode</td><td>DE</td></tr>
+          <tr><td>🇳🇱 Europe</td><td>Amsterdam — Linode</td><td>NL</td></tr>
+          <tr><td>🇬🇧 Europe</td><td>London — Linode</td><td>GB</td></tr>
+          <tr><td>🇺🇸 Americas</td><td>New York — Linode</td><td>US</td></tr>
+          <tr><td>🇺🇸 Americas</td><td>Los Angeles — Linode</td><td>US</td></tr>
+          <tr><td>🇸🇬 Asia-Pacific</td><td>Singapore — Linode</td><td>SG</td></tr>
+          <tr><td>🇯🇵 Asia-Pacific</td><td>Tokyo — Linode</td><td>JP</td></tr>
+          <tr><td>🌍 Global</td><td>Cloudflare CDN</td><td>GLOBAL</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Metrics</h3>
+      <ul>
+        <li><strong>Latency (ms)</strong> — avg RTT from 3 ICMP pings</li>
+        <li><strong>Packet Loss</strong> — % of ping packets dropped</li>
+        <li><strong>Download (Mbps)</strong> — measured with <code>curl</code> (10 MB HTTP download, Mbps = bytes/s × 8 / 1M)</li>
+        <li><strong>Test Duration</strong> — total download test time in seconds</li>
+      </ul>
+
+      <h3>Requirements</h3>
+      <ul>
+        <li><code>curl</code> and <code>ping</code> must be available on the host (usually pre-installed)</li>
+        <li>Outbound HTTP/HTTPS access to the test server is required</li>
+        <li>Only <code>admin</code> and <code>operator</code> roles can run tests (prevents abuse)</li>
+      </ul>
+
+      <p class="callout callout-info">Results measure server-to-internet bandwidth, not client-to-server bandwidth. Use for diagnosing upstream connectivity issues.</p>
+    </section>
+
+    <!-- BGP -->
+    <section id="bgp">
+      <h2>BGP Tunneling</h2>
+      <p>OXware includes BGP peer management for advanced networking setups. Configure under <strong>Settings → Ağ → BGP</strong>.</p>
+      <h3>API Endpoints</h3>
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>GET</td><td><code>/api/bgp/status</code></td><td>BGP daemon status (Bird2/FRR)</td></tr>
+          <tr><td>GET</td><td><code>/api/bgp/peers</code></td><td>List configured peers</td></tr>
+          <tr><td>POST</td><td><code>/api/bgp/peers</code></td><td>Add peer (as_number, neighbor_ip, description)</td></tr>
+          <tr><td>DELETE</td><td><code>/api/bgp/peers/{ip}</code></td><td>Remove a peer</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- BACKUP -->
+    <section id="backup">
+      <h2>Backup &amp; SFTP</h2>
+      <p>OXware supports scheduled VM backups and remote transfer via SFTP/SSH. Configure under <strong>Settings → Zamanlama → Yedekleme</strong>.</p>
+      <h3>Backup Types</h3>
+      <ul>
+        <li><strong>Disk backup</strong> — copies VM disk image (<code>.qcow2</code>) to a local path; optionally transfers via SFTP</li>
+        <li><strong>Snapshot</strong> — QEMU internal snapshot (no downtime)</li>
+      </ul>
+      <h3>SFTP Configuration</h3>
+      <p>Settings → Ağ → SFTP Test card. Required fields:</p>
+      <ul>
+        <li><code>host</code> — remote server hostname or IP</li>
+        <li><code>port</code> — SSH port (default 22)</li>
+        <li><code>username</code> — SSH user</li>
+        <li><code>private_key_path</code> — absolute path to SSH private key on the host</li>
+      </ul>
+      <p>Use <strong>Test Connection</strong> to verify before scheduling.</p>
+      <p class="callout callout-warning">Backup destination paths are validated against an allowlist (<code>/var/lib/libvirt/images</code>, <code>/var/lib/oxware/backups</code>) to prevent path traversal.</p>
+    </section>
+
+    <!-- VM FORMAT -->
+    <section id="vm-format">
+      <h2>Disk Format &amp; Wipe</h2>
+      <p>The <strong>Format</strong> sub-tab in VM detail provides disk backup and secure wipe operations.</p>
+      <h3>Disk Backup</h3>
+      <p>Copies the VM's disk file to a destination path. The VM should be stopped or paused for a consistent snapshot.</p>
+      <h3>Disk Wipe</h3>
+      <p class="callout callout-warning"><strong>Irreversible.</strong> Overwrites the disk with zeros using <code>dd</code> then deletes the file. Confirm by typing the disk device name before proceeding.</p>
+      <h3>Security</h3>
+      <ul>
+        <li>Destination paths are resolved with <code>os.path.realpath()</code> and validated against an allowlist — prevents symlink traversal attacks</li>
+        <li>Disk wipe requires explicit double confirmation in the UI</li>
+      </ul>
+    </section>
+
     <!-- NOTIFICATIONS -->
     <section id="notifications">
       <h2>Notifications</h2>
@@ -921,6 +1098,27 @@ curl -X POST https://localhost:8006/api/import/ova \
     <!-- API -->
     <section id="api">
       <h2>API Reference</h2>
+      <p>OXware ships a built-in <strong>interactive API explorer</strong> at <code>/api/docs</code>. Open it in your browser to browse every endpoint, see required parameters, and fire live requests against your running instance — no external tools needed.</p>
+
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin:16px 0;display:flex;align-items:center;gap:14px">
+        <i class="fas fa-flask" style="font-size:22px;color:var(--accent);flex-shrink:0"></i>
+        <div>
+          <div style="font-weight:600;margin-bottom:4px">Interactive API Explorer</div>
+          <div style="color:var(--text-muted);font-size:13px">Navigate to <code>https://&lt;your-host&gt;:8006/api/docs</code> — authenticate once, then try any endpoint live. Shows request schemas, example payloads, and response formats for all 23+ endpoints.</div>
+        </div>
+      </div>
+
+      <h3>How the API works</h3>
+      <p>Login via <code>POST /api/auth/login</code> to get a JWT token. Pass it as a Bearer header on every subsequent call, or rely on the session cookie set by the dashboard.</p>
+      <pre><code># 1. Get token
+curl -k -X POST https://host:8006/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"yourpass"}'
+
+# 2. Use token
+curl -k https://host:8006/api/vms \
+  -H "Authorization: Bearer &lt;token&gt;"</code></pre>
+
       <p>All API requests require a JWT Bearer token in the <code>Authorization</code> header, or a valid session cookie.</p>
       <pre><code>Authorization: Bearer &lt;token&gt;</code></pre>
 
