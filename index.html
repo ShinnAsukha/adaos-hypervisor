@@ -999,6 +999,7 @@
           </th>
           <th class="th-proxmox"><i class="fas fa-server" style="margin-right:6px;font-size:.85rem"></i>Proxmox VE</th>
           <th class="th-vmware"><i class="fas fa-cloud" style="margin-right:6px;font-size:.85rem"></i>VMware ESXi</th>
+          <th style="background:rgba(168,85,247,.08);border-bottom:3px solid #a855f7"><i class="fas fa-layer-group" style="margin-right:6px;font-size:.85rem;color:#a855f7"></i>Virtualizor</th>
         </tr>
       </thead>
       <tbody>
@@ -1008,6 +1009,7 @@
           <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i> MIT (free)</span></td>
           <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> AGPL / paid sub</span></td>
           <td><span class="cv-no"><i class="fas fa-times-circle"></i> Commercial</span></td>
+          <td><span class="cv-no"><i class="fas fa-times-circle"></i> Commercial</span></td>
         </tr>
 
         <tr>
@@ -1015,11 +1017,13 @@
           <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-no"><i class="fas fa-times-circle"></i><span class="cv-note">Proprietary</span></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
         </tr>
 
         <tr>
           <td>Web UI</td>
           <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i> Dark, modern SPA</span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
         </tr>
@@ -1029,11 +1033,13 @@
           <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i> Full</span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> Partial</span></td>
         </tr>
 
         <tr>
           <td>AI Assistant <span class="ox-badge">UNIQUE</span></td>
           <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
           <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
           <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
         </tr>
@@ -1043,6 +1049,7 @@
           <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> Enterprise only</span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
         </tr>
 
         <tr>
@@ -1050,6 +1057,7 @@
           <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i> vMotion</span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
         </tr>
 
         <tr>
@@ -1057,6 +1065,7 @@
           <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i> Auto UEFI detect</span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> Limited</span></td>
         </tr>
 
         <tr>
@@ -1064,6 +1073,7 @@
           <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i> Let's Encrypt</span></td>
         </tr>
 
         <tr>
@@ -1071,6 +1081,7 @@
           <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
         </tr>
 
         <tr>
@@ -1078,6 +1089,7 @@
           <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i> iptables</span></td>
         </tr>
 
         <tr>
@@ -1085,6 +1097,7 @@
           <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> Plugin only</span></td>
+          <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
         </tr>
 
         <tr>
@@ -1092,13 +1105,15 @@
           <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
         </tr>
 
         <tr>
-          <td>WiseCP / WHMCS <span class="ox-badge">UNIQUE</span></td>
+          <td>WiseCP / WHMCS</td>
           <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> 3rd party</span></td>
           <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i> Native</span></td>
         </tr>
 
         <tr>
@@ -1106,6 +1121,15 @@
           <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
           <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+        </tr>
+
+        <tr>
+          <td>BGP / SDN <span class="ox-badge">UNIQUE</span></td>
+          <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
+          <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> NSX add-on</span></td>
+          <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
         </tr>
 
       </tbody>
@@ -1127,6 +1151,24 @@
 
   <div id="changelog-container">
     <div class="cl-empty"><i class="fas fa-circle-notch fa-spin" style="margin-right:8px"></i>Yükleniyor…</div>
+  </div>
+</section>
+
+<!-- COMMENTS -->
+<section style="max-width:960px;margin:0 auto;padding:3rem 1.5rem 2rem">
+  <h2 style="font-size:1.4rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;text-align:center">💬 Yorumlar &amp; Sorular</h2>
+  <p style="color:var(--muted);font-size:0.9rem;text-align:center;margin-bottom:1.5rem">
+    GitHub hesabınızla yorum bırakın. Utterances üzerinden GitHub Issues'a kaydedilir.
+  </p>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem">
+    <script src="https://utteranc.es/client.js"
+            repo="ShinnAsukha/oxware-hypervisor"
+            issue-term="title"
+            label="comment"
+            theme="github-dark"
+            crossorigin="anonymous"
+            async>
+    </script>
   </div>
 </section>
 
