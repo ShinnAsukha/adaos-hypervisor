@@ -3,11 +3,82 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OXware Hypervisor — Enterprise KVM Management</title>
-  <meta name="description" content="Open-source KVM/QEMU hypervisor management platform. VM lifecycle, RBAC, noVNC console, monitoring, AI assistant and more." />
-  <link rel="icon" type="image/png" href="sadeceikon.png" />
-  <link rel="shortcut icon" type="image/png" href="sadeceikon.png" />
+
+  <!-- ═══════════════════════════════════════════════════════════
+       PRIMARY SEO
+  ════════════════════════════════════════════════════════════ -->
+  <title>OXware Hypervisor — Open Source KVM/QEMU Management Panel</title>
+  <meta name="description" content="OXware is a lightweight, open-source KVM/QEMU hypervisor management panel. Create and manage virtual machines with a modern web UI, noVNC console, cloud-init, RBAC, AI assistant and more. Free Proxmox alternative." />
+  <meta name="keywords" content="hypervisor panel, KVM management, QEMU web interface, open source hypervisor, VM management panel, sanal makine yönetimi, KVM yönetim paneli, Proxmox alternative, VPS panel, virtualization platform, cloud-init, noVNC, libvirt web UI, OXware, oxware hypervisor, free hypervisor" />
+  <meta name="author" content="OXware" />
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+  <meta name="googlebot" content="index, follow" />
+  <link rel="canonical" href="https://shinnasakha.github.io/oxware-hypervisor/" />
+
+  <!-- ═══════════════════════════════════════════════════════════
+       OPEN GRAPH  (Facebook, LinkedIn, WhatsApp preview)
+  ════════════════════════════════════════════════════════════ -->
+  <meta property="og:type"             content="website" />
+  <meta property="og:site_name"        content="OXware Hypervisor" />
+  <meta property="og:title"            content="OXware — Open Source KVM/QEMU Hypervisor Panel" />
+  <meta property="og:description"      content="Lightweight, open-source KVM/QEMU management panel with modern web UI, noVNC console, cloud-init, RBAC, AI assistant. The free Proxmox alternative." />
+  <meta property="og:url"              content="https://shinnasakha.github.io/oxware-hypervisor/" />
+  <meta property="og:image"            content="https://shinnasakha.github.io/oxware-hypervisor/sadeceikon.png" />
+  <meta property="og:image:alt"        content="OXware Hypervisor Management Panel" />
+  <meta property="og:locale"           content="en_US" />
+  <meta property="og:locale:alternate" content="tr_TR" />
+
+  <!-- ═══════════════════════════════════════════════════════════
+       TWITTER / X CARD
+  ════════════════════════════════════════════════════════════ -->
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="OXware — Open Source KVM Hypervisor Panel" />
+  <meta name="twitter:description" content="Lightweight KVM/QEMU management panel. VM lifecycle, noVNC console, cloud-init, RBAC, AI assistant. Free &amp; open source." />
+  <meta name="twitter:image"       content="https://shinnasakha.github.io/oxware-hypervisor/sadeceikon.png" />
+  <meta name="twitter:image:alt"   content="OXware Hypervisor" />
+
+  <!-- ═══════════════════════════════════════════════════════════
+       THEME / APP APPEARANCE
+  ════════════════════════════════════════════════════════════ -->
+  <meta name="theme-color"           content="#161b22" />
+  <meta name="msapplication-TileColor" content="#0d1117" />
+  <meta name="application-name"     content="OXware Hypervisor" />
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STRUCTURED DATA — JSON-LD  (Google Rich Results)
+  ════════════════════════════════════════════════════════════ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "OXware Hypervisor",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Linux (Debian 12, Ubuntu 22.04+)",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "description": "Open-source KVM/QEMU hypervisor management panel with web UI, noVNC console, cloud-init, RBAC, monitoring and AI assistant.",
+    "url": "https://shinnasakha.github.io/oxware-hypervisor/",
+    "image": "https://shinnasakha.github.io/oxware-hypervisor/sadeceikon.png",
+    "author": {
+      "@type": "Organization",
+      "name": "OXware"
+    },
+    "codeRepository": "https://github.com/ShinnAsukha/oxware-hypervisor",
+    "license": "https://opensource.org/licenses/MIT",
+    "keywords": "hypervisor, KVM, QEMU, virtual machine, libvirt, noVNC, cloud-init, open source, Proxmox alternative"
+  }
+  </script>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       FAVICONS
+  ════════════════════════════════════════════════════════════ -->
+  <link rel="icon"             type="image/png" href="sadeceikon.png" />
+  <link rel="shortcut icon"    type="image/png" href="sadeceikon.png" />
   <link rel="apple-touch-icon" href="sadeceikon.png" />
+
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
