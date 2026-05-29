@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OXware Pricing — Transparent, Flexible Plans</title>
+  <meta name="description" content="OXware Hypervisor pricing plans. Monthly $20, Yearly $150, Lifetime $1000. Professional KVM/QEMU management panel." />
+  <link rel="icon" type="image/png" href="../sadeceikon.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d1117; --surface: #161b22; --surface2: #1c2633;
+      --border: #30363d; --accent: #58a6ff; --accent2: #3fb950;
+      --gold: #eab308; --text: #c9d1d9; --muted: #8b949e; --radius: 10px;
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,17,23,.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo { font-size: 1.2rem; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: .5rem; }
+    .nav-logo img { width: 28px; height: 28px; object-fit: contain; }
+    .nav-links { list-style: none; display: flex; gap: 1.5rem; align-items: center; }
+    .nav-links a { color: var(--text); font-size: .9rem; }
+    .nav-links a:hover { color: var(--accent); text-decoration: none; }
+    .btn { display: inline-flex; align-items: center; gap: .4rem; padding: .45rem 1.1rem; border-radius: var(--radius); font-size: .875rem; font-weight: 600; cursor: pointer; border: none; transition: opacity .2s, transform .1s; text-decoration: none; }
+    .btn:hover { opacity: .85; transform: translateY(-1px); text-decoration: none; }
+    .btn-primary { background: var(--accent); color: #0d1117; }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Hero */
+    .hero { text-align: center; padding: 4rem 2rem 2rem; }
+    .hero-badge { display: inline-block; background: rgba(88,166,255,.12); color: var(--accent); border: 1px solid rgba(88,166,255,.3); border-radius: 2rem; padding: .25rem .9rem; font-size: .78rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: .5px; text-transform: uppercase; }
+    .hero h1 { font-size: clamp(2rem,5vw,3rem); font-weight: 800; margin-bottom: 1rem; }
+    .hero p { color: var(--muted); font-size: 1.1rem; max-width: 560px; margin: 0 auto 2rem; }
+
+    /* Billing toggle */
+    .billing-toggle { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 3rem; }
+    .toggle-btn { padding: .4rem 1.2rem; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: .85rem; cursor: pointer; transition: all .2s; }
+    .toggle-btn.active { background: var(--accent); color: #0d1117; border-color: var(--accent); font-weight: 700; }
+    .save-badge { background: rgba(63,185,80,.15); color: var(--accent2); border: 1px solid rgba(63,185,80,.3); border-radius: 20px; padding: .2rem .7rem; font-size: .75rem; font-weight: 700; }
+
+    /* Pricing grid */
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 1.5rem; max-width: 1000px; margin: 0 auto 4rem; padding: 0 2rem; }
+    .plan-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; position: relative; transition: border-color .2s, transform .2s; }
+    .plan-card:hover { border-color: var(--accent); transform: translateY(-4px); }
+    .plan-card.featured { border-color: var(--gold); background: linear-gradient(135deg,rgba(234,179,8,.06),var(--surface)); }
+    .plan-card.featured::before { content: '⭐ En Popüler'; position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: var(--gold); color: #0d1117; font-size: .75rem; font-weight: 800; padding: .25rem 1rem; border-radius: 20px; white-space: nowrap; }
+    .plan-name { font-size: 1.1rem; font-weight: 700; margin-bottom: .5rem; color: var(--text); }
+    .plan-price { font-size: 2.8rem; font-weight: 800; line-height: 1; margin: 1rem 0 .25rem; }
+    .plan-price .currency { font-size: 1.4rem; vertical-align: super; }
+    .plan-price .period { font-size: .85rem; color: var(--muted); font-weight: 400; }
+    .plan-desc { color: var(--muted); font-size: .88rem; margin-bottom: 1.5rem; min-height: 2.5rem; }
+    .plan-features { list-style: none; margin-bottom: 2rem; display: flex; flex-direction: column; gap: .6rem; }
+    .plan-features li { display: flex; align-items: center; gap: .6rem; font-size: .88rem; }
+    .plan-features li i { color: var(--accent2); font-size: .8rem; flex-shrink: 0; }
+    .plan-features li.dim { color: var(--muted); }
+    .plan-features li.dim i { color: var(--border); }
+    .plan-cta { width: 100%; padding: .7rem; border-radius: var(--radius); font-size: .95rem; font-weight: 700; cursor: pointer; border: none; transition: opacity .2s; }
+    .plan-cta.primary { background: var(--accent); color: #0d1117; }
+    .plan-cta.gold { background: var(--gold); color: #0d1117; }
+    .plan-cta.outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .plan-cta:hover { opacity: .85; }
+
+    /* FAQ */
+    .faq { max-width: 720px; margin: 0 auto 4rem; padding: 0 2rem; }
+    .faq h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; text-align: center; }
+    .faq-item { border-bottom: 1px solid var(--border); padding: 1rem 0; }
+    .faq-q { font-weight: 600; margin-bottom: .4rem; color: var(--text); cursor: pointer; display: flex; justify-content: space-between; }
+    .faq-a { color: var(--muted); font-size: .9rem; line-height: 1.7; }
+
+    /* CTA banner */
+    .cta-banner { background: linear-gradient(135deg,rgba(88,166,255,.12),rgba(63,185,80,.08)); border: 1px solid rgba(88,166,255,.25); border-radius: 16px; padding: 2.5rem 2rem; text-align: center; max-width: 700px; margin: 0 auto 4rem; }
+    .cta-banner h2 { font-size: 1.6rem; font-weight: 800; margin-bottom: .75rem; }
+    .cta-banner p { color: var(--muted); margin-bottom: 1.5rem; }
+
+    footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center; color: var(--muted); font-size: .85rem; }
+    footer a { color: var(--muted); }
+
+    @media (max-width: 640px) {
+      .pricing-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="../" class="nav-logo">
+    <img src="../sadeceikon.png" alt="OXware" />
+    OXware
+  </a>
+  <ul class="nav-links">
+    <li><a href="../">Home</a></li>
+    <li><a href="../vcenter/">vCenter</a></li>
+    <li><a href="../docs.html">Docs</a></li>
+    <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i> GitHub</a></li>
+  </ul>
+  <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" class="btn btn-primary">
+    <i class="fa-brands fa-github"></i> Get Started Free
+  </a>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-badge">Pricing</div>
+  <h1>Simple, Transparent Pricing</h1>
+  <p>Start free with open source. Upgrade for commercial use, priority support, and enterprise features.</p>
+</section>
+
+<!-- Pricing Cards -->
+<div class="pricing-grid">
+
+  <!-- Monthly -->
+  <div class="plan-card">
+    <div class="plan-name">Monthly</div>
+    <div class="plan-price"><span class="currency">$</span>20<span class="period">/month</span></div>
+    <div class="plan-desc">Flexible month-to-month license. Cancel anytime.</div>
+    <ul class="plan-features">
+      <li><i class="fa-solid fa-check"></i> Full OXware panel</li>
+      <li><i class="fa-solid fa-check"></i> Unlimited VMs</li>
+      <li><i class="fa-solid fa-check"></i> AI Assistant (OXY)</li>
+      <li><i class="fa-solid fa-check"></i> noVNC Console</li>
+      <li><i class="fa-solid fa-check"></i> RBAC &amp; Multi-user</li>
+      <li><i class="fa-solid fa-check"></i> Community support</li>
+      <li class="dim"><i class="fa-solid fa-xmark"></i> Priority support</li>
+      <li class="dim"><i class="fa-solid fa-xmark"></i> vCenter (coming soon)</li>
+    </ul>
+    <button class="plan-cta outline" onclick="window.location='mailto:support@oxware.io?subject=Monthly License'">Get Monthly</button>
+  </div>
+
+  <!-- Yearly — Featured -->
+  <div class="plan-card featured">
+    <div class="plan-name">Yearly</div>
+    <div class="plan-price"><span class="currency">$</span>150<span class="period">/year</span></div>
+    <div class="plan-desc">Best value — save $90 vs monthly. 12 months for the price of 7.5.</div>
+    <ul class="plan-features">
+      <li><i class="fa-solid fa-check"></i> Everything in Monthly</li>
+      <li><i class="fa-solid fa-check"></i> Unlimited VMs</li>
+      <li><i class="fa-solid fa-check"></i> AI Assistant (OXY)</li>
+      <li><i class="fa-solid fa-check"></i> noVNC Console</li>
+      <li><i class="fa-solid fa-check"></i> RBAC &amp; Multi-user</li>
+      <li><i class="fa-solid fa-check"></i> Priority email support</li>
+      <li><i class="fa-solid fa-check"></i> Early access to updates</li>
+      <li class="dim"><i class="fa-solid fa-xmark"></i> vCenter (coming soon)</li>
+    </ul>
+    <button class="plan-cta gold" onclick="window.location='mailto:support@oxware.io?subject=Yearly License'">Get Yearly — Save 37%</button>
+  </div>
+
+  <!-- Lifetime -->
+  <div class="plan-card">
+    <div class="plan-name">Lifetime</div>
+    <div class="plan-price"><span class="currency">$</span>1000<span class="period"> one-time</span></div>
+    <div class="plan-desc">Pay once, use forever. Includes all future updates and vCenter access.</div>
+    <ul class="plan-features">
+      <li><i class="fa-solid fa-check"></i> Everything in Yearly</li>
+      <li><i class="fa-solid fa-check"></i> Lifetime updates</li>
+      <li><i class="fa-solid fa-check"></i> Priority Slack support</li>
+      <li><i class="fa-solid fa-check"></i> vCenter access (est. Jun 2026)</li>
+      <li><i class="fa-solid fa-check"></i> Custom branding option</li>
+      <li><i class="fa-solid fa-check"></i> 1-on-1 onboarding call</li>
+      <li><i class="fa-solid fa-check"></i> Source code access</li>
+    </ul>
+    <button class="plan-cta primary" onclick="window.location='mailto:support@oxware.io?subject=Lifetime License'">Get Lifetime Access</button>
+  </div>
+
+</div>
+
+<!-- FAQ -->
+<section class="faq">
+  <h2>Frequently Asked Questions</h2>
+
+  <div class="faq-item">
+    <div class="faq-q">Is OXware open source? <i class="fa-solid fa-chevron-down"></i></div>
+    <div class="faq-a">Yes — the core OXware panel is open source on GitHub. The paid license covers commercial use, removes the "OXware Community" branding, and funds ongoing development and support.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">How many servers can I use the license on? <i class="fa-solid fa-chevron-down"></i></div>
+    <div class="faq-a">Each license key activates on 1 server. For multi-server deployments contact us for a volume discount.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">What payment methods do you accept? <i class="fa-solid fa-chevron-down"></i></div>
+    <div class="faq-a">Credit card, PayPal, wire transfer, and crypto (USDT/BTC). Contact us at support@oxware.io to purchase.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">What is vCenter and when is it available? <i class="fa-solid fa-chevron-down"></i></div>
+    <div class="faq-a">OXware vCenter is a multi-node cluster management layer — manage multiple OXware hosts from a single dashboard. Estimated release: <strong>June 30, 2026</strong>. Lifetime license holders get access on day one.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">Can I get a refund? <i class="fa-solid fa-chevron-down"></i></div>
+    <div class="faq-a">Yes — 14-day money-back guarantee, no questions asked.</div>
+  </div>
+</section>
+
+<!-- CTA Banner -->
+<section style="padding: 0 2rem">
+  <div class="cta-banner">
+    <h2>Ready to get started?</h2>
+    <p>Deploy OXware free with open source, or contact us for a commercial license key.</p>
+    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+      <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" class="btn btn-primary">
+        <i class="fa-brands fa-github"></i> Deploy Free
+      </a>
+      <a href="mailto:support@oxware.io" class="btn btn-outline">
+        <i class="fa-regular fa-envelope"></i> Contact for License
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>&copy; 2026 OXware Hypervisor &mdash; <a href="../">Home</a> &middot; <a href="../vcenter/">vCenter</a> &middot; <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener">GitHub</a></p>
+</footer>
+
+</body>
+</html>

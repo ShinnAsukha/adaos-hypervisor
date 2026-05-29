@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OXware vCenter — Multi-Node Cluster Management</title>
+  <meta name="description" content="OXware vCenter — manage multiple KVM hypervisor nodes from a single unified dashboard. Live migration, cluster health, distributed networking. Estimated release: June 30, 2026." />
+  <meta name="keywords" content="vcenter alternative, vmware alternative, kvm cluster management, multi-node hypervisor, live migration, high availability, open source vcenter, oxware vcenter" />
+  <meta name="author" content="OXware" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#161b22" />
+  <link rel="icon" type="image/png" href="../sadeceikon.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --gold: #eab308;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+      --danger: #f85149;
+      --radius: 8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* NAV */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13,17,23,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+    }
+
+    .nav-logo img { width: 28px; height: 28px; object-fit: contain; filter: drop-shadow(0 0 6px rgba(88,166,255,.5)); }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text);
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--accent); text-decoration: none; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 1rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      border: none;
+      text-decoration: none;
+    }
+
+    .btn:hover { opacity: 0.85; text-decoration: none; transform: translateY(-1px); }
+
+    .btn-primary { background: var(--accent); color: #0d1117; }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-green { background: var(--accent2); color: #0d1117; }
+    .btn-gold { background: var(--gold); color: #0d1117; }
+    .btn-lg { padding: 0.7rem 1.6rem; font-size: 1rem; }
+
+    /* COMING SOON BADGE */
+    .coming-soon-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(234,179,8,0.12);
+      color: var(--gold);
+      border: 1px solid rgba(234,179,8,0.35);
+      border-radius: 2rem;
+      padding: 0.3rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+
+    .coming-soon-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--gold);
+      animation: pulse-dot 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    /* HERO */
+    .hero {
+      padding: 5rem 2rem 4rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 5vw, 3.75rem);
+      font-weight: 800;
+      line-height: 1.1;
+      color: #f0f6fc;
+      margin-bottom: 1.25rem;
+      letter-spacing: -1.5px;
+    }
+
+    .hero h1 span { color: var(--accent); }
+
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--muted);
+      max-width: 620px;
+      margin: 0 auto 1.75rem;
+    }
+
+    .release-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(88,166,255,0.1);
+      color: var(--accent);
+      border: 1px solid rgba(88,166,255,0.3);
+      border-radius: 2rem;
+      padding: 0.3rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 2rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+
+    /* COUNTDOWN */
+    .countdown-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--gold);
+      border-radius: var(--radius);
+      padding: 2rem;
+      max-width: 600px;
+      margin: 3rem auto 0;
+      text-align: center;
+    }
+
+    .countdown-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    .countdown-grid {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .cd-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 70px;
+    }
+
+    .cd-num {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #f0f6fc;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cd-lbl {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+
+    .cd-sep {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--border);
+      align-self: flex-start;
+      margin-top: 0.1rem;
+    }
+
+    /* DIVIDER */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0;
+    }
+
+    /* SECTION */
+    .section { padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; }
+
+    .section-title {
+      text-align: center;
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #f0f6fc;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-sub {
+      text-align: center;
+      color: var(--muted);
+      margin-bottom: 3rem;
+      font-size: 1rem;
+    }
+
+    /* FEATURES GRID */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .feature-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+    }
+
+    .feature-icon.blue   { background: rgba(88,166,255,0.12);  color: var(--accent); }
+    .feature-icon.green  { background: rgba(63,185,80,0.12);   color: var(--accent2); }
+    .feature-icon.gold   { background: rgba(234,179,8,0.12);   color: var(--gold); }
+    .feature-icon.purple { background: rgba(163,113,247,0.12); color: #a371f7; }
+    .feature-icon.orange { background: rgba(240,136,62,0.12);  color: #f0883e; }
+
+    .feature-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #f0f6fc;
+      margin-bottom: 0.4rem;
+    }
+
+    .feature-card p {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* MISSION / VISION */
+    .mv-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .mv-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+    }
+
+    .mv-card.mission { border-top: 3px solid var(--accent2); }
+    .mv-card.vision  { border-top: 3px solid var(--accent); }
+
+    .mv-card h3 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #f0f6fc;
+      margin-bottom: 0.75rem;
+    }
+
+    .mv-card p {
+      font-size: 0.925rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .mv-tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      border-radius: 3px;
+      padding: 0.15rem 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .mv-tag.mission { background: rgba(63,185,80,0.15);  color: var(--accent2); }
+    .mv-tag.vision  { background: rgba(88,166,255,0.15); color: var(--accent); }
+
+    @media (max-width: 700px) {
+      .mv-grid { grid-template-columns: 1fr; }
+    }
+
+    /* COMPARISON TABLE */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    thead tr {
+      background: var(--surface);
+      border-bottom: 2px solid var(--border);
+    }
+
+    thead th {
+      padding: 1rem 1.25rem;
+      text-align: left;
+      font-weight: 700;
+      color: #f0f6fc;
+      white-space: nowrap;
+    }
+
+    thead th:first-child { color: var(--muted); font-weight: 500; }
+
+    thead th.highlight { color: var(--accent); border-bottom: 2px solid var(--accent); }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+    tbody td {
+      padding: 0.85rem 1.25rem;
+      color: var(--text);
+    }
+
+    tbody td:first-child { color: var(--muted); font-size: 0.85rem; }
+
+    .check-yes  { color: var(--accent2); }
+    .check-no   { color: var(--muted); }
+    .check-part { color: var(--gold); }
+
+    /* ROADMAP */
+    .roadmap { position: relative; padding-left: 2rem; }
+
+    .roadmap::before {
+      content: '';
+      position: absolute;
+      left: 0.625rem;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+
+    .rm-item {
+      position: relative;
+      padding: 0 0 2rem 1.5rem;
+    }
+
+    .rm-item:last-child { padding-bottom: 0; }
+
+    .rm-dot {
+      position: absolute;
+      left: -1.5rem;
+      top: 0.25rem;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--bg);
+    }
+
+    .rm-dot.done      { background: var(--accent2); }
+    .rm-dot.progress  { background: var(--accent);  box-shadow: 0 0 8px var(--accent); }
+    .rm-dot.soon      { background: var(--gold); }
+    .rm-dot.future    { background: var(--border); }
+
+    .rm-label {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      border-radius: 3px;
+      padding: 0.1rem 0.45rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .rm-label.done     { background: rgba(63,185,80,0.15);  color: var(--accent2); }
+    .rm-label.progress { background: rgba(88,166,255,0.15); color: var(--accent); }
+    .rm-label.soon     { background: rgba(234,179,8,0.15);  color: var(--gold); }
+
+    .rm-item h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #f0f6fc;
+      margin-bottom: 0.25rem;
+    }
+
+    .rm-item p {
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    /* CTA SECTION */
+    .cta-section {
+      padding: 5rem 2rem;
+      text-align: center;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cta-section h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #f0f6fc;
+      margin-bottom: 0.75rem;
+    }
+
+    .cta-section p {
+      color: var(--muted);
+      max-width: 500px;
+      margin: 0 auto 2rem;
+    }
+
+    /* FOOTER */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 2.5rem 2rem;
+    }
+
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .footer-brand { max-width: 280px; }
+
+    .footer-brand .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+
+    .footer-brand .logo img { width: 24px; height: 24px; object-fit: contain; }
+    .footer-brand p { font-size: 0.85rem; color: var(--muted); line-height: 1.55; }
+
+    .footer-links h4 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .footer-links ul { list-style: none; }
+
+    .footer-links li { margin-bottom: 0.5rem; }
+
+    .footer-links a {
+      font-size: 0.875rem;
+      color: var(--text);
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--accent); text-decoration: none; }
+
+    .footer-bottom {
+      max-width: 1100px;
+      margin: 2rem auto 0;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .features-grid { grid-template-columns: 1fr; }
+      .countdown-grid { gap: 1rem; }
+      .cd-num { font-size: 2rem; }
+      .footer-inner { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="../">
+    <img src="../sadeceikon.png" alt="OXware" />
+    OXware
+  </a>
+  <ul class="nav-links">
+    <li><a href="../">Home</a></li>
+    <li><a href="../pricing/">Pricing</a></li>
+    <li><a href="../docs.html">Docs</a></li>
+    <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i> GitHub</a></li>
+    <li><a href="../pricing/" class="btn btn-primary">Get Lifetime Access</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="coming-soon-badge">
+    <span class="dot"></span>
+    Coming Soon
+  </div>
+
+  <h1>OXware <span>vCenter</span></h1>
+
+  <p>Manage entire KVM hypervisor clusters from a single unified dashboard. Live VM migration, high availability, distributed networking — enterprise power, open source freedom.</p>
+
+  <div class="release-badge">
+    <i class="fa-regular fa-calendar"></i>
+    Estimated Release: June 30, 2026
+  </div>
+
+  <div class="hero-actions">
+    <a href="../pricing/" class="btn btn-primary btn-lg"><i class="fa-solid fa-rocket"></i> Reserve Early Access</a>
+    <a href="https://github.com/ShinnAsukha/oxware-hypervisor" class="btn btn-outline btn-lg" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i> Star on GitHub</a>
+  </div>
+
+  <div class="countdown-wrap">
+    <div class="countdown-label"><i class="fa-regular fa-clock"></i> &nbsp;Launch Countdown</div>
+    <div class="countdown-grid">
+      <div class="cd-unit">
+        <span class="cd-num" id="cd-days">--</span>
+        <span class="cd-lbl">Days</span>
+      </div>
+      <span class="cd-sep">:</span>
+      <div class="cd-unit">
+        <span class="cd-num" id="cd-hours">--</span>
+        <span class="cd-lbl">Hours</span>
+      </div>
+      <span class="cd-sep">:</span>
+      <div class="cd-unit">
+        <span class="cd-num" id="cd-mins">--</span>
+        <span class="cd-lbl">Minutes</span>
+      </div>
+      <span class="cd-sep">:</span>
+      <div class="cd-unit">
+        <span class="cd-num" id="cd-secs">--</span>
+        <span class="cd-lbl">Seconds</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- FEATURES -->
+<div class="section">
+  <h2 class="section-title">Cluster-Grade Features</h2>
+  <p class="section-sub">Everything you need to run a production multi-node KVM cluster.</p>
+
+  <div class="features-grid">
+
+    <div class="feature-card">
+      <div class="feature-icon blue"><i class="fa-solid fa-table-cells-large"></i></div>
+      <h3>Multi-Node Dashboard</h3>
+      <p>Unified view across all hypervisor nodes. Monitor CPU, RAM, storage, and network for every host from a single pane of glass.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon green"><i class="fa-solid fa-arrow-right-arrow-left"></i></div>
+      <h3>Live VM Migration</h3>
+      <p>Move running virtual machines between nodes with zero downtime. Drag-and-drop or API-driven — your choice.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon blue"><i class="fa-solid fa-sliders"></i></div>
+      <h3>Auto Load Balancing</h3>
+      <p>Automatically redistribute workloads across cluster nodes based on real-time resource utilization and configurable policies.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon orange"><i class="fa-solid fa-shield-halved"></i></div>
+      <h3>High Availability (HA)</h3>
+      <p>Automatic VM restart on node failure. Configurable HA groups with priority levels and fencing support keep your services alive.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon purple"><i class="fa-solid fa-network-wired"></i></div>
+      <h3>Distributed vSwitch</h3>
+      <p>Manage virtual switches across the entire cluster from one place. VLAN tagging, bonding, and SDN policies applied cluster-wide.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon green"><i class="fa-solid fa-database"></i></div>
+      <h3>Shared Storage</h3>
+      <p>Native integration with NFS, iSCSI, Ceph, and GlusterFS. Manage shared storage pools and volumes across all nodes.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon gold"><i class="fa-solid fa-brain"></i></div>
+      <h3>Cluster AI Insights</h3>
+      <p>AI-powered recommendations for placement, scaling, and anomaly detection. Predict resource exhaustion before it impacts production.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon blue"><i class="fa-solid fa-users-gear"></i></div>
+      <h3>Unified RBAC</h3>
+      <p>Single role and permission model spanning all nodes. Delegate cluster-level, datacenter-level, or per-VM access with fine granularity.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon orange"><i class="fa-solid fa-chart-line"></i></div>
+      <h3>Cluster Metrics</h3>
+      <p>Historical and real-time metrics for every node and VM. Built-in dashboards with Prometheus-compatible export for external tooling.</p>
+    </div>
+
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- MISSION & VISION -->
+<div class="section">
+  <h2 class="section-title">Why vCenter?</h2>
+  <p class="section-sub">The story behind building an open alternative.</p>
+
+  <div class="mv-grid">
+    <div class="mv-card mission">
+      <span class="mv-tag mission">Mission</span>
+      <h3>Democratize Enterprise Virtualization</h3>
+      <p>Enterprise-grade cluster management has always been locked behind six-figure licensing fees. OXware vCenter changes that. Every feature — live migration, HA, distributed networking — is available to individuals, startups, and organizations that cannot afford VMware's price tag. We believe infrastructure power should not be gated by budget.</p>
+    </div>
+
+    <div class="mv-card vision">
+      <span class="mv-tag vision">Vision</span>
+      <h3>The Open Alternative to VMware vCenter</h3>
+      <p>After Broadcom's acquisition of VMware, perpetual licenses vanished overnight and subscription costs skyrocketed by 300–500%. Thousands of organizations are stranded. OXware vCenter is purpose-built to be the drop-in, open source replacement — same operational model, modern UI, no vendor lock-in, and a community that will never abandon you.</p>
+    </div>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- COMPARISON TABLE -->
+<div class="section">
+  <h2 class="section-title">How We Compare</h2>
+  <p class="section-sub">OXware vCenter vs VMware vCenter vs Proxmox</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th class="highlight"><i class="fa-solid fa-cube"></i> OXware vCenter</th>
+          <th>VMware vCenter</th>
+          <th>Proxmox VE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Multi-Node Cluster Management</td>
+          <td><i class="fa-solid fa-circle-check check-yes"></i> Full</td>
+          <td><i class="fa-solid fa-circle-check check-yes"></i> Full</td>
+          <td><i class="fa-solid fa-circle-check check-yes"></i> Full</td>
+        </tr>
+        <tr>
+          <td>Live VM Migration</td>
+          <td><i class="fa-solid fa-circle-check check-yes"></i> Zero-downtime</td>
+          <td><i class="fa-solid fa-circle-check check-yes"></i> vMotion</td>
+          <td><i class="fa-solid fa-circle-check check-yes"></i> Online</td>
+        </tr>
+        <tr>
+          <td>High Availability (HA)</td>
+          <td><i class="fa-solid fa-circle-check check-yes"></i> Built-in</td>
+          <td><i class="fa-solid fa-circle-check check-yes"></i> vSphere HA</td>
+          <td><i class="fa-solid fa-circle-check check-yes"></i> Built-in</td>
+        </tr>
+        <tr>
+          <td>AI Assistant / Insights</td>
+          <td><i class="fa-solid fa-circle-check check-yes"></i> Yes</td>
+          <td><i class="fa-solid fa-circle-minus check-part"></i> vRealize only</td>
+          <td><i class="fa-solid fa-circle-xmark check-no"></i> No</td>
+        </tr>
+        <tr>
+          <td>Modern Web UI</td>
+          <td><i class="fa-solid fa-circle-check check-yes"></i> Yes</td>
+          <td><i class="fa-solid fa-circle-minus check-part"></i> Legacy Flash era</td>
+          <td><i class="fa-solid fa-circle-minus check-part"></i> Functional</td>
+        </tr>
+        <tr>
+          <td>Open Source</td>
+          <td><i class="fa-solid fa-circle-check check-yes"></i> Yes</td>
+          <td><i class="fa-solid fa-circle-xmark check-no"></i> No</td>
+          <td><i class="fa-solid fa-circle-check check-yes"></i> Yes</td>
+        </tr>
+        <tr>
+          <td>Pricing</td>
+          <td><i class="fa-solid fa-circle-check check-yes"></i> Free / Lifetime deal</td>
+          <td><i class="fa-solid fa-circle-xmark check-no"></i> $10k–$100k+/yr</td>
+          <td><i class="fa-solid fa-circle-minus check-part"></i> Free / subscription</td>
+        </tr>
+        <tr>
+          <td>KVM-Based</td>
+          <td><i class="fa-solid fa-circle-check check-yes"></i> Yes</td>
+          <td><i class="fa-solid fa-circle-xmark check-no"></i> ESXi proprietary</td>
+          <td><i class="fa-solid fa-circle-check check-yes"></i> Yes</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- ROADMAP -->
+<div class="section">
+  <h2 class="section-title">Development Roadmap</h2>
+  <p class="section-sub">From single-node panel to full cluster management.</p>
+
+  <div class="roadmap">
+
+    <div class="rm-item">
+      <div class="rm-dot done"></div>
+      <span class="rm-label done">Done</span>
+      <h4>OXware Panel v2.5</h4>
+      <p>Single-node KVM management, noVNC console, cloud-init, RBAC, AI assistant, snapshot management, resource monitoring.</p>
+    </div>
+
+    <div class="rm-item">
+      <div class="rm-dot done"></div>
+      <span class="rm-label done">Done</span>
+      <h4>OXware vSwitch</h4>
+      <p>Per-node virtual switch management, VLAN tagging, bridge configuration via the web UI.</p>
+    </div>
+
+    <div class="rm-item">
+      <div class="rm-dot progress"></div>
+      <span class="rm-label progress">In Progress</span>
+      <h4>vCenter API Layer</h4>
+      <p>Unified REST API aggregating multiple OXware nodes. Foundation for all cluster-level operations.</p>
+    </div>
+
+    <div class="rm-item">
+      <div class="rm-dot progress"></div>
+      <span class="rm-label progress">In Progress</span>
+      <h4>Live Migration Engine</h4>
+      <p>QEMU live migration over secure tunnel between nodes. Memory pre-copy with fallback to warm migration.</p>
+    </div>
+
+    <div class="rm-item">
+      <div class="rm-dot soon"></div>
+      <span class="rm-label soon">Soon</span>
+      <h4>High Availability Daemon</h4>
+      <p>Node health monitoring, quorum voting, automatic VM restart with configurable priorities and fencing.</p>
+    </div>
+
+    <div class="rm-item">
+      <div class="rm-dot soon"></div>
+      <span class="rm-label soon">Soon</span>
+      <h4>vCenter Web UI</h4>
+      <p>Unified cluster dashboard, node topology view, live migration drag-and-drop, cluster metrics, HA management.</p>
+    </div>
+
+    <div class="rm-item">
+      <div class="rm-dot soon"></div>
+      <span class="rm-label soon">Soon</span>
+      <h4>GA Release — June 30, 2026</h4>
+      <p>General availability of OXware vCenter. Full cluster management, production-ready HA, distributed vSwitch, shared storage integrations.</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2>Reserve Early Access</h2>
+  <p>Lock in lifetime pricing before the June 30, 2026 launch. Early adopters get vCenter included at no extra cost.</p>
+  <a href="../pricing/" class="btn btn-gold btn-lg"><i class="fa-solid fa-star"></i> Get Lifetime Access</a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="logo">
+        <img src="../sadeceikon.png" alt="OXware" />
+        OXware
+      </div>
+      <p>Open source KVM/QEMU hypervisor management. From single VMs to full multi-node clusters — enterprise power, zero lock-in.</p>
+    </div>
+
+    <div class="footer-links">
+      <h4>Product</h4>
+      <ul>
+        <li><a href="../">OXware Panel</a></li>
+        <li><a href="./">vCenter</a></li>
+        <li><a href="../pricing/">Pricing</a></li>
+        <li><a href="../docs.html">Documentation</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-links">
+      <h4>Community</h4>
+      <ul>
+        <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i> GitHub</a></li>
+        <li><a href="https://www.linkedin.com/company/oxware" target="_blank" rel="noopener"><i class="fa-brands fa-linkedin"></i> LinkedIn</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-links">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a></li>
+        <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/SECURITY.md" target="_blank" rel="noopener">Security Policy</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <span>© 2026 OXware. Released under the MIT License.</span>
+    <span>Built with <i class="fa-solid fa-heart" style="color:var(--danger);"></i> for the open source community.</span>
+  </div>
+</footer>
+
+<script>
+(function() {
+  var target = new Date('2026-06-30T00:00:00Z').getTime();
+  var dEl = document.getElementById('cd-days');
+  var hEl = document.getElementById('cd-hours');
+  var mEl = document.getElementById('cd-mins');
+  var sEl = document.getElementById('cd-secs');
+
+  function pad(n) {
+    return n < 10 ? '0' + n : String(n);
+  }
+
+  function tick() {
+    var now = Date.now();
+    var diff = target - now;
+
+    if (diff <= 0) {
+      dEl.textContent = '00';
+      hEl.textContent = '00';
+      mEl.textContent = '00';
+      sEl.textContent = '00';
+      return;
+    }
+
+    var totalSecs = Math.floor(diff / 1000);
+    var days  = Math.floor(totalSecs / 86400);
+    var hours = Math.floor((totalSecs % 86400) / 3600);
+    var mins  = Math.floor((totalSecs % 3600) / 60);
+    var secs  = totalSecs % 60;
+
+    dEl.textContent = String(days);
+    hEl.textContent = pad(hours);
+    mEl.textContent = pad(mins);
+    sEl.textContent = pad(secs);
+  }
+
+  tick();
+  setInterval(tick, 1000);
+}());
+</script>
+
+</body>
+</html>
