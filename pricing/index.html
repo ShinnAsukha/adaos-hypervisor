@@ -83,8 +83,18 @@
     .cta-banner h2 { font-size: 1.6rem; font-weight: 800; margin-bottom: .75rem; }
     .cta-banner p { color: var(--muted); margin-bottom: 1.5rem; }
 
-    footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center; color: var(--muted); font-size: .85rem; }
-    footer a { color: var(--muted); }
+    footer { border-top: 1px solid var(--border); padding: 3rem 2rem 1.5rem; }
+    .footer-inner { display: flex; gap: 3rem; max-width: 1160px; margin: 0 auto 2rem; flex-wrap: wrap; }
+    .footer-brand { max-width: 280px; }
+    .footer-brand .logo { display: flex; align-items: center; gap: .5rem; font-size: 1.1rem; font-weight: 700; color: var(--accent); margin-bottom: .75rem; }
+    .footer-brand .logo img { width: 24px; height: 24px; object-fit: contain; }
+    .footer-brand p { font-size: .85rem; color: var(--muted); line-height: 1.55; }
+    .footer-links h4 { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: .75rem; }
+    .footer-links ul { list-style: none; }
+    .footer-links li { margin-bottom: .5rem; }
+    .footer-links a { font-size: .875rem; color: var(--text); }
+    .footer-links a:hover { color: var(--accent); text-decoration: none; }
+    .footer-bottom { max-width: 1160px; margin: 0 auto; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem; font-size: .8rem; color: var(--muted); }
 
     @media (max-width: 640px) {
       .pricing-grid { grid-template-columns: 1fr; }
@@ -218,7 +228,42 @@
 </section>
 
 <footer>
-  <p>&copy; 2026 OXware Hypervisor &mdash; <a href="../">Home</a> &middot; <a href="../vcenter/">vCenter</a> &middot; <a href="../docs/">Docs</a> &middot; <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener">GitHub</a></p>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="logo">
+        <img src="../sadeceikon.png" alt="OXware" />
+        OXware
+      </div>
+      <p>Open source KVM/QEMU hypervisor management. From single VMs to full multi-node clusters — enterprise power, zero lock-in.</p>
+    </div>
+    <div class="footer-links">
+      <h4>Product</h4>
+      <ul>
+        <li><a href="../">OXware Panel</a></li>
+        <li><a href="../vcenter/">vCenter</a></li>
+        <li><a href="./">Pricing</a></li>
+        <li><a href="../docs/">Documentation</a></li>
+      </ul>
+    </div>
+    <div class="footer-links">
+      <h4>Community</h4>
+      <ul>
+        <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i> GitHub</a></li>
+        <li><a href="https://www.linkedin.com/company/oxware" target="_blank" rel="noopener"><i class="fa-brands fa-linkedin"></i> LinkedIn</a></li>
+      </ul>
+    </div>
+    <div class="footer-links">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a></li>
+        <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/SECURITY.md" target="_blank" rel="noopener">Security Policy</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 OXware. Released under the MIT License.</span>
+    <span>Built with <i class="fa-solid fa-heart" style="color:#f85149"></i> for the open source community.</span>
+  </div>
 </footer>
 
 </body>
