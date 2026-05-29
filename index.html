@@ -148,6 +148,7 @@
     }
 
     .nav-links a:hover { color: var(--accent); text-decoration: none; }
+    .nav-links a.nav-active { color: var(--accent); }
 
     .btn {
       display: inline-flex;
@@ -1013,19 +1014,20 @@
 
 <!-- NAV -->
 <nav>
-  <a href="index.html" class="nav-logo">
+  <a href="/" class="nav-logo">
     <img src="sadeceikon.png" alt="OXware" onerror="this.style.display='none'">
     OXware
   </a>
   <ul class="nav-links">
+    <li><a href="/" class="nav-active">Home</a></li>
+    <li><a href="/vcenter/">vCenter</a></li>
+    <li><a href="/pricing/">Pricing</a></li>
     <li><a href="docs.html">Docs</a></li>
-    <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank">GitHub</a></li>
-    <li>
-      <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" class="btn btn-primary">
-        <i class="fas fa-download"></i> Download
-      </a>
-    </li>
+    <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a></li>
   </ul>
+  <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" class="btn btn-primary">
+    <i class="fab fa-github"></i> Get Started Free
+  </a>
 </nav>
 
 <!-- HERO -->
