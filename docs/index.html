@@ -22,7 +22,7 @@
       --heading: #f0f6fc;
       --radius: 6px;
       --sidebar-w: 260px;
-      --nav-h: 56px;
+      --nav-h: 60px;
     }
 
     body {
@@ -38,50 +38,66 @@
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
 
-    /* TOP NAV */
-    .topnav {
+    /* NAV */
+    nav {
       position: sticky;
       top: 0;
       z-index: 200;
-      height: var(--nav-h);
-      background: rgba(13, 17, 23, 0.95);
-      backdrop-filter: blur(10px);
+      background: rgba(13, 17, 23, 0.92);
+      backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: var(--nav-h);
       display: flex;
       align-items: center;
-      padding: 0 1.5rem;
-      gap: 1rem;
+      justify-content: space-between;
     }
 
-    .topnav-logo {
-      font-size: 1.1rem;
+    .nav-logo {
+      font-size: 1.25rem;
       font-weight: 700;
       color: var(--accent);
+      letter-spacing: -0.5px;
       display: flex;
       align-items: center;
-      gap: 0.4rem;
-      white-space: nowrap;
+      gap: 0.5rem;
+      text-decoration: none;
     }
 
-    .topnav-divider {
-      color: var(--border);
-      font-size: 1.2rem;
-    }
+    .nav-logo img { width: 28px; height: 28px; object-fit: contain; filter: drop-shadow(0 0 6px rgba(88,166,255,.5)); }
 
-    .topnav-title {
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-
-    .topnav-right {
-      margin-left: auto;
+    .nav-links {
       display: flex;
-      gap: 1rem;
-      font-size: 0.85rem;
+      gap: 1.5rem;
+      align-items: center;
+      list-style: none;
     }
 
-    .topnav-right a { color: var(--muted); }
-    .topnav-right a:hover { color: var(--accent); text-decoration: none; }
+    .nav-links a {
+      color: var(--text);
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--accent); text-decoration: none; }
+    .nav-links a.nav-active { color: var(--accent); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      border: none;
+      text-decoration: none;
+    }
+
+    .btn:hover { opacity: 0.85; text-decoration: none; transform: translateY(-1px); }
+    .btn-primary { background: var(--accent); color: #0d1117; }
 
     /* LAYOUT */
     .layout {
@@ -299,26 +315,28 @@
     @media (max-width: 900px) {
       .sidebar { display: none; }
       .content { padding: 1.5rem; }
+      nav { padding: 0 1rem; }
+      .nav-links { display: none; }
     }
   </style>
 </head>
 <body>
 
-<!-- TOP NAV -->
-<nav class="topnav">
-  <a href="../" class="topnav-logo">
-    <img src="../sadeceikon.png" alt="OXware" style="width:24px;height:24px;object-fit:contain;margin-right:6px">
+<!-- NAV -->
+<nav>
+  <a href="/" class="nav-logo">
+    <img src="../sadeceikon.png" alt="OXware" onerror="this.style.display='none'">
     OXware
   </a>
-  <span class="topnav-divider">/</span>
-  <span class="topnav-title">Documentation</span>
-  <div class="topnav-right" style="display:flex;align-items:center;gap:1.5rem">
-    <a href="../">Home</a>
-    <a href="../vcenter/">vCenter</a>
-    <a href="../pricing/">Pricing</a>
-    <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a>
-    <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" style="background:var(--accent);color:#0d1117;padding:6px 14px;border-radius:6px;font-weight:600;font-size:13px;text-decoration:none">Get Started Free</a>
-  </div>
+  <ul class="nav-links">
+    <li><a href="/">Home</a></li>
+    <li><a href="/vcenter/">vCenter</a></li>
+    <li><a href="/pricing/">Pricing</a></li>
+    <li><a href="/docs/" class="nav-active">Docs</a></li>
+  </ul>
+  <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" class="btn btn-primary">
+    <i class="fab fa-github"></i> Get Started Free
+  </a>
 </nav>
 
 <div class="layout">

@@ -1040,7 +1040,7 @@
       Manage VMs, users, networking, storage, and security — all from a single dark-themed web UI.
     </p>
     <div class="hero-actions">
-      <a href="docs.html" class="btn btn-primary"><i class="fas fa-book-open"></i> Get Started</a>
+      <a href="/docs/" class="btn btn-primary"><i class="fas fa-book-open"></i> Get Started</a>
       <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" class="btn btn-green"><i class="fas fa-compact-disc"></i> Download ISO</a>
       <a href="https://github.com/ShinnAsukha/oxware-hypervisor" class="btn btn-outline"><i class="fab fa-github"></i> View on GitHub</a>
     </div>
@@ -1131,45 +1131,57 @@
 </div>
 
 <!-- FEATURES -->
-<section class="section">
-  <h2 class="section-title">Everything you need to run a hypervisor</h2>
-  <p class="section-sub">From bare-metal to VM in minutes. No licensing fees, no vendor lock-in.</p>
+<section class="section" id="features">
+  <h2 class="section-title">Enterprise Features, Zero Cost</h2>
+  <p class="section-sub">Everything you need to run production workloads.</p>
   <div class="feature-grid">
 
     <div class="feature-card">
       <div class="feature-icon"><i class="fas fa-desktop"></i></div>
-      <h3>VM Management</h3>
-      <p>Full KVM/QEMU lifecycle — create, start, stop, pause, reboot, clone, and delete. Bulk operations, templates, CPU pinning, vCPU hot-plug, and scheduling.</p>
-    </div>
-
-    <div class="feature-card">
-      <div class="feature-icon"><i class="fas fa-shield-halved"></i></div>
-      <h3>Role-Based Access Control</h3>
-      <p>Four built-in roles: administrator, operator, viewer, and vm-user. Assign specific VMs to vm-user accounts so tenants only see what they own.</p>
+      <h3>VM Lifecycle Management</h3>
+      <p>Create, start, stop, reboot, clone, and snapshot VMs with full KVM power. Bulk operations, CPU pinning, vCPU hot-plug, scheduling, and template-based provisioning.</p>
     </div>
 
     <div class="feature-card">
       <div class="feature-icon"><i class="fas fa-terminal"></i></div>
-      <h3>VNC &amp; SSH Console</h3>
-      <p>Embedded noVNC console in a dedicated window with pointer lock, Ctrl+Alt+Del, and fullscreen. Web-based SSH terminal for direct shell access.</p>
+      <h3>noVNC Console</h3>
+      <p>Browser-based VNC and serial console — no client needed. Pointer lock, Ctrl+Alt+Del, clipboard support, fullscreen, and SPICE for high-performance sessions.</p>
     </div>
 
     <div class="feature-card">
-      <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
-      <h3>Monitoring &amp; Alerts</h3>
-      <p>Live CPU, RAM, disk I/O, and network metrics. Alert rules with Telegram, Discord, and email notifications. Anomaly detection and Prometheus endpoint.</p>
+      <div class="feature-icon"><i class="fas fa-shield-halved"></i></div>
+      <h3>RBAC &amp; Multi-User</h3>
+      <p>Role-based access with four built-in roles: admin, operator, vm-user, and viewer. Assign specific VMs to tenants so they only see and manage what they own.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+      <h3>Cloud-Init &amp; Auto-Provision</h3>
+      <p>Automated VM configuration at first boot: SSH key injection, static IP setup, hostname assignment, and network configuration — no manual intervention required.</p>
     </div>
 
     <div class="feature-card">
       <div class="feature-icon"><i class="fas fa-network-wired"></i></div>
-      <h3>Network Management</h3>
-      <p>IP pool management (CIDR), NAT and bridge modes, per-VM QoS bandwidth limits, DNS watchdog, HAProxy integration, and nftables firewall per VM.</p>
+      <h3>IPAM &amp; Networking</h3>
+      <p>IP address management with CIDR pools, WireGuard VPN, VLAN tagging, SDN via Open vSwitch, HAProxy load balancer, per-VM QoS, and nftables firewall.</p>
     </div>
 
     <div class="feature-card">
       <div class="feature-icon"><i class="fas fa-robot"></i></div>
       <h3>AI Assistant</h3>
-      <p>Create VMs using natural language. Capacity forecasting predicts resource needs from historical trends. Auto-scaler adjusts VM resources based on load.</p>
+      <p>Built-in AI for natural-language VM creation, capacity forecasting, anomaly detection, and workload analysis. Predict resource exhaustion before it impacts production.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(234,179,8,0.12);color:#eab308"><i class="fas fa-layer-group"></i></div>
+      <h3>vCenter <span style="font-size:0.7rem;background:rgba(234,179,8,0.15);color:#eab308;border:1px solid rgba(234,179,8,0.35);border-radius:2rem;padding:0.1rem 0.5rem;font-weight:700;vertical-align:middle;margin-left:4px">COMING SOON</span></h3>
+      <p>Multi-node cluster management, live VM migration with zero downtime, high availability, auto load balancing, and distributed virtual switch — across all your hosts.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(63,185,80,0.12);color:#3fb950"><i class="fab fa-osi"></i></div>
+      <h3>Open Source</h3>
+      <p>MIT license with full source code on GitHub. No vendor lock-in, no subscription traps, no hidden fees. Self-hosted on your infrastructure, forever free to use.</p>
     </div>
 
   </div>
@@ -1202,7 +1214,7 @@
 <span class="url">https://&lt;server-ip&gt;:8006</span>  <span class="comment"># complete the setup wizard on first boot</span></pre>
 
   <div style="text-align:center; margin-top: 2rem;">
-    <a href="docs.html" class="btn btn-primary" style="padding: 0.7rem 2rem; font-size: 1rem;">
+    <a href="/docs/" class="btn btn-primary" style="padding: 0.7rem 2rem; font-size: 1rem;">
       <i class="fas fa-book-open"></i> Read the full documentation
     </a>
   </div>
@@ -1442,18 +1454,51 @@
 </section>
 
 <!-- FOOTER -->
-<footer>
-  <div class="footer-left">
-    &copy; 2026 OXware Hypervisor &mdash; Released under the <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE">MIT License</a>.
-    Hosted at <a href="https://fab.net.tr">fab.net.tr</a>.
+<footer style="background:var(--surface);border-top:1px solid var(--border);padding:2.5rem 2rem;">
+  <div style="max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:2rem;flex-wrap:wrap;">
+
+    <div style="max-width:280px;">
+      <div style="display:flex;align-items:center;gap:0.5rem;font-weight:700;font-size:1.1rem;color:var(--accent);margin-bottom:0.75rem;">
+        <img src="sadeceikon.png" alt="OXware" style="width:24px;height:24px;object-fit:contain;" onerror="this.style.display='none'" />
+        OXware
+      </div>
+      <p style="font-size:0.85rem;color:var(--muted);line-height:1.55;">Open source KVM/QEMU hypervisor management. From single VMs to full multi-node clusters — enterprise power, zero lock-in.</p>
+    </div>
+
+    <div>
+      <h4 style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:0.75rem;">Product</h4>
+      <ul style="list-style:none;">
+        <li style="margin-bottom:0.5rem;"><a href="/" style="font-size:0.875rem;color:var(--text);">OXware Panel</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="/vcenter/" style="font-size:0.875rem;color:var(--text);">vCenter</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="/pricing/" style="font-size:0.875rem;color:var(--text);">Pricing</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="/docs/" style="font-size:0.875rem;color:var(--text);">Documentation</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <h4 style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:0.75rem;">Community</h4>
+      <ul style="list-style:none;">
+        <li style="margin-bottom:0.5rem;"><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);"><i class="fab fa-github"></i> GitHub</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="https://www.linkedin.com/company/oxware" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);"><i class="fab fa-linkedin"></i> LinkedIn</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);"><i class="fas fa-download"></i> Releases</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="https://github.com/ShinnAsukha/oxware-hypervisor/issues" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);"><i class="fas fa-bug"></i> Issues</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <h4 style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:0.75rem;">Legal</h4>
+      <ul style="list-style:none;">
+        <li style="margin-bottom:0.5rem;"><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);">MIT License</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/SECURITY.md" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);">Security Policy</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="https://g.page/r/CYXvWfbx9uKJEBM/review" target="_blank" rel="noopener" style="font-size:0.875rem;color:#4285F4;"><i class="fas fa-star"></i> Google Review</a></li>
+      </ul>
+    </div>
+
   </div>
-  <div class="footer-links">
-    <a href="docs.html"><i class="fas fa-book"></i> Docs</a>
-    <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank"><i class="fab fa-github"></i> GitHub</a>
-    <a href="https://www.linkedin.com/company/oxware" target="_blank" rel="noopener" style="color:#0a66c2"><i class="fab fa-linkedin"></i> LinkedIn</a>
-    <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" target="_blank"><i class="fas fa-download"></i> Releases</a>
-    <a href="https://github.com/ShinnAsukha/oxware-hypervisor/issues" target="_blank"><i class="fas fa-bug"></i> Issues</a>
-    <a href="https://g.page/r/CYXvWfbx9uKJEBM/review" target="_blank" rel="noopener" style="color:#4285F4"><i class="fas fa-star"></i> Google Review</a>
+
+  <div style="max-width:1100px;margin:2rem auto 0;padding-top:1.25rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;font-size:0.8rem;color:var(--muted);">
+    <span>&copy; 2026 OXware. Released under the MIT License.</span>
+    <span>Built with <i class="fa-solid fa-heart" style="color:var(--danger);"></i> for the open source community.</span>
   </div>
 </footer>
 
