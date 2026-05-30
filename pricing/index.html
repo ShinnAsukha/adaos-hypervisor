@@ -50,7 +50,9 @@
     .save-badge { background: rgba(63,185,80,.15); color: var(--accent2); border: 1px solid rgba(63,185,80,.3); border-radius: 20px; padding: .2rem .7rem; font-size: .75rem; font-weight: 700; }
 
     /* Pricing grid */
-    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 1.5rem; max-width: 1000px; margin: 0 auto 4rem; padding: 0 2rem; }
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap: 1.2rem; max-width: 1280px; margin: 0 auto 4rem; padding: 0 2rem; }
+    .plan-card.free { border-color: rgba(63,185,80,.4); }
+    .plan-card.free::before { content: 'Free Forever'; position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: var(--green, #3fb950); color: #0d1117; font-size: .7rem; font-weight: 800; padding: .25rem .9rem; border-radius: 20px; white-space: nowrap; }
     .plan-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; position: relative; transition: border-color .2s, transform .2s; }
     .plan-card:hover { border-color: var(--accent); transform: translateY(-4px); }
     .plan-card.featured { border-color: var(--gold); background: linear-gradient(135deg,rgba(234,179,8,.06),var(--surface)); }
@@ -129,6 +131,24 @@
 
 <!-- Pricing Cards -->
 <div class="pricing-grid">
+
+  <!-- Free / Open Source -->
+  <div class="plan-card free">
+    <div class="plan-name">Free</div>
+    <div class="plan-price"><span class="currency">$</span>0<span class="period">/forever</span></div>
+    <div class="plan-desc">Self-hosted open source. MIT licensed. Use it, fork it, modify it.</div>
+    <ul class="plan-features">
+      <li><i class="fa-solid fa-check"></i> Full source code (MIT)</li>
+      <li><i class="fa-solid fa-check"></i> Self-hosted on your hardware</li>
+      <li><i class="fa-solid fa-check"></i> Up to 5 VMs</li>
+      <li><i class="fa-solid fa-check"></i> noVNC Console</li>
+      <li><i class="fa-solid fa-check"></i> Basic backup &amp; snapshots</li>
+      <li><i class="fa-solid fa-check"></i> GitHub community</li>
+      <li class="dim"><i class="fa-solid fa-xmark"></i> AI Assistant (OXY)</li>
+      <li class="dim"><i class="fa-solid fa-xmark"></i> RBAC &amp; Multi-user</li>
+    </ul>
+    <button class="plan-cta outline" onclick="window.location='https://github.com/ShinnAsukha/oxware-hypervisor'">⭐ Download Free</button>
+  </div>
 
   <!-- Monthly -->
   <div class="plan-card">
