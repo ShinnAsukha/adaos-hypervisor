@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://oxware.top/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <lastmod>2026-05-31</lastmod>
+  </url>
+  <url>
+    <loc>https://oxware.top/pricing/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-05-31</lastmod>
+  </url>
+  <url>
+    <loc>https://oxware.top/docs/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-05-31</lastmod>
+  </url>
+  <url>
+    <loc>https://oxware.top/vcenter/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-05-31</lastmod>
+  </url>
+</urlset>
