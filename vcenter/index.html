@@ -565,22 +565,54 @@
     }
 
     @media (max-width: 768px) {
-      nav { flex-wrap: wrap; position: relative; }
+      nav { flex-wrap: wrap; position: relative; padding: 0 1rem; }
       .nav-burger { display: inline-flex; align-items: center; order: 3; }
       nav > .btn-primary { display: none; }
       .nav-links {
         order: 4; flex-basis: 100%; flex-direction: column; align-items: stretch;
         gap: 0; max-height: 0; overflow: hidden; transition: max-height .3s ease;
-        background: var(--surface); margin: 0 -2rem;
+        background: var(--surface); margin: 0 -1rem;
       }
       .nav-toggle-cb:checked ~ .nav-links { max-height: 340px; border-top: 1px solid var(--border); }
       .nav-links li { width: 100%; }
-      .nav-links a { display: block; padding: 0.85rem 2rem; border-bottom: 1px solid var(--border); }
+      .nav-links a { display: block; padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border); }
       .nav-links .nav-cta a { color: #0d1117; }
       .features-grid { grid-template-columns: 1fr; }
-      .countdown-grid { gap: 1rem; }
+      .countdown-grid { gap: 0.75rem; }
       .cd-num { font-size: 2rem; }
-      .footer-inner { flex-direction: column; }
+      .footer-inner { flex-direction: column; gap: 1.5rem; }
+      .hero { padding: 3rem 1.25rem 1.5rem !important; }
+      .hero-actions { flex-direction: column; align-items: stretch; }
+      .hero-actions .btn { justify-content: center; width: 100%; min-height: 44px; }
+    }
+    @media (max-width: 480px) {
+      .hero h1 { font-size: 1.7rem; }
+      .hero p { font-size: 0.9rem; }
+      .countdown-wrap { padding: 1rem !important; }
+      .cd-num { font-size: 1.6rem; }
+      .cd-label { font-size: 0.65rem; }
+      .features-grid { padding: 0 0.25rem; }
+      footer { padding: 2rem 1rem 1.25rem; }
+      .footer-bottom { flex-direction: column; text-align: center; gap: 0.6rem; }
+      .btn, .btn-primary, .btn-outline { min-height: 44px; }
+    }
+    /* Universal */
+    img { max-width: 100%; height: auto; }
+
+    /* Version badge */
+    .ver-badge {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      background: linear-gradient(135deg, rgba(88,166,255,0.14), rgba(63,185,80,0.1));
+      border: 1px solid rgba(88,166,255,0.3);
+      color: var(--accent);
+      font-size: 0.7rem; font-weight: 700;
+      padding: 0.2rem 0.65rem; border-radius: 20px;
+      letter-spacing: 0.5px;
+      font-family: "SFMono-Regular", Consolas, Monaco, monospace;
+    }
+    .ver-badge .ver-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--accent2);
+      box-shadow: 0 0 6px var(--accent2);
     }
   </style>
 </head>
@@ -919,12 +951,25 @@
   </div>
 
   <div class="footer-bottom">
-    <span>© 2026 OXware. Released under the MIT License.</span>
+    <span style="display:inline-flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+      © 2026 OXware. Released under the MIT License.
+      <span class="ver-badge" title="Current development version"><span class="ver-dot"></span>v2.5.3</span>
+    </span>
     <span>Built with <i class="fa-solid fa-heart" style="color:var(--danger);"></i> for the open source community.</span>
   </div>
 </footer>
 
 <script>
+/* Mobile nav: close on link click */
+(function() {
+  var cb = document.getElementById('navtoggle');
+  if (cb) {
+    document.querySelectorAll('.nav-links a').forEach(function(a) {
+      a.addEventListener('click', function() { cb.checked = false; });
+    });
+  }
+})();
+
 (function() {
   var target = new Date('2026-06-30T00:00:00Z').getTime();
   var dEl = document.getElementById('cd-days');

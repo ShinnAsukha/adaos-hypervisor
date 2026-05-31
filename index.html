@@ -1075,49 +1075,178 @@
       .nav-logo { font-size: 1.1rem; }
     }
 
-    /* ─────────── Roadmap / We're working on ─────────── */
+    /* ─────────── Small Mobile (≤480px) ─────────── */
+    @media (max-width: 480px) {
+      .hero { padding: 2rem 1rem 1.75rem; }
+      .hero h1 { font-size: 1.5rem; letter-spacing: -0.5px; }
+      .hero p { font-size: 0.9rem; margin-bottom: 1.75rem; }
+      .hero-actions .btn,
+      .plan-cta,
+      .gr-btn, .li-btn,
+      .btn-primary, .btn-green, .btn-outline { min-height: 44px; }
+      .section { padding: 2.5rem 1rem; }
+      .section-title { font-size: 1.2rem; }
+      .section-sub { font-size: 0.85rem; margin-bottom: 2rem; }
+      .feature-card { padding: 1.25rem; }
+      .stats-bar { gap: 0.75rem 1.25rem; padding: 1rem 0.75rem; }
+      .stat-value { font-size: 1.1rem; }
+      .stat-label { font-size: 0.65rem; }
+      .stack-section { padding: 2rem 1rem; }
+      .quickstart-section { padding: 3rem 1rem; }
+      pre { padding: 1rem; font-size: 0.78rem; word-break: break-word; white-space: pre-wrap; }
+      .compare-section, .changelog-section { padding: 3rem 1rem; }
+      .google-review-section { padding: 2rem 1rem; gap: 1rem; }
+      footer { padding: 2rem 1rem !important; }
+      .cl-row { gap: 0.5rem; padding: 0.7rem 0.85rem; }
+      .cl-meta { gap: 0.4rem; flex-wrap: wrap; }
+      .cl-author { display: none; }
+    }
+
+    /* Universal: ensure images never overflow & code wraps */
+    img { max-width: 100%; height: auto; }
+    pre, code { word-wrap: break-word; }
+    @media (max-width: 768px) {
+      pre { white-space: pre-wrap; word-break: break-word; }
+      .hero-actions .btn,
+      nav .btn-primary,
+      .plan-cta { min-height: 44px; }
+    }
+
+    /* ─────────── Roadmap / We're working on v2.5.3 ─────────── */
     .roadmap-section {
-      max-width: 1100px; margin: 0 auto; padding: 5rem 2rem;
+      max-width: 1160px; margin: 0 auto; padding: 5rem 2rem;
       position: relative;
     }
-    .roadmap-head { text-align: center; margin-bottom: 2.5rem; }
+    /* Glassmorphism container with animated gradient border */
+    .roadmap-shell {
+      position: relative;
+      border-radius: 20px;
+      padding: 2.5rem;
+      background: linear-gradient(180deg, rgba(22,27,34,0.85) 0%, rgba(13,17,23,0.7) 100%);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(88,166,255,0.15);
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+    .roadmap-shell::before {
+      content: ''; position: absolute; inset: -2px;
+      border-radius: 22px; padding: 2px; z-index: 0;
+      background: linear-gradient(120deg, rgba(88,166,255,0.55), rgba(63,185,80,0.4), rgba(168,85,247,0.45), rgba(88,166,255,0.55));
+      background-size: 300% 300%;
+      animation: rmGradient 9s linear infinite;
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+              mask-composite: exclude;
+      pointer-events: none;
+      opacity: 0.55;
+    }
+    @keyframes rmGradient {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .roadmap-shell::after {
+      content: ''; position: absolute; top: -120px; right: -120px;
+      width: 320px; height: 320px;
+      background: radial-gradient(circle, rgba(88,166,255,0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .roadmap-head {
+      text-align: center; margin-bottom: 2.5rem; position: relative; z-index: 1;
+    }
     .roadmap-badge {
-      display: inline-flex; align-items: center; gap: 0.4rem;
-      background: linear-gradient(90deg, rgba(88,166,255,.15), rgba(63,185,80,.12));
-      border: 1px solid rgba(88,166,255,.3); color: var(--accent);
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: linear-gradient(90deg, rgba(88,166,255,.18), rgba(63,185,80,.14));
+      border: 1px solid rgba(88,166,255,.35); color: var(--accent);
       font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 1px; padding: 0.35rem 1rem; border-radius: 20px;
-      margin-bottom: 1rem;
+      letter-spacing: 1.2px; padding: 0.4rem 1rem; border-radius: 20px;
+      margin-bottom: 1.25rem;
     }
     .roadmap-badge .pulse {
       width: 7px; height: 7px; border-radius: 50%; background: var(--accent2);
       animation: rmpulse 1.6s infinite;
     }
-    @keyframes rmpulse { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(63,185,80,.5)} 50%{opacity:.6;box-shadow:0 0 0 5px rgba(63,185,80,0)} }
+    @keyframes rmpulse { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(63,185,80,.5)} 50%{opacity:.6;box-shadow:0 0 0 6px rgba(63,185,80,0)} }
+    .roadmap-title {
+      font-size: clamp(1.5rem, 3vw, 2.1rem);
+      font-weight: 800;
+      color: #f0f6fc;
+      letter-spacing: -0.5px;
+      margin-bottom: 0.5rem;
+    }
+    .roadmap-title .ver-chip {
+      display: inline-block;
+      background: linear-gradient(135deg, #58a6ff, #3fb950);
+      color: #0d1117;
+      font-size: 0.85rem; font-weight: 800;
+      padding: 0.15rem 0.6rem; border-radius: 6px;
+      vertical-align: middle; margin-left: 0.5rem;
+      letter-spacing: 0;
+    }
+    .roadmap-sub { color: var(--muted); font-size: 0.95rem; max-width: 620px; margin: 0 auto; }
     .roadmap-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr));
-      gap: 1rem;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr));
+      gap: 0.85rem; position: relative; z-index: 1;
     }
     .rm-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 1.4rem; position: relative;
-      transition: transform .15s, border-color .15s;
+      background: rgba(13,17,23,0.55);
+      border: 1px solid rgba(48,54,61,0.7);
+      border-radius: 12px; padding: 1.1rem 1.1rem 1rem;
+      position: relative;
+      transition: transform .18s, border-color .18s, background .18s;
+      backdrop-filter: blur(6px);
     }
-    .rm-card:hover { transform: translateY(-3px); border-color: var(--accent); }
-    .rm-card .rm-icon { font-size: 1.5rem; margin-bottom: 0.6rem; }
-    .rm-card h4 { font-size: 1rem; color: #f0f6fc; margin-bottom: 0.35rem; }
-    .rm-card p { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+    .rm-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(88,166,255,0.5);
+      background: rgba(22,27,34,0.85);
+    }
+    .rm-card .rm-icon {
+      font-size: 1.35rem; margin-bottom: 0.55rem;
+      display: inline-flex; width: 36px; height: 36px;
+      align-items: center; justify-content: center;
+      background: linear-gradient(135deg, rgba(88,166,255,0.12), rgba(63,185,80,0.08));
+      border: 1px solid rgba(88,166,255,0.18);
+      border-radius: 9px;
+    }
+    .rm-card h4 { font-size: 0.95rem; color: #f0f6fc; margin-bottom: 0.3rem; padding-right: 4.5rem; }
+    .rm-card p { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
     .rm-tag {
-      position: absolute; top: 1rem; right: 1rem; font-size: 0.62rem;
+      position: absolute; top: 0.85rem; right: 0.85rem; font-size: 0.6rem;
       font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
       padding: 0.15rem 0.5rem; border-radius: 10px;
     }
-    .rm-tag.soon { background: rgba(234,179,8,.15); color: #eab308; }
-    .rm-tag.beta { background: rgba(88,166,255,.15); color: var(--accent); }
-    .rm-tag.live { background: rgba(63,185,80,.15); color: var(--accent2); }
+    .rm-tag.soon { background: rgba(234,179,8,.15); color: #eab308; border: 1px solid rgba(234,179,8,.3); }
+    .rm-tag.beta { background: rgba(88,166,255,.15); color: var(--accent); border: 1px solid rgba(88,166,255,.3); }
+    .rm-tag.live { background: rgba(63,185,80,.15); color: var(--accent2); border: 1px solid rgba(63,185,80,.3); }
+    .rm-tag.dev  { background: rgba(168,85,247,.15); color: #c084fc; border: 1px solid rgba(168,85,247,.3); }
     @media (max-width: 768px) {
-      .roadmap-section { padding: 3rem 1.25rem; }
+      .roadmap-section { padding: 3rem 1rem; }
+      .roadmap-shell { padding: 1.75rem 1.1rem; border-radius: 16px; }
       .roadmap-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .roadmap-section { padding: 2.5rem 0.75rem; }
+      .roadmap-shell { padding: 1.5rem 1rem; }
+      .roadmap-title { font-size: 1.35rem; }
+      .roadmap-title .ver-chip { font-size: 0.72rem; padding: 0.1rem 0.45rem; }
+    }
+
+    /* Version badge in footer */
+    .ver-badge {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      background: linear-gradient(135deg, rgba(88,166,255,0.14), rgba(63,185,80,0.1));
+      border: 1px solid rgba(88,166,255,0.3);
+      color: var(--accent);
+      font-size: 0.7rem; font-weight: 700;
+      padding: 0.2rem 0.65rem; border-radius: 20px;
+      letter-spacing: 0.5px;
+      font-family: "SFMono-Regular", Consolas, Monaco, monospace;
+    }
+    .ver-badge .ver-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--accent2);
+      box-shadow: 0 0 6px var(--accent2);
     }
   </style>
 </head>
@@ -1301,61 +1430,87 @@
   </div>
 </section>
 
-<!-- ROADMAP — We're working on -->
+<!-- ROADMAP — We're working on v2.5.3 -->
 <section class="roadmap-section" id="roadmap">
-  <div class="roadmap-head">
-    <span class="roadmap-badge"><span class="pulse"></span> We're working on</span>
-    <h2 class="section-title">The Road to Enterprise</h2>
-    <p class="section-sub">OXware is evolving fast. Here's what's landing soon — building toward a full enterprise-grade virtualization platform.</p>
-  </div>
-  <div class="roadmap-grid">
-    <div class="rm-card">
-      <span class="rm-tag beta">Beta</span>
-      <div class="rm-icon">🧠</div>
-      <h4>DRS Auto-Balancing</h4>
-      <p>Cluster-wide automatic VM rebalancing based on real-time CPU/RAM load.</p>
+  <div class="roadmap-shell">
+    <div class="roadmap-head">
+      <span class="roadmap-badge"><span class="pulse"></span> We're working on</span>
+      <h2 class="roadmap-title">The Road to Enterprise<span class="ver-chip">v2.5.3</span></h2>
+      <p class="roadmap-sub">OXware is evolving fast. Here's what's landing in the next enterprise release — pushing toward a full VMware-class virtualization platform.</p>
     </div>
-    <div class="rm-card">
-      <span class="rm-tag soon">Soon</span>
-      <div class="rm-icon">🛡️</div>
-      <h4>Fault Tolerance</h4>
-      <p>Lockstep secondary VM — zero-downtime failover when a host dies.</p>
-    </div>
-    <div class="rm-card">
-      <span class="rm-tag beta">Beta</span>
-      <div class="rm-icon">🔐</div>
-      <h4>SSO &amp; LDAP / AD</h4>
-      <p>SAML, OIDC, Active Directory login. Enterprise identity integration.</p>
-    </div>
-    <div class="rm-card">
-      <span class="rm-tag beta">Beta</span>
-      <div class="rm-icon">📋</div>
-      <h4>SIEM &amp; Audit Chain</h4>
-      <p>Tamper-evident hash-chained logs, Splunk/Elastic/Wazuh export.</p>
-    </div>
-    <div class="rm-card">
-      <span class="rm-tag soon">Soon</span>
-      <div class="rm-icon">🏢</div>
-      <h4>Multi-Tenancy</h4>
-      <p>Virtual datacenters, hard tenant isolation, chargeback &amp; showback.</p>
-    </div>
-    <div class="rm-card">
-      <span class="rm-tag beta">Beta</span>
-      <div class="rm-icon">🔄</div>
-      <h4>Disaster Recovery</h4>
-      <p>Site Recovery runbooks, cross-site replication, RPO/RTO SLA tracking.</p>
-    </div>
-    <div class="rm-card">
-      <span class="rm-tag beta">Beta</span>
-      <div class="rm-icon">⚡</div>
-      <h4>vGPU &amp; SR-IOV</h4>
-      <p>GPU sharing, NUMA-aware scheduling, PCIe passthrough pools.</p>
-    </div>
-    <div class="rm-card">
-      <span class="rm-tag soon">Soon</span>
-      <div class="rm-icon">📱</div>
-      <h4>Mobile &amp; Desktop Apps</h4>
-      <p>Manage VMs on the go. iOS, Android, and native desktop clients.</p>
+    <div class="roadmap-grid">
+      <div class="rm-card">
+        <span class="rm-tag beta">Beta</span>
+        <div class="rm-icon">🧠</div>
+        <h4>DRS Scheduler</h4>
+        <p>Distributed Resource Scheduler — cluster-wide VM rebalancing on live CPU / RAM load.</p>
+      </div>
+      <div class="rm-card">
+        <span class="rm-tag soon">Soon</span>
+        <div class="rm-icon">🛡️</div>
+        <h4>Fault Tolerance</h4>
+        <p>Lockstep secondary VM — zero-downtime failover when a host dies.</p>
+      </div>
+      <div class="rm-card">
+        <span class="rm-tag soon">Soon</span>
+        <div class="rm-icon">🌐</div>
+        <h4>Site Recovery Manager</h4>
+        <p>Cross-site DR orchestration, runbooks, RPO/RTO SLA tracking, failover testing.</p>
+      </div>
+      <div class="rm-card">
+        <span class="rm-tag dev">Dev</span>
+        <div class="rm-icon">♻️</div>
+        <h4>Lifecycle Manager</h4>
+        <p>Centralized firmware, hypervisor and driver upgrades — fleet-wide, zero touch.</p>
+      </div>
+      <div class="rm-card">
+        <span class="rm-tag beta">Beta</span>
+        <div class="rm-icon">🧬</div>
+        <h4>Microsegmentation</h4>
+        <p>NSX-T style distributed firewall — per-VM policies, east-west traffic isolation.</p>
+      </div>
+      <div class="rm-card">
+        <span class="rm-tag beta">Beta</span>
+        <div class="rm-icon">🔐</div>
+        <h4>vTPM · Secure Boot · AMD SEV</h4>
+        <p>Hardware-rooted trust: virtual TPM 2.0, UEFI Secure Boot, encrypted-memory VMs.</p>
+      </div>
+      <div class="rm-card">
+        <span class="rm-tag beta">Beta</span>
+        <div class="rm-icon">📋</div>
+        <h4>SIEM Integration</h4>
+        <p>Hash-chained audit logs — Splunk, Elastic, Wazuh, QRadar native exporters.</p>
+      </div>
+      <div class="rm-card">
+        <span class="rm-tag soon">Soon</span>
+        <div class="rm-icon">🏢</div>
+        <h4>Multi-Tenancy + Chargeback</h4>
+        <p>Virtual datacenters, hard tenant isolation, per-tenant chargeback &amp; showback.</p>
+      </div>
+      <div class="rm-card">
+        <span class="rm-tag dev">Dev</span>
+        <div class="rm-icon">🧩</div>
+        <h4>NUMA-Aware Scheduling</h4>
+        <p>Topology-aware vCPU pinning, memory locality, latency-sensitive workload boost.</p>
+      </div>
+      <div class="rm-card">
+        <span class="rm-tag beta">Beta</span>
+        <div class="rm-icon">⚡</div>
+        <h4>vGPU Support</h4>
+        <p>NVIDIA / AMD GPU partitioning, SR-IOV, PCIe passthrough pools for AI workloads.</p>
+      </div>
+      <div class="rm-card">
+        <span class="rm-tag soon">Soon</span>
+        <div class="rm-icon">📱</div>
+        <h4>Mobile App (iOS + Android)</h4>
+        <p>Native clients — VM lifecycle, alerts, console snapshots on the go.</p>
+      </div>
+      <div class="rm-card">
+        <span class="rm-tag dev">Dev</span>
+        <div class="rm-icon">☸️</div>
+        <h4>Kubernetes CSI Driver</h4>
+        <p>Persistent volumes for k8s — dynamic provisioning, snapshots, clone, expand.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -1670,12 +1825,24 @@
   </div>
 
   <div style="max-width:1100px;margin:2rem auto 0;padding-top:1.25rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;font-size:0.8rem;color:var(--muted);">
-    <span>&copy; 2026 OXware. Released under the MIT License.</span>
+    <span style="display:inline-flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+      &copy; 2026 OXware. Released under the MIT License.
+      <span class="ver-badge" title="Current development version"><span class="ver-dot"></span>v2.5.3</span>
+    </span>
     <span>Built with <i class="fa-solid fa-heart" style="color:var(--danger);"></i> for the open source community.</span>
   </div>
 </footer>
 
 <script>
+/* ── Mobile nav: close on link click ── */
+(function() {
+  var cb = document.getElementById('navtoggle');
+  if (!cb) return;
+  document.querySelectorAll('.nav-links a').forEach(function(a) {
+    a.addEventListener('click', function() { cb.checked = false; });
+  });
+})();
+
 /* ── Changelog / Commit History ── */
 const CL_REPO    = "ShinnAsukha/oxware-hypervisor";
 const CL_BRANCH  = "main";

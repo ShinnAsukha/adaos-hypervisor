@@ -336,6 +336,39 @@
       }
       .content { padding: 1.5rem 1.25rem; }
     }
+    @media (max-width: 480px) {
+      .content { padding: 1.25rem 0.85rem; }
+      pre { padding: 0.85rem; font-size: 0.78rem; }
+      .endpoint { flex-wrap: wrap; font-size: 0.78rem; }
+      table { font-size: 0.78rem; }
+      th, td { padding: 0.45rem 0.6rem; }
+      .sidebar a { padding: 0.5rem 0.75rem; font-size: 0.85rem; }
+    }
+    /* Universal: tables get horizontal scroll on small screens */
+    @media (max-width: 768px) {
+      table { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+      pre { white-space: pre-wrap; word-break: break-word; }
+      .sidebar a { min-height: 38px; display: flex; align-items: center; }
+      .btn, .btn-primary, .btn-outline { min-height: 44px; }
+    }
+    img { max-width: 100%; height: auto; }
+    code { word-break: break-word; }
+
+    /* Version badge */
+    .ver-badge {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      background: linear-gradient(135deg, rgba(88,166,255,0.14), rgba(63,185,80,0.1));
+      border: 1px solid rgba(88,166,255,0.3);
+      color: var(--accent);
+      font-size: 0.7rem; font-weight: 700;
+      padding: 0.2rem 0.65rem; border-radius: 20px;
+      letter-spacing: 0.5px;
+      font-family: "SFMono-Regular", Consolas, Monaco, monospace;
+    }
+    .ver-badge .ver-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--accent2);
+      box-shadow: 0 0 6px var(--accent2);
+    }
   </style>
 </head>
 <body>
@@ -401,6 +434,9 @@
     <a href="#ai"><i class="fas fa-robot"></i> AI Assistant (OXY)</a>
     <a href="#hosting"><i class="fas fa-cloud"></i> Hosting Integration</a>
 
+    <div class="sidebar-section">Enterprise (v2.5.3)</div>
+    <a href="#enterprise"><i class="fas fa-building"></i> Enterprise Features</a>
+
     <div class="sidebar-section">Reference</div>
     <a href="#api"><i class="fas fa-flask"></i> API Reference &amp; Explorer</a>
     <a href="/api/docs" target="_blank" style="color:var(--accent-lt)"><i class="fas fa-external-link-alt"></i> Open API Explorer ↗</a>
@@ -414,7 +450,7 @@
     <!-- OVERVIEW -->
     <section id="overview">
       <h1>OXware Hypervisor Documentation</h1>
-      <p><strong>Version 2.5</strong> — <span style="color:var(--accent2)">Latest</span></p>
+      <p><strong>Version 2.5.3</strong> — <span style="color:var(--accent2)">Latest (Enterprise release)</span></p>
       <p>
         OXware is an open-source hypervisor management platform built on KVM/QEMU and Ubuntu/Debian.
         It provides a complete web-based control plane for virtual machine lifecycle, role-based access,
@@ -1141,6 +1177,85 @@ ethernets:
       <p>Navigate to <strong>Settings → SSL / Domains</strong> to add a custom domain and issue a Let's Encrypt certificate. OXware uses <code>certbot</code> and reconfigures Nginx automatically.</p>
     </section>
 
+    <!-- ENTERPRISE (v2.5.3) -->
+    <section id="enterprise">
+      <h2>Enterprise Features (v2.5.3)</h2>
+      <p>
+        The <strong>v2.5.3 Enterprise release</strong> brings 23 datacenter-grade modules to open-source KVM,
+        closing the gap with VMware vSphere and Nutanix AHV — at zero licensing cost.
+      </p>
+
+      <div class="callout callout-success">
+        <strong>What's new</strong>
+        DRS, EVC, NIOC, Site Recovery, NUMA scheduling, linked clones, app-consistent snapshots, SIEM export,
+        session recording, AES backup encryption, lifecycle manager, alert correlation, webhook system, and more.
+      </div>
+
+      <h3>Compute &amp; Scheduling</h3>
+      <ul>
+        <li><strong>DRS</strong> (Distributed Resource Scheduler) — cluster-wide automatic VM rebalancing by CPU/RAM load.</li>
+        <li><strong>Affinity / Anti-Affinity Rules</strong> — keep VMs together or force them apart across hosts.</li>
+        <li><strong>EVC</strong> (Enhanced vMotion Compatibility) — CPU masking for migration across CPU generations.</li>
+        <li><strong>Maintenance Mode</strong> — auto-evacuate VMs to other hosts before host maintenance.</li>
+        <li><strong>NUMA-aware scheduling</strong> — pin VMs to physical NUMA nodes, HugePages tuning.</li>
+        <li><strong>Right-Sizing Recommendations</strong> — detect over/under-provisioned VMs automatically.</li>
+        <li><strong>Predictive Failure Analysis</strong> — SMART/ECC monitoring → proactive VM evacuation.</li>
+        <li><strong>Compute Tuning</strong> — KSM (kernel same-page merging), memory ballooning, hugepages.</li>
+      </ul>
+
+      <h3>Storage</h3>
+      <ul>
+        <li><strong>Linked Clones</strong> — 100 VMs from 1 base image plus thin diffs.</li>
+        <li><strong>Application-consistent snapshots</strong> — DB-aware quiesce (flush + freeze).</li>
+        <li><strong>Snapshot orphan cleanup</strong> — automatic stale snapshot detection &amp; removal.</li>
+        <li><strong>Storage Advanced</strong> — ZFS, tiering, dedup/compression hooks, SPBM, iSCSI targets.</li>
+        <li><strong>Backup Encryption</strong> — AES-256 encrypted archives with passphrase.</li>
+      </ul>
+
+      <h3>Network</h3>
+      <ul>
+        <li><strong>NIOC</strong> (Network I/O Control) — per-VM bandwidth guarantees &amp; QoS.</li>
+        <li><strong>Network Advanced</strong> — VXLAN overlay, IPv6 dual-stack, service chaining hooks.</li>
+      </ul>
+
+      <h3>Security &amp; Compliance</h3>
+      <ul>
+        <li><strong>SSO</strong> — SAML / OIDC (Okta, Azure AD, Google Workspace).</li>
+        <li><strong>LDAP / Active Directory</strong> — domain authentication, group → role mapping.</li>
+        <li><strong>SIEM Integration</strong> — Splunk, Elastic, Wazuh (CEF / syslog export).</li>
+        <li><strong>Session Recording</strong> — SSH and VNC console capture &amp; replay.</li>
+        <li><strong>MFA enforcement per role</strong> — mandatory TOTP for admins.</li>
+      </ul>
+
+      <h3>Availability &amp; Disaster Recovery</h3>
+      <ul>
+        <li><strong>Site Recovery Manager</strong> — automated DR runbooks, cross-site replication.</li>
+        <li><strong>RPO/RTO monitoring</strong> — SLA tracking with burn-rate awareness.</li>
+        <li><strong>Recovery drill automation</strong> — non-destructive failover testing.</li>
+      </ul>
+
+      <h3>Operations &amp; Automation</h3>
+      <ul>
+        <li><strong>Lifecycle Manager</strong> — rolling host upgrades, configuration drift detection.</li>
+        <li><strong>Alert Correlation Engine</strong> — group related alerts into single incidents.</li>
+        <li><strong>Webhook System</strong> — VM events → custom HTTP POST (Zapier / n8n).</li>
+        <li><strong>Automation Engine</strong> — multi-step workflow orchestration.</li>
+        <li><strong>VNC Thumbnails</strong> — live VM previews in the dashboard list.</li>
+      </ul>
+
+      <h3>Roadmap — Coming Soon</h3>
+      <p>
+        Fault Tolerance (lockstep), Storage DRS, Microsegmentation (per-VM L7 firewall), vTPM &amp; Secure Boot,
+        AMD SEV / Intel TDX confidential VMs, HashiCorp Vault integration, audit log hash-chain,
+        multi-tenancy hard isolation &amp; chargeback, vGPU (NVIDIA GRID / MIG), SR-IOV passthrough,
+        image-based bare-metal provisioning, capacity planning + what-if, distributed tracing (OpenTelemetry),
+        topology + flow visualization, cross-site replication, Terraform / Ansible / Pulumi providers,
+        Kubernetes CSI driver + Operator, KubeVirt integration, GitOps (ArgoCD / Flux),
+        policy-as-code (OPA / Rego), mobile app (iOS + Android), desktop client (Electron), PWA,
+        microVM (Firecracker), Kata Containers.
+      </p>
+    </section>
+
     <!-- API -->
     <section id="api">
       <h2>API Reference</h2>
@@ -1326,12 +1441,24 @@ curl -k https://host:8006/api/vms \
     </div>
   </div>
   <div style="max-width:1160px;margin:0 auto;padding-top:1.5rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;font-size:.8rem;color:var(--muted)">
-    <span>© 2026 OXware. Released under the MIT License.</span>
+    <span style="display:inline-flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+      © 2026 OXware. Released under the MIT License.
+      <span class="ver-badge" title="Current development version"><span class="ver-dot"></span>v2.5.3</span>
+    </span>
     <span>Built with <i class="fa-solid fa-heart" style="color:#f85149"></i> for the open source community.</span>
   </div>
 </footer>
 
 <script>
+  /* Mobile nav: close on link click */
+  (function() {
+    var cb = document.getElementById('navtoggle');
+    if (!cb) return;
+    document.querySelectorAll('.nav-links a').forEach(function(a) {
+      a.addEventListener('click', function() { cb.checked = false; });
+    });
+  })();
+
   // Highlight active sidebar link based on scroll position
   const sections = document.querySelectorAll('section[id]');
   const sidebarLinks = document.querySelectorAll('.sidebar a');

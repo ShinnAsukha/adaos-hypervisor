@@ -1,0 +1,27 @@
+# gh-pages branch — sadece statik site dosyaları tutulmalı
+# Tüm oxware-main source code'u + build artifact'leri ignore et
+
+.github/
+build/
+modules/
+oxware/
+terraform-provider-oxware/
+.claude/
+__pycache__/
+*.pyc
+
+# Source-level files (gh-pages'a ait değil)
+install.sh
+uninstall.sh
+repair.sh
+LICENSE
+README.md
+SECURITY.md
+
+# Editor/IDE
+.vscode/
+.idea/
+*.bak
+*.swp
+.DS_Store
+Thumbs.db

@@ -111,7 +111,45 @@
       .nav-links .nav-cta a { color: #0d1117; }
     }
     @media (max-width: 640px) {
-      .pricing-grid { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; padding: 0 1rem; gap: 1.5rem; }
+      .hero { padding: 3rem 1rem 1.5rem; }
+      .hero p { font-size: 0.95rem; }
+      .plan-card { padding: 1.5rem 1.25rem; }
+      .plan-price { font-size: 2.3rem; }
+      .faq { padding: 0 1rem; }
+      .cta-banner { padding: 1.75rem 1.25rem; }
+      .footer-inner { flex-direction: column; gap: 1.5rem; }
+      .footer-bottom { flex-direction: column; gap: 0.6rem; text-align: center; }
+    }
+    @media (max-width: 480px) {
+      .hero h1 { font-size: 1.7rem; }
+      .hero-badge { font-size: 0.7rem; }
+      .billing-toggle { gap: 0.5rem; flex-wrap: wrap; }
+      .plan-cta, .btn, .btn-primary, .btn-outline { min-height: 44px; }
+      .plan-cta { padding: 0.85rem 0.5rem; }
+      footer { padding: 2rem 1rem 1.25rem; }
+    }
+    /* Tablet: 2 columns */
+    @media (min-width: 641px) and (max-width: 900px) {
+      .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    /* Universal */
+    img { max-width: 100%; height: auto; }
+
+    /* Version badge */
+    .ver-badge {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      background: linear-gradient(135deg, rgba(88,166,255,0.14), rgba(63,185,80,0.1));
+      border: 1px solid rgba(88,166,255,0.3);
+      color: var(--accent);
+      font-size: 0.7rem; font-weight: 700;
+      padding: 0.2rem 0.65rem; border-radius: 20px;
+      letter-spacing: 0.5px;
+      font-family: "SFMono-Regular", Consolas, Monaco, monospace;
+    }
+    .ver-badge .ver-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--accent2);
+      box-shadow: 0 0 6px var(--accent2);
     }
   </style>
 </head>
@@ -295,10 +333,22 @@
     </div>
   </div>
   <div class="footer-bottom">
-    <span>© 2026 OXware. Released under the MIT License.</span>
+    <span style="display:inline-flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+      © 2026 OXware. Released under the MIT License.
+      <span class="ver-badge" title="Current development version"><span class="ver-dot"></span>v2.5.3</span>
+    </span>
     <span>Built with <i class="fa-solid fa-heart" style="color:#f85149"></i> for the open source community.</span>
   </div>
 </footer>
 
+<script>
+(function() {
+  var cb = document.getElementById('navtoggle');
+  if (!cb) return;
+  document.querySelectorAll('.nav-links a').forEach(function(a) {
+    a.addEventListener('click', function() { cb.checked = false; });
+  });
+})();
+</script>
 </body>
 </html>
