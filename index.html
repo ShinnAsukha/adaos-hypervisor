@@ -150,6 +150,15 @@
     .nav-links a:hover { color: var(--accent); text-decoration: none; }
     .nav-links a.nav-active { color: var(--accent); }
 
+    /* Mobile hamburger (CSS-only, checkbox hack) */
+    .nav-toggle-cb { display: none; }
+    .nav-burger {
+      display: none; cursor: pointer; font-size: 1.4rem; color: var(--text);
+      padding: 0.3rem 0.5rem; border-radius: 6px; transition: background .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-burger:hover { background: var(--surface); }
+
     .btn {
       display: inline-flex;
       align-items: center;
@@ -1001,12 +1010,105 @@
     }
     .gr-btn svg { width: 18px; height: 18px; }
 
-    @media (max-width: 600px) {
-      nav { padding: 0 1rem; }
-      .hero { padding: 4rem 1.25rem 3rem; }
-      .stats-bar { gap: 1.5rem; }
+    /* ─────────── Tablet & Mobile (≤768px) ─────────── */
+    @media (max-width: 768px) {
+      nav { padding: 0 1rem; position: relative; flex-wrap: wrap; }
+      .nav-burger { display: inline-flex; align-items: center; order: 3; }
+      .nav-links {
+        order: 4;
+        flex-basis: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height .3s ease;
+        background: var(--surface);
+        margin: 0 -1rem;
+        border-top: 0 solid var(--border);
+      }
+      .nav-toggle-cb:checked ~ .nav-links {
+        max-height: 320px;
+        border-top: 1px solid var(--border);
+      }
+      .nav-links li { width: 100%; }
+      .nav-links a {
+        display: block; padding: 0.85rem 1.25rem;
+        border-bottom: 1px solid var(--border); font-size: 0.95rem;
+      }
+      /* Get Started button → hide in topbar, show inside dropdown via duplicate */
+      nav > .btn-primary { display: none; }
+      .nav-links .nav-cta { padding: 0.85rem 1.25rem; }
+      .nav-links .nav-cta a { display: inline-flex; padding: 0.5rem 1rem; border-bottom: none; color: #0d1117; }
+
+      .hero { grid-template-columns: 1fr; padding: 3rem 1.25rem 2.5rem; gap: 1.5rem; }
+      .hero-visual { display: none; }
+      .hero h1 { font-size: 2rem; line-height: 1.2; }
+      .hero p { font-size: 0.95rem; }
+      .hero-actions { flex-direction: column; align-items: stretch; }
+      .hero-actions .btn { justify-content: center; width: 100%; }
+      .section { padding: 3rem 1.25rem; }
+      .section-title { font-size: 1.5rem; }
+      .feature-grid { grid-template-columns: 1fr; gap: 1rem; }
+      .stats-bar { gap: 1.25rem 2rem; padding: 1.25rem; }
+      .stat-value { font-size: 1.25rem; }
       footer { flex-direction: column; text-align: center; }
+      .footer-inner { flex-direction: column; gap: 1.75rem; }
+      .footer-bottom { flex-direction: column; gap: 0.5rem; text-align: center; }
+    }
+
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 1.7rem; }
+      .hero-badge { font-size: 0.7rem; }
+      .stats-bar { gap: 1rem 1.5rem; }
       .gr-card, .li-card { padding: 1.75rem 1.25rem; max-width: 100%; }
+      .section-title { font-size: 1.35rem; }
+      .nav-logo { font-size: 1.1rem; }
+    }
+
+    /* ─────────── Roadmap / We're working on ─────────── */
+    .roadmap-section {
+      max-width: 1100px; margin: 0 auto; padding: 5rem 2rem;
+      position: relative;
+    }
+    .roadmap-head { text-align: center; margin-bottom: 2.5rem; }
+    .roadmap-badge {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: linear-gradient(90deg, rgba(88,166,255,.15), rgba(63,185,80,.12));
+      border: 1px solid rgba(88,166,255,.3); color: var(--accent);
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; padding: 0.35rem 1rem; border-radius: 20px;
+      margin-bottom: 1rem;
+    }
+    .roadmap-badge .pulse {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--accent2);
+      animation: rmpulse 1.6s infinite;
+    }
+    @keyframes rmpulse { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(63,185,80,.5)} 50%{opacity:.6;box-shadow:0 0 0 5px rgba(63,185,80,0)} }
+    .roadmap-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr));
+      gap: 1rem;
+    }
+    .rm-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.4rem; position: relative;
+      transition: transform .15s, border-color .15s;
+    }
+    .rm-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+    .rm-card .rm-icon { font-size: 1.5rem; margin-bottom: 0.6rem; }
+    .rm-card h4 { font-size: 1rem; color: #f0f6fc; margin-bottom: 0.35rem; }
+    .rm-card p { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+    .rm-tag {
+      position: absolute; top: 1rem; right: 1rem; font-size: 0.62rem;
+      font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+      padding: 0.15rem 0.5rem; border-radius: 10px;
+    }
+    .rm-tag.soon { background: rgba(234,179,8,.15); color: #eab308; }
+    .rm-tag.beta { background: rgba(88,166,255,.15); color: var(--accent); }
+    .rm-tag.live { background: rgba(63,185,80,.15); color: var(--accent2); }
+    @media (max-width: 768px) {
+      .roadmap-section { padding: 3rem 1.25rem; }
+      .roadmap-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -1018,11 +1120,14 @@
     <img src="sadeceikon.png" alt="OXware" onerror="this.style.display='none'">
     OXware
   </a>
+  <input type="checkbox" id="navtoggle" class="nav-toggle-cb">
+  <label for="navtoggle" class="nav-burger" aria-label="Menü"><i class="fas fa-bars"></i></label>
   <ul class="nav-links">
     <li><a href="/" class="nav-active">Home</a></li>
     <li><a href="/vcenter/">vCenter</a></li>
     <li><a href="/pricing/">Pricing</a></li>
     <li><a href="/docs/">Docs</a></li>
+    <li class="nav-cta"><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" class="btn btn-primary"><i class="fab fa-github"></i> Get Started Free</a></li>
   </ul>
   <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" class="btn btn-primary">
     <i class="fab fa-github"></i> Get Started Free
@@ -1184,6 +1289,65 @@
       <p>MIT license with full source code on GitHub. No vendor lock-in, no subscription traps, no hidden fees. Self-hosted on your infrastructure, forever free to use.</p>
     </div>
 
+  </div>
+</section>
+
+<!-- ROADMAP — We're working on -->
+<section class="roadmap-section" id="roadmap">
+  <div class="roadmap-head">
+    <span class="roadmap-badge"><span class="pulse"></span> We're working on</span>
+    <h2 class="section-title">The Road to Enterprise</h2>
+    <p class="section-sub">OXware is evolving fast. Here's what's landing soon — building toward a full enterprise-grade virtualization platform.</p>
+  </div>
+  <div class="roadmap-grid">
+    <div class="rm-card">
+      <span class="rm-tag beta">Beta</span>
+      <div class="rm-icon">🧠</div>
+      <h4>DRS Auto-Balancing</h4>
+      <p>Cluster-wide automatic VM rebalancing based on real-time CPU/RAM load.</p>
+    </div>
+    <div class="rm-card">
+      <span class="rm-tag soon">Soon</span>
+      <div class="rm-icon">🛡️</div>
+      <h4>Fault Tolerance</h4>
+      <p>Lockstep secondary VM — zero-downtime failover when a host dies.</p>
+    </div>
+    <div class="rm-card">
+      <span class="rm-tag beta">Beta</span>
+      <div class="rm-icon">🔐</div>
+      <h4>SSO &amp; LDAP / AD</h4>
+      <p>SAML, OIDC, Active Directory login. Enterprise identity integration.</p>
+    </div>
+    <div class="rm-card">
+      <span class="rm-tag beta">Beta</span>
+      <div class="rm-icon">📋</div>
+      <h4>SIEM &amp; Audit Chain</h4>
+      <p>Tamper-evident hash-chained logs, Splunk/Elastic/Wazuh export.</p>
+    </div>
+    <div class="rm-card">
+      <span class="rm-tag soon">Soon</span>
+      <div class="rm-icon">🏢</div>
+      <h4>Multi-Tenancy</h4>
+      <p>Virtual datacenters, hard tenant isolation, chargeback &amp; showback.</p>
+    </div>
+    <div class="rm-card">
+      <span class="rm-tag beta">Beta</span>
+      <div class="rm-icon">🔄</div>
+      <h4>Disaster Recovery</h4>
+      <p>Site Recovery runbooks, cross-site replication, RPO/RTO SLA tracking.</p>
+    </div>
+    <div class="rm-card">
+      <span class="rm-tag beta">Beta</span>
+      <div class="rm-icon">⚡</div>
+      <h4>vGPU &amp; SR-IOV</h4>
+      <p>GPU sharing, NUMA-aware scheduling, PCIe passthrough pools.</p>
+    </div>
+    <div class="rm-card">
+      <span class="rm-tag soon">Soon</span>
+      <div class="rm-icon">📱</div>
+      <h4>Mobile &amp; Desktop Apps</h4>
+      <p>Manage VMs on the go. iOS, Android, and native desktop clients.</p>
+    </div>
   </div>
 </section>
 

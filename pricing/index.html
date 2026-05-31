@@ -98,9 +98,20 @@
     .footer-links a:hover { color: var(--accent); text-decoration: none; }
     .footer-bottom { max-width: 1160px; margin: 0 auto; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem; font-size: .8rem; color: var(--muted); }
 
+    .nav-toggle-cb { display: none; }
+    .nav-burger { display: none; cursor: pointer; font-size: 1.4rem; color: var(--text); padding: .3rem .5rem; border-radius: 6px; -webkit-tap-highlight-color: transparent; }
+    @media (max-width: 768px) {
+      nav { flex-wrap: wrap; position: relative; }
+      .nav-burger { display: inline-flex; align-items: center; order: 3; }
+      nav > .btn-primary { display: none; }
+      .nav-links { order: 4; flex-basis: 100%; flex-direction: column; align-items: stretch; gap: 0; max-height: 0; overflow: hidden; transition: max-height .3s ease; background: var(--surface); margin: 0 -2rem; }
+      .nav-toggle-cb:checked ~ .nav-links { max-height: 340px; border-top: 1px solid var(--border); }
+      .nav-links li { width: 100%; }
+      .nav-links a { display: block; padding: .85rem 2rem; border-bottom: 1px solid var(--border); }
+      .nav-links .nav-cta a { color: #0d1117; }
+    }
     @media (max-width: 640px) {
       .pricing-grid { grid-template-columns: 1fr; }
-      .nav-links { display: none; }
     }
   </style>
 </head>
@@ -111,11 +122,14 @@
     <img src="../sadeceikon.png" alt="OXware" />
     OXware
   </a>
+  <input type="checkbox" id="navtoggle" class="nav-toggle-cb">
+  <label for="navtoggle" class="nav-burger" aria-label="Menü"><i class="fa-solid fa-bars"></i></label>
   <ul class="nav-links">
     <li><a href="../">Home</a></li>
     <li><a href="../vcenter/">vCenter</a></li>
     <li><a href="./" class="nav-active">Pricing</a></li>
     <li><a href="../docs/">Docs</a></li>
+    <li class="nav-cta"><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" class="btn btn-primary"><i class="fa-brands fa-github"></i> Get Started Free</a></li>
   </ul>
   <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" class="btn btn-primary">
     <i class="fa-brands fa-github"></i> Get Started Free
