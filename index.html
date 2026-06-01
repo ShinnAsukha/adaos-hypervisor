@@ -1248,6 +1248,9 @@
       width: 6px; height: 6px; border-radius: 50%; background: var(--accent2);
       box-shadow: 0 0 6px var(--accent2);
     }
+    @keyframes mq-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+    .mq-item{color:#fff;font-size:.95rem;font-weight:600;opacity:.9;flex-shrink:0;letter-spacing:.3px}
+    .marquee-wrap:hover .marquee-track{animation-play-state:paused}
   </style>
 </head>
 <body>
@@ -1518,13 +1521,70 @@
 <!-- TECH STACK -->
 <div class="stack-section">
   <div class="stack-label">Built with</div>
-  <div class="stack-badges">
-    <span class="badge py"><i class="fab fa-python"></i> Python 3</span>
-    <span class="badge flask"><i class="fas fa-flask"></i> Flask + SocketIO</span>
-    <span class="badge kvm"><i class="fas fa-microchip"></i> KVM / QEMU</span>
-    <span class="badge vnc"><i class="fas fa-display"></i> noVNC</span>
-    <span class="badge lv"><i class="fas fa-server"></i> libvirt</span>
-    <span class="badge jwt"><i class="fas fa-key"></i> JWT Auth</span>
+  <div class="marquee-wrap" style="overflow:hidden;white-space:nowrap;width:100%;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)">
+    <div class="marquee-track" style="display:inline-flex;gap:2.5rem;animation:mq-scroll 45s linear infinite;will-change:transform">
+      <span class="mq-item">KVM/QEMU</span>
+      <span class="mq-item">libvirt</span>
+      <span class="mq-item">Python 3</span>
+      <span class="mq-item">Flask</span>
+      <span class="mq-item">SocketIO</span>
+      <span class="mq-item">noVNC</span>
+      <span class="mq-item">nftables</span>
+      <span class="mq-item">iptables</span>
+      <span class="mq-item">Open vSwitch</span>
+      <span class="mq-item">WireGuard</span>
+      <span class="mq-item">Ceph</span>
+      <span class="mq-item">ZFS</span>
+      <span class="mq-item">LUKS2</span>
+      <span class="mq-item">LDAP/AD</span>
+      <span class="mq-item">SAML/OIDC</span>
+      <span class="mq-item">HashiCorp Vault</span>
+      <span class="mq-item">TOTP 2FA</span>
+      <span class="mq-item">JWT Auth</span>
+      <span class="mq-item">cloud-init</span>
+      <span class="mq-item">QEMU Guest Agent</span>
+      <span class="mq-item">SR-IOV</span>
+      <span class="mq-item">NUMA</span>
+      <span class="mq-item">vGPU</span>
+      <span class="mq-item">AMD SEV</span>
+      <span class="mq-item">Intel TDX</span>
+      <span class="mq-item">Let's Encrypt</span>
+      <span class="mq-item">HAProxy</span>
+      <span class="mq-item">nginx</span>
+      <span class="mq-item">dnsmasq</span>
+      <span class="mq-item">SPICE</span>
+      <!-- duplicate for seamless loop -->
+      <span class="mq-item">KVM/QEMU</span>
+      <span class="mq-item">libvirt</span>
+      <span class="mq-item">Python 3</span>
+      <span class="mq-item">Flask</span>
+      <span class="mq-item">SocketIO</span>
+      <span class="mq-item">noVNC</span>
+      <span class="mq-item">nftables</span>
+      <span class="mq-item">iptables</span>
+      <span class="mq-item">Open vSwitch</span>
+      <span class="mq-item">WireGuard</span>
+      <span class="mq-item">Ceph</span>
+      <span class="mq-item">ZFS</span>
+      <span class="mq-item">LUKS2</span>
+      <span class="mq-item">LDAP/AD</span>
+      <span class="mq-item">SAML/OIDC</span>
+      <span class="mq-item">HashiCorp Vault</span>
+      <span class="mq-item">TOTP 2FA</span>
+      <span class="mq-item">JWT Auth</span>
+      <span class="mq-item">cloud-init</span>
+      <span class="mq-item">QEMU Guest Agent</span>
+      <span class="mq-item">SR-IOV</span>
+      <span class="mq-item">NUMA</span>
+      <span class="mq-item">vGPU</span>
+      <span class="mq-item">AMD SEV</span>
+      <span class="mq-item">Intel TDX</span>
+      <span class="mq-item">Let's Encrypt</span>
+      <span class="mq-item">HAProxy</span>
+      <span class="mq-item">nginx</span>
+      <span class="mq-item">dnsmasq</span>
+      <span class="mq-item">SPICE</span>
+    </div>
   </div>
 </div>
 
