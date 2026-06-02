@@ -450,7 +450,7 @@
     <!-- OVERVIEW -->
     <section id="overview">
       <h1>OXware Hypervisor Documentation</h1>
-      <p><strong>Version 2.5.3</strong> — <span style="color:var(--accent2)">Latest (Enterprise release)</span></p>
+      <p><strong>Version 2.5.12</strong> — <span style="color:var(--accent2)">Latest (full enterprise roadmap)</span></p>
       <p>
         OXware is an open-source hypervisor management platform built on KVM/QEMU and Ubuntu/Debian.
         It provides a complete web-based control plane for virtual machine lifecycle, role-based access,
@@ -1324,6 +1324,58 @@ curl -k https://host:8006/api/vms \
       <h3>Provisioning</h3>
       <div class="endpoint"><span class="method post">POST</span> /api/provision/vm</div>
       <div class="endpoint"><span class="method delete">DELETE</span> /api/provision/vm/&lt;id&gt;</div>
+
+      <h3 style="margin-top:2rem">🏢 Enterprise — Backup Advanced (v2.5.7)</h3>
+      <div class="endpoint"><span class="method post">POST</span> /api/backup-adv/consistent/&lt;vm_id&gt; — app-consistent snapshot (fsfreeze)</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/backup-adv/321/&lt;vm_id&gt;/run — 3-2-1 backup</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/backup-adv/verify — mount+boot test</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/backup-adv/replication/&lt;vm_id&gt;/run — cross-site replication</div>
+
+      <h3>📊 Observability (v2.5.8)</h3>
+      <div class="endpoint"><span class="method get">GET</span> /api/otel/traces — distributed tracing</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/grafana/embed-url — Grafana panel iframe</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/topo-viz/graph — topology + flow viz</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/forecast/capacity — ML capacity forecast</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/capacity/whatif — what-if VM placement</div>
+
+      <h3>🔐 Network Advanced 2 (v2.5.9)</h3>
+      <div class="endpoint"><span class="method post">POST</span> /api/microseg/&lt;vm_id&gt; — per-VM L7 firewall</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/bfd/sessions — BFD link detection</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/service-chain — IDS→WAF→VM steering</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/mesh/detect — Istio/Linkerd</div>
+
+      <h3>☸️ Cloud / Kubernetes (v2.5.10)</h3>
+      <div class="endpoint"><span class="method post">POST</span> /api/pulumi/generate — IaC program</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/k8s-csi/manifests — CSI driver</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/k8s-operator/crd — OxwareVM CRD</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/kubevirt/export/&lt;vm_id&gt; — VirtualMachine YAML</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/gitops/sync — ArgoCD/Flux</div>
+
+      <h3>🚀 Modern Workloads (v2.5.11)</h3>
+      <div class="endpoint"><span class="method post">POST</span> /api/firecracker/vms — microVM (125ms boot)</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/kata/detect — Kata Containers</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/wasm/run — WASM module</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/edge/status — edge deployment</div>
+
+      <h3>🧩 IaC + Clients (v2.5.12)</h3>
+      <div class="endpoint"><span class="method post">POST</span> /api/workflow/&lt;id&gt;/run — multi-step automation</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/opa/evaluate — policy-as-code</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/cloudevents/emit — CloudEvents v1.0</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/desktop/clients — desktop client tokens</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/cloud-export/aws — VM → AWS AMI / Azure VHD / GCP</div>
+
+      <h3>🔒 Security &amp; Compliance (v2.5.4–2.5.6)</h3>
+      <div class="endpoint"><span class="method post">POST</span> /api/vtpm/&lt;vm_id&gt;/enable — virtual TPM 2.0</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/compliance/scan — CIS/NIST/PCI-DSS/HIPAA/ISO27001</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/dlp/events — data-loss prevention</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/sso/config — SAML/OIDC</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/tenants — multi-tenancy + quotas</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/chargeback/all — per-tenant billing</div>
+
+      <p style="margin-top:1.5rem;color:var(--muted)">
+        💡 <strong>Full interactive API explorer</strong> with all ~190 endpoints (auto-generated, always current):
+        <a href="/api/docs" target="_blank" style="color:var(--accent-lt)">/api/docs ↗</a>
+      </p>
     </section>
 
     <!-- CONFIG -->
