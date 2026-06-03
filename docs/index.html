@@ -1265,7 +1265,7 @@ ethernets:
         <i class="fas fa-flask" style="font-size:22px;color:var(--accent);flex-shrink:0"></i>
         <div>
           <div style="font-weight:600;margin-bottom:4px">Interactive API Explorer</div>
-          <div style="color:var(--text-muted);font-size:13px">Navigate to <code>https://&lt;your-host&gt;:8006/api/docs</code> — authenticate once, then try any endpoint live. Shows request schemas, example payloads, and response formats for all 23+ endpoints.</div>
+          <div style="color:var(--text-muted);font-size:13px">Navigate to <code>https://&lt;your-host&gt;:8006/api/docs</code> — authenticate once, then try any endpoint live. Shows request schemas, example payloads, and response formats for all ~190 endpoints.</div>
         </div>
       </div>
 
@@ -1304,26 +1304,97 @@ curl -k https://host:8006/api/vms \
       <div class="endpoint"><span class="method post">POST</span> /api/vms/&lt;id&gt;/snapshots</div>
       <div class="endpoint"><span class="method delete">DELETE</span> /api/vms/&lt;id&gt;/snapshots/&lt;snap_id&gt;</div>
 
-      <h3>Users</h3>
+      <h3>Users &amp; RBAC</h3>
       <div class="endpoint"><span class="method get">GET</span> /api/users</div>
       <div class="endpoint"><span class="method post">POST</span> /api/users</div>
       <div class="endpoint"><span class="method patch">PATCH</span> /api/users/&lt;id&gt;</div>
       <div class="endpoint"><span class="method delete">DELETE</span> /api/users/&lt;id&gt;</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/roles — list roles</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/roles — create role</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/audit/logs — audit trail</div>
 
       <h3>Networking</h3>
+      <div class="endpoint"><span class="method get">GET</span> /api/networks — list libvirt networks</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/networks — create network</div>
+      <div class="endpoint"><span class="method delete">DELETE</span> /api/networks/&lt;name&gt; — delete network</div>
       <div class="endpoint"><span class="method get">GET</span> /api/network/pools</div>
       <div class="endpoint"><span class="method post">POST</span> /api/network/pools</div>
       <div class="endpoint"><span class="method get">GET</span> /api/network/firewall/&lt;vm_id&gt;</div>
       <div class="endpoint"><span class="method post">POST</span> /api/network/firewall/&lt;vm_id&gt;</div>
 
-      <h3>Monitoring</h3>
+      <h3>Storage</h3>
+      <div class="endpoint"><span class="method get">GET</span> /api/storage/pools — list storage pools</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/storage/pools — create pool</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/storage/pools/&lt;name&gt; — pool detail</div>
+      <div class="endpoint"><span class="method delete">DELETE</span> /api/storage/pools/&lt;name&gt; — delete pool</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/storage/volumes — list volumes</div>
+
+      <h3>Monitoring &amp; Alerts</h3>
       <div class="endpoint"><span class="method get">GET</span> /metrics — Prometheus endpoint</div>
       <div class="endpoint"><span class="method get">GET</span> /api/alerts</div>
       <div class="endpoint"><span class="method post">POST</span> /api/alerts</div>
+      <div class="endpoint"><span class="method delete">DELETE</span> /api/alerts/&lt;id&gt;</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/monitoring/global — global host metrics</div>
 
-      <h3>Provisioning</h3>
+      <h3>Provisioning &amp; ISO</h3>
       <div class="endpoint"><span class="method post">POST</span> /api/provision/vm</div>
       <div class="endpoint"><span class="method delete">DELETE</span> /api/provision/vm/&lt;id&gt;</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/isos — list ISO images</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/isos — upload ISO</div>
+      <div class="endpoint"><span class="method delete">DELETE</span> /api/isos/&lt;name&gt; — delete ISO</div>
+
+      <h3>SSH Keys &amp; Vault</h3>
+      <div class="endpoint"><span class="method get">GET</span> /api/vms/&lt;id&gt;/vault — credentials vault</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/vms/&lt;id&gt;/vault — add vault entry</div>
+      <div class="endpoint"><span class="method delete">DELETE</span> /api/vms/&lt;id&gt;/vault/&lt;entry_id&gt;</div>
+
+      <h3>🏢 Enterprise — Compute (v2.5.3–2.5.6)</h3>
+      <div class="endpoint"><span class="method get">GET</span> /api/drs/status — DRS cluster status</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/drs/analyze — DRS balance analysis</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/affinity/rules — VM affinity/anti-affinity</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/affinity/rules</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/evc/status — EVC CPU compat</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/evc/enable</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/numa/topology — NUMA pinning</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/numa/pin/&lt;vm_id&gt;</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/rightsize/recommendations — rightsizing</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/maint/windows — maintenance windows</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/maint/windows</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/nioc/policies — network I/O QoS</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/nioc/policies</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/dr/plan — disaster recovery plan</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/dr/failover — failover trigger</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/lifecycle/policy — VM lifecycle policies</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/lifecycle/retire/&lt;vm_id&gt;</div>
+
+      <h3>🔒 Security &amp; Compliance (v2.5.4–2.5.6)</h3>
+      <div class="endpoint"><span class="method post">POST</span> /api/vtpm/&lt;vm_id&gt;/enable — virtual TPM 2.0</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/vtpm/&lt;vm_id&gt;/status</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/compliance/scan — CIS/NIST/PCI-DSS/HIPAA/ISO27001</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/compliance/results</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/dlp/events — data-loss prevention</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/dlp/policy</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/sso/config — SAML/OIDC</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/sso/config</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/tenants — multi-tenancy + quotas</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/tenants</div>
+      <div class="endpoint"><span class="method patch">PATCH</span> /api/tenants/&lt;id&gt;</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/chargeback/all — per-tenant billing</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/chargeback/&lt;tenant_id&gt;</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/siem/events — SIEM event stream</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/siem/rules</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/session-recordings — session recordings</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/cvm/status — confidential VM status</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/cvm/enable/&lt;vm_id&gt;</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/disk-encryption/&lt;vm_id&gt;</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/disk-encryption/&lt;vm_id&gt;/enable</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/forensics/report/&lt;vm_id&gt;</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/mfa-policy — 2FA policies</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/mfa-policy</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/alert-correlation/&lt;alert_id&gt;</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/service-catalog — service catalog</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/rate-limits</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/rate-limits</div>
 
       <h3 style="margin-top:2rem">🏢 Enterprise — Backup Advanced (v2.5.7)</h3>
       <div class="endpoint"><span class="method post">POST</span> /api/backup-adv/consistent/&lt;vm_id&gt; — app-consistent snapshot (fsfreeze)</div>
