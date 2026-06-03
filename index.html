@@ -8,8 +8,8 @@
        PRIMARY SEO
   ════════════════════════════════════════════════════════════ -->
   <title>OXware Hypervisor — Open Source KVM/QEMU Management Panel</title>
-  <meta name="description" content="OXware is a lightweight, open-source KVM/QEMU hypervisor management panel. Create and manage virtual machines with a modern web UI, noVNC console, cloud-init, RBAC, AI assistant and more. Free Proxmox alternative." />
-  <meta name="keywords" content="hypervisor panel, KVM management, QEMU web interface, open source hypervisor, VM management panel, sanal makine yönetimi, KVM yönetim paneli, Proxmox alternative, VPS panel, virtualization platform, cloud-init, noVNC, libvirt web UI, OXware, oxware hypervisor, free hypervisor" />
+  <meta name="description" content="OXware is an enterprise-grade, open-source KVM/QEMU hypervisor management platform — a free alternative to VMware ESXi, Proxmox VE, and Nutanix AHV. Features DRS auto-balancing, live migration, vTPM, AMD SEV/Intel TDX confidential VMs, multi-tenancy with chargeback, Terraform provider, Kubernetes CSI/Operator, GitOps, Firecracker microVM, compliance scanner (CIS/NIST/PCI-DSS/HIPAA), and ~190 REST API endpoints. Web UI, noVNC console, cloud-init, RBAC, LDAP/SAML SSO, AI assistant." />
+  <meta name="keywords" content="hypervisor panel, KVM management, QEMU web interface, open source hypervisor, VM management panel, sanal makine yönetimi, KVM yönetim paneli, Proxmox alternative, VMware ESXi alternative, vSphere alternative, Nutanix AHV alternative, VPS panel, virtualization platform, cloud-init, noVNC, libvirt web UI, OXware, oxware hypervisor, free hypervisor, enterprise virtualization, DRS scheduler, live migration, disaster recovery, vTPM virtual TPM, Secure Boot, confidential VM, AMD SEV Intel TDX, SIEM integration, multi-tenancy chargeback, Terraform provider KVM, Kubernetes CSI driver, GitOps ArgoCD Flux, Firecracker microVM, Kata Containers, WASM runtime, OPA policy engine, compliance scanner CIS NIST PCI-DSS HIPAA ISO27001, KVM cluster management, datacenter automation, open source vSphere, bare metal hypervisor, self-hosted virtualization" />
   <meta name="author" content="OXware" />
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
   <meta name="googlebot" content="index, follow" />
@@ -21,7 +21,7 @@
   <meta property="og:type"             content="website" />
   <meta property="og:site_name"        content="OXware Hypervisor" />
   <meta property="og:title"            content="OXware — Open Source KVM/QEMU Hypervisor Panel" />
-  <meta property="og:description"      content="Lightweight, open-source KVM/QEMU management panel with modern web UI, noVNC console, cloud-init, RBAC, AI assistant. The free Proxmox alternative." />
+  <meta property="og:description"      content="Enterprise-grade, open-source KVM/QEMU hypervisor management platform. Free VMware ESXi / Proxmox VE alternative with DRS, live migration, vTPM, multi-tenancy, Terraform provider, Kubernetes CSI, Firecracker microVM, compliance scanner, and ~190 REST API endpoints." />
   <meta property="og:url"              content="https://oxware.top/" />
   <meta property="og:image"            content="https://oxware.top/sadeceikon.png" />
   <meta property="og:image:alt"        content="OXware Hypervisor Management Panel" />
@@ -67,7 +67,7 @@
       "ratingValue": "4.9",
       "ratingCount": "37"
     },
-    "featureList": "VM lifecycle management, live migration, DRS auto-balancing, high availability, RBAC, 2FA, SSO/LDAP, noVNC console, IPAM, SDN, snapshots, backups, disaster recovery, SIEM, AI assistant",
+    "featureList": "VM lifecycle management, live migration, DRS auto-balancing, EVC CPU compatibility, NUMA-aware scheduling, affinity/anti-affinity rules, high availability, RBAC 4 roles, TOTP 2FA, SAML/OIDC SSO, LDAP/AD, noVNC console, SPICE, serial console, IPAM, SDN VXLAN, microsegmentation, BFD, service chaining, nftables firewall, snapshots, qcow2 storage, MinIO/S3 backup, 3-2-1 backup automation, app-consistent snapshots, backup verification, cross-site replication, disaster recovery runbooks, RPO/RTO SLA, vTPM 2.0, AMD SEV/Intel TDX confidential VMs, LUKS2 disk encryption, UEFI Secure Boot, CIS/NIST/PCI-DSS/HIPAA/ISO27001 compliance scanner, DLP engine, forensics, HashiCorp Vault, SIEM export, session recording, MFA per role, multi-tenancy hard isolation, per-tenant quotas, chargeback/showback, service catalog, rate limiting, AI assistant, OpenTelemetry tracing, Grafana embed, ML forecasting, topology viz, Terraform provider, Kubernetes CSI driver, Kubernetes Operator, KubeVirt integration, GitOps ArgoCD/Flux, Pulumi IaC, Firecracker microVM, Kata Containers, WASM runtime, edge mode, workflow engine, OPA policy-as-code, CloudEvents v1.0, desktop client, workload mobility AWS/Azure/GCP, ~190 REST API endpoints",
     "description": "Open-source KVM/QEMU hypervisor management panel and free VMware ESXi / Proxmox VE alternative — web UI, noVNC console, cloud-init, RBAC, live migration, DRS, monitoring and AI assistant.",
     "url": "https://oxware.top/",
     "image": "https://oxware.top/sadeceikon.png",
@@ -1279,11 +1279,12 @@
 <section class="hero">
   <!-- LEFT -->
   <div class="hero-left">
-    <div class="hero-badge">Open Source · v2.5</div>
+    <div class="hero-badge">Open Source · v2.5.12 Enterprise</div>
     <h1>Enterprise <span>KVM Hypervisor</span> Management</h1>
     <p>
       A full-featured, self-hosted virtualization platform built on KVM/QEMU.
-      Manage VMs, users, networking, storage, and security — all from a single dark-themed web UI.
+      Manage VMs, clusters, networking, storage, security, and compliance — all from a single dark-themed web UI.
+      114 enterprise capabilities: DRS, live migration, vTPM, confidential VMs, multi-tenancy, Terraform, Kubernetes CSI, Firecracker microVM, OPA policy engine, and more.
     </p>
     <div class="hero-actions">
       <a href="/docs/" class="btn btn-primary"><i class="fas fa-book-open"></i> Get Started</a>
@@ -1419,15 +1420,51 @@
     </div>
 
     <div class="feature-card">
-      <div class="feature-icon" style="background:rgba(234,179,8,0.12);color:#eab308"><i class="fas fa-layer-group"></i></div>
-      <h3>vCenter <span style="font-size:0.7rem;background:rgba(234,179,8,0.15);color:#eab308;border:1px solid rgba(234,179,8,0.35);border-radius:2rem;padding:0.1rem 0.5rem;font-weight:700;vertical-align:middle;margin-left:4px">COMING SOON</span></h3>
-      <p>Multi-node cluster management, live VM migration with zero downtime, high availability, auto load balancing, and distributed virtual switch — across all your hosts.</p>
+      <div class="feature-icon" style="background:rgba(88,166,255,0.12);color:#58a6ff"><i class="fas fa-layer-group"></i></div>
+      <h3>Cluster &amp; DRS</h3>
+      <p>Distributed Resource Scheduler auto-balances VMs across hosts by CPU/RAM load. EVC CPU compatibility for live migration across CPU generations. Affinity/anti-affinity rules, NUMA-aware scheduling, maintenance mode evacuation.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(248,81,73,0.12);color:#f85149"><i class="fas fa-shield-halved"></i></div>
+      <h3>Security &amp; Compliance</h3>
+      <p>vTPM 2.0 (Windows 11/BitLocker), AMD SEV/Intel TDX confidential VMs, LUKS2 disk encryption, automated CIS/NIST/PCI-DSS/HIPAA/ISO 27001 compliance scanner, DLP engine, forensics, SAML/OIDC SSO, MFA per role.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(63,185,80,0.12);color:#3fb950"><i class="fas fa-rotate"></i></div>
+      <h3>Disaster Recovery</h3>
+      <p>3-2-1 backup automation, app-consistent snapshots (fsfreeze), backup mount+boot verification, cross-site async/sync replication. RPO/RTO SLA tracking, automated DR runbooks, one-click failover.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(210,153,34,0.12);color:#d29922"><i class="fas fa-building"></i></div>
+      <h3>Multi-Tenancy</h3>
+      <p>Hard tenant isolation with per-tenant vCPU/RAM/disk quotas, self-service portal, chargeback/showback billing engine (€/$/TRY), 6-template service catalog, token-bucket rate limiting per tenant.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(88,166,255,0.12);color:#58a6ff"><i class="fab fa-kubernetes"></i></div>
+      <h3>Kubernetes &amp; Cloud</h3>
+      <p>Kubernetes CSI driver (csi.oxware.io), OxwareVM CRD Operator, KubeVirt import/export, GitOps (ArgoCD/Flux), Pulumi IaC generation, workload mobility to AWS AMI / Azure VHD / GCP.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(63,185,80,0.12);color:#3fb950"><i class="fas fa-bolt"></i></div>
+      <h3>Modern Workloads</h3>
+      <p>Firecracker microVM (125ms boot), Kata Containers runtime, WASM module execution (wasmtime/wasmedge), edge deployment mode. OPA/Rego policy-as-code, CloudEvents v1.0, workflow automation engine.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(139,92,246,0.12);color:#a78bfa"><i class="fas fa-code-branch"></i></div>
+      <h3>IaC &amp; Terraform</h3>
+      <p>Official Terraform provider: <code>oxware_vm</code>, <code>oxware_network</code>, <code>oxware_storage_pool</code> resources + data sources. Full REST API (~190 endpoints) with OpenAPI spec auto-generated at <code>/api/docs</code>.</p>
     </div>
 
     <div class="feature-card">
       <div class="feature-icon" style="background:rgba(63,185,80,0.12);color:#3fb950"><i class="fab fa-osi"></i></div>
-      <h3>Open Source</h3>
-      <p>MIT license with full source code on GitHub. No vendor lock-in, no subscription traps, no hidden fees. Self-hosted on your infrastructure, forever free to use.</p>
+      <h3>Open Source · MIT</h3>
+      <p>Full source on GitHub. No vendor lock-in, no subscriptions, no fees. Self-hosted on your own infrastructure forever. Community-driven development with enterprise features baked in.</p>
     </div>
 
   </div>
@@ -1437,82 +1474,58 @@
 <section class="roadmap-section" id="roadmap">
   <div class="roadmap-shell">
     <div class="roadmap-head">
-      <span class="roadmap-badge"><span class="pulse"></span> We're working on</span>
-      <h2 class="roadmap-title">The Road to Enterprise<span class="ver-chip">v2.5.12</span></h2>
-      <p class="roadmap-sub">OXware is evolving fast. Here's what's landing in the next enterprise release — pushing toward a full VMware-class virtualization platform.</p>
+      <span class="roadmap-badge"><span class="pulse"></span> Coming in v2.6</span>
+      <h2 class="roadmap-title">What's Next<span class="ver-chip">v2.6</span></h2>
+      <p class="roadmap-sub">v2.5.12 Enterprise is complete — 114 capabilities shipped across 10 release batches. Here's what we're designing for the next major cycle.</p>
     </div>
     <div class="roadmap-grid">
       <div class="rm-card">
-        <span class="rm-tag beta">Beta</span>
-        <div class="rm-icon">🧠</div>
-        <h4>DRS Scheduler</h4>
-        <p>Distributed Resource Scheduler — cluster-wide VM rebalancing on live CPU / RAM load.</p>
-      </div>
-      <div class="rm-card">
-        <span class="rm-tag soon">Soon</span>
+        <span class="rm-tag soon">v2.6</span>
         <div class="rm-icon">🛡️</div>
         <h4>Fault Tolerance</h4>
-        <p>Lockstep secondary VM — zero-downtime failover when a host dies.</p>
+        <p>Lockstep secondary VM — zero-downtime failover when a primary host dies. Continuous memory replication with sub-second RPO.</p>
       </div>
       <div class="rm-card">
-        <span class="rm-tag soon">Soon</span>
-        <div class="rm-icon">🌐</div>
-        <h4>Site Recovery Manager</h4>
-        <p>Cross-site DR orchestration, runbooks, RPO/RTO SLA tracking, failover testing.</p>
-      </div>
-      <div class="rm-card">
-        <span class="rm-tag dev">Dev</span>
-        <div class="rm-icon">♻️</div>
-        <h4>Lifecycle Manager</h4>
-        <p>Centralized firmware, hypervisor and driver upgrades — fleet-wide, zero touch.</p>
-      </div>
-      <div class="rm-card">
-        <span class="rm-tag beta">Beta</span>
-        <div class="rm-icon">🧬</div>
-        <h4>Microsegmentation</h4>
-        <p>NSX-T style distributed firewall — per-VM policies, east-west traffic isolation.</p>
-      </div>
-      <div class="rm-card">
-        <span class="rm-tag beta">Beta</span>
-        <div class="rm-icon">🔐</div>
-        <h4>vTPM · Secure Boot · AMD SEV</h4>
-        <p>Hardware-rooted trust: virtual TPM 2.0, UEFI Secure Boot, encrypted-memory VMs.</p>
-      </div>
-      <div class="rm-card">
-        <span class="rm-tag beta">Beta</span>
-        <div class="rm-icon">📋</div>
-        <h4>SIEM Integration</h4>
-        <p>Hash-chained audit logs — Splunk, Elastic, Wazuh, QRadar native exporters.</p>
-      </div>
-      <div class="rm-card">
-        <span class="rm-tag soon">Soon</span>
-        <div class="rm-icon">🏢</div>
-        <h4>Multi-Tenancy + Chargeback</h4>
-        <p>Virtual datacenters, hard tenant isolation, per-tenant chargeback &amp; showback.</p>
-      </div>
-      <div class="rm-card">
-        <span class="rm-tag dev">Dev</span>
-        <div class="rm-icon">🧩</div>
-        <h4>NUMA-Aware Scheduling</h4>
-        <p>Topology-aware vCPU pinning, memory locality, latency-sensitive workload boost.</p>
-      </div>
-      <div class="rm-card">
-        <span class="rm-tag beta">Beta</span>
-        <div class="rm-icon">⚡</div>
-        <h4>vGPU Support</h4>
-        <p>NVIDIA / AMD GPU partitioning, SR-IOV, PCIe passthrough pools for AI workloads.</p>
-      </div>
-      <div class="rm-card">
-        <span class="rm-tag soon">Soon</span>
+        <span class="rm-tag soon">v2.6</span>
         <div class="rm-icon">📱</div>
         <h4>Mobile App (iOS + Android)</h4>
-        <p>Native clients — VM lifecycle, alerts, console snapshots on the go.</p>
+        <p>Native clients — VM lifecycle, push alerts, live metrics, noVNC console snapshots, and quick actions on the go.</p>
       </div>
       <div class="rm-card">
-        <span class="rm-tag dev">Dev</span>
-        <div class="rm-icon">☸️</div>
-        <h4>Kubernetes CSI Driver</h4>
-        <p>Persistent volumes for k8s — dynamic provisioning, snapshots, clone, expand.</p>
+        <span class="rm-tag soon">v2.6</span>
+        <div class="rm-icon">🏪</div>
+        <h4>App Marketplace</h4>
+        <p>One-click deployment of community-built VM templates, automation workflows, and integration plugins from a central registry.</p>
+      </div>
+      <div class="rm-card">
+        <span class="rm-tag dev">v2.6</span>
+        <div class="rm-icon">🤝</div>
+        <h4>Managed Clusters</h4>
+        <p>Multi-site cluster federation — manage multiple OXware nodes from a single global control plane with unified inventory.</p>
+      </div>
+      <div class="rm-card">
+        <span class="rm-tag dev">v2.6</span>
+        <div class="rm-icon">🧠</div>
+        <h4>AI-Powered Anomaly Response</h4>
+        <p>Autonomous remediation — AI detects anomalies and triggers pre-approved runbooks without manual intervention.</p>
+      </div>
+      <div class="rm-card">
+        <span class="rm-tag dev">v2.6</span>
+        <div class="rm-icon">🔋</div>
+        <h4>Storage DRS</h4>
+        <p>Datastore-level balancing — automatically move VM disks between storage pools based on I/O load and capacity thresholds.</p>
+      </div>
+      <div class="rm-card">
+        <span class="rm-tag dev">v2.6</span>
+        <div class="rm-icon">🌍</div>
+        <h4>Multi-Region Support</h4>
+        <p>Geo-aware VM placement, latency-based routing, cross-region snapshot replication, and region-level DR failover.</p>
+      </div>
+      <div class="rm-card">
+        <span class="rm-tag dev">v2.6</span>
+        <div class="rm-icon">🔌</div>
+        <h4>Plugin SDK</h4>
+        <p>Official Python plugin SDK — add custom panels, API endpoints, and automation hooks without forking the core codebase.</p>
       </div>
     </div>
   </div>
@@ -1553,6 +1566,20 @@
       <span class="mq-item">nginx</span>
       <span class="mq-item">dnsmasq</span>
       <span class="mq-item">SPICE</span>
+      <span class="mq-item">Terraform</span>
+      <span class="mq-item">Kubernetes</span>
+      <span class="mq-item">Firecracker</span>
+      <span class="mq-item">Kata Containers</span>
+      <span class="mq-item">WASM</span>
+      <span class="mq-item">OpenTelemetry</span>
+      <span class="mq-item">Grafana</span>
+      <span class="mq-item">OPA/Rego</span>
+      <span class="mq-item">ArgoCD/Flux</span>
+      <span class="mq-item">CloudEvents</span>
+      <span class="mq-item">Pulumi</span>
+      <span class="mq-item">MinIO/S3</span>
+      <span class="mq-item">swtpm</span>
+      <span class="mq-item">Go</span>
       <!-- duplicate for seamless loop -->
       <span class="mq-item">KVM/QEMU</span>
       <span class="mq-item">libvirt</span>
@@ -1584,6 +1611,20 @@
       <span class="mq-item">nginx</span>
       <span class="mq-item">dnsmasq</span>
       <span class="mq-item">SPICE</span>
+      <span class="mq-item">Terraform</span>
+      <span class="mq-item">Kubernetes</span>
+      <span class="mq-item">Firecracker</span>
+      <span class="mq-item">Kata Containers</span>
+      <span class="mq-item">WASM</span>
+      <span class="mq-item">OpenTelemetry</span>
+      <span class="mq-item">Grafana</span>
+      <span class="mq-item">OPA/Rego</span>
+      <span class="mq-item">ArgoCD/Flux</span>
+      <span class="mq-item">CloudEvents</span>
+      <span class="mq-item">Pulumi</span>
+      <span class="mq-item">MinIO/S3</span>
+      <span class="mq-item">swtpm</span>
+      <span class="mq-item">Go</span>
     </div>
   </div>
 </div>
