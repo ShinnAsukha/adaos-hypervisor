@@ -1265,7 +1265,7 @@ ethernets:
         <i class="fas fa-flask" style="font-size:22px;color:var(--accent);flex-shrink:0"></i>
         <div>
           <div style="font-weight:600;margin-bottom:4px">Interactive API Explorer</div>
-          <div style="color:var(--text-muted);font-size:13px">Navigate to <code>https://&lt;your-host&gt;:8006/api/docs</code> — authenticate once, then try any endpoint live. Shows request schemas, example payloads, and response formats for all ~190 endpoints.</div>
+          <div style="color:var(--text-muted);font-size:13px">Navigate to <code>https://&lt;your-host&gt;:8006/api/docs</code> — authenticate once, then try any endpoint live. Shows request schemas, example payloads, and response formats for all ~230 endpoints (v2.6.1).</div>
         </div>
       </div>
 
@@ -1443,8 +1443,84 @@ curl -k https://host:8006/api/vms \
       <div class="endpoint"><span class="method get">GET</span> /api/tenants — multi-tenancy + quotas</div>
       <div class="endpoint"><span class="method get">GET</span> /api/chargeback/all — per-tenant billing</div>
 
+      <h3 style="margin-top:2rem">🚀 Enterprise Expansion (v2.6.1)</h3>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:10px">
+        <strong>8 new backend modules · 40+ endpoints · 8 security CVEs patched (SEC-001..008)</strong>
+      </p>
+
+      <h4 style="margin-top:1rem">Fault Tolerance — checkpoint-based VM protection</h4>
+      <div class="endpoint"><span class="method get">GET</span> /api/ft/pairs — list FT pairs</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/ft/pairs — create FT pair (primary + secondary pool)</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/ft/&lt;vm_id&gt;/status — replication lag + state</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/ft/&lt;vm_id&gt;/failover — promote secondary, stop primary</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/ft/&lt;vm_id&gt;/sync — manual checkpoint + delta sync</div>
+      <div class="endpoint"><span class="method delete">DELETE</span> /api/ft/&lt;vm_id&gt; — remove FT pairing</div>
+
+      <h4 style="margin-top:1rem">Storage DRS — auto disk rebalance across pools</h4>
+      <div class="endpoint"><span class="method get">GET</span> /api/storage-drs/analyze — pool utilization analysis</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/storage-drs/recommendations — migration suggestions</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/storage-drs/rebalance — dry-run or live rebalance</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/storage-drs/migrate — manual disk migrate (blockcopy)</div>
+
+      <h4 style="margin-top:1rem">VM Console Recording — ffmpeg VNC→WebM</h4>
+      <div class="endpoint"><span class="method get">GET</span> /api/console-recordings — list recordings</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/console-recordings/start — start ffmpeg recording</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/console-recordings/&lt;id&gt;/stop — finalize WebM</div>
+      <div class="endpoint"><span class="method delete">DELETE</span> /api/console-recordings/&lt;id&gt; — delete recording</div>
+
+      <h4 style="margin-top:1rem">2FA Recovery Codes — single-use backup codes</h4>
+      <div class="endpoint"><span class="method post">POST</span> /api/recovery-codes/generate — 8× XXXX-XXXX codes (shown once)</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/recovery-codes/status — remaining count</div>
+      <div class="endpoint"><span class="method delete">DELETE</span> /api/recovery-codes/revoke — revoke all</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/auth/recovery — passwordless login with recovery code</div>
+
+      <h4 style="margin-top:1rem">Plugin SDK — dynamic Python plugin loader</h4>
+      <div class="endpoint"><span class="method get">GET</span> /api/plugins — list loaded plugins</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/plugins/&lt;id&gt;/enable — enable plugin</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/plugins/&lt;id&gt;/disable — disable plugin</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/plugins/template — download starter plugin.py</div>
+
+      <h4 style="margin-top:1rem">VM Disk Hot-Extend — live resize</h4>
+      <div class="endpoint"><span class="method get">GET</span> /api/vms/&lt;id&gt;/disks — disk info with sizes</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/vms/&lt;id&gt;/disks/extend — virsh blockresize + guest growpart</div>
+
+      <h4 style="margin-top:1rem">Bulk VM Operations — parallel ops on N VMs</h4>
+      <div class="endpoint"><span class="method post">POST</span> /api/vms/bulk/start — parallel start</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/vms/bulk/stop — parallel stop</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/vms/bulk/snapshot — bulk snapshot</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/vms/bulk/tag — bulk add/remove tag</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/vms/bulk/set-vcpus — bulk vCPU change</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/vms/bulk/set-memory — bulk RAM change</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/vms/bulk/delete — bulk delete (confirm_token required)</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/vms/bulk/status/&lt;job_id&gt; — async job status</div>
+
+      <h4 style="margin-top:1rem">Network Mode &amp; IP Fix — NAT/Bridge detection</h4>
+      <div class="endpoint"><span class="method get">GET</span> /api/vms/&lt;id&gt;/network-mode — NAT/BRIDGE/ISOLATED detection</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/vms/&lt;id&gt;/network-info — full context: gateway, DHCP, guidance</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/vms/&lt;id&gt;/network-info/validate-ip — check static IP viability</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/vms/&lt;id&gt;/network-info/suggest-fix — step-by-step IP setup</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/networks/routable — networks where static IPs work</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/networks/bridge-status — oxbr0 setup check</div>
+
+      <h4 style="margin-top:1rem">Kernel Hardening — AppArmor/seccomp/cgroups/eBPF</h4>
+      <div class="endpoint"><span class="method get">GET</span> /api/security/kernel-hardening — all 5 layers status + score</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/security/kernel-hardening/install — trigger install (admin only)</div>
+
+      <h3 style="margin-top:2rem">🛡️ Security Patches (v2.6.1)</h3>
+      <p style="color:var(--muted);font-size:13px">8 CVEs patched without downtime:</p>
+      <ul style="font-size:13px;color:var(--text);line-height:1.7">
+        <li><strong>SEC-001</strong> — AI API keys at-rest Fernet encryption (was plaintext)</li>
+        <li><strong>SEC-002</strong> — AI_CONFIG_FILE path traversal guard (allowed-roots whitelist)</li>
+        <li><strong>SEC-003</strong> — ai_agent threading.RLock + atomic file write + threading.Event stop</li>
+        <li><strong>SEC-004</strong> — AI agent add/delete/update → admin-only (was operator)</li>
+        <li><strong>SEC-005</strong> — 2FA invalid code = generic "Geçersiz kimlik bilgileri" (was specific)</li>
+        <li><strong>SEC-006</strong> — vm_id XSS: <code>{{ vm_id | tojson }}</code> + server regex validation</li>
+        <li><strong>SEC-007</strong> — postMessage <code>'*'</code> → <code>location.origin</code> + receiver origin check</li>
+        <li><strong>SEC-008</strong> — WS auth: raw JWT in URL → one-time 60s vnc_token (no log leakage)</li>
+      </ul>
+
       <p style="margin-top:1.5rem;color:var(--muted)">
-        💡 <strong>Full interactive API explorer</strong> with all ~190 endpoints (auto-generated, always current):
+        💡 <strong>Full interactive API explorer</strong> with all ~230 endpoints (auto-generated, always current):
         <a href="/api/docs" target="_blank" style="color:var(--accent-lt)">/api/docs ↗</a>
       </p>
     </section>
