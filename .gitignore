@@ -11,11 +11,12 @@ __pycache__/
 *.pyc
 
 # Source-level files (gh-pages'a ait değil)
-install.sh
+# NOTE: install.sh ve README.md ARTIK gh-pages'in parçası:
+#   - install.sh = bootstrap (curl https://oxware.top/install.sh | bash hedefi)
+#   - README.md  = gh-pages branch explainer (minimal)
 uninstall.sh
 repair.sh
 LICENSE
-README.md
 SECURITY.md
 
 # Editor/IDE
