@@ -1561,6 +1561,13 @@ curl -k https://host:8006/api/vms \
  <section id="troubleshooting">
  <h2>Troubleshooting</h2>
 
+ <h3>oxupdate syntax error / update fails</h3>
+ <p>If <code>sudo oxupdate</code> prints a syntax error (e.g. <code>line N: syntax error near unexpected token `fi'</code>) or <code>command not found</code>, the CLI script got corrupted. Recover with:</p>
+ <pre><code><span class="cmd">cd</span> /opt/oxware <span class="cmd">&amp;&amp; git pull</span>
+<span class="cmd">sudo bash</span> repair.sh --fix-cli
+<span class="cmd">sudo systemctl restart</span> oxware</code></pre>
+ <p><code>repair.sh --fix-cli</code> regenerates <code>/usr/local/bin/ox</code> and <code>/usr/local/bin/oxupdate</code> from a clean template. After that, <code>sudo oxupdate</code> works normally again.</p>
+
  <h3>Services won't start after reboot</h3>
  <pre><code><span class="cmd">sudo bash</span> repair.sh</code></pre>
  <p>This restarts <code>oxware</code>, <code>nginx</code>, <code>libvirtd</code>, and <code>novnc</code>, and re-applies nftables rules.</p>
