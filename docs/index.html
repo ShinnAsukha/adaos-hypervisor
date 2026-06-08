@@ -438,6 +438,10 @@
  <div class="sidebar-section">Enterprise (v2.6.3)</div>
  <a href="#enterprise"><i class="fas fa-building"></i> Enterprise Features</a>
 
+ <div class="sidebar-section">Extensibility</div>
+ <a href="#plugins"><i class="fas fa-puzzle-piece"></i> Plugin SDK</a>
+ <a href="/marketplace/" style="color:var(--text)" target="_blank"><i class="fas fa-store"></i> Marketplace</a>
+
  <div class="sidebar-section">Reference</div>
  <a href="#api"><i class="fas fa-flask"></i> API Reference &amp; Explorer</a>
  <a href="#api" style="color:var(--accent-lt)"><i class="fas fa-external-link-alt"></i> Open API Explorer</a>
@@ -491,6 +495,12 @@
  <section id="installation">
  <h2>Installation</h2>
 
+ <h3>Quick Install (recommended)</h3>
+ <p>One command installs OXware and all dependencies on Ubuntu 22.04+ or Debian 12+. Requires root.</p>
+ <pre><code><span class="comment"># Install OXware (Ubuntu 22.04+ or Debian 12+, requires root)</span>
+<span class="cmd">curl</span> -sSL https://oxware.top/install.sh | <span class="cmd">sudo bash</span></code></pre>
+ <p>The script detects your distribution, installs all dependencies (KVM, libvirt, qemu-utils, noVNC, Nginx, Python packages), configures systemd services, and generates a self-signed TLS certificate. Takes 5–10 minutes depending on network speed. After completion, navigate to <code>https://&lt;server-ip&gt;:8006</code>.</p>
+
  <h3>Method 1 — Bootable ISO (recommended for bare-metal)</h3>
  <p>
  The ISO method installs a complete, pre-configured Ubuntu 22.04 LTS base with OXware baked in.
@@ -504,7 +514,8 @@
 <span class="cmd">sudo dd</span> if=oxware-2.3.iso of=/dev/sdX bs=4M status=progress conv=fsync</code></pre>
  <p>Boot the target machine from USB and follow the Calamares installer. OXware services start automatically on first boot.</p>
 
- <h3>Method 2 — Script on existing Ubuntu 22.04 LTS</h3>
+ <h3>Method 2 — Manual install (git clone) on Ubuntu 22.04 LTS</h3>
+ <p>Alternative if you prefer to inspect the source before running, or need to use a specific branch.</p>
  <pre><code><span class="cmd">git clone</span> https://github.com/ShinnAsukha/oxware-hypervisor.git /opt/oxware-src
 <span class="cmd">cd</span> /opt/oxware-src
 <span class="cmd">sudo bash</span> install.sh</code></pre>
@@ -1178,11 +1189,11 @@ ethernets:
  <p>Navigate to <strong>Settings → SSL / Domains</strong> to add a custom domain and issue a Let's Encrypt certificate. OXware uses <code>certbot</code> and reconfigures Nginx automatically.</p>
  </section>
 
- <!-- ENTERPRISE (v2.5.12) -->
+ <!-- ENTERPRISE (v2.6.3) -->
  <section id="enterprise">
- <h2>Enterprise Features (v2.5.12)</h2>
+ <h2>Enterprise Features (v2.6.3)</h2>
  <p>
- The <strong>v2.5.12 Enterprise release</strong> brings 23 datacenter-grade modules to open-source KVM,
+ The <strong>v2.6.3 Enterprise release</strong> brings 23+ datacenter-grade modules to open-source KVM,
  closing the gap with VMware vSphere and Nutanix AHV — at zero licensing cost.
  </p>
 
@@ -1191,7 +1202,7 @@ ethernets:
  DRS, EVC, NIOC, Site Recovery, NUMA scheduling, linked clones, app-consistent snapshots, SIEM export,
  session recording, AES backup encryption, lifecycle manager, alert correlation, webhook system, and more.
  v2.6.2 adds Green Mode (AI power optimization, WoL/IPMI node control, hourly load forecast).
- v2.6.3 adds Multi-Region geo-placement, App Marketplace, Cloud Burst (AWS/GCP/Azure), Bare-Metal PXE/iPXE provisioning, and OAuth 2.0 PKCE SSO.
+ v2.6.3 adds Multi-Region geo-placement, App Marketplace (curated plugin catalog at oxware.top/marketplace — plugins developed in the panel via Settings → Plugins → Develop, run locally, shared via GitHub Discussions), Cloud Burst (AWS/GCP/Azure), Bare-Metal PXE/iPXE provisioning, and OAuth 2.0 PKCE SSO.
  </div>
 
  <h3>Compute &amp; Scheduling</h3>
@@ -1257,6 +1268,122 @@ ethernets:
  policy-as-code (OPA / Rego), mobile app (iOS + Android), desktop client (Electron), PWA,
  microVM (Firecracker), Kata Containers.
  </p>
+ </section>
+
+ <!-- PLUGINS -->
+ <section id="plugins">
+ <h2>Plugin SDK</h2>
+ <p>
+ OXware includes a Python plugin SDK that lets you extend the panel with custom API endpoints,
+ VM event handlers, and UI panels. Plugins are single <code>.py</code> files loaded at runtime
+ by the plugin engine. No restart required — plugins can be enabled and disabled live from
+ <strong>Settings → Plugins</strong>.
+ </p>
+
+ <div class="callout callout-info">
+ <strong>Community</strong>
+ Share your plugins and browse others on <a href="https://github.com/ShinnAsukha/oxware-hypervisor/discussions" target="_blank" rel="noopener">GitHub Discussions</a>.
+ Well-tested plugins may be added to the curated catalog at <a href="https://oxware.top/marketplace" target="_blank" rel="noopener">oxware.top/marketplace</a>.
+ Questions? Join the <a href="https://discord.gg/c6yHhKrQs5" target="_blank" rel="noopener"><i class="fab fa-discord"></i> Discord</a>.
+ </div>
+
+ <h3>Plugin Structure</h3>
+ <p>Every plugin must be a single <code>.py</code> file with a <code>PLUGIN_META</code> dict at the top. Three optional hook functions are recognised:</p>
+ <ul>
+ <li><code>register_routes(app)</code> — adds Flask routes to the running application.</li>
+ <li><code>on_vm_event(event)</code> — receives VM lifecycle events: <code>vm.created</code>, <code>vm.started</code>, <code>vm.stopped</code>, <code>vm.deleted</code>.</li>
+ <li><code>on_load()</code> / <code>on_unload()</code> — called when the plugin is enabled or disabled.</li>
+ </ul>
+
+ <h3>PLUGIN_META Fields</h3>
+ <table>
+ <thead>
+ <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+ </thead>
+ <tbody>
+ <tr><td><code>id</code></td><td>str</td><td>Yes</td><td>Unique slug, lowercase <code>[a-z0-9_-]</code>, max 48 chars</td></tr>
+ <tr><td><code>name</code></td><td>str</td><td>Yes</td><td>Display name</td></tr>
+ <tr><td><code>version</code></td><td>str</td><td>Yes</td><td>Semver string e.g. <code>"1.0"</code></td></tr>
+ <tr><td><code>author</code></td><td>str</td><td>Yes</td><td>Author name</td></tr>
+ <tr><td><code>description</code></td><td>str</td><td>Yes</td><td>Short description</td></tr>
+ <tr><td><code>api_version</code></td><td>str</td><td>Yes</td><td>SDK API version, use <code>"1.0"</code></td></tr>
+ </tbody>
+ </table>
+
+ <h3>Example Plugin</h3>
+ <pre><code>PLUGIN_META = {
+ "id": "my-plugin",
+ "name": "My Plugin",
+ "version": "1.0",
+ "author": "Your Name",
+ "description": "Adds /api/plugin/hello endpoint.",
+ "api_version": "1.0",
+}
+
+def register_routes(app):
+ @app.route("/api/plugin/hello")
+ def _hello():
+ from flask import jsonify
+ return jsonify({"message": "Hello from my plugin!"})
+
+def on_vm_event(event):
+ # event = {"type": "vm.started", "vm_id": "...", "name": "..."}
+ pass</code></pre>
+
+ <h3>Developing a Plugin (in-panel)</h3>
+ <ol>
+ <li>Open <strong>Settings → Plugins → Develop</strong> tab.</li>
+ <li>Click <strong>Scaffold</strong> and pick a template: <em>Basic</em>, <em>API</em>, <em>Event</em>, or <em>Panel</em>.</li>
+ <li>Write your code in the browser editor.</li>
+ <li>Click <strong>Validate</strong> — runs an AST security scan, checks <code>PLUGIN_META</code>, and flags dangerous calls.</li>
+ <li>Click <strong>Upload from Editor</strong> to install the plugin on your system.</li>
+ <li>The plugin is disabled by default — enable it in the <strong>Installed</strong> tab.</li>
+ </ol>
+
+ <h3>Scaffold Templates</h3>
+ <table>
+ <thead><tr><th>Template</th><th>What it generates</th></tr></thead>
+ <tbody>
+ <tr><td><code>basic</code></td><td>PLUGIN_META + empty hooks</td></tr>
+ <tr><td><code>api</code></td><td>PLUGIN_META + <code>register_routes</code> with example endpoint</td></tr>
+ <tr><td><code>event</code></td><td>PLUGIN_META + <code>on_vm_event</code> handler</td></tr>
+ <tr><td><code>panel</code></td><td>PLUGIN_META + <code>register_routes</code> with HTML panel endpoint</td></tr>
+ </tbody>
+ </table>
+ <p>Download a scaffold template: <code>GET /api/plugins/scaffold?kind=basic</code> (or <code>api</code>, <code>event</code>, <code>panel</code>).</p>
+
+ <h3>Security Scanner (Validate)</h3>
+ <p>The in-panel validator runs a Python AST scan before upload. The following patterns are blocked or flagged:</p>
+ <table>
+ <thead><tr><th>Pattern</th><th>Action</th></tr></thead>
+ <tbody>
+ <tr><td>Shell invocation via the <code>os</code> module or <code>subprocess</code> in shell-mode</td><td>Blocked</td></tr>
+ <tr><td>Dynamic code execution builtins (<code>eval</code>, <code>exec</code>)</td><td>Blocked</td></tr>
+ <tr><td>Dynamic import via <code>__import__</code> builtin</td><td>Blocked</td></tr>
+ <tr><td>Direct <code>socket</code> usage</td><td>Warning</td></tr>
+ </tbody>
+ </table>
+
+ <h3>Sharing Plugins</h3>
+ <p>
+ Plugins run locally on your own OXware install. To share: post on
+ <a href="https://github.com/ShinnAsukha/oxware-hypervisor/discussions" target="_blank" rel="noopener">GitHub Discussions</a>.
+ Well-tested plugins may be added to the curated catalog at
+ <a href="https://oxware.top/marketplace" target="_blank" rel="noopener">oxware.top/marketplace</a>.
+ </p>
+
+ <h3>Plugin SDK API Endpoints</h3>
+ <div class="endpoint"><span class="method get">GET</span> /api/plugins — list all loaded plugins</div>
+ <div class="endpoint"><span class="method get">GET</span> /api/plugins/sdk-info — SDK version, API version</div>
+ <div class="endpoint"><span class="method get">GET</span> /api/plugins/scaffold?kind=basic — download scaffold template</div>
+ <div class="endpoint"><span class="method post">POST</span> /api/plugins/validate — validate plugin.py code (AST scan)</div>
+ <div class="endpoint"><span class="method post">POST</span> /api/plugins/upload — upload .py or .zip (admin only)</div>
+ <div class="endpoint"><span class="method delete">DELETE</span> /api/plugins/&lt;id&gt; — uninstall plugin (admin only)</div>
+ <div class="endpoint"><span class="method post">POST</span> /api/plugins/&lt;id&gt;/enable — enable plugin</div>
+ <div class="endpoint"><span class="method post">POST</span> /api/plugins/&lt;id&gt;/disable — disable plugin</div>
+ <div class="endpoint"><span class="method get">GET</span> /api/plugins/&lt;id&gt;/source — get plugin source code (admin only)</div>
+ <div class="endpoint"><span class="method post">POST</span> /api/plugins/&lt;id&gt;/source — save edited source (admin only)</div>
+ <div class="endpoint"><span class="method get">GET</span> /api/plugins/&lt;id&gt;/logs — get plugin log entries</div>
  </section>
 
  <!-- API -->
@@ -1478,10 +1605,18 @@ curl -k https://host:8006/api/vms \
  <div class="endpoint"><span class="method post">POST</span> /api/auth/recovery — passwordless login with recovery code</div>
 
  <h4 style="margin-top:1rem">Plugin SDK — dynamic Python plugin loader</h4>
- <div class="endpoint"><span class="method get">GET</span> /api/plugins — list loaded plugins</div>
+ <p style="font-size:0.85rem;color:var(--muted)">See the <a href="#plugins">Plugin SDK</a> section for full documentation.</p>
+ <div class="endpoint"><span class="method get">GET</span> /api/plugins — list all loaded plugins</div>
+ <div class="endpoint"><span class="method get">GET</span> /api/plugins/sdk-info — SDK version, API version</div>
+ <div class="endpoint"><span class="method get">GET</span> /api/plugins/scaffold?kind=basic — download scaffold template</div>
+ <div class="endpoint"><span class="method post">POST</span> /api/plugins/validate — validate plugin.py code (AST scan)</div>
+ <div class="endpoint"><span class="method post">POST</span> /api/plugins/upload — upload .py or .zip (admin only)</div>
+ <div class="endpoint"><span class="method delete">DELETE</span> /api/plugins/&lt;id&gt; — uninstall plugin (admin only)</div>
  <div class="endpoint"><span class="method post">POST</span> /api/plugins/&lt;id&gt;/enable — enable plugin</div>
  <div class="endpoint"><span class="method post">POST</span> /api/plugins/&lt;id&gt;/disable — disable plugin</div>
- <div class="endpoint"><span class="method get">GET</span> /api/plugins/template — download starter plugin.py</div>
+ <div class="endpoint"><span class="method get">GET</span> /api/plugins/&lt;id&gt;/source — get plugin source code (admin only)</div>
+ <div class="endpoint"><span class="method post">POST</span> /api/plugins/&lt;id&gt;/source — save edited source (admin only)</div>
+ <div class="endpoint"><span class="method get">GET</span> /api/plugins/&lt;id&gt;/logs — get plugin log entries</div>
 
  <h4 style="margin-top:1rem">VM Disk Hot-Extend — live resize</h4>
  <div class="endpoint"><span class="method get">GET</span> /api/vms/&lt;id&gt;/disks — disk info with sizes</div>
@@ -1680,6 +1815,7 @@ curl -k https://host:8006/api/vms \
  <div class="callout callout-info">
  <strong>Getting help</strong>
  Open an issue at <a href="https://github.com/ShinnAsukha/oxware-hypervisor/issues" target="_blank">github.com/ShinnAsukha/oxware-hypervisor/issues</a> and include the output of <code>sudo bash repair.sh</code> and the relevant log lines.
+ You can also ask in the community on <a href="https://discord.gg/c6yHhKrQs5" target="_blank" rel="noopener"><i class="fab fa-discord"></i> Discord</a>.
  </div>
  </section>
 
