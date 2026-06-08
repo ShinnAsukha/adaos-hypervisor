@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OXware Marketplace — Plugins, Templates &amp; Automation</title>
+  <meta name="description" content="Browse community plugins, VM templates, and automation tools for OXware Hypervisor. Install directly from your OXware panel." />
+  <link rel="canonical" href="https://oxware.top/marketplace/" />
+  <link rel="icon" type="image/png" href="../sadeceikon.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+      --danger: #f85149;
+      --radius: 8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* NAV */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13, 17, 23, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+    }
+
+    .nav-logo img {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 6px rgba(88,166,255,.5));
+    }
+
+    .nav-toggle-cb { display: none; }
+    .nav-burger {
+      display: none;
+      cursor: pointer;
+      font-size: 1.4rem;
+      color: var(--text);
+      padding: 0.3rem 0.5rem;
+      border-radius: 6px;
+      transition: background .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-burger:hover { background: var(--surface); }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text);
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--accent); text-decoration: none; }
+    .nav-links a.nav-active { color: var(--accent); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 1rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      border: none;
+      text-decoration: none;
+    }
+
+    .btn:hover { opacity: 0.85; text-decoration: none; transform: translateY(-1px); }
+    .btn-primary { background: var(--accent); color: #0d1117; }
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* HERO */
+    .hero {
+      padding: 4rem 2rem 3rem;
+      max-width: 900px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 800;
+      color: #f0f6fc;
+      margin-bottom: 1rem;
+      letter-spacing: -1px;
+      line-height: 1.2;
+    }
+
+    .hero h1 span { color: var(--accent); }
+
+    .hero p {
+      font-size: 1rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto 2rem;
+    }
+
+    /* SEARCH + FILTER */
+    .controls {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 2rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .search-wrap {
+      position: relative;
+    }
+
+    .search-wrap i {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    #search {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.65rem 1rem 0.65rem 2.6rem;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: inherit;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    #search:focus { border-color: var(--accent); }
+    #search::placeholder { color: var(--muted); }
+
+    .filter-chips {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      padding: 0.35rem 0.9rem;
+      border-radius: 2rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+    .chip.active { background: rgba(88,166,255,0.12); border-color: var(--accent); color: var(--accent); }
+
+    /* GRID */
+    .grid-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 2rem 4rem;
+      flex: 1;
+    }
+
+    #app-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    /* APP CARD */
+    .app-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .app-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .card-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #f0f6fc;
+    }
+
+    .cat-badge {
+      flex-shrink: 0;
+      padding: 0.15rem 0.55rem;
+      border-radius: 2rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .cat-os      { background: rgba(88,166,255,.15);  color: #58a6ff;  border: 1px solid rgba(88,166,255,.3); }
+    .cat-app     { background: rgba(63,185,80,.13);   color: #3fb950;  border: 1px solid rgba(63,185,80,.3); }
+    .cat-devops  { background: rgba(240,136,62,.13);  color: #f0883e;  border: 1px solid rgba(240,136,62,.3); }
+    .cat-plugin  { background: rgba(188,140,255,.13); color: #bc8cff;  border: 1px solid rgba(188,140,255,.3); }
+
+    .card-meta {
+      display: flex;
+      gap: 0.75rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .card-meta-item { display: flex; align-items: center; gap: 0.3rem; }
+
+    .card-desc {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.5;
+      flex: 1;
+    }
+
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .tag-chip {
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .card-install {
+      background: rgba(13,17,23,0.7);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.6rem 0.75rem;
+    }
+
+    .card-install-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 0.2rem;
+    }
+
+    .card-install-path {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.75rem;
+      color: #e6edf3;
+      display: block;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .card-dl-link {
+      font-size: 0.8rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+
+    .card-dl-link:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* EMPTY / ERROR */
+    #status-msg {
+      display: none;
+      text-align: center;
+      padding: 3rem 2rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .status-icon {
+      display: block;
+      font-size: 2rem;
+      margin-bottom: 0.75rem;
+      color: var(--border);
+    }
+
+    /* SUBMIT SECTION */
+    .submit-section {
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      padding: 3.5rem 2rem;
+    }
+
+    .submit-inner {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .submit-inner h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #f0f6fc;
+      margin-bottom: 0.5rem;
+    }
+
+    .submit-inner > p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .submit-steps {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .submit-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.85rem;
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      background: rgba(88,166,255,0.12);
+      border: 1px solid rgba(88,166,255,0.3);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-top: 1px;
+    }
+
+    .submit-step a { color: var(--accent); }
+
+    .inline-code {
+      background: rgba(110,118,129,.15);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: .1rem .35rem;
+      font-size: .85em;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      color: #e6edf3;
+    }
+
+    /* FOOTER */
+    .footer-border { border-top: 1px solid var(--border); }
+
+    footer {
+      padding: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .footer-left { color: var(--muted); font-size: 0.85rem; }
+    .footer-links { display: flex; gap: 1.25rem; font-size: 0.85rem; }
+    .footer-links a { color: var(--muted); }
+    .footer-links a:hover { color: var(--accent); text-decoration: none; }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      nav { padding: 0 1rem; flex-wrap: wrap; position: relative; }
+      .nav-burger { display: inline-flex; align-items: center; order: 3; }
+      nav > .btn-primary { display: none; }
+      .nav-links {
+        order: 4;
+        flex-basis: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height .3s ease;
+        background: var(--surface);
+        margin: 0 -1rem;
+      }
+      .nav-toggle-cb:checked ~ .nav-links {
+        max-height: 320px;
+        border-top: 1px solid var(--border);
+      }
+      .nav-links li { width: 100%; }
+      .nav-links a { display: block; padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
+      .nav-links .nav-cta a { color: #0d1117; }
+      .hero { padding: 3rem 1.25rem 2rem; }
+      .controls { padding: 0 1.25rem 1.5rem; }
+      .grid-wrap { padding: 0 1.25rem 3rem; }
+      footer { flex-direction: column; text-align: center; }
+    }
+
+    @media (max-width: 480px) {
+      .hero h1 { font-size: 1.6rem; }
+      #app-grid { grid-template-columns: 1fr; }
+      .submit-section { padding: 2.5rem 1.25rem; }
+    }
+
+    img { max-width: 100%; height: auto; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="/" class="nav-logo">
+    <img src="../sadeceikon.png" alt="OXware" onerror="this.style.display='none'">
+    OXware
+  </a>
+  <input type="checkbox" id="navtoggle" class="nav-toggle-cb">
+  <label for="navtoggle" class="nav-burger" aria-label="Menu"><i class="fas fa-bars"></i></label>
+  <ul class="nav-links">
+    <li><a href="/">Home</a></li>
+    <li><a href="/docs/">Docs</a></li>
+    <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a></li>
+    <li><a href="/marketplace/" class="nav-active">Marketplace</a></li>
+    <li class="nav-cta">
+      <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" class="btn btn-primary">
+        <i class="fab fa-github"></i> Get Started
+      </a>
+    </li>
+  </ul>
+  <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" class="btn btn-primary">
+    <i class="fab fa-github"></i> Get Started
+  </a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <h1>OXware <span>Marketplace</span></h1>
+  <p>Community plugins, VM templates, and automation — install with one click from your OXware panel.</p>
+</section>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <div class="search-wrap">
+    <i class="fas fa-search" aria-hidden="true"></i>
+    <input type="text" id="search" placeholder="Search by name, description, or tag..." autocomplete="off">
+  </div>
+  <div class="filter-chips" id="filter-chips">
+    <button class="chip active" data-cat="all">All</button>
+    <button class="chip" data-cat="os"><i class="fas fa-server" aria-hidden="true"></i> OS</button>
+    <button class="chip" data-cat="app"><i class="fas fa-cube" aria-hidden="true"></i> App</button>
+    <button class="chip" data-cat="devops"><i class="fas fa-gears" aria-hidden="true"></i> DevOps</button>
+    <button class="chip" data-cat="plugin"><i class="fas fa-puzzle-piece" aria-hidden="true"></i> Plugin</button>
+  </div>
+</div>
+
+<!-- APP GRID -->
+<div class="grid-wrap">
+  <div id="app-grid"></div>
+  <div id="status-msg" role="status">
+    <i class="fas fa-box-open status-icon" aria-hidden="true"></i>
+    <span id="status-text">Loading marketplace...</span>
+  </div>
+</div>
+
+<!-- SUBMIT -->
+<section class="submit-section" id="submit">
+  <div class="submit-inner">
+    <h2>
+      <i class="fas fa-code-pull-request" style="color:var(--accent);margin-right:.5rem" aria-hidden="true"></i>Submit a Plugin or Template
+    </h2>
+    <p>Contributions are reviewed manually before appearing in the marketplace.</p>
+    <ul class="submit-steps">
+      <li class="submit-step">
+        <span class="step-num" aria-hidden="true">1</span>
+        <span>Develop your plugin following the <a href="/docs/#plugins">Plugin SDK docs</a>. Plugins are single Python files that implement the OXware plugin interface.</span>
+      </li>
+      <li class="submit-step">
+        <span class="step-num" aria-hidden="true">2</span>
+        <span>Open a GitHub issue with the <code class="inline-code">marketplace</code> label and attach your <code class="inline-code">plugin.py</code> or <code class="inline-code">.zip</code>.</span>
+      </li>
+      <li class="submit-step">
+        <span class="step-num" aria-hidden="true">3</span>
+        <span>The maintainer reviews your submission and adds it to <code class="inline-code">index.json</code> on the next release.</span>
+      </li>
+    </ul>
+    <a
+      href="https://github.com/ShinnAsukha/oxware-hypervisor/issues/new?labels=marketplace"
+      target="_blank"
+      rel="noopener"
+      class="btn btn-primary"
+    >
+      <i class="fab fa-github" aria-hidden="true"></i> Open Submission Issue
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<div class="footer-border">
+  <footer>
+    <div class="footer-left">
+      &copy; 2026 OXware. MIT License.
+    </div>
+    <nav class="footer-links" aria-label="Footer navigation">
+      <a href="/">Home</a>
+      <a href="/docs/">Docs</a>
+      <a href="/marketplace/">Marketplace</a>
+      <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var grid = document.getElementById('app-grid');
+  var statusMsg = document.getElementById('status-msg');
+  var statusText = document.getElementById('status-text');
+  var searchInput = document.getElementById('search');
+  var chips = document.querySelectorAll('.chip');
+  var statusIcon = statusMsg.querySelector('.status-icon');
+
+  var allApps = [];
+  var activeCategory = 'all';
+  var searchQuery = '';
+
+  var CAT_CLASS = { os: 'cat-os', app: 'cat-app', devops: 'cat-devops', plugin: 'cat-plugin' };
+  var CAT_LABEL = { os: 'OS', app: 'App', devops: 'DevOps', plugin: 'Plugin' };
+
+  var INSTALL_PATHS = {
+    plugin: 'Panel > Ayarlar > Eklentiler > Marketplace > Kur',
+    os:     'Panel > VM > Sablonlar',
+    app:    'Panel > VM > Yeni VM > Sablonlar',
+    devops: 'Panel > VM > Sablonlar'
+  };
+
+  function esc(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function buildCard(app) {
+    var card = document.createElement('div');
+    card.className = 'app-card';
+
+    // header
+    var header = document.createElement('div');
+    header.className = 'card-header';
+
+    var nameEl = document.createElement('span');
+    nameEl.className = 'card-name';
+    nameEl.textContent = app.name || '';
+    header.appendChild(nameEl);
+
+    var badge = document.createElement('span');
+    badge.className = 'cat-badge ' + (CAT_CLASS[app.category] || 'cat-app');
+    badge.textContent = CAT_LABEL[app.category] || app.category || '';
+    header.appendChild(badge);
+
+    card.appendChild(header);
+
+    // meta
+    var meta = document.createElement('div');
+    meta.className = 'card-meta';
+
+    var ver = document.createElement('span');
+    ver.className = 'card-meta-item';
+    var verIcon = document.createElement('i');
+    verIcon.className = 'fas fa-tag';
+    verIcon.setAttribute('aria-hidden', 'true');
+    ver.appendChild(verIcon);
+    ver.appendChild(document.createTextNode(' v' + (app.version || '—')));
+    meta.appendChild(ver);
+
+    var auth = document.createElement('span');
+    auth.className = 'card-meta-item';
+    var authIcon = document.createElement('i');
+    authIcon.className = 'fas fa-user';
+    authIcon.setAttribute('aria-hidden', 'true');
+    auth.appendChild(authIcon);
+    auth.appendChild(document.createTextNode(' ' + (app.author || 'unknown')));
+    meta.appendChild(auth);
+
+    card.appendChild(meta);
+
+    // description
+    var desc = document.createElement('div');
+    desc.className = 'card-desc';
+    desc.textContent = app.description || '';
+    card.appendChild(desc);
+
+    // tags
+    var tags = app.tags || [];
+    if (tags.length) {
+      var tagsEl = document.createElement('div');
+      tagsEl.className = 'card-tags';
+      tags.forEach(function (t) {
+        var chip = document.createElement('span');
+        chip.className = 'tag-chip';
+        chip.textContent = t;
+        tagsEl.appendChild(chip);
+      });
+      card.appendChild(tagsEl);
+    }
+
+    // install path
+    var installPath = INSTALL_PATHS[app.category] || INSTALL_PATHS.os;
+    var installBox = document.createElement('div');
+    installBox.className = 'card-install';
+    var installLabel = document.createElement('span');
+    installLabel.className = 'card-install-label';
+    installLabel.textContent = 'Install';
+    var installCode = document.createElement('span');
+    installCode.className = 'card-install-path';
+    installCode.textContent = installPath;
+    installBox.appendChild(installLabel);
+    installBox.appendChild(installCode);
+    card.appendChild(installBox);
+
+    // download link for plugins
+    if (app.plugin_url) {
+      var actions = document.createElement('div');
+      actions.className = 'card-actions';
+      var link = document.createElement('a');
+      link.href = app.plugin_url;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.className = 'card-dl-link';
+      var dlIcon = document.createElement('i');
+      dlIcon.className = 'fas fa-download';
+      dlIcon.setAttribute('aria-hidden', 'true');
+      link.appendChild(dlIcon);
+      link.appendChild(document.createTextNode(' Download .py'));
+      actions.appendChild(link);
+      card.appendChild(actions);
+    }
+
+    return card;
+  }
+
+  function applyFilters() {
+    var q = searchQuery.trim().toLowerCase();
+    var filtered = allApps.filter(function (app) {
+      if (activeCategory !== 'all' && app.category !== activeCategory) return false;
+      if (!q) return true;
+      var haystack = [
+        app.name || '',
+        app.description || '',
+        app.author || ''
+      ].concat(app.tags || []).join(' ').toLowerCase();
+      return haystack.indexOf(q) !== -1;
+    });
+
+    while (grid.firstChild) { grid.removeChild(grid.firstChild); }
+
+    if (filtered.length === 0) {
+      statusMsg.style.display = 'block';
+      if (statusIcon) { statusIcon.className = 'fas fa-search status-icon'; }
+      statusText.textContent = (q || activeCategory !== 'all')
+        ? 'No items match your filter.'
+        : 'No items in marketplace yet.';
+    } else {
+      statusMsg.style.display = 'none';
+      var frag = document.createDocumentFragment();
+      filtered.forEach(function (app) { frag.appendChild(buildCard(app)); });
+      grid.appendChild(frag);
+    }
+  }
+
+  function showError(msg) {
+    while (grid.firstChild) { grid.removeChild(grid.firstChild); }
+    statusMsg.style.display = 'block';
+    if (statusIcon) { statusIcon.className = 'fas fa-circle-exclamation status-icon'; }
+    statusText.textContent = msg;
+  }
+
+  // chip filter
+  chips.forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      chips.forEach(function (c) { c.classList.remove('active'); });
+      chip.classList.add('active');
+      activeCategory = chip.dataset.cat;
+      applyFilters();
+    });
+  });
+
+  // live search
+  searchInput.addEventListener('input', function () {
+    searchQuery = searchInput.value;
+    applyFilters();
+  });
+
+  // initial load state
+  statusMsg.style.display = 'block';
+  statusText.textContent = 'Loading marketplace...';
+
+  fetch('./index.json')
+    .then(function (res) {
+      if (!res.ok) { throw new Error('HTTP ' + res.status); }
+      return res.json();
+    })
+    .then(function (data) {
+      allApps = Array.isArray(data.apps) ? data.apps : [];
+      statusMsg.style.display = 'none';
+      applyFilters();
+    })
+    .catch(function () {
+      showError('Marketplace is loading or offline. Try again shortly.');
+    });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,72 @@
+{
+  "schema": "oxware-marketplace/v1",
+  "updated": "2026-06-08",
+  "submit": "https://github.com/ShinnAsukha/oxware-hypervisor/issues/new?labels=marketplace&template=plugin-submit.md",
+  "apps": [
+    {
+      "id": "ubuntu-server-24.04",
+      "name": "Ubuntu Server 24.04 LTS",
+      "description": "Official Ubuntu Server 24.04 LTS cloud image template with cloud-init.",
+      "category": "os",
+      "tags": ["ubuntu", "linux", "lts", "server"],
+      "vm_spec": {"vcpus": 2, "ram_mb": 2048, "disk_gb": 20},
+      "url": "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img",
+      "author": "OXware",
+      "version": "24.04.1"
+    },
+    {
+      "id": "debian-12-cloud",
+      "name": "Debian 12 Cloud",
+      "description": "Debian 12 Bookworm cloud-init enabled image.",
+      "category": "os",
+      "tags": ["debian", "linux", "cloud-init"],
+      "vm_spec": {"vcpus": 2, "ram_mb": 2048, "disk_gb": 20},
+      "url": "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2",
+      "author": "OXware",
+      "version": "12"
+    },
+    {
+      "id": "wordpress-lamp",
+      "name": "WordPress on LAMP",
+      "description": "Pre-configured WordPress on Apache + MySQL + PHP.",
+      "category": "app",
+      "tags": ["wordpress", "lamp", "blog", "cms"],
+      "vm_spec": {"vcpus": 2, "ram_mb": 4096, "disk_gb": 25},
+      "url": "",
+      "author": "OXware",
+      "version": "6.5"
+    },
+    {
+      "id": "gitlab-ce",
+      "name": "GitLab CE",
+      "description": "Self-hosted GitLab Community Edition for SCM/CI.",
+      "category": "devops",
+      "tags": ["gitlab", "git", "ci"],
+      "vm_spec": {"vcpus": 4, "ram_mb": 8192, "disk_gb": 60},
+      "url": "",
+      "author": "OXware",
+      "version": "17.0"
+    },
+    {
+      "id": "docker-host",
+      "name": "Docker Host",
+      "description": "Ubuntu with Docker Engine + Compose pre-installed.",
+      "category": "devops",
+      "tags": ["docker", "containers"],
+      "vm_spec": {"vcpus": 2, "ram_mb": 4096, "disk_gb": 30},
+      "url": "",
+      "author": "OXware",
+      "version": "1.0"
+    },
+    {
+      "id": "plugin-hello-world",
+      "name": "Hello World Plugin",
+      "description": "Minimal example plugin: adds /api/plugin/hello route. Great starting point for developers.",
+      "category": "plugin",
+      "tags": ["example", "starter", "api"],
+      "plugin_url": "https://oxware.top/marketplace/plugins/hello-world.py",
+      "author": "OXware",
+      "version": "1.0"
+    }
+  ]
+}
