@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OXware Marketplace — Plugins, Templates &amp; Automation</title>
-  <meta name="description" content="Browse community plugins, VM templates, and automation tools for OXware Hypervisor. Install directly from your OXware panel." />
+  <title>OXware Plugin Marketplace</title>
+  <meta name="description" content="Develop OXware plugins in the panel, run them on your own system, and browse the curated plugin catalog. Share your plugins via GitHub Discussions." />
   <link rel="canonical" href="https://oxware.top/marketplace/" />
   <link rel="icon" type="image/png" href="../sadeceikon.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
@@ -499,38 +499,32 @@
   <label for="navtoggle" class="nav-burger" aria-label="Menu"><i class="fas fa-bars"></i></label>
   <ul class="nav-links">
     <li><a href="/">Home</a></li>
-    <li><a href="/docs/">Docs</a></li>
-    <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a></li>
+    <li><a href="/vcenter/">vCenter</a></li>
+    <li><a href="/pricing/">Pricing</a></li>
     <li><a href="/marketplace/" class="nav-active">Marketplace</a></li>
+    <li><a href="/docs/">Docs</a></li>
     <li class="nav-cta">
       <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" class="btn btn-primary">
-        <i class="fab fa-github"></i> Get Started
+        <i class="fab fa-github"></i> Get Started Free
       </a>
     </li>
   </ul>
   <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" class="btn btn-primary">
-    <i class="fab fa-github"></i> Get Started
+    <i class="fab fa-github"></i> Get Started Free
   </a>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
-  <h1>OXware <span>Marketplace</span></h1>
-  <p>Community plugins, VM templates, and automation — install with one click from your OXware panel.</p>
+  <h1>OXware <span>Plugin Marketplace</span></h1>
+  <p>Extend OXware with plugins. Develop your own in the panel, run them on your own system, and browse the curated catalog below.</p>
 </section>
 
 <!-- CONTROLS -->
 <div class="controls">
   <div class="search-wrap">
     <i class="fas fa-search" aria-hidden="true"></i>
-    <input type="text" id="search" placeholder="Search by name, description, or tag..." autocomplete="off">
-  </div>
-  <div class="filter-chips" id="filter-chips">
-    <button class="chip active" data-cat="all">All</button>
-    <button class="chip" data-cat="os"><i class="fas fa-server" aria-hidden="true"></i> OS</button>
-    <button class="chip" data-cat="app"><i class="fas fa-cube" aria-hidden="true"></i> App</button>
-    <button class="chip" data-cat="devops"><i class="fas fa-gears" aria-hidden="true"></i> DevOps</button>
-    <button class="chip" data-cat="plugin"><i class="fas fa-puzzle-piece" aria-hidden="true"></i> Plugin</button>
+    <input type="text" id="search" placeholder="Search plugins by name, description, or tag..." autocomplete="off">
   </div>
 </div>
 
@@ -547,48 +541,96 @@
 <section class="submit-section" id="submit">
   <div class="submit-inner">
     <h2>
-      <i class="fas fa-code-pull-request" style="color:var(--accent);margin-right:.5rem" aria-hidden="true"></i>Submit a Plugin or Template
+      <i class="fas fa-puzzle-piece" style="color:var(--accent);margin-right:.5rem" aria-hidden="true"></i>Build &amp; Share Your Own Plugins
     </h2>
-    <p>Contributions are reviewed manually before appearing in the marketplace.</p>
+    <p>Anyone can develop plugins directly inside the OXware panel and run them on their own system. The marketplace catalog above is curated &mdash; only the maintainer adds entries to keep it safe and trusted.</p>
     <ul class="submit-steps">
       <li class="submit-step">
         <span class="step-num" aria-hidden="true">1</span>
-        <span>Develop your plugin following the <a href="/docs/#plugins">Plugin SDK docs</a>. Plugins are single Python files that implement the OXware plugin interface.</span>
+        <span>Open <strong>Settings &gt; Plugins &gt; Develop</strong> in your panel. Scaffold a template, write your code, and validate it in the browser &mdash; no external tools needed.</span>
       </li>
       <li class="submit-step">
         <span class="step-num" aria-hidden="true">2</span>
-        <span>Open a GitHub issue with the <code class="inline-code">marketplace</code> label and attach your <code class="inline-code">plugin.py</code> or <code class="inline-code">.zip</code>.</span>
+        <span>Upload and enable the plugin on your own OXware install. It runs locally on your system &mdash; you stay in full control.</span>
       </li>
       <li class="submit-step">
         <span class="step-num" aria-hidden="true">3</span>
-        <span>The maintainer reviews your submission and adds it to <code class="inline-code">index.json</code> on the next release.</span>
+        <span>Want to share it with the community? Publish your plugin in <a href="https://github.com/ShinnAsukha/oxware-hypervisor/discussions" target="_blank" rel="noopener">GitHub Discussions</a>. Useful, well-tested plugins may be picked up and added to this curated catalog.</span>
       </li>
     </ul>
-    <a
-      href="https://github.com/ShinnAsukha/oxware-hypervisor/issues/new?labels=marketplace"
-      target="_blank"
-      rel="noopener"
-      class="btn btn-primary"
-    >
-      <i class="fab fa-github" aria-hidden="true"></i> Open Submission Issue
-    </a>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+      <a
+        href="https://github.com/ShinnAsukha/oxware-hypervisor/discussions"
+        target="_blank"
+        rel="noopener"
+        class="btn btn-primary"
+      >
+        <i class="fab fa-github" aria-hidden="true"></i> Share on Discussions
+      </a>
+      <a
+        href="https://discord.gg/c6yHhKrQs5"
+        target="_blank"
+        rel="noopener"
+        class="btn btn-outline"
+      >
+        <i class="fab fa-discord" aria-hidden="true"></i> Join our Discord
+      </a>
+      <a href="/docs/#plugins" class="btn btn-outline">
+        <i class="fas fa-book" aria-hidden="true"></i> Plugin SDK Docs
+      </a>
+    </div>
   </div>
 </section>
 
 <!-- FOOTER -->
-<div class="footer-border">
-  <footer>
-    <div class="footer-left">
-      &copy; 2026 OXware. MIT License.
+<footer style="background:var(--surface);border-top:1px solid var(--border);padding:2.5rem 2rem;">
+  <div style="max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:2rem;flex-wrap:wrap;">
+
+    <div style="max-width:280px;">
+      <div style="display:flex;align-items:center;gap:0.5rem;font-weight:700;font-size:1.1rem;color:var(--accent);margin-bottom:0.75rem;">
+        <img src="../sadeceikon.png" alt="OXware" style="width:24px;height:24px;object-fit:contain;" onerror="this.style.display='none'" />
+        OXware
+      </div>
+      <p style="font-size:0.85rem;color:var(--muted);line-height:1.55;">Open source KVM/QEMU hypervisor management. From single VMs to full multi-node clusters — enterprise power, zero lock-in.</p>
     </div>
-    <nav class="footer-links" aria-label="Footer navigation">
-      <a href="/">Home</a>
-      <a href="/docs/">Docs</a>
-      <a href="/marketplace/">Marketplace</a>
-      <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener">GitHub</a>
-    </nav>
-  </footer>
-</div>
+
+    <div>
+      <h4 style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:0.75rem;">Product</h4>
+      <ul style="list-style:none;">
+        <li style="margin-bottom:0.5rem;"><a href="/" style="font-size:0.875rem;color:var(--text);">OXware Panel</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="/vcenter/" style="font-size:0.875rem;color:var(--text);">vCenter</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="/marketplace/" style="font-size:0.875rem;color:var(--text);">Marketplace</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="/pricing/" style="font-size:0.875rem;color:var(--text);">Pricing</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="/docs/" style="font-size:0.875rem;color:var(--text);">Documentation</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <h4 style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:0.75rem;">Community</h4>
+      <ul style="list-style:none;">
+        <li style="margin-bottom:0.5rem;"><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);"><i class="fab fa-github"></i> GitHub</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="https://discord.gg/c6yHhKrQs5" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);"><i class="fab fa-discord"></i> Discord</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="https://www.linkedin.com/company/oxware" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);"><i class="fab fa-linkedin"></i> LinkedIn</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="https://github.com/ShinnAsukha/oxware-hypervisor/discussions" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);"><i class="fas fa-comments"></i> Discussions</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <h4 style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:0.75rem;">Legal</h4>
+      <ul style="list-style:none;">
+        <li style="margin-bottom:0.5rem;"><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);">MIT License</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/SECURITY.md" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);">Security Policy</a></li>
+        <li style="margin-bottom:0.5rem;"><a href="https://g.page/r/CYXvWfbx9uKJEBM/review" target="_blank" rel="noopener" style="font-size:0.875rem;color:#4285F4;"><i class="fas fa-star"></i> Google Review</a></li>
+      </ul>
+    </div>
+
+  </div>
+
+  <div style="max-width:1100px;margin:2rem auto 0;padding-top:1.25rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;font-size:0.8rem;color:var(--muted);">
+    <span>&copy; 2026 OXware. Released under the MIT License.</span>
+    <span>Built with <i class="fa-solid fa-heart" style="color:var(--danger);"></i> for the open source community.</span>
+  </div>
+</footer>
 
 <script>
 (function () {
@@ -609,10 +651,7 @@
   var CAT_LABEL = { os: 'OS', app: 'App', devops: 'DevOps', plugin: 'Plugin' };
 
   var INSTALL_PATHS = {
-    plugin: 'Panel > Ayarlar > Eklentiler > Marketplace > Kur',
-    os:     'Panel > VM > Sablonlar',
-    app:    'Panel > VM > Yeni VM > Sablonlar',
-    devops: 'Panel > VM > Sablonlar'
+    plugin: 'Panel > Settings > Plugins > Marketplace > Install'
   };
 
   function esc(str) {
@@ -689,7 +728,7 @@
     }
 
     // install path
-    var installPath = INSTALL_PATHS[app.category] || INSTALL_PATHS.os;
+    var installPath = INSTALL_PATHS[app.category] || INSTALL_PATHS.plugin;
     var installBox = document.createElement('div');
     installBox.className = 'card-install';
     var installLabel = document.createElement('span');
@@ -742,8 +781,8 @@
       statusMsg.style.display = 'block';
       if (statusIcon) { statusIcon.className = 'fas fa-search status-icon'; }
       statusText.textContent = (q || activeCategory !== 'all')
-        ? 'No items match your filter.'
-        : 'No items in marketplace yet.';
+        ? 'No plugins match your search.'
+        : 'No plugins in the catalog yet.';
     } else {
       statusMsg.style.display = 'none';
       var frag = document.createDocumentFragment();
