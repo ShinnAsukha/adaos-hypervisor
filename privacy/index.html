@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — OXware</title>
+  <meta name="description" content="OXware privacy policy. Learn how we handle your data." />
+  <link rel="icon" type="image/png" href="../sadeceikon.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d1117; --surface: #161b22; --border: #30363d;
+      --accent: #58a6ff; --text: #c9d1d9; --muted: #8b949e; --radius: 10px;
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.7; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,17,23,.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo { font-size: 1.2rem; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: .5rem; }
+    .nav-logo img { width: 28px; height: 28px; object-fit: contain; }
+    .nav-links { list-style: none; display: flex; gap: 1.5rem; align-items: center; }
+    .nav-links a { color: var(--text); font-size: .9rem; }
+    .nav-links a:hover { color: var(--accent); text-decoration: none; }
+    .btn { display: inline-flex; align-items: center; gap: .4rem; padding: .45rem 1.1rem; border-radius: var(--radius); font-size: .875rem; font-weight: 600; cursor: pointer; border: none; transition: opacity .2s; text-decoration: none; }
+    .btn:hover { opacity: .85; text-decoration: none; }
+    .btn-primary { background: var(--accent); color: #0d1117; }
+
+    .hero { text-align: center; padding: 3.5rem 2rem 1.5rem; }
+    .hero-badge { display: inline-block; background: rgba(88,166,255,.12); color: var(--accent); border: 1px solid rgba(88,166,255,.3); border-radius: 2rem; padding: .25rem .9rem; font-size: .78rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: .5px; text-transform: uppercase; }
+    .hero h1 { font-size: clamp(1.8rem,4vw,2.5rem); font-weight: 800; margin-bottom: .75rem; }
+    .hero p { color: var(--muted); font-size: .95rem; }
+
+    .content { max-width: 780px; margin: 0 auto; padding: 2rem 2rem 4rem; }
+    .section { margin-bottom: 2.5rem; }
+    .section h2 { font-size: 1.1rem; font-weight: 700; color: var(--accent); margin-bottom: .75rem; display: flex; align-items: center; gap: .6rem; }
+    .section p, .section li { font-size: .9rem; color: var(--text); margin-bottom: .5rem; }
+    .section ul { padding-left: 1.4rem; }
+    .section ul li { margin-bottom: .35rem; }
+    .highlight { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+    .updated { display: inline-block; background: rgba(63,185,80,.1); color: #3fb950; border: 1px solid rgba(63,185,80,.25); border-radius: 6px; padding: .2rem .75rem; font-size: .78rem; font-weight: 700; margin-top: .5rem; }
+
+    footer { border-top: 1px solid var(--border); padding: 2rem 2rem 1.5rem; text-align: center; font-size: .8rem; color: var(--muted); }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--accent); }
+
+    .nav-toggle-cb { display: none; }
+    .nav-burger { display: none; cursor: pointer; font-size: 1.4rem; color: var(--text); padding: .3rem .5rem; }
+    @media (max-width: 768px) {
+      nav { flex-wrap: wrap; }
+      .nav-burger { display: inline-flex; align-items: center; order: 3; }
+      nav > .btn-primary { display: none; }
+      .nav-links { order: 4; flex-basis: 100%; flex-direction: column; align-items: stretch; gap: 0; max-height: 0; overflow: hidden; transition: max-height .3s ease; background: var(--surface); margin: 0 -2rem; }
+      .nav-toggle-cb:checked ~ .nav-links { max-height: 300px; border-top: 1px solid var(--border); }
+      .nav-links li { width: 100%; }
+      .nav-links a { display: block; padding: .85rem 2rem; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="../" class="nav-logo">
+    <img src="../sadeceikon.png" alt="OXware" />
+    OXware
+  </a>
+  <input type="checkbox" id="navtoggle" class="nav-toggle-cb">
+  <label for="navtoggle" class="nav-burger" aria-label="Menü"><i class="fa-solid fa-bars"></i></label>
+  <ul class="nav-links">
+    <li><a href="../">Home</a></li>
+    <li><a href="../vcenter/">vCenter</a></li>
+    <li><a href="../pricing/">Pricing</a></li>
+    <li><a href="../marketplace/">Marketplace</a></li>
+    <li><a href="../docs/">Docs</a></li>
+    <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" class="btn btn-primary"><i class="fa-brands fa-github"></i> Get Started Free</a></li>
+  </ul>
+  <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" class="btn btn-primary">
+    <i class="fa-brands fa-github"></i> Get Started Free
+  </a>
+</nav>
+
+<section class="hero">
+  <div class="hero-badge">Legal</div>
+  <h1>Privacy Policy</h1>
+  <p>Last updated: <strong>June 9, 2026</strong></p>
+  <span class="updated"><i class="fa-solid fa-circle-check"></i> GDPR Compliant</span>
+</section>
+
+<div class="content">
+
+  <div class="highlight">
+    <p style="font-size:.9rem"><i class="fa-solid fa-shield-halved" style="color:var(--accent);margin-right:8px"></i>
+    <strong>Short version:</strong> OXware is self-hosted software. When you run OXware on your own servers, all your VM data, credentials, and usage information stays on <em>your infrastructure</em> — we never see it. This policy covers only what happens when you visit <strong>oxware.top</strong> and when you purchase a commercial license.</p>
+  </div>
+
+  <div class="section">
+    <h2><i class="fa-solid fa-building"></i> 1. Who We Are</h2>
+    <p>OXware is an open-source hypervisor management panel developed and maintained by the OXware team. Contact: <a href="mailto:root@oxware.top">root@oxware.top</a></p>
+  </div>
+
+  <div class="section">
+    <h2><i class="fa-solid fa-database"></i> 2. Data We Collect</h2>
+    <p><strong>On oxware.top (this website):</strong></p>
+    <ul>
+      <li>Standard web server access logs (IP address, browser type, pages visited) — retained for 30 days</li>
+      <li>Contact form submissions (name, email, message) — used only to respond to inquiries</li>
+      <li>License purchase information (name, email) — processed via our payment provider</li>
+    </ul>
+    <p style="margin-top:.75rem"><strong>OXware panel (self-hosted software):</strong></p>
+    <ul>
+      <li>All data (VMs, users, credentials, audit logs) is stored entirely on your own server</li>
+      <li>OXware does not transmit any operational data to our servers</li>
+      <li>Optional telemetry (anonymous install count) can be disabled in config — no PII is collected</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2><i class="fa-solid fa-gears"></i> 3. How We Use Data</h2>
+    <ul>
+      <li>To respond to support and sales inquiries</li>
+      <li>To deliver license keys and activation emails</li>
+      <li>To improve the website and documentation</li>
+      <li>We do <strong>not</strong> sell, rent, or share your data with third parties for marketing</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2><i class="fa-solid fa-cookie-bite"></i> 4. Cookies</h2>
+    <p>oxware.top uses only essential cookies necessary for site functionality (session management, CSRF protection). We do not use tracking cookies, advertising cookies, or third-party analytics.</p>
+  </div>
+
+  <div class="section">
+    <h2><i class="fa-solid fa-share-nodes"></i> 5. Third-Party Services</h2>
+    <ul>
+      <li><strong>GitHub</strong> — source code hosting, issue tracking. Governed by <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement" target="_blank" rel="noopener">GitHub Privacy Statement</a></li>
+      <li><strong>Cloudflare</strong> — CDN for font-awesome assets. Governed by <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare Privacy Policy</a></li>
+      <li><strong>WhatsApp Business</strong> — sales/support channel. Messages governed by Meta privacy policy</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2><i class="fa-solid fa-user-shield"></i> 6. Your Rights (GDPR)</h2>
+    <p>If you are in the European Economic Area, you have the right to:</p>
+    <ul>
+      <li><strong>Access</strong> — request a copy of personal data we hold about you</li>
+      <li><strong>Rectification</strong> — request correction of inaccurate data</li>
+      <li><strong>Erasure</strong> — request deletion of your data ("right to be forgotten")</li>
+      <li><strong>Portability</strong> — receive your data in a structured, machine-readable format</li>
+      <li><strong>Objection</strong> — object to processing of your personal data</li>
+    </ul>
+    <p style="margin-top:.75rem">To exercise any of these rights, email <a href="mailto:root@oxware.top">root@oxware.top</a>. We will respond within 30 days.</p>
+  </div>
+
+  <div class="section">
+    <h2><i class="fa-solid fa-lock"></i> 7. Security</h2>
+    <p>We implement appropriate technical and organizational measures to protect personal data against unauthorized access, disclosure, or destruction. The OXware panel itself features JWT authentication, RBAC, 2FA, account lockout, IP allowlisting, audit logging, and encrypted credential storage.</p>
+    <p style="margin-top:.5rem">To report a security vulnerability, see our <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/SECURITY.md" target="_blank" rel="noopener">Security Policy</a>.</p>
+  </div>
+
+  <div class="section">
+    <h2><i class="fa-solid fa-child"></i> 8. Children's Privacy</h2>
+    <p>OXware is intended for professional and commercial use. We do not knowingly collect personal data from individuals under 16 years of age.</p>
+  </div>
+
+  <div class="section">
+    <h2><i class="fa-solid fa-pen-to-square"></i> 9. Changes to This Policy</h2>
+    <p>We may update this policy from time to time. Material changes will be announced via the GitHub repository. The "Last updated" date at the top of this page will always reflect the most recent revision.</p>
+  </div>
+
+  <div class="section">
+    <h2><i class="fa-solid fa-envelope"></i> 10. Contact</h2>
+    <p>For privacy-related inquiries: <a href="mailto:root@oxware.top">root@oxware.top</a></p>
+    <p>For security disclosures: <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/SECURITY.md" target="_blank" rel="noopener">GitHub Security Policy</a></p>
+    <p>WhatsApp: <a href="https://wa.me/905439769301" target="_blank" rel="noopener">+90 543 976 9301</a></p>
+  </div>
+
+</div>
+
+<footer>
+  <p>
+    <a href="../">Home</a> &nbsp;·&nbsp;
+    <a href="../pricing/">Pricing</a> &nbsp;·&nbsp;
+    <a href="../docs/">Docs</a> &nbsp;·&nbsp;
+    <a href="./">Privacy Policy</a> &nbsp;·&nbsp;
+    <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+  </p>
+  <p style="margin-top:.75rem">© 2026 OXware. All rights reserved.</p>
+</footer>
+
+<script>
+(function() {
+  var cb = document.getElementById('navtoggle');
+  if (!cb) return;
+  document.querySelectorAll('.nav-links a').forEach(function(a) {
+    a.addEventListener('click', function() { cb.checked = false; });
+  });
+})();
+</script>
+</body>
+</html>
