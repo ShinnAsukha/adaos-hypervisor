@@ -47,9 +47,24 @@
     .highlight { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
     .updated { display: inline-block; background: rgba(63,185,80,.1); color: #3fb950; border: 1px solid rgba(63,185,80,.25); border-radius: 6px; padding: .2rem .75rem; font-size: .78rem; font-weight: 700; margin-top: .5rem; }
 
-    footer { border-top: 1px solid var(--border); padding: 2rem 2rem 1.5rem; text-align: center; font-size: .8rem; color: var(--muted); }
-    footer a { color: var(--muted); }
-    footer a:hover { color: var(--accent); }
+    footer { border-top: 1px solid var(--border); padding: 3rem 2rem 1.5rem; }
+    .footer-inner { display: flex; gap: 3rem; max-width: 1160px; margin: 0 auto 2rem; flex-wrap: wrap; }
+    .footer-brand { max-width: 280px; }
+    .footer-brand .logo { display: flex; align-items: center; gap: .5rem; font-size: 1.1rem; font-weight: 700; color: var(--accent); margin-bottom: .75rem; }
+    .footer-brand .logo img { width: 24px; height: 24px; object-fit: contain; }
+    .footer-brand p { font-size: .85rem; color: var(--muted); line-height: 1.55; }
+    .footer-links h4 { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: .75rem; }
+    .footer-links ul { list-style: none; }
+    .footer-links li { margin-bottom: .5rem; }
+    .footer-links a { font-size: .875rem; color: var(--text); }
+    .footer-links a:hover { color: var(--accent); text-decoration: none; }
+    .footer-bottom { max-width: 1160px; margin: 0 auto; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem; font-size: .8rem; color: var(--muted); }
+    .ver-badge { display: inline-flex; align-items: center; gap: 0.35rem; background: linear-gradient(135deg,rgba(88,166,255,.14),rgba(63,185,80,.1)); border: 1px solid rgba(88,166,255,.3); color: var(--accent); font-size: .7rem; font-weight: 700; padding: .2rem .65rem; border-radius: 20px; letter-spacing: .5px; font-family: "SFMono-Regular", Consolas, Monaco, monospace; }
+    .ver-badge .ver-dot { width: 6px; height: 6px; border-radius: 50%; background: #3fb950; box-shadow: 0 0 6px #3fb950; }
+    @media (max-width: 640px) {
+      .footer-inner { flex-direction: column; gap: 1.5rem; }
+      .footer-bottom { flex-direction: column; gap: .6rem; text-align: center; }
+    }
 
     .nav-toggle-cb { display: none; }
     .nav-burger { display: none; cursor: pointer; font-size: 1.4rem; color: var(--text); padding: .3rem .5rem; }
@@ -184,14 +199,47 @@
 </div>
 
 <footer>
-  <p>
-    <a href="../">Home</a> &nbsp;·&nbsp;
-    <a href="../pricing/">Pricing</a> &nbsp;·&nbsp;
-    <a href="../docs/">Docs</a> &nbsp;·&nbsp;
-    <a href="./">Privacy Policy</a> &nbsp;·&nbsp;
-    <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
-  </p>
-  <p style="margin-top:.75rem">© 2026 OXware. All rights reserved.</p>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="logo">
+        <img src="../sadeceikon.png" alt="OXware" />
+        OXware
+      </div>
+      <p>Open source KVM/QEMU hypervisor management. From single VMs to full multi-node clusters — enterprise power, zero lock-in.</p>
+    </div>
+    <div class="footer-links">
+      <h4>Product</h4>
+      <ul>
+        <li><a href="../">OXware Panel</a></li>
+        <li><a href="../vcenter/">vCenter</a></li>
+        <li><a href="../pricing/">Pricing</a></li>
+        <li><a href="../docs/">Documentation</a></li>
+      </ul>
+    </div>
+    <div class="footer-links">
+      <h4>Community</h4>
+      <ul>
+        <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i> GitHub</a></li>
+        <li><a href="https://discord.gg/c6yHhKrQs5" target="_blank" rel="noopener"><i class="fa-brands fa-discord"></i> Discord</a></li>
+        <li><a href="https://www.linkedin.com/company/oxware" target="_blank" rel="noopener"><i class="fa-brands fa-linkedin"></i> LinkedIn</a></li>
+      </ul>
+    </div>
+    <div class="footer-links">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a></li>
+        <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/SECURITY.md" target="_blank" rel="noopener">Security Policy</a></li>
+        <li><a href="./">Privacy Policy</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span style="display:inline-flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+      © 2026 OXware. Released under the MIT License.
+      <span class="ver-badge" title="Current development version"><span class="ver-dot"></span>v2.7.0</span>
+    </span>
+    <span>Built with <i class="fa-solid fa-heart" style="color:#f85149"></i> for the open source community.</span>
+  </div>
 </footer>
 
 <script>
