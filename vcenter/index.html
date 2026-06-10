@@ -614,6 +614,15 @@
       width: 6px; height: 6px; border-radius: 50%; background: var(--accent2);
       box-shadow: 0 0 6px var(--accent2);
     }
+  /* mobile perf — GPU-heavy effects off */
+  @media (max-width:900px){
+    *,*::before,*::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+    .marquee-wrap{mask-image:none!important;-webkit-mask-image:none!important}
+    .marquee-track{animation:none!important;will-change:auto!important}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important}
+  }
   </style>
 </head>
 <body>

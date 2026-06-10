@@ -1250,6 +1250,16 @@
  @keyframes mq-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
  .mq-item{color:#fff;font-size:.95rem;font-weight:600;opacity:.9;flex-shrink:0;letter-spacing:.3px}
  .marquee-wrap:hover .marquee-track{animation-play-state:paused}
+ /* mobile perf — GPU-heavy effects off */
+ @media (max-width:900px){
+   *,*::before,*::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+   .marquee-wrap{mask-image:none!important;-webkit-mask-image:none!important}
+   .marquee-track{animation:none!important;will-change:auto!important}
+   [class*="rm-pulse"],[class*="rmpulse"]{animation:none!important}
+ }
+ @media (prefers-reduced-motion:reduce){
+   *,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important}
+ }
  </style>
 </head>
 <body>
