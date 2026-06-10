@@ -446,6 +446,9 @@
 
  <div class="sidebar-section">Enterprise (v2.7.0)</div>
  <a href="#enterprise"><i class="fas fa-building"></i> Enterprise Features</a>
+ <a href="#v270-cvm" style="padding-left:1.5rem;font-size:.85rem"><i class="fas fa-user-shield"></i> Confidential VMs</a>
+ <a href="#v270-runbook" style="padding-left:1.5rem;font-size:.85rem"><i class="fas fa-robot"></i> Auto-Remediation</a>
+ <a href="#v270-federation" style="padding-left:1.5rem;font-size:.85rem"><i class="fas fa-network-wired"></i> Cluster Federation</a>
 
  <div class="sidebar-section">Extensibility</div>
  <a href="#plugins"><i class="fas fa-puzzle-piece"></i> Plugin SDK</a>
@@ -1202,17 +1205,56 @@ ethernets:
  <section id="enterprise">
  <h2>Enterprise Features (v2.7.0)</h2>
  <p>
- The <strong>v2.7.0 Enterprise release</strong> brings 23+ datacenter-grade modules to open-source KVM,
+ The <strong>v2.7.0 Enterprise release</strong> brings 27+ datacenter-grade modules to open-source KVM,
  closing the gap with VMware vSphere and Nutanix AHV — at zero licensing cost.
  </p>
 
  <div class="callout callout-success">
- <strong>What's new</strong>
- DRS, EVC, NIOC, Site Recovery, NUMA scheduling, linked clones, app-consistent snapshots, SIEM export,
- session recording, AES backup encryption, lifecycle manager, alert correlation, webhook system, and more.
- v2.6.2 adds Green Mode (AI power optimization, WoL/IPMI node control, hourly load forecast).
- v2.7.0 adds Multi-Region geo-placement, App Marketplace (curated plugin catalog at oxware.top/marketplace — plugins developed in the panel via Settings → Plugins → Develop, run locally, shared via GitHub Discussions), Cloud Burst (AWS/GCP/Azure), Bare-Metal PXE/iPXE provisioning, and OAuth 2.0 PKCE SSO.
+ <strong>What's new in v2.7.0</strong>
+ <strong>Confidential VMs</strong> with vTPM 2.0 + UEFI Secure Boot + measurement attestation (AMD SEV/SEV-ES/SEV-SNP + Intel TDX),
+ <strong>Auto-Remediation Runbooks</strong> wired into the anomaly detector (cooldown + hourly quota + audit history),
+ <strong>Managed Cluster Federation</strong> for single-pane control across multiple OXware nodes (parallel health, aggregated VM inventory, bulk action forwarding),
+ <strong>OS-aware VM icons</strong> in the create modal and VM list,
+ <strong>topbar license banner</strong> restored for active licenses,
+ <strong>strict CSP</strong> + per-IP rate limit on auth endpoints,
+ and the <strong>privacy policy</strong> page at oxware.top/privacy.
  </div>
+
+ <div class="callout">
+ <strong>Earlier releases — recap</strong>
+ v2.6.3: Multi-Region, App Marketplace (curated catalog), Cloud Burst (AWS/GCP/Azure), Bare-Metal PXE/iPXE, OAuth 2.0 PKCE SSO.
+ v2.6.2: Green Mode (AI power optimization, WoL/IPMI node control, hourly load forecast).
+ v2.5.x: DRS, EVC, NIOC, Site Recovery, NUMA scheduling, linked clones, app-consistent snapshots, SIEM export, session recording, AES backup encryption, lifecycle manager, alert correlation, webhook system.
+ </div>
+
+ <h3 id="v270-cvm">Confidential VMs (v2.7.0)</h3>
+ <ul>
+ <li><strong>AMD SEV / SEV-ES / SEV-SNP / Intel TDX</strong> — CPU-enforced memory encryption. The hypervisor cannot read guest RAM.</li>
+ <li><strong>vTPM 2.0</strong> — per-VM virtual TPM with persistent emulated state for BitLocker, LUKS2 unlock, measured boot.</li>
+ <li><strong>UEFI Secure Boot</strong> — signed OVMF loader (<code>OVMF_CODE.secboot.fd</code>) + SMM, blocks unsigned kernels at boot.</li>
+ <li><strong>Attestation</strong> — captures the launch measurement via <code>virsh domlaunchsecinfo</code> (SEV/SNP) or TDREPORT (TDX) and stores it per-VM for relying-party verification.</li>
+ <li>API: <code>/api/confidential-vm/support</code>, <code>/vms</code>, <code>/vms/&lt;id&gt;</code> (POST mode), <code>/vms/&lt;id&gt;/vtpm</code>, <code>/vms/&lt;id&gt;/secure-boot</code>, <code>/vms/&lt;id&gt;/attest</code>.</li>
+ </ul>
+
+ <h3 id="v270-runbook">Auto-Remediation Runbooks (v2.7.0)</h3>
+ <ul>
+ <li><strong>Anomaly-driven</strong> — when the z-score detector raises an event matching a runbook's metric regex with sufficient confidence, the runbook fires automatically.</li>
+ <li><strong>Step types</strong>: <code>notify</code> (alert via notifications module), <code>shell</code> (timeout-bounded subprocess), <code>api_call</code> (internal HTTP POST), <code>vm_action</code> (virsh start/stop/reboot with vm_id extracted from the metric key).</li>
+ <li><strong>Safety</strong> — every runbook has a <code>cooldown_sec</code> and <code>max_runs_per_hour</code> cap; <code>approval: manual</code> disables auto-fire and forces operator click.</li>
+ <li><strong>Audit</strong> — every execution appends to <code>/var/lib/oxware/runbook_history.jsonl</code> with step-by-step results.</li>
+ <li><strong>Defaults</strong>: throttle hot VMs on CPU anomaly, balloon idle VMs on memory pressure, throttle batch I/O on IOPS spike, auto-restart unexpectedly stopped VMs.</li>
+ <li>API: <code>/api/runbooks</code> (GET/POST), <code>/api/runbooks/&lt;id&gt;</code> (DELETE), <code>/api/runbooks/&lt;id&gt;/run</code>, <code>/api/runbooks/history</code>.</li>
+ </ul>
+
+ <h3 id="v270-federation">Managed Cluster Federation (v2.7.0)</h3>
+ <ul>
+ <li><strong>Single control plane</strong> — federate multiple OXware controllers into one inventory. Each member keeps its own RBAC and audit log; the federation node forwards calls and aggregates results.</li>
+ <li><strong>Parallel health</strong> — <code>/api/health</code> probed across all members concurrently with latency reported per member.</li>
+ <li><strong>VM inventory</strong> — <code>/api/vms</code> aggregated across members. Per-VM rows carry <code>_member_id</code>, <code>_member_label</code>, <code>_region</code> so the panel can group/filter.</li>
+ <li><strong>Bulk action</strong> — fan out one call to many members in parallel. Audit logs stay where the VM lives.</li>
+ <li><strong>Roles</strong>: <code>leader</code>, <code>follower</code>, <code>observer</code>. TLS verification per member.</li>
+ <li>API: <code>/api/federation/members</code> (GET/POST/PATCH/DELETE), <code>/api/federation/health</code>, <code>/api/federation/inventory/vms</code>, <code>/api/federation/forward/&lt;id&gt;</code>, <code>/api/federation/bulk</code>.</li>
+ </ul>
 
  <h3>Compute &amp; Scheduling</h3>
  <ul>
