@@ -1,7 +1,9 @@
 {
   "schema": "oxware-marketplace/v1",
-  "updated": "2026-06-08",
+  "updated": "2026-06-10",
+  "policy": "curated",
   "discussions": "https://github.com/ShinnAsukha/oxware-hypervisor/discussions",
+  "note": "The OXware catalog is curated by the maintainer. To share a plugin, post it in GitHub Discussions; if it is broadly useful and safe, it will be added here.",
   "apps": [
     {
       "id": "plugin-hello-world",
@@ -12,6 +14,147 @@
       "plugin_url": "https://oxware.top/marketplace/plugins/hello-world.py",
       "author": "OXware",
       "version": "1.0"
+    },
+    {
+      "id": "plugin-telegram-notifier",
+      "name": "Telegram Notifier",
+      "description": "Forwards VM lifecycle events (created, started, stopped, failed) and high-severity alerts to a Telegram bot.",
+      "category": "plugin",
+      "tags": ["notification", "telegram", "alerts"],
+      "plugin_url": "https://oxware.top/marketplace/plugins/telegram-notifier.py",
+      "author": "OXware",
+      "version": "1.0",
+      "config_keys": ["bot_token", "chat_id"]
+    },
+    {
+      "id": "plugin-discord-console",
+      "name": "Discord Console",
+      "description": "Manage VMs from a Discord channel via slash commands: /vms, /start, /stop, /reboot, /status.",
+      "category": "plugin",
+      "tags": ["chatops", "discord", "remote-control"],
+      "plugin_url": "https://oxware.top/marketplace/plugins/discord-console.py",
+      "author": "OXware",
+      "version": "1.0",
+      "config_keys": ["discord_token", "allowed_user_ids"]
+    },
+    {
+      "id": "plugin-prometheus-exporter",
+      "name": "Prometheus Exporter",
+      "description": "Exposes OXware host and VM metrics at /metrics in Prometheus exposition format. Suitable for scraping by Prometheus, VictoriaMetrics, Mimir.",
+      "category": "plugin",
+      "tags": ["observability", "prometheus", "metrics"],
+      "plugin_url": "https://oxware.top/marketplace/plugins/prometheus-exporter.py",
+      "author": "OXware",
+      "version": "1.0"
+    },
+    {
+      "id": "plugin-pagerduty",
+      "name": "PagerDuty Alerter",
+      "description": "Routes high-severity OXware alerts to PagerDuty Events API v2. Maps severity, deduplicates by alert key.",
+      "category": "plugin",
+      "tags": ["oncall", "pagerduty", "alerts"],
+      "plugin_url": "https://oxware.top/marketplace/plugins/pagerduty.py",
+      "author": "OXware",
+      "version": "1.0",
+      "config_keys": ["routing_key"]
+    },
+    {
+      "id": "plugin-slack-notifier",
+      "name": "Slack Notifier",
+      "description": "Posts OXware events to a Slack channel via incoming webhook. Filters by severity and category.",
+      "category": "plugin",
+      "tags": ["notification", "slack", "alerts"],
+      "plugin_url": "https://oxware.top/marketplace/plugins/slack-notifier.py",
+      "author": "OXware",
+      "version": "1.0",
+      "config_keys": ["webhook_url", "min_severity"]
+    },
+    {
+      "id": "template-wordpress-stack",
+      "name": "WordPress Production Stack",
+      "description": "Ubuntu 22.04 + nginx + MariaDB + PHP-FPM + WordPress, tuned for production. cloud-init bootstraps Let's Encrypt and basic hardening.",
+      "category": "template",
+      "tags": ["wordpress", "lemp", "production"],
+      "template_url": "https://oxware.top/marketplace/templates/wordpress-stack.tar.gz",
+      "os": "ubuntu22.04",
+      "min_ram_mb": 2048,
+      "disk_gb": 20,
+      "author": "OXware",
+      "version": "1.0"
+    },
+    {
+      "id": "template-k3s-cluster",
+      "name": "k3s 3-Node Cluster",
+      "description": "Three-VM k3s cluster — one server, two agents. cloud-init joins agents via shared token. Includes Traefik ingress.",
+      "category": "template",
+      "tags": ["kubernetes", "k3s", "cluster"],
+      "template_url": "https://oxware.top/marketplace/templates/k3s-cluster.tar.gz",
+      "os": "ubuntu22.04",
+      "min_ram_mb": 4096,
+      "disk_gb": 40,
+      "vm_count": 3,
+      "author": "OXware",
+      "version": "1.0"
+    },
+    {
+      "id": "template-monitoring-stack",
+      "name": "Monitoring Stack (Prometheus + Grafana + Loki)",
+      "description": "Single-VM monitoring host running Prometheus, Grafana, Loki, and Promtail. Preconfigured to scrape the OXware Prometheus Exporter plugin.",
+      "category": "template",
+      "tags": ["observability", "prometheus", "grafana", "loki"],
+      "template_url": "https://oxware.top/marketplace/templates/monitoring-stack.tar.gz",
+      "os": "debian12",
+      "min_ram_mb": 4096,
+      "disk_gb": 50,
+      "author": "OXware",
+      "version": "1.0"
+    },
+    {
+      "id": "template-mail-server",
+      "name": "Mail Server (Postfix + Dovecot + Roundcube)",
+      "description": "Self-hosted mail with TLS, SPF/DKIM/DMARC, Roundcube webmail, Fail2Ban. cloud-init asks for the domain and admin email.",
+      "category": "template",
+      "tags": ["mail", "postfix", "dovecot"],
+      "template_url": "https://oxware.top/marketplace/templates/mail-server.tar.gz",
+      "os": "debian12",
+      "min_ram_mb": 2048,
+      "disk_gb": 30,
+      "author": "OXware",
+      "version": "1.0"
+    },
+    {
+      "id": "template-wireguard-vpn",
+      "name": "WireGuard VPN Server",
+      "description": "WireGuard server with a small client management API. cloud-init generates the server keypair and exposes a QR-code endpoint for new client configs.",
+      "category": "template",
+      "tags": ["vpn", "wireguard", "network"],
+      "template_url": "https://oxware.top/marketplace/templates/wireguard-vpn.tar.gz",
+      "os": "debian12",
+      "min_ram_mb": 1024,
+      "disk_gb": 10,
+      "author": "OXware",
+      "version": "1.0"
+    },
+    {
+      "id": "theme-vsphere-look",
+      "name": "vSphere Look",
+      "description": "UI theme that mimics VMware vSphere Client colors and typography. Drop-in CSS, no panel changes.",
+      "category": "theme",
+      "tags": ["theme", "vmware", "vsphere"],
+      "theme_url": "https://oxware.top/marketplace/themes/vsphere-look.css",
+      "author": "OXware",
+      "version": "1.0"
+    },
+    {
+      "id": "integration-backblaze-b2",
+      "name": "Backblaze B2 Backup Target",
+      "description": "Adds Backblaze B2 as a backup destination for the OXware backup scheduler. Supports application-default encryption and lifecycle rules.",
+      "category": "integration",
+      "tags": ["backup", "backblaze", "s3"],
+      "plugin_url": "https://oxware.top/marketplace/plugins/backblaze-b2.py",
+      "author": "OXware",
+      "version": "1.0",
+      "config_keys": ["b2_key_id", "b2_app_key", "bucket"]
     }
   ]
 }
