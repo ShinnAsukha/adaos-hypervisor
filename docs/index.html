@@ -444,7 +444,7 @@
  <a href="#ai"><i class="fas fa-robot"></i> AI Assistant (OXY)</a>
  <a href="#hosting"><i class="fas fa-cloud"></i> Hosting Integration</a>
 
- <div class="sidebar-section">Enterprise (v2.6.3)</div>
+ <div class="sidebar-section">Enterprise (v2.7.0)</div>
  <a href="#enterprise"><i class="fas fa-building"></i> Enterprise Features</a>
 
  <div class="sidebar-section">Extensibility</div>
@@ -1198,11 +1198,11 @@ ethernets:
  <p>Navigate to <strong>Settings → SSL / Domains</strong> to add a custom domain and issue a Let's Encrypt certificate. OXware uses <code>certbot</code> and reconfigures Nginx automatically.</p>
  </section>
 
- <!-- ENTERPRISE (v2.6.3) -->
+ <!-- ENTERPRISE (v2.7.0) -->
  <section id="enterprise">
- <h2>Enterprise Features (v2.6.3)</h2>
+ <h2>Enterprise Features (v2.7.0)</h2>
  <p>
- The <strong>v2.6.3 Enterprise release</strong> brings 23+ datacenter-grade modules to open-source KVM,
+ The <strong>v2.7.0 Enterprise release</strong> brings 23+ datacenter-grade modules to open-source KVM,
  closing the gap with VMware vSphere and Nutanix AHV — at zero licensing cost.
  </p>
 
@@ -1211,7 +1211,7 @@ ethernets:
  DRS, EVC, NIOC, Site Recovery, NUMA scheduling, linked clones, app-consistent snapshots, SIEM export,
  session recording, AES backup encryption, lifecycle manager, alert correlation, webhook system, and more.
  v2.6.2 adds Green Mode (AI power optimization, WoL/IPMI node control, hourly load forecast).
- v2.6.3 adds Multi-Region geo-placement, App Marketplace (curated plugin catalog at oxware.top/marketplace — plugins developed in the panel via Settings → Plugins → Develop, run locally, shared via GitHub Discussions), Cloud Burst (AWS/GCP/Azure), Bare-Metal PXE/iPXE provisioning, and OAuth 2.0 PKCE SSO.
+ v2.7.0 adds Multi-Region geo-placement, App Marketplace (curated plugin catalog at oxware.top/marketplace — plugins developed in the panel via Settings → Plugins → Develop, run locally, shared via GitHub Discussions), Cloud Burst (AWS/GCP/Azure), Bare-Metal PXE/iPXE provisioning, and OAuth 2.0 PKCE SSO.
  </div>
 
  <h3>Compute &amp; Scheduling</h3>
@@ -1404,7 +1404,7 @@ def on_vm_event(event):
  <i class="fas fa-flask" style="font-size:22px;color:var(--accent);flex-shrink:0"></i>
  <div>
  <div style="font-weight:600;margin-bottom:4px">Interactive API Explorer</div>
- <div style="color:var(--text-muted);font-size:13px">Navigate to <code>https://&lt;your-host&gt;:8006/api/docs</code> — authenticate once, then try any endpoint live. Shows request schemas, example payloads, and response formats for all ~270 endpoints (v2.6.3).</div>
+ <div style="color:var(--text-muted);font-size:13px">Navigate to <code>https://&lt;your-host&gt;:8006/api/docs</code> — authenticate once, then try any endpoint live. Shows request schemas, example payloads, and response formats for all ~270 endpoints (v2.7.0).</div>
  </div>
  </div>
 
@@ -1567,7 +1567,7 @@ curl -k https://host:8006/api/vms \
  <div class="endpoint"><span class="method post">POST</span> /api/wasm/run — WASM module</div>
  <div class="endpoint"><span class="method get">GET</span> /api/edge/status — edge deployment</div>
 
- <h3> IaC + Clients (v2.5.12)</h3>
+ <h3> IaC + Clients (v2.7.0)</h3>
  <div class="endpoint"><span class="method post">POST</span> /api/workflow/&lt;id&gt;/run — multi-step automation</div>
  <div class="endpoint"><span class="method post">POST</span> /api/opa/evaluate — policy-as-code</div>
  <div class="endpoint"><span class="method post">POST</span> /api/cloudevents/emit — CloudEvents v1.0</div>
@@ -1582,7 +1582,7 @@ curl -k https://host:8006/api/vms \
  <div class="endpoint"><span class="method get">GET</span> /api/tenants — multi-tenancy + quotas</div>
  <div class="endpoint"><span class="method get">GET</span> /api/chargeback/all — per-tenant billing</div>
 
- <h3 style="margin-top:2rem"> Enterprise Expansion (v2.6.3)</h3>
+ <h3 style="margin-top:2rem"> Enterprise Expansion (v2.7.0)</h3>
  <p style="color:var(--muted);font-size:13px;margin-bottom:10px">
  <strong>8 new backend modules · 40+ endpoints · 8 security CVEs patched (SEC-001..008)</strong>
  </p>
@@ -1671,7 +1671,7 @@ curl -k https://host:8006/api/vms \
  <div class="endpoint"><span class="method post">POST</span> /api/green-mode/nodes/&lt;node&gt;/suspend — suspend node (ACPI S3)</div>
  <div class="endpoint"><span class="method get">GET</span> /api/green-mode/history — power action audit log</div>
 
- <h3 style="margin-top:2rem">Multi-Region, Marketplace, Cloud Burst, Bare-Metal, OAuth2 (v2.6.3)</h3>
+ <h3 style="margin-top:2rem">Multi-Region, Marketplace, Cloud Burst, Bare-Metal, OAuth2 (v2.7.0)</h3>
  <p style="color:var(--muted);font-size:13px;margin-bottom:10px">
  <strong>5 new backend modules · ~40 endpoints · geo-aware placement, app marketplace, cloud overflow, PXE provisioning, PKCE SSO</strong>
  </p>
@@ -1723,7 +1723,7 @@ curl -k https://host:8006/api/vms \
  <div class="endpoint"><span class="method get">GET</span> /api/auth/oauth2/&lt;provider&gt;/start — begin auth flow</div>
  <div class="endpoint"><span class="method get">GET</span> /api/auth/oauth2/&lt;provider&gt;/callback — handle IdP redirect</div>
 
- <h3 style="margin-top:2rem">Security Patches (v2.6.3)</h3>
+ <h3 style="margin-top:2rem">Security Patches (v2.7.0)</h3>
  <p style="color:var(--muted);font-size:13px">8 CVEs patched without downtime:</p>
  <ul style="font-size:13px;color:var(--text);line-height:1.7">
  <li><strong>SEC-001</strong> — AI API keys at-rest Fernet encryption (was plaintext)</li>
@@ -1869,7 +1869,7 @@ curl -k https://host:8006/api/vms \
  <div style="max-width:1160px;margin:0 auto;padding-top:1.5rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;font-size:.8rem;color:var(--muted)">
  <span style="display:inline-flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
  © 2026 OXware. Released under the MIT License.
- <span class="ver-badge" title="Current development version"><span class="ver-dot"></span>v2.6.3</span>
+ <span class="ver-badge" title="Current development version"><span class="ver-dot"></span>v2.7.0</span>
  </span>
  <span>Built with <i class="fa-solid fa-heart" style="color:#f85149"></i> for the open source community.</span>
  </div>
