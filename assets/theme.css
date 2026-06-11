@@ -6,7 +6,8 @@
 /* LIGHT (default). data-theme="light" is the explicit form; an absent
    attribute also resolves to light because we ship data-theme="light"
    on every page from the inline init script in theme.js. */
-:root,
+html:root,
+html[data-theme="light"]:root,
 html[data-theme="light"] {
   --bg-0:        #ffffff;
   --bg-1:        #fff7ee;
