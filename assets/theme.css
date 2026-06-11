@@ -1,0 +1,130 @@
+/* ─────────────────────────────────────────────────────────────────────
+   OXware Theme Switch — Light (default, orange + white) / Dark (legacy)
+   Light is the default. Dark activates only when <html data-theme="dark">.
+   ───────────────────────────────────────────────────────────────────── */
+
+/* LIGHT (default). data-theme="light" is the explicit form; an absent
+   attribute also resolves to light because we ship data-theme="light"
+   on every page from the inline init script in theme.js. */
+:root,
+html[data-theme="light"] {
+  --bg-0:        #ffffff;
+  --bg-1:        #fff7ee;
+  --bg-2:        #fef0e0;
+  --bg-3:        #fce4c4;
+  --border:      #f5d2a8;
+  --border-2:    #e8a16a;
+  --text:        #2a1a0e;
+  --text-2:      #4a2e1a;
+  --muted:       #8a6e58;
+  --accent:      #ff6b1a;       /* vivid orange — VMware blue is replaced */
+  --accent-2:    #ff8a3d;
+  --accent-deep: #d94f00;
+  --success:     #008a5e;
+  --warning:     #d97706;
+  --danger:      #c53030;
+  --gradient-1:  linear-gradient(135deg, #ff6b1a 0%, #ff8a3d 100%);
+  --gradient-glow: radial-gradient(60% 60% at 50% 0%, rgba(255,107,26,0.16) 0%, rgba(255,107,26,0) 70%);
+  --shadow-1:    0 1px 3px rgba(120,60,0,.08), 0 1px 2px rgba(120,60,0,.06);
+  --shadow-2:    0 4px 16px rgba(120,60,0,.10);
+  --shadow-3:    0 24px 60px rgba(120,60,0,.14);
+  --code-bg:     #fff2e0;
+  --code-bd:     #f5d2a8;
+  --pre-bg:      #fff8f0;
+  color-scheme:  light;
+}
+
+/* Override hardcoded backgrounds inside the existing page CSS that were
+   coded against the dark palette. These selectors match the topbar /
+   sticky nav / footer / dark code blocks used across every page. */
+html[data-theme="light"] .topbar         { background: #fff2e0; }
+html[data-theme="light"] header.site-nav { background: rgba(255,247,238,.92); }
+html[data-theme="light"] footer.site-footer { background: #fff2e0; }
+html[data-theme="light"] pre             { background: #fff8f0; color: var(--text); border-color: var(--border); }
+html[data-theme="light"] pre code        { color: var(--text); }
+html[data-theme="light"] .cmd            { color: var(--accent-deep); }
+html[data-theme="light"] .str            { color: #0e7490; }
+html[data-theme="light"] .comment        { color: var(--muted); }
+html[data-theme="light"] a               { color: var(--accent-deep); }
+html[data-theme="light"] a:hover         { color: var(--accent); }
+html[data-theme="light"] .nav-brand,
+html[data-theme="light"] .nav-brand:hover { color: var(--text); }
+html[data-theme="light"] .btn-primary    { background: var(--accent); color: #fff; }
+html[data-theme="light"] .btn-primary:hover { background: var(--accent-deep); }
+html[data-theme="light"] .btn-outline    { color: var(--text); border-color: var(--border-2); background: transparent; }
+html[data-theme="light"] .btn-outline:hover { color: var(--accent-deep); border-color: var(--accent); }
+html[data-theme="light"] code            { background: var(--code-bg); border-color: var(--code-bd); color: var(--accent-deep); }
+html[data-theme="light"] h1, html[data-theme="light"] h2, html[data-theme="light"] h3 { color: var(--text); }
+html[data-theme="light"] .hero h1        { color: var(--text); }
+html[data-theme="light"] .hero h1 .accent { background: var(--gradient-1); -webkit-background-clip: text; background-clip: text; color: transparent; }
+html[data-theme="light"] .nav-dropdown   { background: #fff; border-color: var(--border); box-shadow: 0 24px 60px rgba(120,60,0,.18); }
+html[data-theme="light"] .nav-dropdown a:hover { background: var(--bg-2); }
+html[data-theme="light"] .mobile-drawer  { background: var(--bg-0); }
+html[data-theme="light"] .docs-sidebar   { background: var(--bg-1); border-right-color: var(--border); }
+html[data-theme="light"] .docs-sidebar a:hover,
+html[data-theme="light"] .docs-sidebar a.active { background: rgba(255,107,26,.10); color: var(--accent-deep); border-left-color: var(--accent); }
+html[data-theme="light"] th              { background: var(--bg-2); color: var(--text); border-color: var(--border); }
+html[data-theme="light"] td              { color: var(--text-2); border-color: var(--border); }
+html[data-theme="light"] tr:nth-child(even) td { background: rgba(255,107,26,.03); }
+html[data-theme="light"] .endpoint       { background: var(--bg-2); border-color: var(--border); color: var(--text-2); }
+html[data-theme="light"] .footer-tag,
+html[data-theme="light"] .footer-col a,
+html[data-theme="light"] .footer-bottom .legal-links a { color: var(--text-2); }
+html[data-theme="light"] .footer-col a:hover { color: var(--accent-deep); }
+html[data-theme="light"] .footer-col h4  { color: var(--text); }
+html[data-theme="light"] .footer-bottom  { color: var(--muted); border-top-color: var(--border); }
+html[data-theme="light"] .footer-social a { border-color: var(--border); color: var(--text-2); }
+html[data-theme="light"] .footer-social a:hover { border-color: var(--accent); color: var(--accent-deep); }
+html[data-theme="light"] .ver-pill,
+html[data-theme="light"] .ver-badge      { background: rgba(255,107,26,.10); border-color: rgba(255,107,26,.25); color: var(--accent-deep); }
+html[data-theme="light"] .tag            { background: rgba(255,107,26,.10); color: var(--accent-deep); border-color: rgba(255,107,26,.25); }
+
+/* DARK (the original VMware-style palette restored verbatim). */
+html[data-theme="dark"] {
+  --bg-0:        #050810;
+  --bg-1:        #0a0e1a;
+  --bg-2:        #0f1525;
+  --bg-3:        #161d2e;
+  --border:      #1e2638;
+  --border-2:    #2a334a;
+  --text:        #e6ebf5;
+  --text-2:      #b8c2d6;
+  --muted:       #6b7689;
+  --accent:      #0091da;
+  --accent-2:    #00b8e6;
+  --accent-deep: #0066b3;
+  --success:     #00c389;
+  --warning:     #f5a623;
+  --danger:      #e74c5e;
+  --gradient-1:  linear-gradient(135deg, #0091da 0%, #00b8e6 100%);
+  --gradient-glow: radial-gradient(60% 60% at 50% 0%, rgba(0,145,218,0.18) 0%, rgba(0,145,218,0) 70%);
+  --shadow-1:    0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.6);
+  --shadow-2:    0 4px 12px rgba(0,0,0,.5);
+  --shadow-3:    0 24px 60px rgba(0,0,0,.6);
+  color-scheme:  dark;
+}
+html[data-theme="dark"] .topbar         { background: #03060e; }
+html[data-theme="dark"] header.site-nav { background: rgba(5,8,16,.92); }
+html[data-theme="dark"] footer.site-footer { background: #03060e; }
+html[data-theme="dark"] pre             { background: #020509; color: var(--text-2); border-color: var(--border); }
+
+/* Theme toggle button — same place on every page (inside .nav-cta). */
+.theme-toggle {
+  width: 38px; height: 38px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid var(--border-2);
+  border-radius: 6px; cursor: pointer;
+  color: var(--text); transition: all .18s;
+  font-size: 1rem;
+}
+.theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.theme-toggle .ico-dark  { display: inline; }
+.theme-toggle .ico-light { display: none; }
+html[data-theme="dark"] .theme-toggle .ico-dark  { display: none; }
+html[data-theme="dark"] .theme-toggle .ico-light { display: inline; }
+
+/* Smooth color transitions when the user toggles. */
+body, .topbar, header.site-nav, footer.site-footer, .docs-sidebar,
+.nav-dropdown, .endpoint, pre, code, th, td {
+  transition: background-color .18s ease, color .18s ease, border-color .18s ease;
+}
