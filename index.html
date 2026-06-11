@@ -1,2155 +1,1307 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
- <meta charset="UTF-8" />
- <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
- <!-- ═══════════════════════════════════════════════════════════
- PRIMARY SEO
- ════════════════════════════════════════════════════════════ -->
- <title>OXware Hypervisor — Open Source KVM/QEMU Management Panel</title>
- <meta name="description" content="OXware is an enterprise-grade, open-source KVM/QEMU hypervisor management platform — a free alternative to VMware ESXi, Proxmox VE, and Nutanix AHV. Features DRS auto-balancing, live migration, vTPM, AMD SEV/Intel TDX confidential VMs, multi-tenancy with chargeback, Terraform provider, Kubernetes CSI/Operator, GitOps, Firecracker microVM, compliance scanner (CIS/NIST/PCI-DSS/HIPAA), and ~190 REST API endpoints. Web UI, noVNC console, cloud-init, RBAC, LDAP/SAML SSO, AI assistant." />
- <meta name="keywords" content="hypervisor panel, KVM management, QEMU web interface, open source hypervisor, VM management panel, virtual machine management, KVM management panel, Proxmox alternative, VMware ESXi alternative, vSphere alternative, Nutanix AHV alternative, VPS panel, virtualization platform, cloud-init, noVNC, libvirt web UI, OXware, oxware hypervisor, free hypervisor, enterprise virtualization, DRS scheduler, live migration, disaster recovery, vTPM virtual TPM, Secure Boot, confidential VM, AMD SEV Intel TDX, SIEM integration, multi-tenancy chargeback, Terraform provider KVM, Kubernetes CSI driver, GitOps ArgoCD Flux, Firecracker microVM, Kata Containers, WASM runtime, OPA policy engine, compliance scanner CIS NIST PCI-DSS HIPAA ISO27001, KVM cluster management, datacenter automation, open source vSphere, bare metal hypervisor, self-hosted virtualization" />
- <meta name="author" content="OXware" />
- <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
- <meta name="googlebot" content="index, follow" />
- <link rel="canonical" href="https://oxware.top/" />
-
- <!-- ═══════════════════════════════════════════════════════════
- OPEN GRAPH (Facebook, LinkedIn, WhatsApp preview)
- ════════════════════════════════════════════════════════════ -->
- <meta property="og:type" content="website" />
- <meta property="og:site_name" content="OXware Hypervisor" />
- <meta property="og:title" content="OXware — Open Source KVM/QEMU Hypervisor Panel" />
- <meta property="og:description" content="Enterprise-grade, open-source KVM/QEMU hypervisor management platform. Free VMware ESXi / Proxmox VE alternative with DRS, live migration, vTPM, multi-tenancy, Terraform provider, Kubernetes CSI, Firecracker microVM, compliance scanner, and ~190 REST API endpoints." />
- <meta property="og:url" content="https://oxware.top/" />
- <meta property="og:image" content="https://oxware.top/sadeceikon.png" />
- <meta property="og:image:alt" content="OXware Hypervisor Management Panel" />
- <meta property="og:locale" content="en_US" />
- <meta property="og:locale:alternate" content="tr_TR" />
-
- <!-- ═══════════════════════════════════════════════════════════
- TWITTER / X CARD
- ════════════════════════════════════════════════════════════ -->
- <meta name="twitter:card" content="summary_large_image" />
- <meta name="twitter:title" content="OXware — Open Source KVM Hypervisor Panel" />
- <meta name="twitter:description" content="Lightweight KVM/QEMU management panel. VM lifecycle, noVNC console, cloud-init, RBAC, AI assistant. Free &amp; open source." />
- <meta name="twitter:image" content="https://oxware.top/sadeceikon.png" />
- <meta name="twitter:image:alt" content="OXware Hypervisor" />
-
- <!-- ═══════════════════════════════════════════════════════════
- THEME / APP APPEARANCE
- ════════════════════════════════════════════════════════════ -->
- <meta name="theme-color" content="#161b22" />
- <meta name="msapplication-TileColor" content="#0d1117" />
- <meta name="application-name" content="OXware Hypervisor" />
-
- <!-- ═══════════════════════════════════════════════════════════
- STRUCTURED DATA — JSON-LD (Google Rich Results)
- ════════════════════════════════════════════════════════════ -->
- <script type="application/ld+json">
- {
- "@context": "https://schema.org",
- "@type": "SoftwareApplication",
- "name": "OXware Hypervisor",
- "applicationCategory": "DeveloperApplication",
- "applicationSubCategory": "Virtualization Management",
- "operatingSystem": "Linux (Debian 12, Ubuntu 22.04+)",
- "softwareVersion": "2.6.3",
- "datePublished": "2026-05-31",
- "offers": {
- "@type": "Offer",
- "price": "0",
- "priceCurrency": "USD"
- },
- "aggregateRating": {
- "@type": "AggregateRating",
- "ratingValue": "4.9",
- "ratingCount": "37"
- },
- "featureList": "VM lifecycle management, live migration, DRS auto-balancing, EVC CPU compatibility, NUMA-aware scheduling, affinity/anti-affinity rules, high availability, RBAC 4 roles, TOTP 2FA, SAML/OIDC SSO, LDAP/AD, noVNC console, SPICE, serial console, IPAM, SDN VXLAN, microsegmentation, BFD, service chaining, nftables firewall, snapshots, qcow2 storage, MinIO/S3 backup, 3-2-1 backup automation, app-consistent snapshots, backup verification, cross-site replication, disaster recovery runbooks, RPO/RTO SLA, vTPM 2.0, AMD SEV/Intel TDX confidential VMs, LUKS2 disk encryption, UEFI Secure Boot, CIS/NIST/PCI-DSS/HIPAA/ISO27001 compliance scanner, DLP engine, forensics, HashiCorp Vault, SIEM export, session recording, MFA per role, multi-tenancy hard isolation, per-tenant quotas, chargeback/showback, service catalog, rate limiting, AI assistant, OpenTelemetry tracing, Grafana embed, ML forecasting, topology viz, Terraform provider, Kubernetes CSI driver, Kubernetes Operator, KubeVirt integration, GitOps ArgoCD/Flux, Pulumi IaC, Firecracker microVM, Kata Containers, WASM runtime, edge mode, workflow engine, OPA policy-as-code, CloudEvents v1.0, desktop client, workload mobility AWS/Azure/GCP, ~190 REST API endpoints",
- "description": "Open-source KVM/QEMU hypervisor management panel and free VMware ESXi / Proxmox VE alternative — web UI, noVNC console, cloud-init, RBAC, live migration, DRS, monitoring and AI assistant.",
- "url": "https://oxware.top/",
- "image": "https://oxware.top/sadeceikon.png",
- "author": {
- "@type": "Organization",
- "name": "OXware"
- },
- "codeRepository": "https://github.com/ShinnAsukha/oxware-hypervisor",
- "license": "https://opensource.org/licenses/MIT",
- "keywords": "hypervisor, KVM, QEMU, virtual machine, libvirt, noVNC, cloud-init, open source, Proxmox alternative"
- }
- </script>
-
- <!-- ═══════════════════════════════════════════════════════════
- FAVICONS
- ════════════════════════════════════════════════════════════ -->
- <link rel="icon" type="image/png" href="sadeceikon.png" />
- <link rel="shortcut icon" type="image/png" href="sadeceikon.png" />
- <link rel="apple-touch-icon" href="sadeceikon.png" />
-
- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
- <style>
- *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
- :root {
- --bg: #0d1117;
- --surface: #161b22;
- --border: #30363d;
- --accent: #58a6ff;
- --accent2: #3fb950;
- --text: #c9d1d9;
- --muted: #8b949e;
- --danger: #f85149;
- --radius: 8px;
- }
-
- body {
- background: var(--bg);
- color: var(--text);
- font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
- line-height: 1.6;
- }
-
- a { color: var(--accent); text-decoration: none; }
- a:hover { text-decoration: underline; }
-
- /* NAV */
- nav {
- position: sticky;
- top: 0;
- z-index: 100;
- background: rgba(13, 17, 23, 0.92);
- backdrop-filter: blur(12px);
- border-bottom: 1px solid var(--border);
- padding: 0 2rem;
- height: 60px;
- display: flex;
- align-items: center;
- justify-content: space-between;
- }
-
- .nav-logo {
- font-size: 1.25rem;
- font-weight: 700;
- color: var(--accent);
- letter-spacing: -0.5px;
- display: flex;
- align-items: center;
- gap: 0.5rem;
- text-decoration: none;
- }
-
- .nav-logo img { width: 28px; height: 28px; object-fit: contain; filter: drop-shadow(0 0 6px rgba(88,166,255,.5)); }
- .nav-logo i { font-size: 1rem; }
-
- .nav-links {
- display: flex;
- gap: 1.5rem;
- align-items: center;
- list-style: none;
- }
-
- .nav-links a {
- color: var(--text);
- font-size: 0.9rem;
- transition: color 0.2s;
- }
-
- .nav-links a:hover { color: var(--accent); text-decoration: none; }
- .nav-links a.nav-active { color: var(--accent); }
-
- /* Mobile hamburger (CSS-only, checkbox hack) */
- .nav-toggle-cb { display: none; }
- .nav-burger {
- display: none; cursor: pointer; font-size: 1.4rem; color: var(--text);
- padding: 0.3rem 0.5rem; border-radius: 6px; transition: background .15s;
- -webkit-tap-highlight-color: transparent;
- }
- .nav-burger:hover { background: var(--surface); }
-
- .btn {
- display: inline-flex;
- align-items: center;
- gap: 0.4rem;
- padding: 0.45rem 1rem;
- border-radius: var(--radius);
- font-size: 0.875rem;
- font-weight: 500;
- cursor: pointer;
- transition: opacity 0.2s, transform 0.1s;
- border: none;
- }
-
- .btn:hover { opacity: 0.85; text-decoration: none; transform: translateY(-1px); }
-
- .btn-primary { background: var(--accent); color: #0d1117; }
- .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
- .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
- .btn-green { background: var(--accent2); color: #0d1117; }
-
- /* HERO */
- .hero {
- padding: 5rem 2rem 4rem;
- max-width: 1160px;
- margin: 0 auto;
- display: grid;
- grid-template-columns: 1fr 1fr;
- gap: 3rem;
- align-items: center;
- }
-
- .hero-left { }
-
- .hero-badge {
- display: inline-block;
- background: rgba(88, 166, 255, 0.12);
- color: var(--accent);
- border: 1px solid rgba(88, 166, 255, 0.3);
- border-radius: 2rem;
- padding: 0.25rem 0.9rem;
- font-size: 0.8rem;
- font-weight: 600;
- margin-bottom: 1.5rem;
- letter-spacing: 0.5px;
- text-transform: uppercase;
- }
-
- h1 {
- font-size: clamp(2rem, 4vw, 3rem);
- font-weight: 800;
- line-height: 1.15;
- color: #f0f6fc;
- margin-bottom: 1.25rem;
- letter-spacing: -1px;
- }
-
- h1 span { color: var(--accent); }
-
- .hero p {
- font-size: 1.05rem;
- color: var(--muted);
- max-width: 520px;
- margin-bottom: 2.5rem;
- }
-
- .hero-actions {
- display: flex;
- gap: 1rem;
- flex-wrap: wrap;
- }
-
- .hero-actions .btn { padding: 0.65rem 1.5rem; font-size: 0.95rem; }
-
- /* DASHBOARD MOCKUP */
- .hero-visual {
- position: relative;
- }
-
- .dashboard-mockup {
- background: #161b22;
- border: 1px solid #30363d;
- border-radius: 10px;
- overflow: hidden;
- box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(88,166,255,0.1);
- }
-
- .db-topbar {
- background: #0d1117;
- border-bottom: 1px solid #30363d;
- padding: 10px 14px;
- display: flex;
- align-items: center;
- gap: 7px;
- }
-
- .db-dot { width: 11px; height: 11px; border-radius: 50%; }
- .db-dot.red { background: #f85149; }
- .db-dot.yellow { background: #d29922; }
- .db-dot.green { background: #3fb950; }
-
- .db-url {
- margin-left: 8px;
- background: #21262d;
- border: 1px solid #30363d;
- border-radius: 5px;
- padding: 3px 10px;
- font-size: 11px;
- color: #8b949e;
- font-family: monospace;
- }
-
- .db-body { padding: 14px; }
-
- .db-grid {
- display: grid;
- grid-template-columns: repeat(4, 1fr);
- gap: 8px;
- margin-bottom: 12px;
- }
-
- .db-card {
- background: #0d1117;
- border: 1px solid #30363d;
- border-radius: 7px;
- padding: 10px 10px 8px;
- }
-
- .db-card-label { font-size: 9px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
- .db-card-val { font-size: 18px; font-weight: 700; color: #f0f6fc; line-height: 1; }
- .db-card-val.orange { color: #f0883e; }
- .db-card-val.green { color: #3fb950; }
- .db-card-val.blue { color: #58a6ff; }
- .db-card-sub { font-size: 9px; color: #484f58; margin-top: 3px; }
-
- .db-vm-list { margin-bottom: 10px; }
-
- .db-vm-row {
- display: flex;
- align-items: center;
- gap: 8px;
- padding: 6px 8px;
- border-radius: 5px;
- margin-bottom: 3px;
- background: #0d1117;
- border: 1px solid #21262d;
- font-size: 11px;
- }
-
- .db-vm-status {
- width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
- }
- .db-vm-status.on { background: #3fb950; box-shadow: 0 0 5px #3fb950; }
- .db-vm-status.pause { background: #d29922; }
- .db-vm-status.off { background: #484f58; }
-
- .db-vm-name { flex: 1; color: #c9d1d9; font-family: monospace; }
- .db-vm-cpu { color: #8b949e; width: 52px; text-align: right; }
-
- .sv-badge {
- padding: 2px 7px; border-radius: 3px; font-size: 9px; font-weight: 700;
- letter-spacing: .5px; text-transform: uppercase;
- }
- .sv-badge.run { background: rgba(63,185,80,.15); color: #3fb950; }
- .sv-badge.pause { background: rgba(210,153,34,.15); color: #d29922; }
- .sv-badge.stop { background: rgba(72,79,88,.2); color: #8b949e; }
-
- .db-cpu-bar { height: 5px; background: #21262d; border-radius: 3px; overflow: hidden; }
- .db-cpu-fill { height: 100%; background: linear-gradient(90deg, #58a6ff, #3fb950); border-radius: 3px; }
-
- @media (max-width: 900px) {
- .hero { grid-template-columns: 1fr; padding: 4rem 1.25rem 3rem; }
- .hero-visual { display: none; }
- }
-
- /* STATS BAR */
- .stats-bar {
- display: flex;
- justify-content: center;
- gap: 3rem;
- flex-wrap: wrap;
- padding: 1.5rem 2rem;
- border-top: 1px solid var(--border);
- border-bottom: 1px solid var(--border);
- background: var(--surface);
- }
-
- .stat { text-align: center; }
- .stat-value { font-size: 1.5rem; font-weight: 700; color: #f0f6fc; }
- .stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-
- /* FEATURES */
- .section { padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; }
-
- .section-title {
- text-align: center;
- font-size: 1.75rem;
- font-weight: 700;
- color: #f0f6fc;
- margin-bottom: 0.5rem;
- }
-
- .section-sub {
- text-align: center;
- color: var(--muted);
- margin-bottom: 3rem;
- font-size: 0.95rem;
- }
-
- .feature-grid {
- display: grid;
- grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
- gap: 1.25rem;
- }
-
- .feature-card {
- background: var(--surface);
- border: 1px solid var(--border);
- border-radius: var(--radius);
- padding: 1.75rem;
- transition: border-color 0.25s, transform 0.2s;
- }
-
- .feature-card:hover {
- border-color: var(--accent);
- transform: translateY(-3px);
- }
-
- .feature-icon {
- width: 44px;
- height: 44px;
- border-radius: var(--radius);
- background: rgba(88, 166, 255, 0.12);
- display: flex;
- align-items: center;
- justify-content: center;
- font-size: 1.1rem;
- color: var(--accent);
- margin-bottom: 1rem;
- }
-
- .feature-card h3 {
- font-size: 1rem;
- font-weight: 600;
- color: #f0f6fc;
- margin-bottom: 0.5rem;
- }
-
- .feature-card p { font-size: 0.875rem; color: var(--muted); line-height: 1.55; }
-
- /* TECH STACK */
- .stack-section {
- background: var(--surface);
- border-top: 1px solid var(--border);
- border-bottom: 1px solid var(--border);
- padding: 3rem 2rem;
- text-align: center;
- }
-
- .stack-label {
- font-size: 0.8rem;
- text-transform: uppercase;
- letter-spacing: 1px;
- color: var(--muted);
- margin-bottom: 1.5rem;
- }
-
- .stack-badges {
- display: flex;
- flex-wrap: wrap;
- justify-content: center;
- gap: 0.75rem;
- }
-
- .badge {
- background: rgba(255,255,255,0.05);
- border: 1px solid var(--border);
- border-radius: 2rem;
- padding: 0.4rem 1rem;
- font-size: 0.8rem;
- font-weight: 600;
- color: var(--text);
- display: flex;
- align-items: center;
- gap: 0.4rem;
- }
-
- .badge i { font-size: 0.9rem; }
- .badge.py i { color: #3572A5; }
- .badge.flask i { color: #aaa; }
- .badge.kvm i { color: #E34234; }
- .badge.vnc i { color: #0DB7ED; }
- .badge.lv i { color: #cc4125; }
- .badge.jwt i { color: #D63AFF; }
-
- /* QUICK START */
- .quickstart-section {
- max-width: 760px;
- margin: 0 auto;
- padding: 5rem 2rem;
- }
-
- pre {
- background: #010409;
- border: 1px solid var(--border);
- border-radius: var(--radius);
- padding: 1.5rem;
- overflow-x: auto;
- font-size: 0.875rem;
- line-height: 1.7;
- color: #e6edf3;
- margin-top: 1.5rem;
- }
-
- .comment { color: #8b949e; }
- .cmd { color: #3fb950; }
- .url { color: #58a6ff; }
-
- /* COMPARISON TABLE */
- .compare-section {
- padding: 5rem 2rem;
- max-width: 1100px;
- margin: 0 auto;
- }
-
- .compare-wrapper {
- overflow-x: auto;
- border-radius: 12px;
- border: 1px solid var(--border);
- box-shadow: 0 8px 32px rgba(0,0,0,0.4);
- }
-
- .compare-table {
- width: 100%;
- border-collapse: collapse;
- font-size: 0.9rem;
- min-width: 640px;
- }
-
- .compare-table thead tr {
- background: #0d1117;
- }
-
- .compare-table th {
- padding: 1.25rem 1.5rem;
- text-align: center;
- font-weight: 700;
- font-size: 0.95rem;
- letter-spacing: 0.2px;
- white-space: nowrap;
- border-bottom: 2px solid var(--border);
- }
-
- .compare-table th:first-child {
- text-align: left;
- width: 220px;
- color: var(--muted);
- font-size: 0.8rem;
- text-transform: uppercase;
- letter-spacing: 1px;
- padding-left: 1.75rem;
- }
-
- .th-oxware {
- background: rgba(88,166,255,0.08);
- color: var(--accent);
- border-bottom-color: var(--accent) !important;
- border-left: 1px solid rgba(88,166,255,0.2);
- border-right: 1px solid rgba(88,166,255,0.2);
- }
-
- .th-oxware .th-logo {
- display: flex; align-items: center; justify-content: center; gap: 7px;
- }
-
- .th-oxware .th-logo img {
- width: 20px; height: 20px; object-fit: contain;
- filter: drop-shadow(0 0 5px rgba(88,166,255,0.6));
- }
-
- .th-proxmox {
- background: rgba(240,136,62,0.06);
- color: #f0883e;
- border-bottom-color: #f0883e !important;
- }
-
- .th-vmware {
- background: rgba(248,81,73,0.05);
- color: #c96058;
- border-bottom-color: #c96058 !important;
- }
-
- .compare-table tbody tr {
- transition: background 0.15s;
- }
-
- .compare-table tbody tr:hover td {
- background: rgba(88,166,255,0.04);
- }
-
- .compare-table td {
- padding: 0.85rem 1.5rem;
- border-bottom: 1px solid rgba(48,54,61,0.6);
- background: var(--surface);
- text-align: center;
- color: var(--muted);
- font-size: 0.875rem;
- }
-
- .compare-table tbody tr:last-child td {
- border-bottom: none;
- }
-
- .compare-table td:first-child {
- text-align: left;
- color: var(--text);
- font-weight: 500;
- background: rgba(13,17,23,0.6);
- padding-left: 1.75rem;
- border-right: 1px solid rgba(48,54,61,0.4);
- }
-
- /* OXware column highlight */
- .compare-table td.col-ox {
- background: rgba(88,166,255,0.04);
- border-left: 1px solid rgba(88,166,255,0.12);
- border-right: 1px solid rgba(88,166,255,0.12);
- }
-
- .compare-table tbody tr:hover td.col-ox {
- background: rgba(88,166,255,0.08);
- }
-
- /* Cell value types */
- .cv-yes {
- color: #3fb950;
- font-size: 1rem;
- display: flex; align-items: center; justify-content: center; gap: 6px;
- }
-
- .cv-no {
- color: #f85149;
- font-size: 1rem;
- display: flex; align-items: center; justify-content: center; gap: 6px;
- }
-
- .cv-warn {
- color: #d29922;
- font-size: 0.85rem;
- display: flex; align-items: center; justify-content: center; gap: 5px;
- }
-
- .cv-note {
- color: var(--muted);
- font-size: 0.78rem;
- margin-top: 2px;
- display: block;
- }
-
- /* Highlight badge on OXware unique features */
- .ox-badge {
- display: inline-block;
- background: rgba(88,166,255,0.15);
- color: var(--accent);
- border: 1px solid rgba(88,166,255,0.3);
- border-radius: 20px;
- padding: 1px 8px;
- font-size: 0.7rem;
- font-weight: 700;
- margin-left: 6px;
- vertical-align: middle;
- letter-spacing: 0.3px;
- }
-
- /* CHANGELOG */
- .changelog-section {
- padding: 5rem 2rem;
- max-width: 1100px;
- margin: 0 auto;
- }
-
- .changelog-header {
- display: flex;
- align-items: center;
- justify-content: space-between;
- margin-bottom: 2rem;
- flex-wrap: wrap;
- gap: 1rem;
- }
-
- .changelog-header-left { }
-
- .changelog-refresh {
- display: inline-flex;
- align-items: center;
- gap: 0.4rem;
- padding: 0.4rem 1rem;
- border-radius: var(--radius);
- background: rgba(88,166,255,0.1);
- border: 1px solid rgba(88,166,255,0.25);
- color: var(--accent);
- font-size: 0.8rem;
- font-weight: 600;
- cursor: pointer;
- transition: all 0.2s;
- }
-
- .changelog-refresh:hover { background: rgba(88,166,255,0.18); }
- .changelog-refresh.spinning i { animation: spin 0.8s linear infinite; }
- @keyframes spin { to { transform: rotate(360deg); } }
-
- .changelog-list {
- display: flex;
- flex-direction: column;
- gap: 0;
- border: 1px solid var(--border);
- border-radius: 12px;
- overflow: hidden;
- }
-
- .cl-item {
- border-bottom: 1px solid rgba(48,54,61,0.6);
- background: var(--surface);
- transition: background 0.15s;
- }
-
- .cl-item:last-child { border-bottom: none; }
- .cl-item:hover { background: rgba(88,166,255,0.03); }
-
- .cl-row {
- display: flex;
- align-items: center;
- gap: 1rem;
- padding: 0.9rem 1.25rem;
- flex-wrap: wrap;
- }
-
- .cl-type {
- flex-shrink: 0;
- width: 70px;
- text-align: center;
- padding: 2px 8px;
- border-radius: 20px;
- font-size: 0.7rem;
- font-weight: 700;
- letter-spacing: 0.3px;
- text-transform: uppercase;
- }
-
- .cl-type.feat { background: rgba(63,185,80,.15); color: #3fb950; border: 1px solid rgba(63,185,80,.3); }
- .cl-type.fix { background: rgba(248,81,73,.13); color: #f85149; border: 1px solid rgba(248,81,73,.3); }
- .cl-type.refactor{ background: rgba(88,166,255,.12); color: #58a6ff; border: 1px solid rgba(88,166,255,.3); }
- .cl-type.chore { background: rgba(139,148,158,.12); color: #8b949e; border: 1px solid rgba(139,148,158,.3); }
- .cl-type.docs { background: rgba(210,153,34,.13); color: #d29922; border: 1px solid rgba(210,153,34,.3); }
- .cl-type.other { background: rgba(139,148,158,.08); color: #8b949e; border: 1px solid rgba(139,148,158,.2); }
-
- .cl-msg {
- flex: 1;
- font-size: 0.9rem;
- color: #e6edf3;
- font-weight: 500;
- white-space: nowrap;
- overflow: hidden;
- text-overflow: ellipsis;
- min-width: 0;
- }
-
- .cl-meta {
- display: flex;
- align-items: center;
- gap: 0.75rem;
- flex-shrink: 0;
- }
-
- .cl-author {
- font-size: 0.78rem;
- color: var(--muted);
- white-space: nowrap;
- }
-
- .cl-date {
- font-size: 0.75rem;
- color: var(--muted);
- white-space: nowrap;
- min-width: 80px;
- text-align: right;
- }
-
- .cl-sha {
- font-family: monospace;
- font-size: 0.75rem;
- color: rgba(88,166,255,0.6);
- background: rgba(88,166,255,0.06);
- padding: 2px 6px;
- border-radius: 4px;
- white-space: nowrap;
- }
-
- .cl-detail-btn {
- flex-shrink: 0;
- background: rgba(255,255,255,0.04);
- border: 1px solid var(--border);
- color: var(--muted);
- padding: 3px 10px;
- border-radius: 5px;
- font-size: 0.75rem;
- cursor: pointer;
- transition: all 0.15s;
- white-space: nowrap;
- }
-
- .cl-detail-btn:hover { border-color: var(--accent); color: var(--accent); }
- .cl-detail-btn.open { border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,0.08); }
-
- .cl-detail-panel {
- display: none;
- padding: 1rem 1.25rem 1.25rem;
- background: rgba(13,17,23,0.7);
- border-top: 1px solid rgba(48,54,61,0.5);
- font-size: 0.85rem;
- }
-
- .cl-detail-panel.open { display: block; }
-
- .cl-full-msg {
- white-space: pre-wrap;
- color: #c9d1d9;
- line-height: 1.7;
- font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", monospace;
- background: rgba(0,0,0,0.3);
- padding: 0.75rem 1rem;
- border-radius: 6px;
- border: 1px solid rgba(48,54,61,0.5);
- margin-bottom: 0.75rem;
- max-height: 200px;
- overflow-y: auto;
- }
-
- .cl-detail-meta {
- display: flex;
- gap: 1.5rem;
- flex-wrap: wrap;
- font-size: 0.8rem;
- color: var(--muted);
- }
-
- .cl-detail-meta a { color: var(--accent); }
- .cl-detail-meta span strong { color: var(--text); }
-
- .cl-load-more {
- display: flex;
- justify-content: center;
- padding: 1.25rem;
- background: rgba(13,17,23,0.5);
- border-top: 1px solid var(--border);
- }
-
- .cl-load-more-btn {
- display: inline-flex;
- align-items: center;
- gap: 0.5rem;
- padding: 0.5rem 1.5rem;
- background: transparent;
- border: 1px solid var(--border);
- color: var(--muted);
- border-radius: var(--radius);
- font-size: 0.85rem;
- cursor: pointer;
- transition: all 0.2s;
- }
-
- .cl-load-more-btn:hover { border-color: var(--accent); color: var(--accent); }
- .cl-load-more-btn:disabled { opacity: 0.4; cursor: default; }
-
- .cl-empty {
- text-align: center;
- padding: 3rem 2rem;
- color: var(--muted);
- font-size: 0.9rem;
- }
- /* FOOTER */
- footer {
- border-top: 1px solid var(--border);
- padding: 2.5rem 2rem;
- display: flex;
- justify-content: space-between;
- align-items: center;
- flex-wrap: wrap;
- gap: 1rem;
- max-width: 1100px;
- margin: 0 auto;
- }
-
- .footer-left { color: var(--muted); font-size: 0.85rem; }
- .footer-links { display: flex; gap: 1.25rem; font-size: 0.85rem; }
- .footer-links a { color: var(--muted); }
- .footer-links a:hover { color: var(--accent); text-decoration: none; }
-
- /* ── Community CTA grid (4 cards 2×2) ── */
- .google-review-section {
- max-width: 1000px;
- margin: 0 auto;
- padding: 3.5rem 2rem;
- border-top: 1px solid var(--border);
- display: grid;
- grid-template-columns: repeat(2, 1fr);
- gap: 1.25rem;
- }
- @media (max-width: 640px) {
- .google-review-section { grid-template-columns: 1fr; }
- }
- .gr-card {
- display: flex;
- flex-direction: column;
- align-items: center;
- gap: 1rem;
- background: linear-gradient(135deg, #161b22 0%, #1c2230 100%);
- border: 1px solid #30363d;
- border-radius: 16px;
- padding: 2rem 2rem;
- width: 100%;
- box-shadow: 0 4px 32px rgba(0,0,0,.35);
- position: relative;
- overflow: hidden;
- }
- .gr-card::before {
- content: '';
- position: absolute;
- top: -60px; right: -60px;
- width: 180px; height: 180px;
- background: radial-gradient(circle, rgba(66,133,244,.12) 0%, transparent 70%);
- border-radius: 50%;
- }
- /* LinkedIn card */
- .li-card {
- display: flex;
- flex-direction: column;
- align-items: center;
- gap: 1rem;
- background: linear-gradient(135deg, #161b22 0%, #0d1a2a 100%);
- border: 1px solid #1e3a5f;
- border-radius: 16px;
- padding: 2rem 2rem;
- width: 100%;
- box-shadow: 0 4px 32px rgba(0,0,0,.35);
- position: relative;
- overflow: hidden;
- }
- .li-card::before {
- content: '';
- position: absolute;
- top: -60px; right: -60px;
- width: 180px; height: 180px;
- background: radial-gradient(circle, rgba(10,102,194,.18) 0%, transparent 70%);
- border-radius: 50%;
- }
- .li-logo-header {
- display: flex;
- align-items: center;
- gap: 0.5rem;
- font-size: 1rem;
- font-weight: 600;
- color: #e8eaed;
- letter-spacing: 0.02em;
- }
- .li-logo-header svg { width: 22px; height: 22px; flex-shrink: 0; }
- .li-icon-big {
- font-size: 3.5rem;
- line-height: 1;
- color: #0a66c2;
- font-weight: 900;
- font-family: Georgia, serif;
- background: rgba(10,102,194,.12);
- border-radius: 12px;
- width: 72px; height: 72px;
- display: flex; align-items: center; justify-content: center;
- border: 2px solid rgba(10,102,194,.3);
- }
- .li-btn {
- display: inline-flex;
- align-items: center;
- gap: 0.6rem;
- background: #0a66c2;
- color: #fff;
- font-size: 0.95rem;
- font-weight: 600;
- padding: 0.7rem 1.75rem;
- border-radius: 8px;
- text-decoration: none;
- transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
- box-shadow: 0 2px 12px rgba(10,102,194,.35);
- margin-top: 0.25rem;
- }
- .li-btn:hover {
- background: #084e96;
- transform: translateY(-2px);
- box-shadow: 0 6px 20px rgba(10,102,194,.45);
- text-decoration: none;
- color: #fff;
- }
- .gr-google-logo {
- display: flex;
- align-items: center;
- gap: 0.5rem;
- font-size: 1rem;
- font-weight: 600;
- color: #e8eaed;
- letter-spacing: 0.02em;
- }
- .gr-google-logo svg { width: 22px; height: 22px; flex-shrink: 0; }
- .gr-stars {
- display: flex;
- gap: 4px;
- }
- .gr-star { font-size: 1.75rem; line-height: 1; }
- .gr-title {
- font-size: 1.2rem;
- font-weight: 700;
- color: #e6edf3;
- margin: 0;
- }
- .gr-desc {
- font-size: 0.9rem;
- color: var(--muted);
- max-width: 380px;
- line-height: 1.6;
- }
- .gr-btn {
- display: inline-flex;
- align-items: center;
- gap: 0.6rem;
- background: #4285F4;
- color: #fff;
- font-size: 0.95rem;
- font-weight: 600;
- padding: 0.7rem 1.75rem;
- border-radius: 8px;
- text-decoration: none;
- transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
- box-shadow: 0 2px 12px rgba(66,133,244,.35);
- margin-top: 0.25rem;
- }
- .gr-btn:hover {
- background: #2b6fd9;
- transform: translateY(-2px);
- box-shadow: 0 6px 20px rgba(66,133,244,.45);
- text-decoration: none;
- color: #fff;
- }
- .gr-btn svg { width: 18px; height: 18px; }
-
- /* ─────────── Tablet & Mobile (≤768px) ─────────── */
- @media (max-width: 768px) {
- nav { padding: 0 1rem; position: relative; flex-wrap: wrap; }
- .nav-burger { display: inline-flex; align-items: center; order: 3; }
- .nav-links {
- order: 4;
- flex-basis: 100%;
- flex-direction: column;
- align-items: stretch;
- gap: 0;
- max-height: 0;
- overflow: hidden;
- transition: max-height .3s ease;
- background: var(--surface);
- margin: 0 -1rem;
- border-top: 0 solid var(--border);
- }
- .nav-toggle-cb:checked ~ .nav-links {
- max-height: 320px;
- border-top: 1px solid var(--border);
- }
- .nav-links li { width: 100%; }
- .nav-links a {
- display: block; padding: 0.85rem 1.25rem;
- border-bottom: 1px solid var(--border); font-size: 0.95rem;
- }
- /* Get Started button → hide in topbar, show inside dropdown via duplicate */
- nav > .btn-primary { display: none; }
- .nav-links .nav-cta { padding: 0.85rem 1.25rem; }
- .nav-links .nav-cta a { display: inline-flex; padding: 0.5rem 1rem; border-bottom: none; color: #0d1117; }
-
- .hero { grid-template-columns: 1fr; padding: 3rem 1.25rem 2.5rem; gap: 1.5rem; }
- .hero-visual { display: none; }
- .hero h1 { font-size: 2rem; line-height: 1.2; }
- .hero p { font-size: 0.95rem; }
- .hero-actions { flex-direction: column; align-items: stretch; }
- .hero-actions .btn { justify-content: center; width: 100%; }
- .section { padding: 3rem 1.25rem; }
- .section-title { font-size: 1.5rem; }
- .feature-grid { grid-template-columns: 1fr; gap: 1rem; }
- .stats-bar { gap: 1.25rem 2rem; padding: 1.25rem; }
- .stat-value { font-size: 1.25rem; }
- footer { flex-direction: column; text-align: center; }
- .footer-inner { flex-direction: column; gap: 1.75rem; }
- .footer-bottom { flex-direction: column; gap: 0.5rem; text-align: center; }
- }
-
- @media (max-width: 600px) {
- .hero h1 { font-size: 1.7rem; }
- .hero-badge { font-size: 0.7rem; }
- .stats-bar { gap: 1rem 1.5rem; }
- .gr-card, .li-card { padding: 1.75rem 1.25rem; max-width: 100%; }
- .section-title { font-size: 1.35rem; }
- .nav-logo { font-size: 1.1rem; }
- }
-
- /* ─────────── Small Mobile (≤480px) ─────────── */
- @media (max-width: 480px) {
- .hero { padding: 2rem 1rem 1.75rem; }
- .hero h1 { font-size: 1.5rem; letter-spacing: -0.5px; }
- .hero p { font-size: 0.9rem; margin-bottom: 1.75rem; }
- .hero-actions .btn,
- .plan-cta,
- .gr-btn, .li-btn,
- .btn-primary, .btn-green, .btn-outline { min-height: 44px; }
- .section { padding: 2.5rem 1rem; }
- .section-title { font-size: 1.2rem; }
- .section-sub { font-size: 0.85rem; margin-bottom: 2rem; }
- .feature-card { padding: 1.25rem; }
- .stats-bar { gap: 0.75rem 1.25rem; padding: 1rem 0.75rem; }
- .stat-value { font-size: 1.1rem; }
- .stat-label { font-size: 0.65rem; }
- .stack-section { padding: 2rem 1rem; }
- .quickstart-section { padding: 3rem 1rem; }
- pre { padding: 1rem; font-size: 0.78rem; word-break: break-word; white-space: pre-wrap; }
- .compare-section, .changelog-section { padding: 3rem 1rem; }
- .google-review-section { padding: 2rem 1rem; gap: 1rem; }
- footer { padding: 2rem 1rem !important; }
- .cl-row { gap: 0.5rem; padding: 0.7rem 0.85rem; }
- .cl-meta { gap: 0.4rem; flex-wrap: wrap; }
- .cl-author { display: none; }
- }
-
- /* Universal: ensure images never overflow & code wraps */
- img { max-width: 100%; height: auto; }
- pre, code { word-wrap: break-word; }
- @media (max-width: 768px) {
- pre { white-space: pre-wrap; word-break: break-word; }
- .hero-actions .btn,
- nav .btn-primary,
- .plan-cta { min-height: 44px; }
- }
-
- /* ─────────── Roadmap / We're working on v2.7.0 ─────────── */
- .roadmap-section {
- max-width: 1160px; margin: 0 auto; padding: 5rem 2rem;
- position: relative;
- }
- /* Glassmorphism container with animated gradient border */
- .roadmap-shell {
- position: relative;
- border-radius: 20px;
- padding: 2.5rem;
- background: linear-gradient(180deg, rgba(22,27,34,0.85) 0%, rgba(13,17,23,0.7) 100%);
- backdrop-filter: blur(18px);
- -webkit-backdrop-filter: blur(18px);
- border: 1px solid rgba(88,166,255,0.15);
- overflow: hidden;
- box-shadow: 0 24px 80px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
- }
- .roadmap-shell::before {
- content: ''; position: absolute; inset: -2px;
- border-radius: 22px; padding: 2px; z-index: 0;
- background: linear-gradient(120deg, rgba(88,166,255,0.55), rgba(63,185,80,0.4), rgba(168,85,247,0.45), rgba(88,166,255,0.55));
- background-size: 300% 300%;
- animation: rmGradient 9s linear infinite;
- -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
- -webkit-mask-composite: xor;
- mask-composite: exclude;
- pointer-events: none;
- opacity: 0.55;
- }
- @keyframes rmGradient {
- 0% { background-position: 0% 50%; }
- 50% { background-position: 100% 50%; }
- 100% { background-position: 0% 50%; }
- }
- .roadmap-shell::after {
- content: ''; position: absolute; top: -120px; right: -120px;
- width: 320px; height: 320px;
- background: radial-gradient(circle, rgba(88,166,255,0.18) 0%, transparent 70%);
- pointer-events: none;
- }
- .roadmap-head {
- text-align: center; margin-bottom: 2.5rem; position: relative; z-index: 1;
- }
- .roadmap-badge {
- display: inline-flex; align-items: center; gap: 0.5rem;
- background: linear-gradient(90deg, rgba(88,166,255,.18), rgba(63,185,80,.14));
- border: 1px solid rgba(88,166,255,.35); color: var(--accent);
- font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
- letter-spacing: 1.2px; padding: 0.4rem 1rem; border-radius: 20px;
- margin-bottom: 1.25rem;
- }
- .roadmap-badge .pulse {
- width: 7px; height: 7px; border-radius: 50%; background: var(--accent2);
- animation: rmpulse 1.6s infinite;
- }
- @keyframes rmpulse { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(63,185,80,.5)} 50%{opacity:.6;box-shadow:0 0 0 6px rgba(63,185,80,0)} }
- .roadmap-title {
- font-size: clamp(1.5rem, 3vw, 2.1rem);
- font-weight: 800;
- color: #f0f6fc;
- letter-spacing: -0.5px;
- margin-bottom: 0.5rem;
- }
- .roadmap-title .ver-chip {
- display: inline-block;
- background: linear-gradient(135deg, #58a6ff, #3fb950);
- color: #0d1117;
- font-size: 0.85rem; font-weight: 800;
- padding: 0.15rem 0.6rem; border-radius: 6px;
- vertical-align: middle; margin-left: 0.5rem;
- letter-spacing: 0;
- }
- .roadmap-sub { color: var(--muted); font-size: 0.95rem; max-width: 620px; margin: 0 auto; }
- .roadmap-grid {
- display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr));
- gap: 0.85rem; position: relative; z-index: 1;
- }
- .rm-card {
- background: rgba(13,17,23,0.55);
- border: 1px solid rgba(48,54,61,0.7);
- border-radius: 12px; padding: 1.1rem 1.1rem 1rem;
- position: relative;
- transition: transform .18s, border-color .18s, background .18s;
- backdrop-filter: blur(6px);
- }
- .rm-card:hover {
- transform: translateY(-3px);
- border-color: rgba(88,166,255,0.5);
- background: rgba(22,27,34,0.85);
- }
- .rm-card .rm-icon {
- font-size: 1.35rem; margin-bottom: 0.55rem;
- display: inline-flex; width: 36px; height: 36px;
- align-items: center; justify-content: center;
- background: linear-gradient(135deg, rgba(88,166,255,0.12), rgba(63,185,80,0.08));
- border: 1px solid rgba(88,166,255,0.18);
- border-radius: 9px;
- }
- .rm-card h4 { font-size: 0.95rem; color: #f0f6fc; margin-bottom: 0.3rem; padding-right: 4.5rem; }
- .rm-card p { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
- .rm-tag {
- position: absolute; top: 0.85rem; right: 0.85rem; font-size: 0.6rem;
- font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
- padding: 0.15rem 0.5rem; border-radius: 10px;
- }
- .rm-tag.soon { background: rgba(234,179,8,.15); color: #eab308; border: 1px solid rgba(234,179,8,.3); }
- .rm-tag.beta { background: rgba(88,166,255,.15); color: var(--accent); border: 1px solid rgba(88,166,255,.3); }
- .rm-tag.live { background: rgba(63,185,80,.15); color: var(--accent2); border: 1px solid rgba(63,185,80,.3); }
- .rm-tag.dev { background: rgba(168,85,247,.15); color: #c084fc; border: 1px solid rgba(168,85,247,.3); }
- @media (max-width: 768px) {
- .roadmap-section { padding: 3rem 1rem; }
- .roadmap-shell { padding: 1.75rem 1.1rem; border-radius: 16px; }
- .roadmap-grid { grid-template-columns: 1fr; }
- }
- @media (max-width: 480px) {
- .roadmap-section { padding: 2.5rem 0.75rem; }
- .roadmap-shell { padding: 1.5rem 1rem; }
- .roadmap-title { font-size: 1.35rem; }
- .roadmap-title .ver-chip { font-size: 0.72rem; padding: 0.1rem 0.45rem; }
- }
-
- /* Version badge in footer */
- .ver-badge {
- display: inline-flex; align-items: center; gap: 0.35rem;
- background: linear-gradient(135deg, rgba(88,166,255,0.14), rgba(63,185,80,0.1));
- border: 1px solid rgba(88,166,255,0.3);
- color: var(--accent);
- font-size: 0.7rem; font-weight: 700;
- padding: 0.2rem 0.65rem; border-radius: 20px;
- letter-spacing: 0.5px;
- font-family: "SFMono-Regular", Consolas, Monaco, monospace;
- }
- .ver-badge .ver-dot {
- width: 6px; height: 6px; border-radius: 50%; background: var(--accent2);
- box-shadow: 0 0 6px var(--accent2);
- }
- @keyframes mq-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
- .mq-item{color:#fff;font-size:.95rem;font-weight:600;opacity:.9;flex-shrink:0;letter-spacing:.3px}
- .marquee-wrap:hover .marquee-track{animation-play-state:paused}
- /* mobile perf — GPU-heavy effects off */
- @media (max-width:900px){
-   *,*::before,*::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-   .marquee-wrap{mask-image:none!important;-webkit-mask-image:none!important}
-   .marquee-track{animation:none!important;will-change:auto!important}
-   [class*="rm-pulse"],[class*="rmpulse"]{animation:none!important}
- }
- @media (prefers-reduced-motion:reduce){
-   *,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important}
- }
- </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OXware — Free Enterprise KVM Hypervisor | VMware vSphere Alternative</title>
+  <meta name="description" content="OXware is the open-source enterprise KVM hypervisor with vCenter-class management — DRS, HA, live migration, confidential VMs, cluster federation. The free VMware vSphere &amp; Proxmox alternative for production datacenters." />
+  <meta name="keywords" content="kvm hypervisor, vmware alternative, vsphere alternative, proxmox alternative, free hypervisor, enterprise virtualization, kvm management, libvirt panel, open source datacenter, confidential vm, cluster federation, drs, live migration, qemu manager, oxware" />
+  <meta name="author" content="OXware" />
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+  <meta name="googlebot" content="index, follow" />
+  <meta name="theme-color" content="#0a0e1a" />
+  <meta name="application-name" content="OXware" />
+  <meta name="apple-mobile-web-app-title" content="OXware" />
+  <meta name="format-detection" content="telephone=no" />
+  <link rel="icon" type="image/png" href="sadeceikon.png" />
+  <link rel="apple-touch-icon" href="sadeceikon.png" />
+  <link rel="canonical" href="https://oxware.top/" />
+  <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="OXware" />
+  <meta property="og:title" content="OXware — Free Enterprise KVM Hypervisor | The VMware Alternative" />
+  <meta property="og:description" content="Enterprise virtualization without the enterprise licence. KVM/QEMU with vCenter-class management — DRS, HA, live migration, confidential VMs, federation. MIT licensed." />
+  <meta property="og:image" content="https://oxware.top/sadeceikon.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="OXware Hypervisor logo" />
+  <meta property="og:url" content="https://oxware.top/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="OXware — Free Enterprise KVM Hypervisor" />
+  <meta name="twitter:description" content="vCenter-class KVM management. DRS, HA, live migration, confidential VMs, federation. Open source. Production-ready." />
+  <meta name="twitter:image" content="https://oxware.top/sadeceikon.png" />
+  <meta name="twitter:site" content="@oxware" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "OXware Hypervisor",
+    "applicationCategory": "ServerApplication",
+    "applicationSubCategory": "Virtualization Platform",
+    "operatingSystem": "Linux (Ubuntu 22.04+, Debian 12+)",
+    "softwareVersion": "2.7.0",
+    "url": "https://oxware.top/",
+    "downloadUrl": "https://github.com/ShinnAsukha/oxware-hypervisor/releases",
+    "softwareRequirements": "x86_64 CPU with VT-x or AMD-V virtualization extensions",
+    "license": "https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE",
+    "description": "Open-source enterprise-grade KVM/QEMU hypervisor with vCenter-class management: DRS, HA, live migration, confidential VMs (SEV/TDX), vTPM 2.0, runbook auto-remediation, and managed cluster federation.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.9",
+      "ratingCount": "287"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "OXware",
+      "url": "https://oxware.top/",
+      "logo": "https://oxware.top/sadeceikon.png",
+      "sameAs": [
+        "https://github.com/ShinnAsukha/oxware-hypervisor",
+        "https://discord.gg/c6yHhKrQs5"
+      ]
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "OXware",
+    "url": "https://oxware.top/",
+    "logo": "https://oxware.top/sadeceikon.png",
+    "sameAs": [
+      "https://github.com/ShinnAsukha/oxware-hypervisor",
+      "https://discord.gg/c6yHhKrQs5"
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "OXware",
+    "url": "https://oxware.top/",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://oxware.top/docs/?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ─────────────────────────────────────────────────────────────────────
+       OXware Design System — Enterprise theme
+       ───────────────────────────────────────────────────────────────────── */
+    :root {
+      --bg-0:        #050810;   /* page background */
+      --bg-1:        #0a0e1a;   /* sections */
+      --bg-2:        #0f1525;   /* cards */
+      --bg-3:        #161d2e;   /* elevated */
+      --border:      #1e2638;
+      --border-2:    #2a334a;
+      --text:        #e6ebf5;
+      --text-2:      #b8c2d6;
+      --muted:       #6b7689;
+      --accent:      #0091da;   /* primary brand */
+      --accent-2:    #00b8e6;   /* secondary */
+      --accent-deep: #0066b3;
+      --success:     #00c389;
+      --warning:     #f5a623;
+      --danger:      #e74c5e;
+      --gradient-1:  linear-gradient(135deg, #0091da 0%, #00b8e6 100%);
+      --gradient-glow: radial-gradient(60% 60% at 50% 0%, rgba(0,145,218,0.18) 0%, rgba(0,145,218,0) 70%);
+      --container:   1280px;
+      --radius-sm:   4px;
+      --radius:      8px;
+      --radius-lg:   12px;
+      --shadow-1:    0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.6);
+      --shadow-2:    0 4px 12px rgba(0,0,0,.5);
+      --shadow-3:    0 24px 60px rgba(0,0,0,.6);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg-0);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    a { color: var(--accent-2); text-decoration: none; transition: color .15s; }
+    a:hover { color: var(--text); }
+    code, pre { font-family: 'JetBrains Mono', Consolas, monospace; }
+    img { max-width: 100%; display: block; }
+
+    .container { max-width: var(--container); margin: 0 auto; padding: 0 2rem; }
+
+    /* ── Buttons ────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.4rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all .18s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-deep); color: #fff; transform: translateY(-1px); }
+    .btn-outline { background: transparent; color: var(--text); border-color: var(--border-2); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent-2); }
+    .btn-ghost { background: transparent; color: var(--text-2); }
+    .btn-ghost:hover { color: var(--text); }
+    .btn-lg { padding: 0.95rem 1.8rem; font-size: 0.95rem; }
+    .btn i { font-size: 0.85em; }
+
+    /* ── Header / Nav ───────────────────────────────────────────────────── */
+    .topbar {
+      background: #03060e;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 32px;
+      gap: 1rem;
+    }
+    .topbar a { color: var(--muted); font-weight: 500; }
+    .topbar a:hover { color: var(--text-2); }
+    .topbar-links { display: flex; gap: 1.5rem; align-items: center; }
+    .topbar-status { display: flex; align-items: center; gap: 0.4rem; }
+    .topbar-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px var(--success); }
+
+    header.site-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(5, 8, 16, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      gap: 2.5rem;
+      height: 64px;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+    .nav-brand img { width: 30px; height: 30px; object-fit: contain; }
+    .nav-brand:hover { color: var(--text); }
+
+    .nav-primary {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      list-style: none;
+      flex: 1;
+    }
+    .nav-primary > li > a, .nav-primary > li > .nav-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.55rem 0.9rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-2);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: inherit;
+    }
+    .nav-primary > li > a:hover, .nav-primary > li > .nav-trigger:hover {
+      color: var(--text);
+      background: var(--bg-2);
+    }
+    /* chevron rotates only on .dd-open (set by JS) */
+    .nav-primary > li > a.nav-active { color: var(--accent-2); }
+    .nav-trigger i { transition: transform .2s; font-size: 0.65em; opacity: 0.7; }
+
+    .nav-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 580px;
+      background: var(--bg-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-3);
+      padding: 1.5rem;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(6px);
+      transition: opacity .2s, transform .2s, visibility .2s;
+      z-index: 200;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem 2rem;
+    }
+    .nav-primary > li { position: relative; }
+    .nav-primary > li.has-dropdown.dd-open .nav-dropdown {
+      opacity: 1; visibility: visible; transform: translateY(0);
+    }
+    .nav-primary > li.has-dropdown.dd-open .nav-trigger i { transform: rotate(180deg); }
+    .nav-dropdown a {
+      display: block;
+      padding: 0.65rem 0.75rem;
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      transition: background .15s;
+    }
+    .nav-dropdown a:hover { background: var(--bg-3); color: var(--text); }
+    .nav-dropdown .dd-eyebrow {
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+      padding: 0.5rem 0.75rem 0.3rem;
+      grid-column: 1 / -1;
+    }
+    .nav-dropdown .dd-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: 0.15rem;
+    }
+    .nav-dropdown .dd-title i { color: var(--accent); width: 14px; }
+    .nav-dropdown .dd-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
+
+    .nav-cta { display: flex; align-items: center; gap: 0.5rem; }
+
+    .nav-burger { display: none; background: none; border: none; color: var(--text); font-size: 1.25rem; cursor: pointer; padding: 0.4rem; }
+
+    /* ── Hero ───────────────────────────────────────────────────────────── */
+    .hero {
+      position: relative;
+      padding: 6rem 0 5rem;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: var(--gradient-glow);
+      z-index: -1;
+    }
+    .hero-grid {
+      max-width: 980px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.4rem 0.9rem;
+      background: rgba(0, 145, 218, 0.1);
+      border: 1px solid rgba(0, 145, 218, 0.25);
+      border-radius: 100px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--accent-2);
+      letter-spacing: 0.02em;
+      margin-bottom: 1.5rem;
+    }
+    .hero-eyebrow .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+    .hero h1 {
+      font-size: clamp(2.2rem, 4.2vw, 3.5rem);
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      color: #ffffff;
+      margin-bottom: 1.5rem;
+      text-wrap: balance;
+    }
+    .hero h1 .nowrap { white-space: nowrap; }
+    .hero h1 .accent {
+      background: var(--gradient-1);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .hero p.lede {
+      font-size: 1.125rem;
+      color: var(--text-2);
+      max-width: 620px;
+      line-height: 1.6;
+      margin: 0 auto 2.25rem;
+    }
+    .hero-cta { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
+
+    .hero-visual {
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background:
+        linear-gradient(145deg, rgba(0,145,218,0.04), transparent 60%),
+        var(--bg-1);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-3);
+    }
+    .hero-visual .visual-header {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1rem;
+    }
+    .hero-visual .visual-header .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border-2); }
+    .hero-visual .visual-header .dot:nth-child(1) { background: #ef4444; }
+    .hero-visual .visual-header .dot:nth-child(2) { background: #f5a623; }
+    .hero-visual .visual-header .dot:nth-child(3) { background: var(--success); }
+    .hero-visual .visual-header .url {
+      margin-left: 0.8rem;
+      font-size: 0.7rem;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .stat-grid > div {
+      padding: 1rem;
+      background: var(--bg-2);
+    }
+    .stat-grid .stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 0.35rem; }
+    .stat-grid .stat-value { font-size: 1.45rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+    .stat-grid .stat-trend { font-size: 0.72rem; color: var(--success); margin-top: 0.2rem; }
+    .visual-strip {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .visual-strip .chip {
+      font-size: 0.7rem;
+      padding: 0.25rem 0.55rem;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      color: var(--text-2);
+    }
+    .visual-strip .chip.ok { color: var(--success); border-color: rgba(0,195,137,0.25); }
+
+    /* ── Logo strip ─────────────────────────────────────────────────────── */
+    .trust-strip {
+      padding: 3rem 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-1);
+    }
+    .trust-label {
+      text-align: center;
+      font-size: 0.7rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+    .trust-row {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 2.5rem;
+      align-items: center;
+      opacity: 0.7;
+    }
+    .trust-row .tech {
+      font-weight: 600;
+      color: var(--text-2);
+      font-size: 1rem;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .trust-row .tech i { font-size: 1.1rem; color: var(--accent-2); }
+
+    /* ── Sections ───────────────────────────────────────────────────────── */
+    section.surface { padding: 6rem 0; }
+    section.surface.alt { background: var(--bg-1); }
+
+    .section-head { text-align: center; max-width: 700px; margin: 0 auto 3.5rem; }
+    .section-eyebrow {
+      display: inline-block;
+      font-size: 0.75rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent-2);
+      font-weight: 700;
+      margin-bottom: 0.85rem;
+    }
+    .section-head h2 {
+      font-size: clamp(1.85rem, 3vw, 2.5rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+    }
+    .section-head p { color: var(--text-2); font-size: 1.05rem; line-height: 1.65; }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+    }
+    .feature-card {
+      padding: 2rem 1.75rem;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: border-color .2s, transform .2s, box-shadow .2s;
+    }
+    .feature-card:hover {
+      border-color: var(--border-2);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-2);
+    }
+    .feature-icon {
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0, 145, 218, 0.1);
+      border: 1px solid rgba(0, 145, 218, 0.2);
+      border-radius: var(--radius-sm);
+      color: var(--accent-2);
+      font-size: 1.1rem;
+      margin-bottom: 1.25rem;
+    }
+    .feature-card h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+    .feature-card p {
+      font-size: 0.9rem;
+      color: var(--text-2);
+      line-height: 1.55;
+    }
+
+    /* ── Product spotlight (two-up) ─────────────────────────────────────── */
+    .spotlight-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    .spotlight {
+      padding: 2.5rem;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .spotlight::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      background: linear-gradient(135deg, rgba(0,145,218,0.15), transparent 50%);
+      opacity: 0;
+      transition: opacity .25s;
+      z-index: -1;
+    }
+    .spotlight:hover::before { opacity: 1; }
+    .spotlight .sp-icon {
+      width: 52px; height: 52px;
+      border-radius: var(--radius-sm);
+      background: var(--gradient-1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      color: #fff;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 8px 24px rgba(0, 145, 218, 0.3);
+    }
+    .spotlight h3 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+    .spotlight p {
+      font-size: 0.95rem;
+      color: var(--text-2);
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+    .spotlight .sp-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--accent-2);
+    }
+    .spotlight .sp-link:hover { color: var(--text); }
+    .spotlight .sp-link i { transition: transform .18s; }
+    .spotlight .sp-link:hover i { transform: translateX(3px); }
+    .spotlight ul {
+      list-style: none;
+      margin: 1rem 0 1.5rem;
+    }
+    .spotlight ul li {
+      font-size: 0.875rem;
+      color: var(--text-2);
+      padding: 0.35rem 0 0.35rem 1.5rem;
+      position: relative;
+    }
+    .spotlight ul li::before {
+      content: '\f00c';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      color: var(--accent-2);
+      position: absolute;
+      left: 0;
+      font-size: 0.75rem;
+      top: 0.45rem;
+    }
+
+    /* ── Stats band ─────────────────────────────────────────────────────── */
+    .stats-band {
+      background: var(--bg-1);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 4rem 0;
+    }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2rem;
+      text-align: center;
+    }
+    .stats-row .stat-num {
+      font-size: 2.75rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: var(--gradient-1);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+    .stats-row .stat-text {
+      font-size: 0.85rem;
+      color: var(--text-2);
+    }
+
+    /* ── Capability list (4-col) ────────────────────────────────────────── */
+    .capability-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .capability-grid > div {
+      padding: 1.75rem 1.25rem;
+      background: var(--bg-2);
+      transition: background .18s;
+    }
+    .capability-grid > div:hover { background: var(--bg-3); }
+    .capability-grid h4 {
+      font-size: 0.92rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+    .capability-grid p {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .capability-grid i {
+      color: var(--accent-2);
+      font-size: 1rem;
+      margin-bottom: 0.85rem;
+      display: inline-block;
+    }
+
+    /* ── CTA strip ──────────────────────────────────────────────────────── */
+    .cta-block {
+      padding: 5rem 3rem;
+      background:
+        linear-gradient(135deg, rgba(0,145,218,0.08), transparent 60%),
+        var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-block::before {
+      content: '';
+      position: absolute;
+      top: -50%; left: 50%;
+      width: 600px; height: 600px;
+      transform: translateX(-50%);
+      background: radial-gradient(circle, rgba(0,145,218,0.12), transparent 60%);
+      pointer-events: none;
+    }
+    .cta-block > * { position: relative; }
+    .cta-block h2 {
+      font-size: clamp(1.85rem, 3vw, 2.35rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+      margin-bottom: 1rem;
+    }
+    .cta-block p {
+      font-size: 1.05rem;
+      color: var(--text-2);
+      max-width: 580px;
+      margin: 0 auto 2rem;
+    }
+    .cta-block-actions { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+
+    /* ── Footer ─────────────────────────────────────────────────────────── */
+    footer.site-footer {
+      background: #03060e;
+      border-top: 1px solid var(--border);
+      padding: 4.5rem 0 2rem;
+      font-size: 0.85rem;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr 1fr 1fr 1fr;
+      gap: 3rem;
+      margin-bottom: 3.5rem;
+    }
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--text);
+      margin-bottom: 1rem;
+    }
+    .footer-brand img { width: 26px; height: 26px; }
+    .footer-tag {
+      color: var(--text-2);
+      font-size: 0.85rem;
+      line-height: 1.6;
+      margin-bottom: 1.25rem;
+      max-width: 280px;
+    }
+    .footer-social { display: flex; gap: 0.6rem; }
+    .footer-social a {
+      width: 32px; height: 32px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-2);
+      font-size: 0.9rem;
+      transition: all .18s;
+    }
+    .footer-social a:hover { border-color: var(--accent); color: var(--accent-2); }
+    .footer-col h4 {
+      font-size: 0.7rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text);
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+    }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.65rem; }
+    .footer-col a {
+      color: var(--text-2);
+      font-size: 0.85rem;
+      transition: color .15s;
+    }
+    .footer-col a:hover { color: var(--accent-2); }
+    .footer-bottom {
+      border-top: 1px solid var(--border);
+      padding-top: 1.75rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 1rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    .footer-bottom .legal-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .footer-bottom .legal-links a { color: var(--muted); }
+    .footer-bottom .legal-links a:hover { color: var(--text-2); }
+    .ver-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.2rem 0.6rem;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--text-2);
+    }
+    .ver-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px var(--success); }
+
+    /* ── Responsive ─────────────────────────────────────────────────────── */
+    @media (max-width: 1024px) {
+      .footer-grid { grid-template-columns: 1fr 1fr 1fr; }
+      .footer-brand-wrap { grid-column: 1 / -1; }
+      .feature-grid, .capability-grid { grid-template-columns: 1fr 1fr; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .spotlight-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 700px) {
+      .container { padding: 0 1.25rem; }
+      section.surface { padding: 4rem 0; }
+      .hero { padding: 4rem 0 3rem; }
+      .topbar-links { display: none; }
+      .nav-primary { display: none; }
+      .nav-burger { display: inline-flex; }
+      .nav-cta .btn-outline { display: none; }
+      .feature-grid, .capability-grid, .footer-grid { grid-template-columns: 1fr; }
+      .cta-block { padding: 3rem 1.5rem; }
+      .stat-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 900px) {
+      *, *::before, *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+
+    /* Mobile menu drawer */
+    .mobile-drawer {
+      position: fixed;
+      inset: 64px 0 0;
+      background: var(--bg-0);
+      z-index: 99;
+      padding: 1.5rem 1.5rem 4rem;
+      overflow-y: auto;
+      transform: translateX(100%);
+      transition: transform .25s;
+    }
+    .mobile-drawer.open { transform: translateX(0); }
+    .mobile-drawer a {
+      display: block;
+      padding: 0.85rem 0;
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 500;
+      border-bottom: 1px solid var(--border);
+    }
+  </style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav>
- <a href="/" class="nav-logo">
- <img src="sadeceikon.png" alt="OXware" onerror="this.style.display='none'">
- OXware
- </a>
- <input type="checkbox" id="navtoggle" class="nav-toggle-cb">
- <label for="navtoggle" class="nav-burger" aria-label="Menu"><i class="fas fa-bars"></i></label>
- <ul class="nav-links">
- <li><a href="/" class="nav-active">Home</a></li>
- <li><a href="/vcenter/">vCenter</a></li>
- <li><a href="/pricing/">Pricing</a></li>
- <li><a href="/marketplace/">Marketplace</a></li>
- <li><a href="/docs/">Docs</a></li>
- </ul>
- <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" class="btn btn-primary">
- <i class="fab fa-github"></i> Get Started Free
- </a>
-</nav>
+<!-- ─────── TOP BAR ─────── -->
+<div class="topbar">
+  <div class="container topbar-inner">
+    <div class="topbar-status">
+      <span class="dot"></span>
+      <span>All systems operational</span>
+      <span style="color: var(--border-2)">·</span>
+      <span>v2.7.0 GA</span>
+    </div>
+    <div class="topbar-links">
+      <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a>
+      <a href="https://discord.gg/c6yHhKrQs5" target="_blank" rel="noopener"><i class="fab fa-discord"></i> Community</a>
+    </div>
+  </div>
+</div>
 
-<!-- HERO -->
+<!-- ─────── MAIN NAV ─────── -->
+<header class="site-nav">
+  <div class="container nav-inner">
+    <a href="/" class="nav-brand">
+      <img src="sadeceikon.png" alt="OXware" />
+      OXware
+    </a>
+
+    <ul class="nav-primary">
+      <li class="has-dropdown">
+        <button class="nav-trigger">Products <i class="fas fa-chevron-down"></i></button>
+        <div class="nav-dropdown">
+          <div class="dd-eyebrow">Hypervisor Platform</div>
+          <a href="/">
+            <div class="dd-title"><i class="fas fa-server"></i> OXware Hypervisor</div>
+            <div class="dd-desc">Type-1 KVM/QEMU with vCenter-class management.</div>
+          </a>
+          <a href="/vcenter/">
+            <div class="dd-title"><i class="fas fa-network-wired"></i> OXware vCenter</div>
+            <div class="dd-desc">Multi-node cluster control plane and federation.</div>
+          </a>
+          <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" target="_blank" rel="noopener">
+            <div class="dd-title"><i class="fas fa-download"></i> Downloads</div>
+            <div class="dd-desc">Installer ISO, debian repo, source releases.</div>
+          </a>
+        </div>
+      </li>
+      <li class="has-dropdown">
+        <button class="nav-trigger">Solutions <i class="fas fa-chevron-down"></i></button>
+        <div class="nav-dropdown">
+          <div class="dd-eyebrow">By Use Case</div>
+          <a href="/docs/#enterprise">
+            <div class="dd-title"><i class="fas fa-building"></i> Enterprise Datacenter</div>
+            <div class="dd-desc">DRS, HA, live migration, cluster federation.</div>
+          </a>
+          <a href="/docs/#v270-cvm">
+            <div class="dd-title"><i class="fas fa-user-shield"></i> Confidential Computing</div>
+            <div class="dd-desc">SEV / TDX + vTPM + Secure Boot.</div>
+          </a>
+          <a href="/docs/#v270-runbook">
+            <div class="dd-title"><i class="fas fa-robot"></i> Auto-Remediation</div>
+            <div class="dd-desc">Runbook executor wired to anomaly detection.</div>
+          </a>
+          <a href="/docs/#v270-federation">
+            <div class="dd-title"><i class="fas fa-globe"></i> Managed Federation</div>
+            <div class="dd-desc">Single pane over multiple OXware nodes.</div>
+          </a>
+        </div>
+      </li>
+      <li><a href="/pricing/">Pricing</a></li>
+      <li><a href="/docs/">Documentation</a></li>
+      <li><a href="/marketplace/">Marketplace</a></li>
+    </ul>
+
+    <div class="nav-cta">
+      <a href="/docs/" class="btn btn-outline">Documentation</a>
+      <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" target="_blank" rel="noopener" class="btn btn-primary">
+        <i class="fas fa-download"></i> Get OXware
+      </a>
+    </div>
+
+    <button class="nav-burger" id="nav-burger" aria-label="Menu"><i class="fas fa-bars"></i></button>
+  </div>
+</header>
+
+<!-- mobile drawer -->
+<div class="mobile-drawer" id="mobile-drawer">
+  <a href="/">Home</a>
+  <a href="/vcenter/">vCenter</a>
+  <a href="/pricing/">Pricing</a>
+  <a href="/docs/">Documentation</a>
+  <a href="/marketplace/">Marketplace</a>
+  <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener">GitHub</a>
+  <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" target="_blank" rel="noopener">Downloads</a>
+</div>
+
+<!-- ─────── HERO ─────── -->
 <section class="hero">
- <!-- LEFT -->
- <div class="hero-left">
- <div class="hero-badge">Open Source · v2.7.0 Enterprise</div>
- <h1>Enterprise <span>KVM Hypervisor</span> Management</h1>
- <p>
- A full-featured, self-hosted virtualization platform built on KVM/QEMU.
- Manage VMs, clusters, networking, storage, security, and compliance — all from a single dark-themed web UI.
- 114 enterprise capabilities: DRS, live migration, vTPM, confidential VMs, multi-tenancy, Terraform, Kubernetes CSI, Firecracker microVM, OPA policy engine, and more.
- </p>
- <div class="hero-actions">
- <a href="/docs/" class="btn btn-primary"><i class="fas fa-book-open"></i> Get Started</a>
- <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" class="btn btn-green"><i class="fas fa-compact-disc"></i> Download ISO</a>
- <a href="https://github.com/ShinnAsukha/oxware-hypervisor" class="btn btn-outline"><i class="fab fa-github"></i> View on GitHub</a>
- </div>
- </div>
-
- <!-- RIGHT — dashboard mockup -->
- <div class="hero-visual">
- <div class="dashboard-mockup">
- <div class="db-topbar">
- <div class="db-dot red"></div>
- <div class="db-dot yellow"></div>
- <div class="db-dot green"></div>
- <div class="db-url">https://192.168.1.10:8006</div>
- </div>
- <div class="db-body">
- <div class="db-grid">
- <div class="db-card">
- <div class="db-card-label">Running VMs</div>
- <div class="db-card-val orange">7</div>
- <div class="db-card-sub">12 total</div>
- </div>
- <div class="db-card">
- <div class="db-card-label">CPU Usage</div>
- <div class="db-card-val blue">34<span style="font-size:11px;color:#484f58">%</span></div>
- <div class="db-card-sub">16 cores</div>
- </div>
- <div class="db-card">
- <div class="db-card-label">Memory</div>
- <div class="db-card-val green">48<span style="font-size:11px;color:#484f58">GB</span></div>
- <div class="db-card-sub">/ 64 GB total</div>
- </div>
- <div class="db-card">
- <div class="db-card-label">Disk I/O</div>
- <div class="db-card-val" style="font-size:15px;padding-top:3px">1.2<span style="font-size:10px;color:#484f58"> GB/s</span></div>
- <div class="db-card-sub">NVMe SSD</div>
- </div>
- </div>
- <div class="db-vm-list">
- <div class="db-vm-row">
- <div class="db-vm-status on"></div>
- <div class="db-vm-name">ubuntu-web-01</div>
- <div class="db-vm-cpu">4 vCPU</div>
- <span class="sv-badge run">RUNNING</span>
- </div>
- <div class="db-vm-row">
- <div class="db-vm-status on"></div>
- <div class="db-vm-name">windows-db-02</div>
- <div class="db-vm-cpu">8 vCPU</div>
- <span class="sv-badge run">RUNNING</span>
- </div>
- <div class="db-vm-row">
- <div class="db-vm-status pause"></div>
- <div class="db-vm-name">dev-test-env</div>
- <div class="db-vm-cpu">2 vCPU</div>
- <span class="sv-badge pause">PAUSED</span>
- </div>
- <div class="db-vm-row">
- <div class="db-vm-status off"></div>
- <div class="db-vm-name">backup-node-03</div>
- <div class="db-vm-cpu">4 vCPU</div>
- <span class="sv-badge stop">STOPPED</span>
- </div>
- </div>
- <div class="db-cpu-bar"><div class="db-cpu-fill" style="width:34%"></div></div>
- </div>
- </div>
- </div>
+  <div class="container hero-grid">
+    <div>
+      <h1>
+        Enterprise virtualization,<br>
+        <span class="nowrap">without the <span class="accent">enterprise licence.</span></span>
+      </h1>
+      <p class="lede">
+        The open-source KVM/QEMU hypervisor that <strong style="color:var(--text)">replaces VMware vSphere</strong> — DRS, HA, live migration, confidential VMs, vTPM 2.0, and a single-pane multi-cluster control plane. Production-ready. Self-hosted. <strong style="color:var(--accent-2)">MIT licensed.</strong>
+      </p>
+      <div class="hero-cta">
+        <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" target="_blank" rel="noopener" class="btn btn-primary btn-lg">
+          <i class="fas fa-download"></i> Download OXware
+        </a>
+        <a href="/docs/" class="btn btn-outline btn-lg">
+          Read the Docs <i class="fas fa-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- STATS -->
-<div class="stats-bar">
- <div class="stat">
- <div class="stat-value">4</div>
- <div class="stat-label">RBAC Roles</div>
- </div>
- <div class="stat">
- <div class="stat-value">40+</div>
- <div class="stat-label">API Endpoints</div>
- </div>
- <div class="stat">
- <div class="stat-value">5</div>
- <div class="stat-label">UI Languages</div>
- </div>
- <div class="stat">
- <div class="stat-value">MIT</div>
- <div class="stat-label">License</div>
- </div>
+<!-- ─────── TRUST STRIP ─────── -->
+<div class="trust-strip">
+  <div class="container">
+    <div class="trust-label">Built on the open stack the datacenter already trusts</div>
+    <div class="trust-row">
+      <span class="tech"><i class="fab fa-linux"></i> KVM</span>
+      <span class="tech">QEMU</span>
+      <span class="tech">libvirt</span>
+      <span class="tech"><i class="fab fa-python"></i> Python</span>
+      <span class="tech">noVNC</span>
+      <span class="tech">Open vSwitch</span>
+      <span class="tech">WireGuard</span>
+      <span class="tech">Ceph</span>
+      <span class="tech">ZFS</span>
+      <span class="tech">LUKS2</span>
+      <span class="tech">nftables</span>
+    </div>
+  </div>
 </div>
 
-<!-- FEATURES -->
-<section class="section" id="features">
- <h2 class="section-title">Enterprise Features, Zero Cost</h2>
- <p class="section-sub">Everything you need to run production workloads.</p>
- <div class="feature-grid">
+<!-- ─────── CAPABILITIES ─────── -->
+<section class="surface">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-eyebrow">Platform Capabilities</div>
+      <h2>Everything a modern hypervisor needs, on day one.</h2>
+      <p>Three release lines. One platform. The same auditable engine on a laptop, a homelab, and a 36-node production cluster.</p>
+    </div>
 
- <div class="feature-card">
- <div class="feature-icon"><i class="fas fa-desktop"></i></div>
- <h3>VM Lifecycle Management</h3>
- <p>Create, start, stop, reboot, clone, and snapshot VMs with full KVM power. Bulk operations, CPU pinning, vCPU hot-plug, scheduling, and template-based provisioning.</p>
- </div>
-
- <div class="feature-card">
- <div class="feature-icon"><i class="fas fa-terminal"></i></div>
- <h3>noVNC Console</h3>
- <p>Browser-based VNC and serial console — no client needed. Pointer lock, Ctrl+Alt+Del, clipboard support, fullscreen, and SPICE for high-performance sessions.</p>
- </div>
-
- <div class="feature-card">
- <div class="feature-icon"><i class="fas fa-shield-halved"></i></div>
- <h3>RBAC &amp; Multi-User</h3>
- <p>Role-based access with four built-in roles: admin, operator, vm-user, and viewer. Assign specific VMs to tenants so they only see and manage what they own.</p>
- </div>
-
- <div class="feature-card">
- <div class="feature-icon"><i class="fas fa-cloud-upload-alt"></i></div>
- <h3>Cloud-Init &amp; Auto-Provision</h3>
- <p>Automated VM configuration at first boot: SSH key injection, static IP setup, hostname assignment, and network configuration — no manual intervention required.</p>
- </div>
-
- <div class="feature-card">
- <div class="feature-icon"><i class="fas fa-network-wired"></i></div>
- <h3>IPAM &amp; Networking</h3>
- <p>IP address management with CIDR pools, WireGuard VPN, VLAN tagging, SDN via Open vSwitch, HAProxy load balancer, per-VM QoS, and nftables firewall.</p>
- </div>
-
- <div class="feature-card">
- <div class="feature-icon"><i class="fas fa-robot"></i></div>
- <h3>AI Assistant</h3>
- <p>Built-in AI for natural-language VM creation, capacity forecasting, anomaly detection, and workload analysis. Predict resource exhaustion before it impacts production.</p>
- </div>
-
- <div class="feature-card">
- <div class="feature-icon" style="background:rgba(88,166,255,0.12);color:#58a6ff"><i class="fas fa-layer-group"></i></div>
- <h3>Cluster &amp; DRS</h3>
- <p>Distributed Resource Scheduler auto-balances VMs across hosts by CPU/RAM load. EVC CPU compatibility for live migration across CPU generations. Affinity/anti-affinity rules, NUMA-aware scheduling, maintenance mode evacuation.</p>
- </div>
-
- <div class="feature-card">
- <div class="feature-icon" style="background:rgba(248,81,73,0.12);color:#f85149"><i class="fas fa-shield-halved"></i></div>
- <h3>Security &amp; Compliance</h3>
- <p>vTPM 2.0 (Windows 11/BitLocker), AMD SEV/Intel TDX confidential VMs, LUKS2 disk encryption, automated CIS/NIST/PCI-DSS/HIPAA/ISO 27001 compliance scanner, DLP engine, forensics, SAML/OIDC SSO, MFA per role.</p>
- </div>
-
- <div class="feature-card">
- <div class="feature-icon" style="background:rgba(63,185,80,0.12);color:#3fb950"><i class="fas fa-rotate"></i></div>
- <h3>Disaster Recovery</h3>
- <p>3-2-1 backup automation, app-consistent snapshots (fsfreeze), backup mount+boot verification, cross-site async/sync replication. RPO/RTO SLA tracking, automated DR runbooks, one-click failover.</p>
- </div>
-
- <div class="feature-card">
- <div class="feature-icon" style="background:rgba(210,153,34,0.12);color:#d29922"><i class="fas fa-building"></i></div>
- <h3>Multi-Tenancy</h3>
- <p>Hard tenant isolation with per-tenant vCPU/RAM/disk quotas, self-service portal, chargeback/showback billing engine (€/$/TRY), 6-template service catalog, token-bucket rate limiting per tenant.</p>
- </div>
-
- <div class="feature-card">
- <div class="feature-icon" style="background:rgba(88,166,255,0.12);color:#58a6ff"><i class="fas fa-dharmachakra"></i></div>
- <h3>Kubernetes &amp; Cloud</h3>
- <p>Kubernetes CSI driver (csi.oxware.io), OxwareVM CRD Operator, KubeVirt import/export, GitOps (ArgoCD/Flux), Pulumi IaC generation, workload mobility to AWS AMI / Azure VHD / GCP.</p>
- </div>
-
- <div class="feature-card">
- <div class="feature-icon" style="background:rgba(63,185,80,0.12);color:#3fb950"><i class="fas fa-bolt"></i></div>
- <h3>Modern Workloads</h3>
- <p>Firecracker microVM (125ms boot), Kata Containers runtime, WASM module execution (wasmtime/wasmedge), edge deployment mode. OPA/Rego policy-as-code, CloudEvents v1.0, workflow automation engine.</p>
- </div>
-
- <div class="feature-card">
- <div class="feature-icon" style="background:rgba(139,92,246,0.12);color:#a78bfa"><i class="fas fa-code-branch"></i></div>
- <h3>IaC &amp; Terraform</h3>
- <p>Official Terraform provider: <code>oxware_vm</code>, <code>oxware_network</code>, <code>oxware_storage_pool</code> resources + data sources. Full REST API (~190 endpoints) with OpenAPI spec auto-generated at <code>/api/docs</code>.</p>
- </div>
-
- <div class="feature-card">
- <div class="feature-icon" style="background:rgba(63,185,80,0.12);color:#3fb950"><i class="fab fa-osi"></i></div>
- <h3>Open Source · MIT</h3>
- <p>Full source on GitHub. No vendor lock-in, no subscriptions, no fees. Self-hosted on your own infrastructure forever. Community-driven development with enterprise features baked in.</p>
- </div>
-
- </div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-server"></i></div>
+        <h3>Type-1 KVM/QEMU</h3>
+        <p>Bare-metal hypervisor with hardware-accelerated VT-x / AMD-V. Direct libvirt integration. No emulation tax.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-arrows-rotate"></i></div>
+        <h3>DRS + HA + Live Migration</h3>
+        <p>Cluster-aware scheduler keeps load balanced. Online migration during host maintenance. Automatic failover.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-user-shield"></i></div>
+        <h3>Confidential VMs</h3>
+        <p>AMD SEV / SEV-SNP and Intel TDX with vTPM 2.0 and UEFI Secure Boot. Attestation captured per launch.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-shield-halved"></i></div>
+        <h3>Audit-grade RBAC</h3>
+        <p>Hash-chained audit log, JWT with HttpOnly cookies, 2FA, recovery codes, IP allowlists, per-tenant isolation.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-network-wired"></i></div>
+        <h3>SDN + Microsegmentation</h3>
+        <p>Open vSwitch with distributed virtual switches. nftables / eBPF L7 policies. WireGuard mesh.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-database"></i></div>
+        <h3>Storage that scales</h3>
+        <p>ZFS, Ceph, LUKS2 disk encryption, content library, 3-2-1 backup, app-consistent snapshots.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-globe"></i></div>
+        <h3>Cluster Federation</h3>
+        <p>One control plane over many OXware nodes. Aggregated inventory, parallel health, fan-out actions.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-robot"></i></div>
+        <h3>Auto-Remediation</h3>
+        <p>Runbook executor reacts to anomaly events. Cooldown, hourly quota, audit log on every step.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-code"></i></div>
+        <h3>API + SDK</h3>
+        <p>~270 REST endpoints, OpenAPI explorer, Python plugin SDK, Pulumi provider, KubeVirt + K8s CSI / Operator.</p>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- ROADMAP — We're working on v2.7.0 -->
-<section class="roadmap-section" id="roadmap">
- <div class="roadmap-shell">
- <div class="roadmap-head">
- <span class="roadmap-badge"><span class="pulse"></span> Designing for v2.7</span>
- <h2 class="roadmap-title">What's Next<span class="ver-chip">v2.7</span></h2>
- <p class="roadmap-sub">v2.7.0 is complete — 114+ capabilities shipped. These are the features we're designing for the next major cycle.</p>
- </div>
- <div class="roadmap-grid">
- <div class="rm-card">
- <span class="rm-tag soon">v2.7</span>
- <div class="rm-icon"><i class="fas fa-mobile-screen-button"></i></div>
- <h4>Mobile App (iOS + Android)</h4>
- <p>Native clients — VM lifecycle, push alerts, live metrics, noVNC console snapshots, and quick actions on the go.</p>
- </div>
- <div class="rm-card">
- <span class="rm-tag soon">v2.7</span>
- <div class="rm-icon"><i class="fas fa-server"></i></div>
- <h4>Managed Clusters</h4>
- <p>Multi-site cluster federation — manage multiple OXware nodes from a single global control plane with unified inventory and single-pane operations.</p>
- </div>
- <div class="rm-card">
- <span class="rm-tag dev">v2.7</span>
- <div class="rm-icon"><i class="fas fa-shield-halved"></i></div>
- <h4>Confidential VMs</h4>
- <p>AMD SEV and Intel TDX hardware memory encryption. vTPM 2.0 + UEFI Secure Boot for untrusted-host environments.</p>
- </div>
- <div class="rm-card">
- <span class="rm-tag dev">v2.7</span>
- <div class="rm-icon"><i class="fas fa-robot"></i></div>
- <h4>AI Anomaly Response</h4>
- <p>Autonomous remediation — AI detects anomalies and triggers pre-approved runbooks without manual intervention.</p>
- </div>
- <div class="rm-card">
- <span class="rm-tag dev">v2.7</span>
- <div class="rm-icon"><i class="fas fa-sitemap"></i></div>
- <h4>KubeVirt &amp; K8s Operator</h4>
- <p>Run OXware VMs as Kubernetes workloads. CSI driver for persistent volumes, Operator for lifecycle management.</p>
- </div>
- <div class="rm-card">
- <span class="rm-tag dev">v2.7</span>
- <div class="rm-icon"><i class="fas fa-users"></i></div>
- <h4>Multi-Tenancy &amp; Chargeback</h4>
- <p>Hard tenant isolation, per-tenant resource quotas, usage metering, and cost chargeback reports for MSP/hosting environments.</p>
- </div>
- <div class="rm-card">
- <span class="rm-tag dev">v2.7</span>
- <div class="rm-icon"><i class="fas fa-fire-flame-curved"></i></div>
- <h4>Microsegmentation</h4>
- <p>Per-VM Layer-7 firewall policies enforced via nftables/eBPF — east-west traffic control without external SDN hardware.</p>
- </div>
- <div class="rm-card">
- <span class="rm-tag dev">v2.7</span>
- <div class="rm-icon"><i class="fas fa-display"></i></div>
- <h4>Desktop Client</h4>
- <p>Electron-based desktop app for macOS, Windows, and Linux — native system tray, offline VM status, and local CLI integration.</p>
- </div>
- </div>
- </div>
+<!-- ─────── PRODUCT SPOTLIGHTS ─────── -->
+<section class="surface alt">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-eyebrow">Product Spotlights</div>
+      <h2>Two products, one platform.</h2>
+      <p>Run a single host or a federated multi-site fleet — the panel scales with you.</p>
+    </div>
+
+    <div class="spotlight-grid">
+      <div class="spotlight">
+        <div class="sp-icon"><i class="fas fa-server"></i></div>
+        <h3>OXware Hypervisor</h3>
+        <p>The core Type-1 KVM/QEMU hypervisor. Single-host or HA cluster. Ships with the full management panel, console, plugin SDK, and ~270 REST endpoints.</p>
+        <ul>
+          <li>VM lifecycle, snapshots, live migration</li>
+          <li>noVNC + xterm.js in-browser console</li>
+          <li>Encrypted backups + Object Store targets</li>
+          <li>Plugin SDK, Marketplace, OPA policies</li>
+        </ul>
+        <a href="/docs/" class="sp-link">Read the Hypervisor docs <i class="fas fa-arrow-right"></i></a>
+      </div>
+
+      <div class="spotlight">
+        <div class="sp-icon" style="background: linear-gradient(135deg, #00b8e6, #00c389); box-shadow: 0 8px 24px rgba(0,195,137,0.3);"><i class="fas fa-network-wired"></i></div>
+        <h3>OXware vCenter</h3>
+        <p>Multi-node cluster management — federate many OXware controllers behind a single pane. Aggregated inventory, parallel health, distributed networking, single sign-on.</p>
+        <ul>
+          <li>Cluster federation across regions</li>
+          <li>Live migration between hosts</li>
+          <li>Distributed Virtual Switch (DVS)</li>
+          <li>Single SAML / OIDC sign-on</li>
+        </ul>
+        <a href="/vcenter/" class="sp-link">See vCenter <i class="fas fa-arrow-right"></i></a>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- TECH STACK -->
-<div class="stack-section">
- <div class="stack-label">Built with</div>
- <div class="marquee-wrap" style="overflow:hidden;white-space:nowrap;width:100%;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)">
- <div class="marquee-track" style="display:inline-flex;gap:2.5rem;animation:mq-scroll 45s linear infinite;will-change:transform">
- <span class="mq-item">KVM/QEMU</span>
- <span class="mq-item">libvirt</span>
- <span class="mq-item">Python 3</span>
- <span class="mq-item">Flask</span>
- <span class="mq-item">SocketIO</span>
- <span class="mq-item">noVNC</span>
- <span class="mq-item">nftables</span>
- <span class="mq-item">iptables</span>
- <span class="mq-item">Open vSwitch</span>
- <span class="mq-item">WireGuard</span>
- <span class="mq-item">Ceph</span>
- <span class="mq-item">ZFS</span>
- <span class="mq-item">LUKS2</span>
- <span class="mq-item">LDAP/AD</span>
- <span class="mq-item">SAML/OIDC</span>
- <span class="mq-item">HashiCorp Vault</span>
- <span class="mq-item">TOTP 2FA</span>
- <span class="mq-item">JWT Auth</span>
- <span class="mq-item">cloud-init</span>
- <span class="mq-item">QEMU Guest Agent</span>
- <span class="mq-item">SR-IOV</span>
- <span class="mq-item">NUMA</span>
- <span class="mq-item">vGPU</span>
- <span class="mq-item">AMD SEV</span>
- <span class="mq-item">Intel TDX</span>
- <span class="mq-item">Let's Encrypt</span>
- <span class="mq-item">HAProxy</span>
- <span class="mq-item">nginx</span>
- <span class="mq-item">dnsmasq</span>
- <span class="mq-item">SPICE</span>
- <span class="mq-item">Terraform</span>
- <span class="mq-item">Kubernetes</span>
- <span class="mq-item">Firecracker</span>
- <span class="mq-item">Kata Containers</span>
- <span class="mq-item">WASM</span>
- <span class="mq-item">OpenTelemetry</span>
- <span class="mq-item">Grafana</span>
- <span class="mq-item">OPA/Rego</span>
- <span class="mq-item">ArgoCD/Flux</span>
- <span class="mq-item">CloudEvents</span>
- <span class="mq-item">Pulumi</span>
- <span class="mq-item">MinIO/S3</span>
- <span class="mq-item">swtpm</span>
- <span class="mq-item">Go</span>
- <!-- duplicate for seamless loop -->
- <span class="mq-item">KVM/QEMU</span>
- <span class="mq-item">libvirt</span>
- <span class="mq-item">Python 3</span>
- <span class="mq-item">Flask</span>
- <span class="mq-item">SocketIO</span>
- <span class="mq-item">noVNC</span>
- <span class="mq-item">nftables</span>
- <span class="mq-item">iptables</span>
- <span class="mq-item">Open vSwitch</span>
- <span class="mq-item">WireGuard</span>
- <span class="mq-item">Ceph</span>
- <span class="mq-item">ZFS</span>
- <span class="mq-item">LUKS2</span>
- <span class="mq-item">LDAP/AD</span>
- <span class="mq-item">SAML/OIDC</span>
- <span class="mq-item">HashiCorp Vault</span>
- <span class="mq-item">TOTP 2FA</span>
- <span class="mq-item">JWT Auth</span>
- <span class="mq-item">cloud-init</span>
- <span class="mq-item">QEMU Guest Agent</span>
- <span class="mq-item">SR-IOV</span>
- <span class="mq-item">NUMA</span>
- <span class="mq-item">vGPU</span>
- <span class="mq-item">AMD SEV</span>
- <span class="mq-item">Intel TDX</span>
- <span class="mq-item">Let's Encrypt</span>
- <span class="mq-item">HAProxy</span>
- <span class="mq-item">nginx</span>
- <span class="mq-item">dnsmasq</span>
- <span class="mq-item">SPICE</span>
- <span class="mq-item">Terraform</span>
- <span class="mq-item">Kubernetes</span>
- <span class="mq-item">Firecracker</span>
- <span class="mq-item">Kata Containers</span>
- <span class="mq-item">WASM</span>
- <span class="mq-item">OpenTelemetry</span>
- <span class="mq-item">Grafana</span>
- <span class="mq-item">OPA/Rego</span>
- <span class="mq-item">ArgoCD/Flux</span>
- <span class="mq-item">CloudEvents</span>
- <span class="mq-item">Pulumi</span>
- <span class="mq-item">MinIO/S3</span>
- <span class="mq-item">swtpm</span>
- <span class="mq-item">Go</span>
- </div>
- </div>
+<!-- ─────── STATS BAND ─────── -->
+<div class="stats-band">
+  <div class="container">
+    <div class="stats-row">
+      <div>
+        <div class="stat-num">~270</div>
+        <div class="stat-text">REST API endpoints</div>
+      </div>
+      <div>
+        <div class="stat-num">114+</div>
+        <div class="stat-text">capabilities shipped</div>
+      </div>
+      <div>
+        <div class="stat-num">$0</div>
+        <div class="stat-text">licence fee, MIT licensed</div>
+      </div>
+      <div>
+        <div class="stat-num">v2.7</div>
+        <div class="stat-text">current GA release</div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- QUICK START -->
-<section class="quickstart-section">
- <h2 class="section-title">Quick Start</h2>
- <p class="section-sub">One command and you're running.</p>
- <pre><span class="comment"># Install OXware (Ubuntu 22.04+ or Debian 12+, requires root)</span>
-<span class="cmd">curl</span> -sSL https://oxware.top/install.sh <span class="cmd">| sudo bash</span>
+<!-- ─────── WHAT'S NEW IN 2.7 ─────── -->
+<section class="surface">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-eyebrow">Release 2.7.0 · GA</div>
+      <h2>What's new this cycle.</h2>
+      <p>Confidential computing, autonomous remediation, federation, and a hardened authentication path.</p>
+    </div>
 
-<span class="comment"># Open the web UI after installation</span>
-<span class="url">https://&lt;server-ip&gt;:8006</span> <span class="comment"># complete the setup wizard on first boot</span></pre>
+    <div class="capability-grid">
+      <div>
+        <i class="fas fa-user-shield"></i>
+        <h4>Confidential VMs</h4>
+        <p>vTPM 2.0 + Secure Boot + SEV/TDX attestation. Hypervisor cannot read guest memory.</p>
+      </div>
+      <div>
+        <i class="fas fa-robot"></i>
+        <h4>Auto-Remediation</h4>
+        <p>Runbooks wired into the anomaly detector. Cooldown + quota + full audit history.</p>
+      </div>
+      <div>
+        <i class="fas fa-globe"></i>
+        <h4>Managed Federation</h4>
+        <p>Aggregate VMs and health across many OXware nodes. Parallel bulk actions.</p>
+      </div>
+      <div>
+        <i class="fas fa-lock"></i>
+        <h4>HttpOnly Cookie Auth</h4>
+        <p>JWT moved off localStorage. SameSite=Strict + double-submit CSRF. Setup endpoint locked to loopback.</p>
+      </div>
+      <div>
+        <i class="fas fa-fingerprint"></i>
+        <h4>SSO Fail-Closed</h4>
+        <p>OIDC ID tokens verified against issuer JWKS. SAML requires python3-saml. No unsigned acceptance.</p>
+      </div>
+      <div>
+        <i class="fas fa-shield-virus"></i>
+        <h4>Strict CSP + Rate Limit</h4>
+        <p>Per-IP sliding window on auth endpoints. Full CSP on panel and site. Privacy policy GA.</p>
+      </div>
+      <div>
+        <i class="fas fa-toggle-off"></i>
+        <h4>High-risk default-off</h4>
+        <p>Plugin SDK, Docker/LXC, GitOps, federation ship disabled. Explicit operator opt-in required.</p>
+      </div>
+      <div>
+        <i class="fas fa-vials"></i>
+        <h4>CI Hardening</h4>
+        <p>Hard gates on compile, syntax, duplicate routes, Bandit HIGH, and token-in-URL regressions.</p>
+      </div>
+    </div>
 
- <div style="text-align:center; margin-top: 2rem;">
- <a href="/docs/" class="btn btn-primary" style="padding: 0.7rem 2rem; font-size: 1rem;">
- <i class="fas fa-book-open"></i> Read the full documentation
- </a>
- </div>
+    <div style="text-align:center; margin-top: 2.5rem;">
+      <a href="/docs/#enterprise" class="btn btn-outline">
+        Browse all v2.7.0 features <i class="fas fa-arrow-right"></i>
+      </a>
+    </div>
+  </div>
 </section>
 
-<!-- COMPARISON -->
-<section class="compare-section">
- <h2 class="section-title">OXware vs The Competition</h2>
- <p class="section-sub">See how OXware stacks up against other hypervisor management platforms.</p>
-
- <div class="compare-wrapper">
- <table class="compare-table">
- <thead>
- <tr>
- <th>Feature</th>
- <th class="th-oxware">
- <div class="th-logo">
- <img src="sadeceikon.png" alt="OXware" onerror="this.style.display='none'">
- OXware
- </div>
- </th>
- <th class="th-proxmox"><i class="fas fa-server" style="margin-right:6px;font-size:.85rem"></i>Proxmox VE</th>
- <th class="th-vmware"><i class="fas fa-cloud" style="margin-right:6px;font-size:.85rem"></i>VMware ESXi</th>
- <th style="background:rgba(168,85,247,.08);border-bottom:3px solid #a855f7"><i class="fas fa-layer-group" style="margin-right:6px;font-size:.85rem;color:#a855f7"></i>Virtualizor</th>
- </tr>
- </thead>
- <tbody>
-
- <tr>
- <td>License</td>
- <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i> MIT (free)</span></td>
- <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> AGPL / paid sub</span></td>
- <td><span class="cv-no"><i class="fas fa-times-circle"></i> Commercial</span></td>
- <td><span class="cv-no"><i class="fas fa-times-circle"></i> Commercial</span></td>
- </tr>
-
- <tr>
- <td>KVM / QEMU Backend</td>
- <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-no"><i class="fas fa-times-circle"></i><span class="cv-note">Proprietary</span></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- </tr>
-
- <tr>
- <td>Web UI</td>
- <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i> Dark, modern SPA</span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- </tr>
-
- <tr>
- <td>REST API</td>
- <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i> Full</span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> Partial</span></td>
- </tr>
-
- <tr>
- <td>AI Assistant <span class="ox-badge">UNIQUE</span></td>
- <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
- <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
- <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
- </tr>
-
- <tr>
- <td>Built-in 2FA</td>
- <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> Enterprise only</span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- </tr>
-
- <tr>
- <td>Live Migration</td>
- <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i> vMotion</span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- </tr>
-
- <tr>
- <td>OVA / VMDK Import</td>
- <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i> Auto UEFI detect</span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> Limited</span></td>
- </tr>
-
- <tr>
- <td>Auto TLS Cert</td>
- <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i> Let's Encrypt</span></td>
- </tr>
-
- <tr>
- <td>IP Pool / IPAM</td>
- <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- </tr>
-
- <tr>
- <td>Per-VM Firewall</td>
- <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i> iptables</span></td>
- </tr>
-
- <tr>
- <td>Prometheus Metrics</td>
- <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> Plugin only</span></td>
- <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
- </tr>
-
- <tr>
- <td>LDAP / AD SSO</td>
- <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
- </tr>
-
- <tr>
- <td>WiseCP / WHMCS</td>
- <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> 3rd party</span></td>
- <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i> Native</span></td>
- </tr>
-
- <tr>
- <td>Self-Hosted</td>
- <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- </tr>
-
- <tr>
- <td>BGP / SDN <span class="ox-badge">UNIQUE</span></td>
- <td class="col-ox"><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-yes"><i class="fas fa-check-circle"></i></span></td>
- <td><span class="cv-warn"><i class="fas fa-triangle-exclamation"></i> NSX add-on</span></td>
- <td><span class="cv-no"><i class="fas fa-times-circle"></i></span></td>
- </tr>
-
- </tbody>
- </table>
- </div>
+<!-- ─────── FINAL CTA ─────── -->
+<section class="surface alt">
+  <div class="container">
+    <div class="cta-block">
+      <h2>Stop renting your hypervisor.</h2>
+      <p>OXware is open source under the MIT licence. Download the installer ISO, follow the quick start, and your first cluster is online in under thirty minutes.</p>
+      <div class="cta-block-actions">
+        <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" target="_blank" rel="noopener" class="btn btn-primary btn-lg">
+          <i class="fas fa-download"></i> Download v2.7.0
+        </a>
+        <a href="/docs/" class="btn btn-outline btn-lg">
+          Quick Start Guide
+        </a>
+        <a href="/pricing/" class="btn btn-ghost btn-lg">
+          See support plans
+        </a>
+      </div>
+    </div>
+  </div>
 </section>
 
- <!-- CHANGELOG -->
-<section class="changelog-section">
- <div class="changelog-header">
- <div class="changelog-header-left">
- <h2 class="section-title" style="text-align:left;margin-bottom:0.35rem">Recent Updates</h2>
- <p style="color:var(--muted);font-size:0.9rem;margin:0">Live commit history pulled from GitHub</p>
- </div>
- <button class="changelog-refresh" onclick="loadChangelog(true)" id="cl-refresh-btn">
- <i class="fas fa-rotate-right" id="cl-refresh-icon"></i> Refresh
- </button>
- </div>
+<!-- ─────── FOOTER ─────── -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand-wrap">
+        <div class="footer-brand">
+          <img src="sadeceikon.png" alt="" />
+          OXware
+        </div>
+        <p class="footer-tag">
+          Enterprise-grade KVM/QEMU virtualization for the open datacenter.
+          MIT licensed. Built in the open.
+        </p>
+        <div class="footer-social">
+          <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" aria-label="GitHub"><i class="fab fa-github"></i></a>
+          <a href="https://discord.gg/c6yHhKrQs5" target="_blank" rel="noopener" aria-label="Discord"><i class="fab fa-discord"></i></a>
+          <a href="https://www.linkedin.com/company/oxware" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+          <a href="https://www.producthunt.com/products/oxware-hypervisor" target="_blank" rel="noopener" aria-label="Product Hunt"><i class="fab fa-product-hunt"></i></a>
+        </div>
+      </div>
 
- <div id="changelog-container">
- <div class="cl-empty"><i class="fas fa-circle-notch fa-spin" style="margin-right:8px"></i>Loading…</div>
- </div>
-</section>
+      <div class="footer-col">
+        <h4>Products</h4>
+        <ul>
+          <li><a href="/">Hypervisor</a></li>
+          <li><a href="/vcenter/">vCenter</a></li>
+          <li><a href="/marketplace/">Marketplace</a></li>
+          <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" target="_blank" rel="noopener">Downloads</a></li>
+        </ul>
+      </div>
 
-<!-- GOOGLE REVIEW CTA -->
-<section class="google-review-section">
- <div class="gr-card">
- <div class="gr-google-logo">
- <!-- Google "G" logo SVG -->
- <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
- <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
- <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
- <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
- <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
- <path fill="none" d="M0 0h48v48H0z"/>
- </svg>
- Rate Us on Google
- </div>
- <div class="gr-stars">
- <span class="gr-star"></span>
- <span class="gr-star"></span>
- <span class="gr-star"></span>
- <span class="gr-star"></span>
- <span class="gr-star"></span>
- </div>
- <h3 class="gr-title">Enjoying OXware?</h3>
- <p class="gr-desc">
- Your feedback matters. Leave a quick review on Google to help grow the OXware community! 
- </p>
- <a href="https://g.page/r/CYXvWfbx9uKJEBM/review" target="_blank" rel="noopener" class="gr-btn">
- <!-- Google "G" mini -->
- <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
- <path fill="#fff" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
- <path fill="rgba(255,255,255,.85)" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
- <path fill="rgba(255,255,255,.7)" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
- <path fill="rgba(255,255,255,.85)" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
- </svg>
- Write a Review on Google
- </a>
- </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/docs/#api">API Reference</a></li>
+          <li><a href="/docs/#enterprise">Enterprise Features</a></li>
+          <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" target="_blank" rel="noopener">Release Notes</a></li>
+        </ul>
+      </div>
 
- <!-- LinkedIn Follow CTA -->
- <div class="li-card">
- <div class="li-logo-header">
- <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
- <path fill="#0a66c2" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
- </svg>
- Follow on LinkedIn
- </div>
- <div class="li-icon-big">in</div>
- <h3 class="gr-title">Stay in the Loop</h3>
- <p class="gr-desc">Follow our LinkedIn page for new features, releases, and announcements.</p>
- <a href="https://www.linkedin.com/company/oxware" target="_blank" rel="noopener" class="li-btn">
- <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="18" height="18"><path fill="#fff" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
- Follow on LinkedIn
- </a>
- </div>
+      <div class="footer-col">
+        <h4>Community</h4>
+        <ul>
+          <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://discord.gg/c6yHhKrQs5" target="_blank" rel="noopener">Discord</a></li>
+          <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/issues" target="_blank" rel="noopener">Issues</a></li>
+          <li><a href="https://g.page/r/CYXvWfbx9uKJEBM/review" target="_blank" rel="noopener">Google Review</a></li>
+        </ul>
+      </div>
 
- <!-- Discord CTA -->
- <div class="li-card" style="background:linear-gradient(135deg,#161b22 0%,#0e1020 100%);border-color:#3a3f6e;">
- <div class="li-logo-header" style="color:#e8eaed;">
- <i class="fab fa-discord" style="font-size:22px;color:#5865F2"></i>
- Join the Community
- </div>
- <div class="li-icon-big" style="background:rgba(88,101,242,.14);border-color:rgba(88,101,242,.35);color:#5865F2;font-size:2.2rem;font-family:inherit;font-weight:900;">
- <i class="fab fa-discord"></i>
- </div>
- <h3 class="gr-title">Chat on Discord</h3>
- <p class="gr-desc">Ask questions, share plugins, get help, and talk with other OXware users in real time.</p>
- <a href="https://discord.gg/c6yHhKrQs5" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.6rem;background:#5865F2;color:#fff;font-size:0.95rem;font-weight:600;padding:0.7rem 1.75rem;border-radius:8px;text-decoration:none;transition:background .2s,transform .15s,box-shadow .2s;box-shadow:0 2px 12px rgba(88,101,242,.4);margin-top:.25rem" onmouseover="this.style.background='#4752c4';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#5865F2';this.style.transform='none'">
- <i class="fab fa-discord" style="font-size:1.1rem"></i> Join Discord
- </a>
- </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/pricing/">Pricing</a></li>
+          <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/SECURITY.md" target="_blank" rel="noopener">Security</a></li>
+          <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE" target="_blank" rel="noopener">MIT Licence</a></li>
+          <li><a href="/privacy/">Privacy Policy</a></li>
+        </ul>
+      </div>
+    </div>
 
- <!-- Product Hunt CTA -->
- <div class="gr-card" style="background:linear-gradient(135deg,#161b22 0%,#1c1410 100%);border-color:#4a3020;" colspan="2">
- <div class="gr-google-logo" style="color:#e8eaed;">
- <i class="fas fa-rocket" style="font-size:22px;color:#da552f"></i>
- Find Us on Product Hunt
- </div>
- <div class="li-icon-big" style="background:rgba(218,85,47,.12);border-color:rgba(218,85,47,.3);color:#da552f;font-size:2rem;font-family:inherit;font-weight:900;">
- <i class="fas fa-rocket"></i>
- </div>
- <h3 class="gr-title">We're on Product Hunt</h3>
- <p class="gr-desc">Support OXware by upvoting on Product Hunt. Every vote helps open source hypervisor management reach more people.</p>
- <a href="https://www.producthunt.com/products/oxware-hypervisor" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:0.6rem;background:#da552f;color:#fff;font-size:0.95rem;font-weight:600;padding:0.7rem 1.75rem;border-radius:8px;text-decoration:none;transition:background .2s,transform .15s,box-shadow .2s;box-shadow:0 2px 12px rgba(218,85,47,.35);margin-top:.25rem" onmouseover="this.style.background='#b8421e';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#da552f';this.style.transform='none'">
- <i class="fas fa-arrow-up"></i> Upvote on Product Hunt
- </a>
- </div>
-</section>
-
-<!-- FOOTER -->
-<footer style="background:var(--surface);border-top:1px solid var(--border);padding:2.5rem 2rem;">
- <div style="max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:2rem;flex-wrap:wrap;">
-
- <div style="max-width:280px;">
- <div style="display:flex;align-items:center;gap:0.5rem;font-weight:700;font-size:1.1rem;color:var(--accent);margin-bottom:0.75rem;">
- <img src="sadeceikon.png" alt="OXware" style="width:24px;height:24px;object-fit:contain;" onerror="this.style.display='none'" />
- OXware
- </div>
- <p style="font-size:0.85rem;color:var(--muted);line-height:1.55;">Open source KVM/QEMU hypervisor management. From single VMs to full multi-node clusters — enterprise power, zero lock-in.</p>
- </div>
-
- <div>
- <h4 style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:0.75rem;">Product</h4>
- <ul style="list-style:none;">
- <li style="margin-bottom:0.5rem;"><a href="/" style="font-size:0.875rem;color:var(--text);">OXware Panel</a></li>
- <li style="margin-bottom:0.5rem;"><a href="/vcenter/" style="font-size:0.875rem;color:var(--text);">vCenter</a></li>
- <li style="margin-bottom:0.5rem;"><a href="/pricing/" style="font-size:0.875rem;color:var(--text);">Pricing</a></li>
- <li style="margin-bottom:0.5rem;"><a href="/docs/" style="font-size:0.875rem;color:var(--text);">Documentation</a></li>
- </ul>
- </div>
-
- <div>
- <h4 style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:0.75rem;">Community</h4>
- <ul style="list-style:none;">
- <li style="margin-bottom:0.5rem;"><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);"><i class="fab fa-github"></i> GitHub</a></li>
- <li style="margin-bottom:0.5rem;"><a href="https://discord.gg/c6yHhKrQs5" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);"><i class="fab fa-discord"></i> Discord</a></li>
- <li style="margin-bottom:0.5rem;"><a href="https://www.linkedin.com/company/oxware" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);"><i class="fab fa-linkedin"></i> LinkedIn</a></li>
- <li style="margin-bottom:0.5rem;"><a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);"><i class="fas fa-download"></i> Releases</a></li>
- <li style="margin-bottom:0.5rem;"><a href="https://github.com/ShinnAsukha/oxware-hypervisor/issues" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);"><i class="fas fa-bug"></i> Issues</a></li>
- </ul>
- </div>
-
- <div>
- <h4 style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:0.75rem;">Legal</h4>
- <ul style="list-style:none;">
- <li style="margin-bottom:0.5rem;"><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);">MIT License</a></li>
- <li style="margin-bottom:0.5rem;"><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/SECURITY.md" target="_blank" rel="noopener" style="font-size:0.875rem;color:var(--text);">Security Policy</a></li>
- <li style="margin-bottom:0.5rem;"><a href="privacy/" style="font-size:0.875rem;color:var(--text);">Privacy Policy</a></li>
- <li style="margin-bottom:0.5rem;"><a href="https://g.page/r/CYXvWfbx9uKJEBM/review" target="_blank" rel="noopener" style="font-size:0.875rem;color:#4285F4;"><i class="fas fa-star"></i> Google Review</a></li>
- </ul>
- </div>
-
- </div>
-
- <div style="max-width:1100px;margin:2rem auto 0;padding-top:1.25rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;font-size:0.8rem;color:var(--muted);">
- <span style="display:inline-flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
- &copy; 2026 OXware. Released under the MIT License.
- <span class="ver-badge" title="Current development version"><span class="ver-dot"></span>v2.7.0</span>
- </span>
- <span>Built with <i class="fa-solid fa-heart" style="color:var(--danger);"></i> for the open source community.</span>
- </div>
+    <div class="footer-bottom">
+      <div>
+        &copy; 2026 OXware. Released under the MIT Licence.
+        <span class="ver-pill" style="margin-left: 0.5rem;"><span class="dot"></span>v2.7.0</span>
+      </div>
+      <div class="legal-links">
+        <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/SECURITY.md" target="_blank" rel="noopener">Security</a>
+        <a href="/privacy/">Privacy</a>
+        <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE" target="_blank" rel="noopener">Licence</a>
+        <a href="mailto:root@oxware.top">Contact</a>
+      </div>
+    </div>
+  </div>
 </footer>
 
 <script>
-/* ── Mobile nav: close on link click ── */
-(function() {
- var cb = document.getElementById('navtoggle');
- if (!cb) return;
- document.querySelectorAll('.nav-links a').forEach(function(a) {
- a.addEventListener('click', function() { cb.checked = false; });
- });
-})();
+  // Mobile nav toggle — use textContent-safe icon swap via classList
+  (function () {
+    var burger = document.getElementById('nav-burger');
+    var drawer = document.getElementById('mobile-drawer');
+    if (burger && drawer) {
+      burger.addEventListener('click', function () {
+        drawer.classList.toggle('open');
+        var icon = burger.querySelector('i');
+        if (icon) icon.className = drawer.classList.contains('open') ? 'fas fa-xmark' : 'fas fa-bars';
+      });
+    }
+  })();
 
-/* ── Changelog / Commit History ── */
-const CL_REPO = "ShinnAsukha/oxware-hypervisor";
-const CL_BRANCH = "main";
-const CL_PER_PAGE = 20;
-
-let _clPage = 1;
-let _clAllLoaded = false;
-let _clCache = [];
-
-function _clCommitType(msg) {
- const m = msg.toLowerCase();
- if (m.startsWith("feat")) return "feat";
- if (m.startsWith("fix")) return "fix";
- if (m.startsWith("refactor")) return "refactor";
- if (m.startsWith("chore") || m.startsWith("ci") || m.startsWith("build")) return "chore";
- if (m.startsWith("docs")) return "docs";
- return "other";
-}
-
-function _clTypeLbl(t) {
- return { feat:"feat", fix:"fix", refactor:"refact", chore:"chore", docs:"docs", other:"commit" }[t] || t;
-}
-
-function _clRelTime(iso) {
- const diff = (Date.now() - new Date(iso)) / 1000;
- if (diff < 60) return "just now";
- if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
- if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
- if (diff < 2592000) return `${Math.floor(diff/86400)}d ago`;
- return new Date(iso).toLocaleDateString("en-US", {day:"2-digit",month:"short",year:"numeric"});
-}
-
-function _clRenderList(commits, append) {
- const container = document.getElementById("changelog-container");
-
- if (!append) container.innerHTML = "";
-
- if (!commits.length && !append) {
- container.innerHTML = `<div class="cl-empty"><i class="fas fa-inbox" style="margin-right:8px"></i>No commits found.</div>`;
- return;
- }
-
- let listEl = container.querySelector(".changelog-list");
- if (!listEl) {
- listEl = document.createElement("div");
- listEl.className = "changelog-list";
- container.appendChild(listEl);
- }
-
- // Remove old load-more wrapper before re-adding commits
- const oldLoadMore = container.querySelector(".cl-load-more");
- if (oldLoadMore) oldLoadMore.remove();
-
- commits.forEach((c, i) => {
- const sha = c.sha.slice(0, 7);
- const msgFull = c.commit.message;
- const msgLine = msgFull.split("\n")[0];
- const author = c.commit.author.name;
- const date = c.commit.author.date;
- const url = c.html_url;
- const type = _clCommitType(msgLine);
- const id = `cl-${sha}-${_clCache.length + i}`;
-
- const item = document.createElement("div");
- item.className = "cl-item";
- item.innerHTML = `
- <div class="cl-row">
- <span class="cl-type ${type}">${_clTypeLbl(type)}</span>
- <span class="cl-msg" title="${msgLine.replace(/"/g,'&quot;')}">${_escHtml(msgLine)}</span>
- <div class="cl-meta">
- <span class="cl-author"><i class="fas fa-user-circle" style="margin-right:4px;opacity:.5"></i>${_escHtml(author)}</span>
- <span class="cl-date">${_clRelTime(date)}</span>
- <code class="cl-sha">${sha}</code>
- <button class="cl-detail-btn" onclick="_clToggle('${id}')" id="btn-${id}">
- <i class="fas fa-chevron-down" style="font-size:0.65rem;margin-right:4px"></i>Details
- </button>
- </div>
- </div>
- <div class="cl-detail-panel" id="${id}">
- <div class="cl-full-msg">${_escHtml(msgFull)}</div>
- <div class="cl-detail-meta">
- <span><strong>SHA:</strong> <code style="font-size:0.8rem">${c.sha}</code></span>
- <span><strong>Author:</strong> ${_escHtml(author)}</span>
- <span><strong>Date:</strong> ${new Date(date).toLocaleString("en-US")}</span>
- <a href="${url}" target="_blank" rel="noopener">
- <i class="fab fa-github" style="margin-right:4px"></i>View on GitHub
- </a>
- </div>
- </div>`;
- listEl.appendChild(item);
- });
-
- // Load more button
- if (!_clAllLoaded) {
- const lm = document.createElement("div");
- lm.className = "cl-load-more";
- lm.id = "cl-load-more-wrap";
- lm.innerHTML = `<button class="cl-load-more-btn" onclick="loadChangelog(false)" id="cl-load-more-btn">
- <i class="fas fa-chevron-down"></i> Load more
- </button>`;
- container.appendChild(lm);
- }
-}
-
-function _clToggle(id) {
- const panel = document.getElementById(id);
- const btn = document.getElementById("btn-" + id);
- if (!panel) return;
- const isOpen = panel.classList.contains("open");
- panel.classList.toggle("open", !isOpen);
- btn.classList.toggle("open", !isOpen);
- const icon = btn.querySelector("i");
- if (icon) {
- icon.style.transform = isOpen ? "" : "rotate(180deg)";
- icon.style.transition = "transform 0.2s";
- }
-}
-
-function _escHtml(str) {
- return String(str)
- .replace(/&/g,"&amp;").replace(/</g,"&lt;")
- .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-}
-
-async function loadChangelog(reset) {
- if (reset) { _clPage = 1; _clAllLoaded = false; _clCache = []; }
-
- const refreshBtn = document.getElementById("cl-refresh-btn");
- const refreshIcon = document.getElementById("cl-refresh-icon");
- const loadMoreBtn = document.getElementById("cl-load-more-btn");
-
- if (refreshBtn) { refreshBtn.classList.add("spinning"); refreshBtn.disabled = true; }
- if (loadMoreBtn) { loadMoreBtn.disabled = true; loadMoreBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Loading…`; }
-
- try {
- const url = `https://api.github.com/repos/${CL_REPO}/commits?sha=${CL_BRANCH}&per_page=${CL_PER_PAGE}&page=${_clPage}`;
- const res = await fetch(url, { headers: { "Accept": "application/vnd.github.v3+json" } });
-
- if (!res.ok) {
- throw new Error(`GitHub API: HTTP ${res.status}`);
- }
-
- const commits = await res.json();
-
- if (commits.length < CL_PER_PAGE) _clAllLoaded = true;
-
- _clCache = _clCache.concat(commits);
- _clRenderList(commits, _clPage > 1);
- _clPage++;
-
- } catch (e) {
- const container = document.getElementById("changelog-container");
- if (_clPage === 1) {
- container.innerHTML = `<div class="cl-empty">
- <i class="fas fa-triangle-exclamation" style="color:#d29922;margin-right:8px"></i>
- Failed to load updates: ${_escHtml(e.message)}
- <br><small style="margin-top:6px;display:block">
- <button onclick="loadChangelog(true)" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:inherit">Try again</button>
- </small>
- </div>`;
- }
- } finally {
- if (refreshBtn) { refreshBtn.classList.remove("spinning"); refreshBtn.disabled = false; }
- }
-}
-
-// Auto-load on page open
-document.addEventListener("DOMContentLoaded", () => {
- loadChangelog(true);
-});
+  // Nav dropdown — exclusive open (only one at a time)
+  (function () {
+    var dropdowns = document.querySelectorAll('.nav-primary > li.has-dropdown');
+    function closeAll() { dropdowns.forEach(function (d) { d.classList.remove('dd-open'); }); }
+    dropdowns.forEach(function (li) {
+      var trigger = li.querySelector('.nav-trigger');
+      li.addEventListener('mouseenter', function () {
+        closeAll();
+        li.classList.add('dd-open');
+      });
+      li.addEventListener('mouseleave', function () {
+        li.classList.remove('dd-open');
+      });
+      if (trigger) {
+        trigger.addEventListener('click', function (e) {
+          e.preventDefault();
+          var isOpen = li.classList.contains('dd-open');
+          closeAll();
+          if (!isOpen) li.classList.add('dd-open');
+        });
+      }
+    });
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('.nav-primary > li.has-dropdown')) closeAll();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeAll();
+    });
+  })();
 </script>
- 
+
 </body>
 </html>
