@@ -179,7 +179,7 @@
 
 <div class="topbar">
   <div class="topbar-inner">
-    <div class="topbar-status"><span class="dot"></span><span>All systems operational</span><span style="color:var(--border-2)"> &middot; </span><span>v2.7.1 GA</span></div>
+    <div class="topbar-status"><span class="dot"></span><span>All systems operational</span><span style="color:var(--border-2)"> &middot; </span><span>v2.7.2 GA</span></div>
     <div class="topbar-links">
       <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a>
       <a href="https://discord.gg/c6yHhKrQs5" target="_blank" rel="noopener"><i class="fab fa-discord"></i> Community</a>
@@ -275,6 +275,20 @@
     <a href="#v270-runbook" class="sidebar-sub"><i class="fas fa-robot"></i> Auto-Remediation</a>
     <a href="#v270-federation" class="sidebar-sub"><i class="fas fa-network-wired"></i> Cluster Federation</a>
 
+    <div class="sidebar-section">v2.7.2 — Cloud-Native</div>
+    <a href="#v272-features"><i class="fas fa-rocket"></i> v2.7.2 Overview</a>
+    <a href="#v272-csi" class="sidebar-sub"><i class="fab fa-docker"></i> Kubernetes CSI</a>
+    <a href="#v272-kubevirt" class="sidebar-sub"><i class="fas fa-cubes"></i> KubeVirt Bridge</a>
+    <a href="#v272-gitops" class="sidebar-sub"><i class="fas fa-code-branch"></i> GitOps</a>
+    <a href="#v272-firecracker" class="sidebar-sub"><i class="fas fa-fire"></i> Firecracker</a>
+    <a href="#v272-oauth2-presets" class="sidebar-sub"><i class="fas fa-key"></i> OAuth2 Presets</a>
+    <a href="#v272-audit-retention" class="sidebar-sub"><i class="fas fa-clock-rotate-left"></i> Audit Retention</a>
+    <a href="#v272-sbom" class="sidebar-sub"><i class="fas fa-list-check"></i> SBOM</a>
+    <a href="#v272-pwa" class="sidebar-sub"><i class="fas fa-mobile-screen"></i> PWA Offline</a>
+    <a href="#v272-ssh-known-hosts" class="sidebar-sub"><i class="fas fa-shield-halved"></i> SSH Known-Hosts</a>
+    <a href="#v272-security" class="sidebar-sub"><i class="fas fa-lock"></i> SEC-029..033</a>
+    <a href="#v272-i18n" class="sidebar-sub"><i class="fas fa-language"></i> 6-Language i18n</a>
+
     <div class="sidebar-section">Extensibility</div>
     <a href="#plugins"><i class="fas fa-puzzle-piece"></i> Plugin SDK</a>
     <a href="/marketplace/"><i class="fas fa-store"></i> Marketplace</a>
@@ -289,7 +303,7 @@
 
     <section id="overview">
       <h1>OXware Hypervisor Documentation</h1>
-      <p><span class="ver-badge"><span class="ver-dot"></span> v2.7.1</span> &nbsp;<span class="tag tag-green">Latest GA</span></p>
+      <p><span class="ver-badge"><span class="ver-dot"></span> v2.7.2</span> &nbsp;<span class="tag tag-green">Latest GA</span></p>
       <p>OXware is an open-source hypervisor management platform built on KVM/QEMU and Ubuntu/Debian. It provides a complete web-based control plane for virtual machine lifecycle, role-based access, networking, storage, security, monitoring, and an AI assistant — accessible at <code>https://&lt;server-ip&gt;:8006</code>.</p>
 
       <h3>Architecture</h3>
@@ -651,6 +665,77 @@ ethernets:
       <p>SAML/OIDC SSO (Okta, Azure AD, Google) with fail-closed signature verification. SIEM integration (Splunk, Elastic, Wazuh). Session recording. CIS / NIST / PCI-DSS / HIPAA / ISO27001 compliance scanner.</p>
     </section>
 
+    <section id="v272-features">
+      <h2>v2.7.2 — Cloud-Native &amp; Hardening</h2>
+      <p><span class="ver-badge"><span class="ver-dot"></span> v2.7.2</span> <span class="tag tag-green">Latest GA</span> &mdash; Five new security patches plus eight new feature modules covering Kubernetes, GitOps, microVMs, SSO presets, audit retention, SBOM, PWA offline, and SSH known-hosts hardening.</p>
+
+      <h3 id="v272-csi">Kubernetes CSI Driver</h3>
+      <p>OXware storage pools surface as Kubernetes PersistentVolumes via a CSI 1.8 driver. Provision, snapshot, expand, and delete VMs from the cluster's PVC API. Supported filesystems: ext4, xfs, btrfs.</p>
+      <div class="endpoint"><span class="method get">GET</span> /api/v2/csi/info</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/v2/csi/volumes</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/v2/csi/volumes</div>
+      <div class="endpoint"><span class="method delete">DELETE</span> /api/v2/csi/volumes/&lt;id&gt;</div>
+
+      <h3 id="v272-kubevirt">KubeVirt Bridge</h3>
+      <p>Register a Kubernetes cluster running KubeVirt and have OXware serve as the underlying hypervisor for its VirtualMachine CRs. The bridge translates VMI specs into native libvirt domains.</p>
+      <div class="endpoint"><span class="method get">GET</span> /api/v2/kubevirt/clusters</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/v2/kubevirt/clusters</div>
+      <div class="endpoint"><span class="method delete">DELETE</span> /api/v2/kubevirt/clusters/&lt;name&gt;</div>
+
+      <h3 id="v272-gitops">GitOps Manager</h3>
+      <p>Manifest-driven infra: register a git repository, OXware reconciles VM and network manifests on a schedule. Compatible with ArgoCD and Flux directory layouts (<code>vms/&lt;name&gt;.yaml</code>, <code>networks/&lt;name&gt;.yaml</code>). Optional <code>auto_apply</code> closes the loop; otherwise drift is reported for manual sync.</p>
+      <div class="endpoint"><span class="method get">GET</span> /api/v2/gitops/repos</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/v2/gitops/repos</div>
+      <div class="endpoint"><span class="method delete">DELETE</span> /api/v2/gitops/repos/&lt;name&gt;</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/v2/gitops/repos/&lt;name&gt;/sync</div>
+
+      <h3 id="v272-firecracker">Firecracker microVM Runtime</h3>
+      <p>Second-tier VM runtime alongside QEMU/KVM. Firecracker microVMs boot in &lt;125&nbsp;ms with &lt;5&nbsp;MB host overhead &mdash; ideal for serverless, CI runners, and per-request VMs.</p>
+      <div class="endpoint"><span class="method get">GET</span> /api/v3/firecracker/vms</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/v3/firecracker/vms</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/v3/firecracker/vms/&lt;id&gt;/stop</div>
+
+      <h3 id="v272-oauth2-presets">OAuth2 Provider Presets</h3>
+      <p>One-click discovery URL builders for the most common identity providers: Keycloak, Authentik, Okta, Microsoft Entra ID, Google Workspace, GitLab. The operator supplies only base URL + client credentials; OXware fills scopes and claim mappings.</p>
+      <div class="endpoint"><span class="method get">GET</span> /api/v2/auth/oauth2/presets</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/v2/auth/oauth2/presets/&lt;preset_id&gt;/render</div>
+
+      <h3 id="v272-audit-retention">Audit-Log Retention Policy</h3>
+      <p>Default policy keeps 90 days of entries per file with a 200&nbsp;MB hard cap. Tracks audit_chain, runbook_history, bulk_audit. Rotation is on-demand or scheduled; old entries are dropped, not compressed (compress flag planned).</p>
+      <div class="endpoint"><span class="method get">GET</span> /api/v2/audit/retention</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/v2/audit/retention</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/v2/audit/retention/rotate</div>
+
+      <h3 id="v272-sbom">CycloneDX SBOM</h3>
+      <p>Per-release Software Bill of Materials in CycloneDX 1.5 JSON. Includes every installed Python distribution with purl, license, and project URLs. Auto-generated by CI on every push to <code>main</code> and uploaded as a build artifact.</p>
+      <div class="endpoint"><span class="method get">GET</span> /api/v2/sbom</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/v2/sbom/generate</div>
+
+      <h3 id="v272-pwa">PWA Offline Mode</h3>
+      <p>Panel registers a service worker that pre-caches static assets and last-known <code>/api/vms</code>, <code>/api/hosts</code>, <code>/api/networks</code> responses. When the network drops, the dashboard switches to a read-only fallback view rather than a blank page.</p>
+      <div class="endpoint"><span class="method get">GET</span> /api/v3/pwa/manifest</div>
+      <div class="endpoint"><span class="method get">GET</span> /api/v3/pwa/status</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/v3/pwa/status</div>
+
+      <h3 id="v272-ssh-known-hosts">SSH Known-Hosts &amp; First-Contact Approval</h3>
+      <p>Outbound SSH (SFTP backup, ESXi import) used to trust whatever key the peer presented. v2.7.2 ships <code>ssh_known_hosts</code>: a persistent <code>/var/lib/oxware/known_hosts</code> file plus a panel queue of pending fingerprint approvals. Trust-on-first-use is opt-in via <code>OXWARE_SSH_TOFU=1</code> for migration.</p>
+      <div class="endpoint"><span class="method get">GET</span> /api/v2/security/known-hosts/pending</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/v2/security/known-hosts/&lt;id&gt;/approve</div>
+      <div class="endpoint"><span class="method post">POST</span> /api/v2/security/known-hosts/&lt;id&gt;/reject</div>
+
+      <h3 id="v272-security">Security Patches (SEC-029..033)</h3>
+      <ul>
+        <li><strong>SEC-029 (HIGH)</strong> Safe archive extraction &mdash; <code>safe_tar_extract</code> / <code>safe_zip_extract</code> reject path traversal, symlink escape, device-file members. Replaces both <code>tarfile.extractall()</code> sites in <code>app.py</code> (Bandit B202).</li>
+        <li><strong>SEC-030 (MEDIUM)</strong> DNS rebinding mitigation &mdash; <code>security_utils.resolve_safe_host()</code> resolves once, validates against the SSRF block list, returns IP literal for direct connect.</li>
+        <li><strong>SEC-031 (MEDIUM)</strong> FTP backup target deprecated &mdash; <code>ftplib</code> only imported when <code>OXWARE_ENABLE_INSECURE_FTP=1</code>; otherwise <code>_upload_ftp</code> aborts and recommends SFTP (Bandit B321/B402).</li>
+        <li><strong>SEC-032 (MEDIUM)</strong> SSH known-hosts replaces <code>paramiko.AutoAddPolicy</code> with a persistent <code>known_hosts</code> file and operator approval queue (Bandit B507).</li>
+        <li><strong>SEC-033 (LOW)</strong> <code>make security</code> runs Bandit + pip-audit; CI publishes the SBOM and audit results as artifacts.</li>
+      </ul>
+
+      <h3 id="v272-i18n">Six-Language Panel + CI Gate</h3>
+      <p>French (FR) joins TR, EN, ES, DE, ZH for a total of six interface languages with full parity. Each lang dict carries 2200+ entries covering every UI string. A CI workflow (<code>.github/workflows/i18n-and-sbom.yml</code>) fails the build if any untranslated TR string appears in HTML body or JS literals. A pre-commit hook auto-runs the i18n pipeline whenever <code>index.html</code> is staged.</p>
+    </section>
+
     <section id="plugins">
       <h2>Plugin SDK</h2>
       <p>Plugins are single <code>.py</code> files loaded at runtime. No restart required. Three optional hooks:</p>
@@ -908,7 +993,7 @@ curl -k https://host:8006/api/vms \
       <div class="footer-col"><h4>Company</h4><ul><li><a href="/pricing/">Pricing</a></li><li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/SECURITY.md" target="_blank" rel="noopener">Security</a></li><li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE" target="_blank" rel="noopener">MIT Licence</a></li><li><a href="/privacy/">Privacy Policy</a></li></ul></div>
     </div>
     <div class="footer-bottom">
-      <div>&copy; 2026 OXware. Released under the MIT Licence. <span class="ver-pill" style="margin-left:.5rem"><span class="dot"></span>v2.7.1</span></div>
+      <div>&copy; 2026 OXware. Released under the MIT Licence. <span class="ver-pill" style="margin-left:.5rem"><span class="dot"></span>v2.7.2</span></div>
       <div class="legal-links">
         <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/SECURITY.md" target="_blank" rel="noopener">Security</a>
         <a href="/privacy/">Privacy</a>
