@@ -98,31 +98,135 @@
 <body>
 
 <div class="topbar">
-  <div class="topbar-inner">
-    <div class="topbar-status"><span class="dot"></span><span>All systems operational</span><span style="color:var(--border-2)"> · </span><span id="stamp">Updated 1 min ago</span></div>
+  <div class="container topbar-inner">
+    <div class="topbar-status">
+      <span class="dot"></span>
+      <span>All systems operational</span>
+      <span style="color: var(--border-2)">·</span>
+      <span>v2.7.2 GA</span>
+    </div>
     <div class="topbar-links">
       <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a>
-      <a href="/security/bug-bounty/">Bug bounty</a>
+      <a href="https://discord.gg/c6yHhKrQs5" target="_blank" rel="noopener"><i class="fab fa-discord"></i> Community</a>
     </div>
   </div>
 </div>
 
 <header class="site-nav">
-  <div class="nav-inner">
-    <a href="/" class="nav-brand"><img src="../sadeceikon.png" alt="OXware" />OXware</a>
+  <div class="container nav-inner">
+    <a href="/" class="nav-brand">
+      <img src="/sadeceikon.png" alt="OXware" />
+      OXware
+    </a>
+
     <ul class="nav-primary">
-      <li><a href="/">Home</a></li>
-      <li><a href="/pricing/">Pricing</a></li>
-      <li><a href="/docs/">Documentation</a></li>
-      <li><a href="/marketplace/">Marketplace</a></li>
-      <li><a href="/status/" style="color:var(--accent-2)">Status</a></li>
+      <li class="has-dropdown">
+        <button class="nav-trigger">Products <i class="fas fa-chevron-down"></i></button>
+        <div class="nav-dropdown">
+          <div class="dd-eyebrow">Hypervisor Platform</div>
+          <a href="/">
+            <div class="dd-title"><i class="fas fa-server"></i> OXware Hypervisor</div>
+            <div class="dd-desc">Type-1 KVM/QEMU with vCenter-class management.</div>
+          </a>
+          <a href="/vcenter/">
+            <div class="dd-title"><i class="fas fa-network-wired"></i> OXware vCenter</div>
+            <div class="dd-desc">Multi-node cluster control plane and federation.</div>
+          </a>
+          <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" target="_blank" rel="noopener">
+            <div class="dd-title"><i class="fas fa-download"></i> Downloads</div>
+            <div class="dd-desc">Installer ISO, debian repo, source releases.</div>
+          </a>
+          <a href="/marketplace/">
+            <div class="dd-title"><i class="fas fa-store"></i> Marketplace</div>
+            <div class="dd-desc">Curated plugins, templates, integrations.</div>
+          </a>
+        </div>
+      </li>
+      <li class="has-dropdown">
+        <button class="nav-trigger">Solutions <i class="fas fa-chevron-down"></i></button>
+        <div class="nav-dropdown">
+          <div class="dd-eyebrow">By Use Case</div>
+          <a href="/docs/#enterprise">
+            <div class="dd-title"><i class="fas fa-building"></i> Enterprise Datacenter</div>
+            <div class="dd-desc">DRS, HA, live migration, cluster federation.</div>
+          </a>
+          <a href="/docs/#v270-cvm">
+            <div class="dd-title"><i class="fas fa-user-shield"></i> Confidential Computing</div>
+            <div class="dd-desc">SEV / TDX + vTPM + Secure Boot.</div>
+          </a>
+          <a href="/docs/#v270-runbook">
+            <div class="dd-title"><i class="fas fa-robot"></i> Auto-Remediation</div>
+            <div class="dd-desc">Runbook executor wired to anomaly detection.</div>
+          </a>
+          <a href="/docs/#v270-federation">
+            <div class="dd-title"><i class="fas fa-globe"></i> Managed Federation</div>
+            <div class="dd-desc">Single pane over multiple OXware nodes.</div>
+          </a>
+        </div>
+      </li>
+      <li class="has-dropdown">
+        <button class="nav-trigger">Company <i class="fas fa-chevron-down"></i></button>
+        <div class="nav-dropdown">
+          <div class="dd-eyebrow">Trust &amp; Programs</div>
+          <a href="/pricing/">
+            <div class="dd-title"><i class="fas fa-tag"></i> Pricing</div>
+            <div class="dd-desc">$35/mo · $250/yr · $2000 lifetime.</div>
+          </a>
+          <a href="/partners/">
+            <div class="dd-title"><i class="fas fa-handshake"></i> Partner Program</div>
+            <div class="dd-desc">Reseller &amp; MSP — 30% recurring commission.</div>
+          </a>
+          <a href="/certification/">
+            <div class="dd-title"><i class="fas fa-graduation-cap"></i> Certification (OCA)</div>
+            <div class="dd-desc">$99 online exam · LinkedIn-verifiable badge.</div>
+          </a>
+          <a href="/compliance/">
+            <div class="dd-title"><i class="fas fa-file-shield"></i> Compliance</div>
+            <div class="dd-desc">SOC 2 + ISO 27001 + CIS / NIST mapping.</div>
+          </a>
+          <a href="/status/">
+            <div class="dd-title"><i class="fas fa-signal"></i> Status</div>
+            <div class="dd-desc">SaaS uptime &amp; incident history.</div>
+          </a>
+          <a href="/security/bug-bounty/">
+            <div class="dd-title"><i class="fas fa-bug"></i> Bug Bounty</div>
+            <div class="dd-desc">$50 – $5000 rewards for valid reports.</div>
+          </a>
+        </div>
+      </li>
+      <li><a href="/pricing/" data-nav-key="pricing">Pricing</a></li>
+      <li><a href="/docs/" data-nav-key="docs">Documentation</a></li>
+      <li><a href="/marketplace/" data-nav-key="marketplace">Marketplace</a></li>
     </ul>
+
     <div class="nav-cta">
-      <button id="theme-toggle" class="theme-toggle"><i class="fas fa-moon ico-dark"></i><i class="fas fa-sun ico-light"></i></button>
-      <a href="mailto:status@oxware.top?subject=Subscribe to status updates" class="btn btn-outline"><i class="fas fa-bell"></i> Subscribe</a>
+      <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme" title="Toggle theme">
+        <i class="fas fa-moon ico-dark"></i><i class="fas fa-sun ico-light"></i>
+      </button>
+      <a href="/docs/" class="btn btn-outline">Documentation</a>
+      <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" target="_blank" rel="noopener" class="btn btn-primary">
+        <i class="fas fa-download"></i> Get OXware
+      </a>
     </div>
+
+    <button class="nav-burger" id="nav-burger" aria-label="Menu"><i class="fas fa-bars"></i></button>
   </div>
 </header>
+
+<div class="mobile-drawer" id="mobile-drawer">
+  <a href="/">Home</a>
+  <a href="/vcenter/">vCenter</a>
+  <a href="/pricing/">Pricing</a>
+  <a href="/docs/">Documentation</a>
+  <a href="/marketplace/">Marketplace</a>
+  <a href="/partners/">Partners</a>
+  <a href="/certification/">Certification</a>
+  <a href="/compliance/">Compliance</a>
+  <a href="/status/">Status</a>
+  <a href="/security/bug-bounty/">Bug Bounty</a>
+  <a href="/privacy/">Privacy</a>
+  <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener">GitHub</a>
+</div>
 
 <section class="status-hero">
   <div class="container">
@@ -215,19 +319,86 @@
       </div>
     </div>
     <div style="text-align:center;margin-top:2rem">
-      <a href="mailto:status@oxware.top?subject=Subscribe to status updates" class="btn btn-outline"><i class="fas fa-rss"></i> Subscribe to incident emails</a>
+      <a href="mailto:root@oxware.top?subject=Subscribe to status updates" class="btn btn-outline"><i class="fas fa-rss"></i> Subscribe to incident emails</a>
     </div>
   </div>
 </section>
 
 <footer class="site-footer">
-  <div class="footer-inner">
-    <div>&copy; 2026 OXware Status &middot; Powered by an internal monitor (not third-party).</div>
-    <div class="footer-links">
-      <a href="/compliance/">Compliance</a>
-      <a href="/security/bug-bounty/">Bug bounty</a>
-      <a href="/privacy/">Privacy</a>
-      <a href="mailto:status@oxware.top">status@oxware.top</a>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand-wrap">
+        <div class="footer-brand">
+          <img src="/sadeceikon.png" alt="" />
+          OXware
+        </div>
+        <p class="footer-tag">
+          Enterprise-grade KVM/QEMU virtualization for the open datacenter.
+          MIT licensed. Built in the open.
+        </p>
+        <div class="footer-social">
+          <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" aria-label="GitHub"><i class="fab fa-github"></i></a>
+          <a href="https://discord.gg/c6yHhKrQs5" target="_blank" rel="noopener" aria-label="Discord"><i class="fab fa-discord"></i></a>
+          <a href="https://www.linkedin.com/company/oxware" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+          <a href="https://www.producthunt.com/products/oxware-hypervisor" target="_blank" rel="noopener" aria-label="Product Hunt"><i class="fab fa-product-hunt"></i></a>
+        </div>
+      </div>
+
+      <div class="footer-col">
+        <h4>Products</h4>
+        <ul>
+          <li><a href="/">Hypervisor</a></li>
+          <li><a href="/vcenter/">vCenter</a></li>
+          <li><a href="/marketplace/">Marketplace</a></li>
+          <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" target="_blank" rel="noopener">Downloads</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/docs/#api">API Reference</a></li>
+          <li><a href="/docs/#enterprise">Enterprise Features</a></li>
+          <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" target="_blank" rel="noopener">Release Notes</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Community</h4>
+        <ul>
+          <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://discord.gg/c6yHhKrQs5" target="_blank" rel="noopener">Discord</a></li>
+          <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/issues" target="_blank" rel="noopener">Issues</a></li>
+          <li><a href="https://g.page/r/CYXvWfbx9uKJEBM/review" target="_blank" rel="noopener">Google Review</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/pricing/">Pricing</a></li>
+          <li><a href="/partners/">Partner Program</a></li>
+          <li><a href="/certification/">Certification (OCA)</a></li>
+          <li><a href="/compliance/">Compliance</a></li>
+          <li><a href="/status/">Status</a></li>
+          <li><a href="/security/bug-bounty/">Bug Bounty</a></li>
+          <li><a href="/privacy/">Privacy Policy</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>
+        &copy; 2026 OXware. Released under the MIT Licence.
+        <span class="ver-pill" style="margin-left: 0.5rem;"><span class="dot"></span>v2.7.2</span>
+      </div>
+      <div class="legal-links">
+        <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/SECURITY.md" target="_blank" rel="noopener">Security</a>
+        <a href="/privacy/">Privacy</a>
+        <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE" target="_blank" rel="noopener">Licence</a>
+        <a href="mailto:root@oxware.top">Contact</a>
+      </div>
     </div>
   </div>
 </footer>
