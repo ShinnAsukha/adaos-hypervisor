@@ -36,4 +36,34 @@
     <priority>0.3</priority>
     <lastmod>2026-06-12</lastmod>
   </url>
+  <url>
+    <loc>https://oxware.top/partners/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-06-12</lastmod>
+  </url>
+  <url>
+    <loc>https://oxware.top/certification/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-06-12</lastmod>
+  </url>
+  <url>
+    <loc>https://oxware.top/compliance/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-06-12</lastmod>
+  </url>
+  <url>
+    <loc>https://oxware.top/status/</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+    <lastmod>2026-06-12</lastmod>
+  </url>
+  <url>
+    <loc>https://oxware.top/security/bug-bounty/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-06-12</lastmod>
+  </url>
 </urlset>

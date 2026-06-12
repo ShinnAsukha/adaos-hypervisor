@@ -301,6 +301,28 @@
 
   <main class="docs-content">
 
+    <!-- Docs live search (Algolia DocSearch) -->
+    <div class="docs-search-wrap" style="margin-bottom:2rem">
+      <div id="docsearch" style="max-width:520px"></div>
+      <noscript>JavaScript required for live search.</noscript>
+    </div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@docsearch/css@3" />
+    <script src="https://cdn.jsdelivr.net/npm/@docsearch/js@3"></script>
+    <script>
+      (function(){
+        if (typeof docsearch !== 'function') return;
+        try {
+          docsearch({
+            container: '#docsearch',
+            appId: 'PENDING',
+            apiKey: 'PENDING',
+            indexName: 'oxware',
+            placeholder: 'Search OXware docs…',
+          });
+        } catch(e){}
+      })();
+    </script>
+
     <section id="overview">
       <h1>OXware Hypervisor Documentation</h1>
       <p><span class="ver-badge"><span class="ver-dot"></span> v2.7.2</span> &nbsp;<span class="tag tag-green">Latest GA</span></p>

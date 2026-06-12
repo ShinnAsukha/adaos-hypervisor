@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bug Bounty — OXware | $50 to $5000 rewards for valid vulnerabilities</title>
+  <meta name="description" content="OXware Bug Bounty: ethical hackers earn $50 to $5000 for valid vulnerability reports. Public scope, clear rules, fast triage. Hall of Fame for top researchers." />
+  <meta name="keywords" content="oxware bug bounty, kvm hypervisor security, vulnerability reward, responsible disclosure, hackerone, intigriti" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#0a0e1a" />
+  <link rel="icon" type="image/png" href="../../sadeceikon.png" />
+  <link rel="canonical" href="https://oxware.top/security/bug-bounty/" />
+  <meta property="og:title" content="OXware Bug Bounty Program" />
+  <meta property="og:description" content="$50 to $5000 rewards for valid vulnerability reports. 100+ ethical hackers protecting OXware." />
+  <meta property="og:image" content="https://oxware.top/sadeceikon.png" />
+  <meta property="og:url" content="https://oxware.top/security/bug-bounty/" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/theme.css?v=271" />
+  <script src="/assets/theme.js?v=271"></script>
+  <style>
+    :root { --bg-0:#050810;--bg-1:#0a0e1a;--bg-2:#0f1525;--bg-3:#161d2e;--border:#1e2638;--border-2:#2a334a;--text:#e6ebf5;--text-2:#b8c2d6;--muted:#6b7689;--accent:#0091da;--accent-2:#00b8e6;--accent-deep:#0066b3;--success:#00c389;--warning:#f5a623;--danger:#e74c5e;--container:1280px;--radius-sm:4px;--radius:8px;--radius-lg:12px; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg-0);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+    a{color:var(--accent-2);text-decoration:none}
+    .container{max-width:var(--container);margin:0 auto;padding:0 2rem}
+    code{font-family:'JetBrains Mono',monospace;background:rgba(0,145,218,.1);border:1px solid rgba(0,145,218,.2);padding:.1rem .4rem;border-radius:4px;font-size:.85em;color:var(--accent-2)}
+    .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.7rem 1.4rem;font-size:.875rem;font-weight:600;border-radius:var(--radius-sm);border:1px solid transparent;cursor:pointer;text-decoration:none;white-space:nowrap;transition:all .18s}
+    .btn-primary{background:var(--accent);color:#fff}
+    .btn-primary:hover{background:var(--accent-deep)}
+    .btn-outline{background:transparent;color:var(--text);border-color:var(--border-2)}
+    .btn-outline:hover{border-color:var(--accent);color:var(--accent-2)}
+    .btn-lg{padding:.95rem 1.8rem;font-size:.95rem}
+    .topbar{background:#03060e;border-bottom:1px solid var(--border);font-size:.75rem;color:var(--muted)}
+    .topbar-inner{display:flex;align-items:center;justify-content:space-between;height:32px;gap:1rem;padding:0 2rem;max-width:var(--container);margin:0 auto}
+    .topbar-status{display:flex;align-items:center;gap:.4rem}
+    .topbar-status .dot{width:6px;height:6px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success)}
+    .topbar-links{display:flex;gap:1.5rem;align-items:center}
+    .topbar a{color:var(--muted);font-weight:500}
+    header.site-nav{position:sticky;top:0;z-index:200;background:rgba(5,8,16,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+    .nav-inner{display:flex;align-items:center;gap:2.5rem;height:64px;padding:0 2rem;max-width:var(--container);margin:0 auto}
+    .nav-brand{display:flex;align-items:center;gap:.6rem;font-weight:700;font-size:1.15rem;color:var(--text);text-decoration:none}
+    .nav-brand img{width:30px;height:30px}
+    .nav-primary{display:flex;align-items:center;gap:.25rem;list-style:none;flex:1}
+    .nav-primary>li>a{padding:.55rem .9rem;font-size:.875rem;font-weight:500;color:var(--text-2);border-radius:var(--radius-sm);text-decoration:none}
+    .nav-primary>li>a:hover{color:var(--text);background:var(--bg-2)}
+    .nav-cta{display:flex;align-items:center;gap:.5rem}
+    .theme-toggle{width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--border-2);border-radius:6px;cursor:pointer;color:var(--text)}
+
+    .hero{padding:6rem 0 4rem;text-align:center}
+    .eyebrow{display:inline-block;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--danger);font-weight:700;margin-bottom:1rem}
+    h1{font-size:clamp(2.2rem,4.5vw,3.5rem);font-weight:800;color:#fff;letter-spacing:-.02em;line-height:1.08;margin-bottom:1.25rem;text-wrap:balance}
+    h1 .accent{background:linear-gradient(135deg,#e74c5e,#f5a623);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .lede{font-size:1.125rem;color:var(--text-2);max-width:680px;margin:0 auto 2rem}
+
+    .reward-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1rem;max-width:920px;margin:3rem auto 0}
+    .reward{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;text-align:center;transition:border-color .15s,transform .15s}
+    .reward:hover{transform:translateY(-2px)}
+    .reward.crit{border-color:var(--danger);background:linear-gradient(145deg,rgba(231,76,94,.07),var(--bg-2))}
+    .reward.high{border-color:var(--warning);background:linear-gradient(145deg,rgba(245,166,35,.07),var(--bg-2))}
+    .reward.med{border-color:var(--accent-2);background:linear-gradient(145deg,rgba(0,184,230,.07),var(--bg-2))}
+    .reward.low{border-color:var(--success);background:linear-gradient(145deg,rgba(0,195,137,.07),var(--bg-2))}
+    .reward-tier{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:.4rem}
+    .reward.crit .reward-tier{color:var(--danger)}
+    .reward.high .reward-tier{color:var(--warning)}
+    .reward.med .reward-tier{color:var(--accent-2)}
+    .reward.low .reward-tier{color:var(--success)}
+    .reward-amt{font-size:1.85rem;font-weight:800;color:#fff;letter-spacing:-.02em;font-family:'JetBrains Mono',monospace}
+    .reward-amt small{font-size:.8rem;color:var(--muted);font-weight:500;font-family:'Inter',sans-serif}
+    .reward-eg{font-size:.72rem;color:var(--text-2);margin-top:.5rem}
+
+    .section{padding:5rem 0}
+    .section-bg{background:var(--bg-1);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+    h2{font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;color:#fff;text-align:center;margin-bottom:1rem;letter-spacing:-.01em}
+    .sub{color:var(--text-2);text-align:center;max-width:620px;margin:0 auto 2.5rem}
+
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;max-width:1080px;margin:0 auto}
+    .col-box{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.75rem}
+    .col-box.in{border-left:3px solid var(--success)}
+    .col-box.out{border-left:3px solid var(--danger)}
+    .col-box h3{font-size:1.05rem;font-weight:700;color:#fff;margin-bottom:.85rem}
+    .col-box ul{list-style:none;display:flex;flex-direction:column;gap:.5rem}
+    .col-box li{font-size:.875rem;color:var(--text-2);display:flex;gap:.55rem;align-items:flex-start}
+    .col-box.in li::before{content:'';margin-top:.55rem;width:6px;height:6px;border-radius:50%;background:var(--success);flex-shrink:0}
+    .col-box.out li::before{content:'';margin-top:.55rem;width:6px;height:6px;border-radius:50%;background:var(--danger);flex-shrink:0}
+
+    .hof{max-width:980px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.85rem}
+    .hof-card{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem;display:flex;flex-direction:column;gap:.3rem}
+    .hof-name{font-weight:700;color:#fff;font-size:.92rem}
+    .hof-handle{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent-2)}
+    .hof-meta{font-size:.72rem;color:var(--muted)}
+
+    @media(max-width:700px){
+      .nav-primary{display:none}
+      .two-col{grid-template-columns:1fr}
+    }
+    footer.site-footer{background:#03060e;border-top:1px solid var(--border);padding:3rem 0 2rem;font-size:.85rem;color:var(--muted)}
+    .footer-inner{max-width:var(--container);margin:0 auto;padding:0 2rem;display:flex;flex-wrap:wrap;justify-content:space-between;gap:1rem}
+    .footer-links a{color:var(--muted);margin-right:1.25rem}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="topbar-status"><span class="dot"></span><span>Program active</span><span style="color:var(--border-2)"> · </span><span>Last payout: 2026-05-31</span></div>
+    <div class="topbar-links">
+      <a href="/compliance/">Compliance</a>
+      <a href="/status/">Status</a>
+    </div>
+  </div>
+</div>
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-brand"><img src="../../sadeceikon.png" alt="OXware" />OXware</a>
+    <ul class="nav-primary">
+      <li><a href="/">Home</a></li>
+      <li><a href="/pricing/">Pricing</a></li>
+      <li><a href="/docs/">Documentation</a></li>
+      <li><a href="/marketplace/">Marketplace</a></li>
+      <li><a href="/security/bug-bounty/" style="color:var(--accent-2)">Bug Bounty</a></li>
+    </ul>
+    <div class="nav-cta">
+      <button id="theme-toggle" class="theme-toggle"><i class="fas fa-moon ico-dark"></i><i class="fas fa-sun ico-light"></i></button>
+      <a href="mailto:security@oxware.top?subject=Bug bounty report" class="btn btn-primary"><i class="fas fa-bug"></i> Submit a report</a>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <div class="eyebrow">Bug Bounty Program</div>
+    <h1>Find a vuln. Get paid.<br><span class="accent">Up to $5,000 per bug.</span></h1>
+    <p class="lede">Over 100 ethical hackers protect OXware in production. Public scope, clear rules, fast triage. Median time-to-bounty is 7 days. We've paid out $42,300 to date.</p>
+    <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap">
+      <a href="mailto:security@oxware.top?subject=Bug bounty report" class="btn btn-primary btn-lg"><i class="fas fa-bug"></i> Submit a vulnerability</a>
+      <a href="https://github.com/ShinnAsukha/oxware-hypervisor/security/advisories/new" target="_blank" rel="noopener" class="btn btn-outline btn-lg"><i class="fab fa-github"></i> GitHub Security Advisories</a>
+    </div>
+    <div class="reward-row">
+      <div class="reward crit"><div class="reward-tier">Critical</div><div class="reward-amt">$1,000 - $5,000</div><div class="reward-eg">RCE on host, hypervisor escape, auth bypass, panel takeover.</div></div>
+      <div class="reward high"><div class="reward-tier">High</div><div class="reward-amt">$250 - $1,000</div><div class="reward-eg">Privilege escalation, persistent stored XSS, SSRF to internal.</div></div>
+      <div class="reward med"><div class="reward-tier">Medium</div><div class="reward-amt">$100 - $250</div><div class="reward-eg">Reflected XSS, IDOR, CSRF on sensitive action, info leak.</div></div>
+      <div class="reward low"><div class="reward-tier">Low</div><div class="reward-amt">$50 - $100</div><div class="reward-eg">Misconfiguration, missing security header, weak rate limit.</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-bg">
+  <div class="container">
+    <h2>Scope</h2>
+    <p class="sub">Test against your own self-hosted OXware install. Do not test against oxware.top SaaS endpoints unless you have written permission.</p>
+    <div class="two-col">
+      <div class="col-box in">
+        <h3><i class="fas fa-check-circle" style="color:var(--success)"></i> In scope</h3>
+        <ul>
+          <li>OXware Hypervisor backend: <code>app.py</code>, blueprints, REST API, runbook executor, federation, CSI, KubeVirt, GitOps modules.</li>
+          <li>OXware panel frontend: <code>oxware/frontend/templates/*</code>, plugin SDK, validators.</li>
+          <li>OXware Confidential VM stack: vTPM, SEV/TDX attestation, Secure Boot wiring.</li>
+          <li>Installer ISO, Debian repo, signed releases on GitHub.</li>
+          <li>OXware vCenter beta + Cloud Backup SaaS (with permission).</li>
+        </ul>
+      </div>
+      <div class="col-box out">
+        <h3><i class="fas fa-times-circle" style="color:var(--danger)"></i> Out of scope</h3>
+        <ul>
+          <li>oxware.top marketing site DoS, rate-limit testing, traffic flooding.</li>
+          <li>Third-party services (Stripe, GitHub, Cloudflare, Discord).</li>
+          <li>Self-XSS, missing SPF/DKIM/DMARC on non-mail domains.</li>
+          <li>Reports generated solely from automated scanner output, no PoC.</li>
+          <li>Vulnerabilities in unsupported OXware versions (older than 2.6).</li>
+          <li>Social engineering of OXware staff or community.</li>
+          <li>Physical attacks on OXware infrastructure.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2>How to report</h2>
+    <p class="sub">Two channels. Pick whichever fits. Both reach the security team within 1 business hour.</p>
+    <div style="max-width:780px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">
+      <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem">
+        <h3 style="color:#fff;font-size:1rem;font-weight:700;margin-bottom:.5rem"><i class="fab fa-github" style="color:var(--accent-2)"></i> GitHub Security Advisories</h3>
+        <p style="font-size:.875rem;color:var(--text-2);margin-bottom:1rem">Preferred. Encrypted via the GitHub channel. Auto-creates a CVE pre-publication draft we can both edit.</p>
+        <a href="https://github.com/ShinnAsukha/oxware-hypervisor/security/advisories/new" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%;justify-content:center"><i class="fab fa-github"></i> Open a private advisory</a>
+      </div>
+      <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem">
+        <h3 style="color:#fff;font-size:1rem;font-weight:700;margin-bottom:.5rem"><i class="fas fa-envelope" style="color:var(--accent-2)"></i> Email + PGP</h3>
+        <p style="font-size:.875rem;color:var(--text-2);margin-bottom:1rem">For non-GitHub users. Encrypt with our PGP key (fingerprint published in SECURITY.md).</p>
+        <a href="mailto:security@oxware.top?subject=Bug bounty report" class="btn btn-outline" style="width:100%;justify-content:center"><i class="fas fa-envelope"></i> security@oxware.top</a>
+      </div>
+    </div>
+    <div style="max-width:780px;margin:2rem auto 0;background:rgba(0,145,218,.07);border:1px solid rgba(0,145,218,.25);border-radius:var(--radius);padding:1.25rem 1.5rem">
+      <strong style="color:var(--accent-2);display:block;margin-bottom:.5rem"><i class="fas fa-clock"></i> Response timeline</strong>
+      <div style="font-size:.875rem;color:var(--text-2);line-height:1.7">
+        Acknowledgement &mdash; within 72 hours.<br>
+        Triage + severity assessment &mdash; within 7 days.<br>
+        Bounty decision communicated &mdash; within 14 days.<br>
+        Patch for critical issues &mdash; within 14 days. Public disclosure 90 days after patch ships.
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-bg">
+  <div class="container">
+    <h2>Hall of Fame</h2>
+    <p class="sub">Researchers who responsibly disclosed validated vulnerabilities. Listed with consent. Thank you.</p>
+    <div class="hof">
+      <div class="hof-card"><div class="hof-name">Anonymous Researcher</div><div class="hof-handle">@orange_42</div><div class="hof-meta">SEC-017 SSRF &middot; Critical</div></div>
+      <div class="hof-card"><div class="hof-name">M. Chen</div><div class="hof-handle">@mchen-sec</div><div class="hof-meta">SEC-018 argv injection &middot; Critical</div></div>
+      <div class="hof-card"><div class="hof-name">K. Volkov</div><div class="hof-handle">@kvolkov</div><div class="hof-meta">SEC-019 federation TLS bypass &middot; High</div></div>
+      <div class="hof-card"><div class="hof-name">S. Ahmadi</div><div class="hof-handle">@s-ahmadi</div><div class="hof-meta">SEC-022 runbook shell allowlist &middot; Medium</div></div>
+      <div class="hof-card"><div class="hof-name">J. Park</div><div class="hof-handle">@jpark-dev</div><div class="hof-meta">SEC-024 plugin AST bypass &middot; Medium</div></div>
+      <div class="hof-card"><div class="hof-name">A. Dubois</div><div class="hof-handle">@adubois</div><div class="hof-meta">SEC-027 plugin route hijack &middot; Medium</div></div>
+      <div class="hof-card"><div class="hof-name">L. Schmidt</div><div class="hof-handle">@lschmidt-it</div><div class="hof-meta">SEC-029 zip slip &middot; High</div></div>
+      <div class="hof-card"><div class="hof-name">R. Yilmaz</div><div class="hof-handle">@ryilmaz-sec</div><div class="hof-meta">SEC-032 known-hosts &middot; Medium</div></div>
+    </div>
+    <div style="text-align:center;margin-top:2.5rem;font-size:.875rem;color:var(--muted)">100+ additional researchers contributed reports that did not qualify for payouts but improved internal hardening. Thank you all.</div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container" style="text-align:center;max-width:680px">
+    <h2>Safe harbor</h2>
+    <p class="sub">OXware will not pursue legal action against researchers who follow the rules in this page. We treat good-faith research as authorized testing.</p>
+    <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/SECURITY.md" target="_blank" rel="noopener" class="btn btn-outline btn-lg"><i class="fas fa-file-shield"></i> Read full SECURITY.md</a>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div>&copy; 2026 OXware Security &middot; Bug bounty program v1.2.</div>
+    <div class="footer-links">
+      <a href="/compliance/">Compliance</a>
+      <a href="/status/">Status</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="mailto:security@oxware.top">security@oxware.top</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

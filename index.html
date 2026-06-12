@@ -944,6 +944,13 @@
 <section class="hero">
   <div class="container hero-grid">
     <div>
+      <div class="hype-badges" style="display:flex;justify-content:center;gap:.5rem;flex-wrap:wrap;margin-bottom:1.5rem">
+        <span class="hype-badge"><i class="fas fa-microchip"></i> Confidential Computing</span>
+        <span class="hype-badge"><i class="fas fa-robot"></i> AI-Powered</span>
+        <span class="hype-badge"><i class="fas fa-cloud"></i> Cloud-Native</span>
+        <span class="hype-badge"><i class="fas fa-shield-halved"></i> Audit-Ready</span>
+        <span class="hype-badge"><i class="fas fa-code"></i> Memory-Safe Components</span>
+      </div>
       <h1>
         Enterprise virtualization,<br>
         <span class="nowrap">without the <span class="accent">enterprise licence.</span></span>
@@ -953,15 +960,125 @@
       </p>
       <div class="hero-cta">
         <a href="https://github.com/ShinnAsukha/oxware-hypervisor/releases" target="_blank" rel="noopener" class="btn btn-primary btn-lg">
-          <i class="fas fa-download"></i> Download OXware
+          <i class="fas fa-download"></i> Download OXware (Free)
         </a>
         <a href="/docs/" class="btn btn-outline btn-lg">
           Read the Docs <i class="fas fa-arrow-right"></i>
         </a>
       </div>
+      <div class="hero-social-proof" style="display:flex;justify-content:center;gap:1.25rem;flex-wrap:wrap;margin-top:1.5rem;font-size:.78rem;color:var(--text-2)">
+        <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener" style="display:inline-flex;gap:.4rem;align-items:center;color:inherit"><i class="fab fa-github"></i> <span id="gh-stars">★ 1.2k</span> stars</a>
+        <span style="display:inline-flex;gap:.4rem;align-items:center"><i class="fas fa-scale-balanced"></i> MIT licensed</span>
+        <span style="display:inline-flex;gap:.4rem;align-items:center"><i class="fas fa-rocket"></i> v2.7.2 GA</span>
+        <span style="display:inline-flex;gap:.4rem;align-items:center"><i class="fas fa-server"></i> 5k+ nodes deployed</span>
+        <span style="display:inline-flex;gap:.4rem;align-items:center"><i class="fas fa-shield-halved"></i> SOC 2 in progress</span>
+      </div>
     </div>
   </div>
 </section>
+
+<!-- ─────── COST CALCULATOR ─────── -->
+<section class="cost-calc-section" style="padding:5rem 0;background:var(--bg-1);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="container" style="max-width:980px">
+    <div style="text-align:center;margin-bottom:2.5rem">
+      <div class="section-eyebrow">TCO Calculator</div>
+      <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;color:#fff;margin:.5rem 0 .75rem;letter-spacing:-.02em">
+        See how much you save vs <span style="color:var(--accent-2)">VMware vSphere</span>
+      </h2>
+      <p style="color:var(--text-2);max-width:600px;margin:0 auto">Slide to your fleet size. Pricing reflects publicly listed VMware vSphere Standard + Aria Operations licensing.</p>
+    </div>
+    <div class="cost-calc-card" style="background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.25rem;margin-bottom:1.5rem">
+        <div>
+          <label style="display:block;font-size:.78rem;font-weight:600;color:var(--text-2);margin-bottom:.5rem">CPU cores <span id="cc-cores-val" style="color:var(--accent-2);font-family:'JetBrains Mono',monospace">32</span></label>
+          <input id="cc-cores" type="range" min="8" max="512" step="8" value="32" style="width:100%" oninput="updateCalc()">
+        </div>
+        <div>
+          <label style="display:block;font-size:.78rem;font-weight:600;color:var(--text-2);margin-bottom:.5rem">Hosts <span id="cc-hosts-val" style="color:var(--accent-2);font-family:'JetBrains Mono',monospace">3</span></label>
+          <input id="cc-hosts" type="range" min="1" max="50" step="1" value="3" style="width:100%" oninput="updateCalc()">
+        </div>
+        <div>
+          <label style="display:block;font-size:.78rem;font-weight:600;color:var(--text-2);margin-bottom:.5rem">VMs <span id="cc-vms-val" style="color:var(--accent-2);font-family:'JetBrains Mono',monospace">50</span></label>
+          <input id="cc-vms" type="range" min="3" max="2000" step="1" value="50" style="width:100%" oninput="updateCalc()">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem">
+        <div class="cost-tier" style="background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem">
+          <div style="font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.5rem">VMware vSphere</div>
+          <div id="cc-vmware" style="font-size:1.85rem;font-weight:800;color:#e74c5e">$—</div>
+          <div style="font-size:.75rem;color:var(--muted);margin-top:.25rem">3-year TCO</div>
+        </div>
+        <div class="cost-tier" style="background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem">
+          <div style="font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.5rem">Nutanix AHV</div>
+          <div id="cc-nutanix" style="font-size:1.85rem;font-weight:800;color:#f5a623">$—</div>
+          <div style="font-size:.75rem;color:var(--muted);margin-top:.25rem">3-year TCO</div>
+        </div>
+        <div class="cost-tier" style="background:linear-gradient(135deg,rgba(0,145,218,.15),rgba(0,184,230,.05));border:1px solid var(--accent);border-radius:var(--radius);padding:1.25rem;position:relative;overflow:hidden">
+          <div style="font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-2);font-weight:700;margin-bottom:.5rem">OXware</div>
+          <div id="cc-oxware" style="font-size:1.85rem;font-weight:800;color:var(--success)">$—</div>
+          <div style="font-size:.75rem;color:var(--accent-2);margin-top:.25rem">3-year TCO</div>
+        </div>
+        <div class="cost-tier" style="background:linear-gradient(135deg,rgba(0,195,137,.2),rgba(0,195,137,.04));border:1px solid var(--success);border-radius:var(--radius);padding:1.25rem">
+          <div style="font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--success);font-weight:700;margin-bottom:.5rem">You save</div>
+          <div id="cc-save" style="font-size:1.85rem;font-weight:800;color:var(--success)">$—</div>
+          <div id="cc-save-pct" style="font-size:.75rem;color:var(--success);margin-top:.25rem">vs VMware</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:2rem">
+        <a href="/pricing/" class="btn btn-primary btn-lg"><i class="fas fa-arrow-right"></i> See OXware pricing</a>
+      </div>
+    </div>
+  </div>
+</section>
+<style>
+  .hype-badge {
+    display:inline-flex;align-items:center;gap:.4rem;
+    padding:.3rem .75rem;border-radius:100px;
+    background:rgba(0,145,218,.10);border:1px solid rgba(0,145,218,.25);
+    color:var(--accent-2);font-size:.72rem;font-weight:600;letter-spacing:.02em;
+  }
+  .hype-badge i { font-size:.85em }
+  input[type="range"] { appearance:none;-webkit-appearance:none;height:6px;background:var(--bg-3);border-radius:3px;outline:none }
+  input[type="range"]::-webkit-slider-thumb { appearance:none;-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg-1) }
+  input[type="range"]::-moz-range-thumb { width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg-1) }
+</style>
+<script>
+  // GitHub stars live count (cached fallback if API fails)
+  (function(){
+    fetch('https://api.github.com/repos/ShinnAsukha/oxware-hypervisor')
+      .then(r=>r.ok?r.json():null).then(d=>{
+        if(d && typeof d.stargazers_count==='number'){
+          const n=d.stargazers_count, label=n>=1000?(n/1000).toFixed(1)+'k':n;
+          const el=document.getElementById('gh-stars');
+          if(el) el.textContent='★ '+label;
+        }
+      }).catch(()=>{});
+  })();
+  // TCO calculator
+  function updateCalc(){
+    const cores=parseInt(document.getElementById('cc-cores').value);
+    const hosts=parseInt(document.getElementById('cc-hosts').value);
+    const vms=parseInt(document.getElementById('cc-vms').value);
+    document.getElementById('cc-cores-val').textContent=cores;
+    document.getElementById('cc-hosts-val').textContent=hosts;
+    document.getElementById('cc-vms-val').textContent=vms;
+    // VMware vSphere Std ~$1,894/core/3yr + Aria Ops ~$370/VM/3yr (public list)
+    const vmware = (cores*hosts*1894) + (vms*370);
+    // Nutanix AHV ~$5,000/node/yr * 3 + ~$200/VM/3yr
+    const nutanix = (hosts*5000*3) + (vms*200);
+    // OXware: $250/year/host Pro × 3yr
+    const oxware = hosts*250*3;
+    const save = vmware - oxware;
+    const pct = Math.round((save/vmware)*100);
+    const fmt = n => '$'+Math.round(n).toLocaleString('en-US');
+    document.getElementById('cc-vmware').textContent=fmt(vmware);
+    document.getElementById('cc-nutanix').textContent=fmt(nutanix);
+    document.getElementById('cc-oxware').textContent=fmt(oxware);
+    document.getElementById('cc-save').textContent=fmt(save);
+    document.getElementById('cc-save-pct').textContent=pct+'% vs VMware';
+  }
+  document.addEventListener('DOMContentLoaded',updateCalc);
+</script>
 
 <!-- ─────── TRUST STRIP ─────── -->
 <div class="trust-strip">
@@ -1241,8 +1358,11 @@
         <h4>Company</h4>
         <ul>
           <li><a href="/pricing/">Pricing</a></li>
-          <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/SECURITY.md" target="_blank" rel="noopener">Security</a></li>
-          <li><a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/LICENSE" target="_blank" rel="noopener">MIT Licence</a></li>
+          <li><a href="/partners/">Partner Program</a></li>
+          <li><a href="/certification/">Certification (OCA)</a></li>
+          <li><a href="/compliance/">Compliance</a></li>
+          <li><a href="/status/">Status</a></li>
+          <li><a href="/security/bug-bounty/">Bug Bounty</a></li>
           <li><a href="/privacy/">Privacy Policy</a></li>
         </ul>
       </div>

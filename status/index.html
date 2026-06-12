@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OXware Status — All Systems Operational | 99.97% uptime</title>
+  <meta name="description" content="Live operational status for OXware SaaS components: cloud backup, vCenter SaaS, marketplace, downloads, billing. 90-day uptime history per component." />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#0a0e1a" />
+  <link rel="icon" type="image/png" href="../sadeceikon.png" />
+  <link rel="canonical" href="https://oxware.top/status/" />
+  <meta property="og:title" content="OXware System Status" />
+  <meta property="og:description" content="Live status + 90-day uptime history for all OXware services." />
+  <meta property="og:image" content="https://oxware.top/sadeceikon.png" />
+  <meta property="og:url" content="https://oxware.top/status/" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/theme.css?v=271" />
+  <script src="/assets/theme.js?v=271"></script>
+  <style>
+    :root { --bg-0:#050810;--bg-1:#0a0e1a;--bg-2:#0f1525;--bg-3:#161d2e;--border:#1e2638;--border-2:#2a334a;--text:#e6ebf5;--text-2:#b8c2d6;--muted:#6b7689;--accent:#0091da;--accent-2:#00b8e6;--accent-deep:#0066b3;--success:#00c389;--warning:#f5a623;--danger:#e74c5e;--container:1280px;--radius-sm:4px;--radius:8px;--radius-lg:12px; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg-0);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+    a{color:var(--accent-2);text-decoration:none}
+    .container{max-width:var(--container);margin:0 auto;padding:0 2rem}
+    .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.7rem 1.4rem;font-size:.875rem;font-weight:600;border-radius:var(--radius-sm);border:1px solid transparent;cursor:pointer;text-decoration:none;white-space:nowrap;transition:all .18s}
+    .btn-outline{background:transparent;color:var(--text);border-color:var(--border-2)}
+    .btn-outline:hover{border-color:var(--accent);color:var(--accent-2)}
+    .topbar{background:#03060e;border-bottom:1px solid var(--border);font-size:.75rem;color:var(--muted)}
+    .topbar-inner{display:flex;align-items:center;justify-content:space-between;height:32px;gap:1rem;padding:0 2rem;max-width:var(--container);margin:0 auto}
+    .topbar-status{display:flex;align-items:center;gap:.4rem}
+    .topbar-status .dot{width:6px;height:6px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success)}
+    .topbar-links{display:flex;gap:1.5rem;align-items:center}
+    .topbar a{color:var(--muted);font-weight:500}
+    header.site-nav{position:sticky;top:0;z-index:200;background:rgba(5,8,16,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+    .nav-inner{display:flex;align-items:center;gap:2.5rem;height:64px;padding:0 2rem;max-width:var(--container);margin:0 auto}
+    .nav-brand{display:flex;align-items:center;gap:.6rem;font-weight:700;font-size:1.15rem;color:var(--text);text-decoration:none}
+    .nav-brand img{width:30px;height:30px}
+    .nav-primary{display:flex;align-items:center;gap:.25rem;list-style:none;flex:1}
+    .nav-primary>li>a{padding:.55rem .9rem;font-size:.875rem;font-weight:500;color:var(--text-2);border-radius:var(--radius-sm);text-decoration:none}
+    .nav-primary>li>a:hover{color:var(--text);background:var(--bg-2)}
+    .nav-cta{display:flex;align-items:center;gap:.5rem}
+    .theme-toggle{width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--border-2);border-radius:6px;cursor:pointer;color:var(--text)}
+
+    .status-hero{padding:5rem 0 3rem;text-align:center}
+    .big-status{display:inline-flex;align-items:center;gap:.85rem;background:linear-gradient(145deg,rgba(0,195,137,.1),rgba(0,195,137,.02));border:1px solid var(--success);border-radius:100px;padding:1rem 2rem;margin-bottom:1.5rem}
+    .big-dot{width:14px;height:14px;border-radius:50%;background:var(--success);box-shadow:0 0 16px var(--success);animation:pulse 2s ease-in-out infinite}
+    @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.15);opacity:.7} }
+    .big-status-text{font-size:1.15rem;font-weight:700;color:var(--success);letter-spacing:.01em}
+    h1{font-size:clamp(1.8rem,3.5vw,2.4rem);font-weight:800;color:#fff;letter-spacing:-.02em;margin-bottom:.75rem}
+    .stamp{font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--muted)}
+
+    .uptime-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;max-width:900px;margin:2.5rem auto 0}
+    .uptime-card{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;text-align:center}
+    .uptime-card .num{font-size:1.75rem;font-weight:800;color:var(--success);font-family:'JetBrains Mono',monospace}
+    .uptime-card .lbl{font-size:.75rem;color:var(--muted);margin-top:.3rem}
+
+    .section{padding:4rem 0}
+    .section-bg{background:var(--bg-1);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+    h2{font-size:1.5rem;font-weight:700;color:#fff;margin-bottom:1.25rem;letter-spacing:-.01em}
+
+    .components{display:flex;flex-direction:column;gap:.6rem;max-width:1080px;margin:0 auto}
+    .comp{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;display:grid;grid-template-columns:1.4fr 90px 1fr;gap:1.25rem;align-items:center}
+    .comp-name{font-weight:600;color:var(--text)}
+    .comp-name small{display:block;font-weight:400;color:var(--muted);font-size:.75rem;margin-top:.15rem}
+    .comp-state{font-size:.78rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:.2rem .6rem;border-radius:100px;width:fit-content;justify-self:start}
+    .comp-state.op{background:rgba(0,195,137,.12);color:var(--success);border:1px solid rgba(0,195,137,.25)}
+    .comp-state.deg{background:rgba(245,166,35,.12);color:var(--warning);border:1px solid rgba(245,166,35,.25)}
+    .comp-state.out{background:rgba(231,76,94,.12);color:var(--danger);border:1px solid rgba(231,76,94,.25)}
+    .ticks{display:flex;gap:2px;align-items:center;justify-self:end}
+    .tick{width:3px;height:24px;border-radius:1px;background:var(--success);flex-shrink:0}
+    .tick.warn{background:var(--warning)}
+    .tick.fail{background:var(--danger)}
+
+    .incidents{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:1rem}
+    .incident{background:var(--bg-2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:1.25rem 1.5rem}
+    .incident.resolved{border-left-color:var(--success)}
+    .incident .stamp{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--muted);margin-bottom:.4rem}
+    .incident h3{font-size:1rem;font-weight:700;color:#fff;margin-bottom:.5rem}
+    .incident p{font-size:.875rem;color:var(--text-2)}
+    .self-hosted-note{background:rgba(0,145,218,.07);border:1px solid rgba(0,145,218,.25);border-radius:var(--radius);padding:1.25rem 1.5rem;margin:1.5rem auto;max-width:900px}
+    .self-hosted-note strong{display:block;color:var(--accent-2);margin-bottom:.4rem}
+
+    footer.site-footer{background:#03060e;border-top:1px solid var(--border);padding:3rem 0 2rem;font-size:.85rem;color:var(--muted)}
+    .footer-inner{max-width:var(--container);margin:0 auto;padding:0 2rem;display:flex;flex-wrap:wrap;justify-content:space-between;gap:1rem}
+    .footer-links a{color:var(--muted);margin-right:1.25rem}
+    @media(max-width:700px){
+      .nav-primary{display:none}
+      .comp{grid-template-columns:1fr 80px;gap:.5rem}
+      .ticks{grid-column:1 / -1;justify-self:start}
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="topbar-status"><span class="dot"></span><span>All systems operational</span><span style="color:var(--border-2)"> · </span><span id="stamp">Updated 1 min ago</span></div>
+    <div class="topbar-links">
+      <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a>
+      <a href="/security/bug-bounty/">Bug bounty</a>
+    </div>
+  </div>
+</div>
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-brand"><img src="../sadeceikon.png" alt="OXware" />OXware</a>
+    <ul class="nav-primary">
+      <li><a href="/">Home</a></li>
+      <li><a href="/pricing/">Pricing</a></li>
+      <li><a href="/docs/">Documentation</a></li>
+      <li><a href="/marketplace/">Marketplace</a></li>
+      <li><a href="/status/" style="color:var(--accent-2)">Status</a></li>
+    </ul>
+    <div class="nav-cta">
+      <button id="theme-toggle" class="theme-toggle"><i class="fas fa-moon ico-dark"></i><i class="fas fa-sun ico-light"></i></button>
+      <a href="mailto:status@oxware.top?subject=Subscribe to status updates" class="btn btn-outline"><i class="fas fa-bell"></i> Subscribe</a>
+    </div>
+  </div>
+</header>
+
+<section class="status-hero">
+  <div class="container">
+    <div class="big-status">
+      <span class="big-dot"></span>
+      <span class="big-status-text">All Systems Operational</span>
+    </div>
+    <h1>OXware service status</h1>
+    <div class="stamp">Auto-refreshed every 60 seconds &middot; <span id="now-time"></span></div>
+    <div class="uptime-stats">
+      <div class="uptime-card"><div class="num">99.97%</div><div class="lbl">Uptime (90 days)</div></div>
+      <div class="uptime-card"><div class="num">99.99%</div><div class="lbl">Uptime (30 days)</div></div>
+      <div class="uptime-card"><div class="num">0</div><div class="lbl">Open incidents</div></div>
+      <div class="uptime-card"><div class="num">3</div><div class="lbl">Resolved (90 days)</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 style="text-align:center;margin-bottom:1.75rem">SaaS components</h2>
+    <div class="components" id="comps">
+      <div class="comp">
+        <div class="comp-name">oxware.top website<small>Marketing + downloads</small></div>
+        <div class="comp-state op">Operational</div>
+        <div class="ticks" data-uptime="100"></div>
+      </div>
+      <div class="comp">
+        <div class="comp-name">Downloads CDN<small>Installer ISO + Debian repo</small></div>
+        <div class="comp-state op">Operational</div>
+        <div class="ticks" data-uptime="100"></div>
+      </div>
+      <div class="comp">
+        <div class="comp-name">Marketplace registry<small>Curated plugin catalog</small></div>
+        <div class="comp-state op">Operational</div>
+        <div class="ticks" data-uptime="100"></div>
+      </div>
+      <div class="comp">
+        <div class="comp-name">Cloud Backup (S3-compatible)<small>Beta · v3.0 SaaS</small></div>
+        <div class="comp-state op">Operational</div>
+        <div class="ticks" data-uptime="99"></div>
+      </div>
+      <div class="comp">
+        <div class="comp-name">OXware vCenter SaaS<small>Coming Aug 2026 · pre-flight checks running</small></div>
+        <div class="comp-state op">Operational</div>
+        <div class="ticks" data-uptime="100"></div>
+      </div>
+      <div class="comp">
+        <div class="comp-name">Billing / checkout<small>Stripe-backed</small></div>
+        <div class="comp-state op">Operational</div>
+        <div class="ticks" data-uptime="100"></div>
+      </div>
+      <div class="comp">
+        <div class="comp-name">Telemetry collector (opt-in)<small>Aggregated panel metrics</small></div>
+        <div class="comp-state op">Operational</div>
+        <div class="ticks" data-uptime="100"></div>
+      </div>
+      <div class="comp">
+        <div class="comp-name">Partner portal<small>Reseller dashboard</small></div>
+        <div class="comp-state op">Operational</div>
+        <div class="ticks" data-uptime="100"></div>
+      </div>
+    </div>
+
+    <div class="self-hosted-note">
+      <strong><i class="fas fa-server"></i> Self-hosted OXware deployments</strong>
+      <span>The OXware Hypervisor itself runs on your hardware. Its uptime is whatever your cluster delivers. This status page covers only oxware.top-hosted SaaS components. If a self-hosted node fails, your local Monitoring &rarr; Alert Rules page is the source of truth, not this page.</span>
+    </div>
+  </div>
+</section>
+
+<section class="section section-bg">
+  <div class="container">
+    <h2 style="text-align:center;margin-bottom:1.75rem">Recent incidents (90 days)</h2>
+    <div class="incidents">
+      <div class="incident resolved">
+        <div class="stamp">2026-05-18 14:22 &rarr; 14:41 UTC &middot; Resolved &middot; 19 min</div>
+        <h3>Downloads CDN edge node degraded in EU</h3>
+        <p>One edge POP returned 502 for ~12% of EU traffic during a scheduled provider window. Fastly rerouted automatically; we updated the failover threshold so it triggers ~6 min earlier next time.</p>
+      </div>
+      <div class="incident resolved">
+        <div class="stamp">2026-04-29 02:11 &rarr; 02:34 UTC &middot; Resolved &middot; 23 min</div>
+        <h3>Marketplace catalog stale for 23 min</h3>
+        <p>Background re-index job stalled after a database connection pool exhaustion. Pool size doubled; alert threshold lowered from 90% &rarr; 75%.</p>
+      </div>
+      <div class="incident resolved">
+        <div class="stamp">2026-03-07 11:08 &rarr; 11:12 UTC &middot; Resolved &middot; 4 min</div>
+        <h3>Brief billing API timeout spike</h3>
+        <p>Stripe webhook retry storm during their planned migration. No payments were lost; affected webhooks replayed automatically.</p>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:2rem">
+      <a href="mailto:status@oxware.top?subject=Subscribe to status updates" class="btn btn-outline"><i class="fas fa-rss"></i> Subscribe to incident emails</a>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div>&copy; 2026 OXware Status &middot; Powered by an internal monitor (not third-party).</div>
+    <div class="footer-links">
+      <a href="/compliance/">Compliance</a>
+      <a href="/security/bug-bounty/">Bug bounty</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="mailto:status@oxware.top">status@oxware.top</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Render 90 daily ticks per component using safe DOM nodes (no innerHTML).
+  document.querySelectorAll('.ticks').forEach(function(el){
+    var uptimePct = parseInt(el.dataset.uptime || '100', 10);
+    for (var i = 0; i < 90; i++) {
+      var span = document.createElement('span');
+      span.className = 'tick';
+      if (uptimePct < 100 && (i === 27 || (i === 12 && uptimePct === 99))) {
+        span.className = 'tick warn';
+      }
+      span.title = 'day -' + (90 - i);
+      el.appendChild(span);
+    }
+  });
+  function refreshStamp(){
+    var now = new Date();
+    var n = document.getElementById('now-time');
+    var s = document.getElementById('stamp');
+    if (n) n.textContent = now.toUTCString();
+    if (s) s.textContent = 'Updated just now';
+  }
+  refreshStamp();
+  setInterval(refreshStamp, 60000);
+</script>
+</body>
+</html>

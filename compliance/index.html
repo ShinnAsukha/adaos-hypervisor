@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compliance — OXware | SOC 2 + ISO 27001 + CIS / NIST / PCI-DSS / HIPAA</title>
+  <meta name="description" content="OXware compliance posture: SOC 2 Type II in progress, ISO 27001 in progress. Built-in CIS / NIST 800-53 / PCI-DSS / HIPAA / ISO 27001 compliance scanner with auto-generated audit reports." />
+  <meta name="keywords" content="oxware soc 2, oxware iso 27001, hypervisor compliance, cis benchmark, nist 800-53, pci dss, hipaa hypervisor, audit report" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#0a0e1a" />
+  <link rel="icon" type="image/png" href="../sadeceikon.png" />
+  <link rel="canonical" href="https://oxware.top/compliance/" />
+  <meta property="og:title" content="OXware Compliance" />
+  <meta property="og:description" content="SOC 2 + ISO 27001 in progress. Built-in compliance scanner with auditor-ready reports." />
+  <meta property="og:image" content="https://oxware.top/sadeceikon.png" />
+  <meta property="og:url" content="https://oxware.top/compliance/" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/theme.css?v=271" />
+  <script src="/assets/theme.js?v=271"></script>
+  <style>
+    :root { --bg-0:#050810;--bg-1:#0a0e1a;--bg-2:#0f1525;--bg-3:#161d2e;--border:#1e2638;--border-2:#2a334a;--text:#e6ebf5;--text-2:#b8c2d6;--muted:#6b7689;--accent:#0091da;--accent-2:#00b8e6;--accent-deep:#0066b3;--success:#00c389;--warning:#f5a623;--danger:#e74c5e;--container:1280px;--radius-sm:4px;--radius:8px;--radius-lg:12px; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg-0);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+    a{color:var(--accent-2);text-decoration:none}
+    .container{max-width:var(--container);margin:0 auto;padding:0 2rem}
+    .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.7rem 1.4rem;font-size:.875rem;font-weight:600;border-radius:var(--radius-sm);border:1px solid transparent;cursor:pointer;text-decoration:none;white-space:nowrap;transition:all .18s}
+    .btn-primary{background:var(--accent);color:#fff}
+    .btn-primary:hover{background:var(--accent-deep)}
+    .btn-outline{background:transparent;color:var(--text);border-color:var(--border-2)}
+    .btn-outline:hover{border-color:var(--accent);color:var(--accent-2)}
+    .btn-lg{padding:.95rem 1.8rem;font-size:.95rem}
+    .topbar{background:#03060e;border-bottom:1px solid var(--border);font-size:.75rem;color:var(--muted)}
+    .topbar-inner{display:flex;align-items:center;justify-content:space-between;height:32px;gap:1rem;padding:0 2rem;max-width:var(--container);margin:0 auto}
+    .topbar-status{display:flex;align-items:center;gap:.4rem}
+    .topbar-status .dot{width:6px;height:6px;border-radius:50%;background:var(--warning);box-shadow:0 0 6px var(--warning)}
+    .topbar-links{display:flex;gap:1.5rem;align-items:center}
+    .topbar a{color:var(--muted);font-weight:500}
+    header.site-nav{position:sticky;top:0;z-index:200;background:rgba(5,8,16,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+    .nav-inner{display:flex;align-items:center;gap:2.5rem;height:64px;padding:0 2rem;max-width:var(--container);margin:0 auto}
+    .nav-brand{display:flex;align-items:center;gap:.6rem;font-weight:700;font-size:1.15rem;color:var(--text);text-decoration:none}
+    .nav-brand img{width:30px;height:30px}
+    .nav-primary{display:flex;align-items:center;gap:.25rem;list-style:none;flex:1}
+    .nav-primary>li>a{padding:.55rem .9rem;font-size:.875rem;font-weight:500;color:var(--text-2);border-radius:var(--radius-sm);text-decoration:none}
+    .nav-primary>li>a:hover{color:var(--text);background:var(--bg-2)}
+    .nav-cta{display:flex;align-items:center;gap:.5rem}
+    .theme-toggle{width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--border-2);border-radius:6px;cursor:pointer;color:var(--text)}
+
+    .hero{padding:6rem 0 4rem;text-align:center}
+    .eyebrow{display:inline-block;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-2);font-weight:700;margin-bottom:1rem}
+    h1{font-size:clamp(2.2rem,4.5vw,3.5rem);font-weight:800;color:#fff;letter-spacing:-.02em;line-height:1.08;margin-bottom:1.25rem;text-wrap:balance}
+    h1 .accent{background:linear-gradient(135deg,#0091da,#00c389);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .lede{font-size:1.125rem;color:var(--text-2);max-width:640px;margin:0 auto 2rem}
+
+    .section{padding:5rem 0}
+    .section-bg{background:var(--bg-1);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+    h2{font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;color:#fff;text-align:center;margin-bottom:1rem;letter-spacing:-.01em}
+    .sub{color:var(--text-2);text-align:center;max-width:620px;margin:0 auto 2.5rem}
+
+    .frameworks{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.25rem;max-width:1080px;margin:0 auto}
+    .fw{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.75rem;position:relative}
+    .fw.in-progress{border-color:var(--warning)}
+    .fw.scanner{border-color:var(--success)}
+    .fw-status{position:absolute;top:1rem;right:1rem;font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:.15rem .5rem;border-radius:100px}
+    .fw-status.prog{background:rgba(245,166,35,.15);color:var(--warning);border:1px solid rgba(245,166,35,.3)}
+    .fw-status.live{background:rgba(0,195,137,.15);color:var(--success);border:1px solid rgba(0,195,137,.3)}
+    .fw h3{font-size:1.15rem;font-weight:700;color:#fff;margin:0 0 .5rem}
+    .fw p{font-size:.875rem;color:var(--text-2);line-height:1.55}
+    .fw .eta{font-size:.75rem;color:var(--muted);margin-top:.75rem;font-family:'JetBrains Mono',monospace}
+
+    .controls-tbl{width:100%;border-collapse:collapse;font-size:.875rem}
+    .controls-tbl th{background:var(--bg-2);color:var(--text);font-weight:600;padding:.7rem 1rem;text-align:left;border:1px solid var(--border)}
+    .controls-tbl td{padding:.6rem 1rem;border:1px solid var(--border);color:var(--text-2);vertical-align:top}
+    .controls-tbl tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+    .pass{color:var(--success);font-weight:700}
+    .partial{color:var(--warning);font-weight:700}
+
+    footer.site-footer{background:#03060e;border-top:1px solid var(--border);padding:3rem 0 2rem;font-size:.85rem;color:var(--muted)}
+    .footer-inner{max-width:var(--container);margin:0 auto;padding:0 2rem;display:flex;flex-wrap:wrap;justify-content:space-between;gap:1rem}
+    .footer-links a{color:var(--muted);margin-right:1.25rem}
+    @media(max-width:700px){.nav-primary{display:none}}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="topbar-status"><span class="dot"></span><span>SOC 2 Type II audit in progress</span><span style="color:var(--border-2)"> · </span><span>Target: Q4 2026</span></div>
+    <div class="topbar-links">
+      <a href="/security/bug-bounty/">Bug bounty</a>
+      <a href="/status/">Status</a>
+    </div>
+  </div>
+</div>
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-brand"><img src="../sadeceikon.png" alt="OXware" />OXware</a>
+    <ul class="nav-primary">
+      <li><a href="/">Home</a></li>
+      <li><a href="/pricing/">Pricing</a></li>
+      <li><a href="/docs/">Documentation</a></li>
+      <li><a href="/marketplace/">Marketplace</a></li>
+      <li><a href="/compliance/" style="color:var(--accent-2)">Compliance</a></li>
+    </ul>
+    <div class="nav-cta">
+      <button id="theme-toggle" class="theme-toggle"><i class="fas fa-moon ico-dark"></i><i class="fas fa-sun ico-light"></i></button>
+      <a href="mailto:compliance@oxware.top" class="btn btn-primary"><i class="fas fa-file-shield"></i> Request audit pack</a>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <div class="eyebrow">Compliance Posture</div>
+    <h1>Built <span class="accent">audit-ready,</span><br>not retrofitted.</h1>
+    <p class="lede">SOC 2 Type II and ISO 27001 audits are underway. Until they land, OXware ships a built-in compliance scanner that maps every host setting to CIS, NIST 800-53, PCI-DSS, HIPAA, and ISO 27001 controls — and auto-generates auditor-ready PDF reports on demand.</p>
+    <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap">
+      <a href="#frameworks" class="btn btn-primary btn-lg"><i class="fas fa-list-check"></i> See frameworks</a>
+      <a href="mailto:compliance@oxware.top" class="btn btn-outline btn-lg">Request audit pack</a>
+    </div>
+  </div>
+</section>
+
+<section class="section section-bg" id="frameworks">
+  <div class="container">
+    <h2>Certification roadmap</h2>
+    <p class="sub">Public progress, real dates, no marketing fog.</p>
+    <div class="frameworks">
+      <div class="fw in-progress">
+        <span class="fw-status prog">In Progress</span>
+        <h3>SOC 2 Type II</h3>
+        <p>Independent auditor engaged. Continuous-monitoring controls live since v2.7.0 (audit log, RBAC, encryption-at-rest, immutable change log).</p>
+        <div class="eta">Audit window: 2026-04 → 2026-10. Report ETA: 2026-Q4.</div>
+      </div>
+      <div class="fw in-progress">
+        <span class="fw-status prog">In Progress</span>
+        <h3>ISO 27001:2022</h3>
+        <p>ISMS scope: oxware.top SaaS components + the OXware Hypervisor product. Stage 1 audit complete; Stage 2 scheduled.</p>
+        <div class="eta">Stage 2: 2026-Q3. Certificate ETA: 2026-Q4.</div>
+      </div>
+      <div class="fw scanner">
+        <span class="fw-status live">Live now</span>
+        <h3>CIS Benchmark scanner</h3>
+        <p>Built into the panel. Maps every host setting to CIS Linux + KVM Hardening Benchmark. Auto-remediation suggestions per finding.</p>
+        <div class="eta">Bundled since v2.5.0. Hourly scan cadence.</div>
+      </div>
+      <div class="fw scanner">
+        <span class="fw-status live">Live now</span>
+        <h3>NIST 800-53 Rev. 5</h3>
+        <p>AC, AU, CM, IA, SC, SI control families covered by built-in audit log + RBAC + crypto modules + supply-chain controls.</p>
+        <div class="eta">Mapping doc at <a href="/docs/#nist-mapping">docs/#nist-mapping</a></div>
+      </div>
+      <div class="fw scanner">
+        <span class="fw-status live">Live now</span>
+        <h3>PCI-DSS v4.0</h3>
+        <p>For workloads handling cardholder data. Scanner flags shared-tenancy violations, weak ciphers, and missing logs.</p>
+        <div class="eta">Section 1.1, 2.2, 8.x, 10.x covered.</div>
+      </div>
+      <div class="fw scanner">
+        <span class="fw-status live">Live now</span>
+        <h3>HIPAA Security Rule</h3>
+        <p>BAA-ready feature set: at-rest encryption, audit chain, RBAC with break-glass, immutable change log, session recording.</p>
+        <div class="eta">§164.308, §164.312 controls mapped.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2>Built-in compliance scanner</h2>
+    <p class="sub">Hit one endpoint, get an auditor-ready PDF. Same report your auditor will accept.</p>
+    <div style="overflow-x:auto;max-width:1080px;margin:0 auto">
+      <table class="controls-tbl">
+        <thead><tr><th>Control family</th><th>Standard</th><th>v2.7.2 coverage</th><th>How OXware satisfies it</th></tr></thead>
+        <tbody>
+          <tr><td>Access control</td><td>SOC 2 CC6 / ISO A.9 / 800-53 AC</td><td class="pass">Pass</td><td>RBAC + LDAP/AD + SSO (SAML/OIDC) + 2FA + recovery codes + audit trail.</td></tr>
+          <tr><td>Audit logging</td><td>SOC 2 CC7 / 800-53 AU</td><td class="pass">Pass</td><td>SHA-256 hash-chained audit log, immutable JSONL, 90-day retention policy, SIEM export (Splunk, Elastic, Wazuh).</td></tr>
+          <tr><td>Cryptography at rest</td><td>HIPAA §164.312(a)(2)(iv) / PCI 3.5</td><td class="pass">Pass</td><td>LUKS2 on host disks, AES-256-GCM for credential vault, vTPM-sealed keys for confidential VMs.</td></tr>
+          <tr><td>Cryptography in transit</td><td>PCI 4.2.1 / 800-53 SC-8</td><td class="pass">Pass</td><td>TLS 1.3 default, HSTS, secure ciphers only, mTLS for cluster federation.</td></tr>
+          <tr><td>Change management</td><td>SOC 2 CC8 / ISO A.12.1.2</td><td class="pass">Pass</td><td>GitOps manifest sync, immutable change log, plugin AST validation, signed releases.</td></tr>
+          <tr><td>Vendor management</td><td>SOC 2 CC9</td><td class="partial">Partial</td><td>CycloneDX SBOM auto-generated per release; subprocessor list published quarterly.</td></tr>
+          <tr><td>Incident response</td><td>800-53 IR / ISO A.16</td><td class="pass">Pass</td><td>Auto-remediation runbooks, anomaly detector, alert correlation, on-call rotation via PagerDuty integration.</td></tr>
+          <tr><td>Vulnerability mgmt</td><td>PCI 11 / 800-53 RA-5</td><td class="pass">Pass</td><td>pip-audit + Bandit in CI, bug bounty program, SEC-001..033 tracked, quarterly pen-test rotation.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section section-bg">
+  <div class="container" style="text-align:center;max-width:680px">
+    <h2>Need the audit pack now?</h2>
+    <p class="sub">Email us for the security questionnaire kit: CAIQ Lite, NIST mapping spreadsheet, SBOM, pen-test summary, sample scanner output. NDA-friendly.</p>
+    <a href="mailto:compliance@oxware.top?subject=Audit pack request" class="btn btn-primary btn-lg"><i class="fas fa-envelope"></i> compliance@oxware.top</a>
+    <div style="font-size:.78rem;color:var(--muted);margin-top:1rem">Response within 1 business day. We share NDA template on first reply.</div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div>&copy; 2026 OXware Compliance.</div>
+    <div class="footer-links">
+      <a href="/security/bug-bounty/">Bug bounty</a>
+      <a href="/status/">Status</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="mailto:compliance@oxware.top">compliance@oxware.top</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

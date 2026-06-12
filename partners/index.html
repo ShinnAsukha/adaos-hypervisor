@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OXware Partners — Reseller &amp; MSP Program | 30% Commission</title>
+  <meta name="description" content="Earn 30% recurring commission on every OXware subscription. Built for hosting providers, MSPs, and system integrators. WHMCS/WiseCP/DiyoCP modules included." />
+  <meta name="keywords" content="oxware partners, kvm reseller program, hosting partner, msp partnership, vmware alternative reseller" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#0a0e1a" />
+  <link rel="icon" type="image/png" href="../sadeceikon.png" />
+  <link rel="canonical" href="https://oxware.top/partners/" />
+  <meta property="og:title" content="OXware Reseller &amp; MSP Partner Program" />
+  <meta property="og:description" content="30% recurring commission. Co-marketing. Free NFR licenses. Hosting + MSP focus." />
+  <meta property="og:image" content="https://oxware.top/sadeceikon.png" />
+  <meta property="og:url" content="https://oxware.top/partners/" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/theme.css?v=271" />
+  <script src="/assets/theme.js?v=271"></script>
+  <style>
+    :root { --bg-0:#050810;--bg-1:#0a0e1a;--bg-2:#0f1525;--bg-3:#161d2e;--border:#1e2638;--border-2:#2a334a;--text:#e6ebf5;--text-2:#b8c2d6;--muted:#6b7689;--accent:#0091da;--accent-2:#00b8e6;--accent-deep:#0066b3;--success:#00c389;--warning:#f5a623;--danger:#e74c5e;--container:1280px;--radius-sm:4px;--radius:8px;--radius-lg:12px;--shadow-3:0 24px 60px rgba(0,0,0,.6); }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{background:var(--bg-0);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+    a{color:var(--accent-2);text-decoration:none}
+    .container{max-width:var(--container);margin:0 auto;padding:0 2rem}
+    .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.7rem 1.4rem;font-size:.875rem;font-weight:600;border-radius:var(--radius-sm);border:1px solid transparent;cursor:pointer;text-decoration:none;white-space:nowrap;transition:all .18s}
+    .btn-primary{background:var(--accent);color:#fff}
+    .btn-primary:hover{background:var(--accent-deep)}
+    .btn-outline{background:transparent;color:var(--text);border-color:var(--border-2)}
+    .btn-outline:hover{border-color:var(--accent);color:var(--accent-2)}
+    .btn-lg{padding:.95rem 1.8rem;font-size:.95rem}
+    .topbar{background:#03060e;border-bottom:1px solid var(--border);font-size:.75rem;color:var(--muted)}
+    .topbar-inner{display:flex;align-items:center;justify-content:space-between;height:32px;gap:1rem;padding:0 2rem;max-width:var(--container);margin:0 auto}
+    .topbar-status{display:flex;align-items:center;gap:.4rem}
+    .topbar-status .dot{width:6px;height:6px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success)}
+    .topbar-links{display:flex;gap:1.5rem;align-items:center}
+    .topbar a{color:var(--muted);font-weight:500}
+    header.site-nav{position:sticky;top:0;z-index:200;background:rgba(5,8,16,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+    .nav-inner{display:flex;align-items:center;gap:2.5rem;height:64px;padding:0 2rem;max-width:var(--container);margin:0 auto}
+    .nav-brand{display:flex;align-items:center;gap:.6rem;font-weight:700;font-size:1.15rem;color:var(--text);text-decoration:none}
+    .nav-brand img{width:30px;height:30px}
+    .nav-primary{display:flex;align-items:center;gap:.25rem;list-style:none;flex:1}
+    .nav-primary>li>a{padding:.55rem .9rem;font-size:.875rem;font-weight:500;color:var(--text-2);border-radius:var(--radius-sm);text-decoration:none}
+    .nav-primary>li>a:hover{color:var(--text);background:var(--bg-2)}
+    .nav-cta{display:flex;align-items:center;gap:.5rem}
+    .theme-toggle{width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--border-2);border-radius:6px;cursor:pointer;color:var(--text);font-size:1rem}
+
+    .hero{padding:6rem 0 4rem;text-align:center}
+    .eyebrow{display:inline-block;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-2);font-weight:700;margin-bottom:1rem}
+    h1{font-size:clamp(2.2rem,4.5vw,3.5rem);font-weight:800;color:#fff;letter-spacing:-.02em;line-height:1.08;margin-bottom:1.25rem;text-wrap:balance}
+    h1 .accent{background:linear-gradient(135deg,#0091da,#00c389);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .lede{font-size:1.125rem;color:var(--text-2);max-width:640px;margin:0 auto 2rem}
+
+    .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;max-width:920px;margin:3rem auto 0;padding:0 2rem}
+    .stat{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;text-align:center}
+    .stat-num{font-size:2rem;font-weight:800;color:var(--accent-2);font-family:'JetBrains Mono',monospace}
+    .stat-lbl{font-size:.78rem;color:var(--muted);margin-top:.4rem}
+
+    .section{padding:5rem 0}
+    .section-bg{background:var(--bg-1);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+    h2{font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;color:#fff;text-align:center;margin-bottom:1rem;letter-spacing:-.01em}
+    .sub{color:var(--text-2);text-align:center;max-width:620px;margin:0 auto 2.5rem}
+
+    .benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.25rem}
+    .benefit{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.75rem;transition:border-color .15s,transform .15s}
+    .benefit:hover{border-color:var(--accent);transform:translateY(-2px)}
+    .benefit-icon{width:44px;height:44px;border-radius:var(--radius);background:linear-gradient(135deg,rgba(0,145,218,.15),rgba(0,184,230,.05));display:flex;align-items:center;justify-content:center;color:var(--accent-2);font-size:1.25rem;margin-bottom:1rem}
+    .benefit h3{font-size:1.05rem;font-weight:700;color:#fff;margin-bottom:.5rem}
+    .benefit p{font-size:.875rem;color:var(--text-2);line-height:1.55}
+
+    .tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.25rem;margin-top:2rem}
+    .tier{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem;position:relative}
+    .tier.featured{border-color:var(--accent);background:linear-gradient(145deg,rgba(0,145,218,.06),var(--bg-2))}
+    .tier-name{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-2);font-weight:700;margin-bottom:.5rem}
+    .tier-pct{font-size:2.4rem;font-weight:800;color:#fff;letter-spacing:-.02em}
+    .tier-pct span{font-size:.9rem;color:var(--muted);font-weight:500}
+    .tier ul{list-style:none;margin-top:1.25rem;display:flex;flex-direction:column;gap:.55rem}
+    .tier li{display:flex;gap:.6rem;align-items:flex-start;font-size:.85rem;color:var(--text-2)}
+    .tier li i{color:var(--success);margin-top:.2rem;flex-shrink:0}
+
+    .form-card{max-width:640px;margin:0 auto;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+    .form-group label{display:block;font-size:.78rem;font-weight:600;color:var(--text-2);margin-bottom:.4rem}
+    .form-group input,.form-group select,.form-group textarea{width:100%;padding:.65rem .8rem;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:.875rem;font-family:inherit}
+    .form-group textarea{min-height:90px;resize:vertical}
+
+    footer.site-footer{background:#03060e;border-top:1px solid var(--border);padding:3rem 0 2rem;font-size:.85rem;color:var(--muted)}
+    .footer-inner{max-width:var(--container);margin:0 auto;padding:0 2rem;display:flex;flex-wrap:wrap;justify-content:space-between;gap:1rem}
+    .footer-links a{color:var(--muted);margin-right:1.25rem}
+    .footer-links a:hover{color:var(--text-2)}
+
+    @media(max-width:700px){
+      .nav-primary{display:none}
+      .form-row{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="topbar-status"><span class="dot"></span><span>Partner program live</span><span style="color:var(--border-2)"> · </span><span>30% commission</span></div>
+    <div class="topbar-links">
+      <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a>
+      <a href="https://discord.gg/c6yHhKrQs5" target="_blank" rel="noopener"><i class="fab fa-discord"></i> Discord</a>
+    </div>
+  </div>
+</div>
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-brand"><img src="../sadeceikon.png" alt="OXware" />OXware</a>
+    <ul class="nav-primary">
+      <li><a href="/">Home</a></li>
+      <li><a href="/pricing/">Pricing</a></li>
+      <li><a href="/docs/">Documentation</a></li>
+      <li><a href="/marketplace/">Marketplace</a></li>
+      <li><a href="/partners/" style="color:var(--accent-2)">Partners</a></li>
+    </ul>
+    <div class="nav-cta">
+      <button id="theme-toggle" class="theme-toggle"><i class="fas fa-moon ico-dark"></i><i class="fas fa-sun ico-light"></i></button>
+      <a href="#apply" class="btn btn-primary"><i class="fas fa-handshake"></i> Apply now</a>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <div class="eyebrow">Partner Program</div>
+    <h1>Resell OXware.<br><span class="accent">Earn 30% recurring.</span></h1>
+    <p class="lede">Built for hosting providers, MSPs, and system integrators. Bring OXware to your customers and keep a real cut of every renewal — not just the first payment.</p>
+    <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap">
+      <a href="#apply" class="btn btn-primary btn-lg"><i class="fas fa-handshake"></i> Become a partner</a>
+      <a href="#tiers" class="btn btn-outline btn-lg">See tier benefits</a>
+    </div>
+  </div>
+  <div class="stats-row">
+    <div class="stat"><div class="stat-num">30%</div><div class="stat-lbl">Recurring commission</div></div>
+    <div class="stat"><div class="stat-num">$0</div><div class="stat-lbl">Setup &amp; certification fee</div></div>
+    <div class="stat"><div class="stat-num">5</div><div class="stat-lbl">NFR licenses included</div></div>
+    <div class="stat"><div class="stat-num">24h</div><div class="stat-lbl">Application response SLA</div></div>
+  </div>
+</section>
+
+<section class="section section-bg">
+  <div class="container">
+    <h2>What partners get</h2>
+    <p class="sub">Real recurring revenue, real co-marketing dollars, real product input.</p>
+    <div class="benefits">
+      <div class="benefit"><div class="benefit-icon"><i class="fas fa-money-bill-trend-up"></i></div><h3>30% recurring</h3><p>Take 30% of every monthly, yearly, and lifetime sale you originate — for as long as the customer renews.</p></div>
+      <div class="benefit"><div class="benefit-icon"><i class="fas fa-plug"></i></div><h3>Hosting modules included</h3><p>Pre-built WHMCS, WiseCP, and DiyoCP integrations. Provision OXware nodes from your existing billing system in minutes.</p></div>
+      <div class="benefit"><div class="benefit-icon"><i class="fas fa-bullhorn"></i></div><h3>Co-marketing budget</h3><p>Gold-tier partners get a quarterly MDF (Market Development Fund) for joint webinars, ads, and conference booths.</p></div>
+      <div class="benefit"><div class="benefit-icon"><i class="fas fa-graduation-cap"></i></div><h3>Free certification</h3><p>Up to 5 free OXware Certified Administrator seats per quarter for your engineers.</p></div>
+      <div class="benefit"><div class="benefit-icon"><i class="fas fa-headset"></i></div><h3>Dedicated partner manager</h3><p>One human you can email. We share deal-registration deadlines, customer escalations, and roadmap previews.</p></div>
+      <div class="benefit"><div class="benefit-icon"><i class="fas fa-handshake-angle"></i></div><h3>Deal registration</h3><p>Lock a prospect with deal-reg and your commission is protected even if the customer buys direct later.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="tiers">
+  <div class="container">
+    <h2>Partner tiers</h2>
+    <p class="sub">Move up automatically based on annual recurring revenue you bring.</p>
+    <div class="tiers">
+      <div class="tier">
+        <div class="tier-name">Silver</div>
+        <div class="tier-pct">20%<span> recurring</span></div>
+        <ul>
+          <li><i class="fas fa-check"></i> No revenue minimum</li>
+          <li><i class="fas fa-check"></i> 2 NFR licenses</li>
+          <li><i class="fas fa-check"></i> Partner portal access</li>
+          <li><i class="fas fa-check"></i> Community Discord channel</li>
+          <li><i class="fas fa-check"></i> Hosting integrations included</li>
+        </ul>
+      </div>
+      <div class="tier featured">
+        <div class="tier-name">Gold (most popular)</div>
+        <div class="tier-pct">30%<span> recurring</span></div>
+        <ul>
+          <li><i class="fas fa-check"></i> $25k ARR or 50 active customers</li>
+          <li><i class="fas fa-check"></i> 5 NFR licenses</li>
+          <li><i class="fas fa-check"></i> Quarterly MDF budget</li>
+          <li><i class="fas fa-check"></i> Dedicated partner manager</li>
+          <li><i class="fas fa-check"></i> Deal-reg protection</li>
+          <li><i class="fas fa-check"></i> Logo on /partners/ + newsletter feature</li>
+        </ul>
+      </div>
+      <div class="tier">
+        <div class="tier-name">Platinum</div>
+        <div class="tier-pct">40%<span> recurring</span></div>
+        <ul>
+          <li><i class="fas fa-check"></i> $250k ARR or 500 active customers</li>
+          <li><i class="fas fa-check"></i> Unlimited NFR + cert seats</li>
+          <li><i class="fas fa-check"></i> Roadmap influence + private slack</li>
+          <li><i class="fas fa-check"></i> Joint case studies + PR</li>
+          <li><i class="fas fa-check"></i> Conference co-branding budget</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-bg" id="apply">
+  <div class="container">
+    <h2>Apply for partnership</h2>
+    <p class="sub">Fill out the form and we'll respond within 24 hours. Real human, no marketing automation.</p>
+    <form class="form-card" action="mailto:partners@oxware.top" method="post" enctype="text/plain">
+      <div class="form-row">
+        <div class="form-group"><label>Company name</label><input name="company" required></div>
+        <div class="form-group"><label>Website</label><input name="website" placeholder="https://" required></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Your name</label><input name="name" required></div>
+        <div class="form-group"><label>Email</label><input type="email" name="email" required></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Business type</label><select name="type"><option>Hosting provider</option><option>MSP / Managed Service Provider</option><option>System Integrator</option><option>Consultancy</option><option>Other</option></select></div>
+        <div class="form-group"><label>Estimated annual revenue you can drive</label><select name="arr"><option>Under $25k</option><option>$25k – $100k</option><option>$100k – $500k</option><option>$500k+</option></select></div>
+      </div>
+      <div class="form-group" style="margin-bottom:1.25rem"><label>Tell us about your customer base</label><textarea name="message" placeholder="Who do you sell to today? What hypervisor are they on now?"></textarea></div>
+      <button type="submit" class="btn btn-primary btn-lg" style="width:100%;justify-content:center"><i class="fas fa-paper-plane"></i> Submit application</button>
+      <div style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:.75rem">By submitting you agree to be contacted about the partner program. You can opt out anytime.</div>
+    </form>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div>&copy; 2026 OXware. Partner Program v1.0.</div>
+    <div class="footer-links">
+      <a href="/pricing/">Pricing</a>
+      <a href="/docs/">Docs</a>
+      <a href="/compliance/">Compliance</a>
+      <a href="/security/bug-bounty/">Bug Bounty</a>
+      <a href="mailto:partners@oxware.top">partners@oxware.top</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
