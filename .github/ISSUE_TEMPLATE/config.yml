@@ -1,0 +1,17 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discord — community chat
+    url: https://discord.gg/c6yHhKrQs5
+    about: Real-time help, plugin showcase, alpha-test announcements.
+  - name: 🐛 Security vulnerability — private disclosure
+    url: https://github.com/ShinnAsukha/oxware-hypervisor/security/advisories/new
+    about: Report vulnerabilities privately. Bounties up to $5000.
+  - name: 📚 Documentation
+    url: https://oxware.top/docs/
+    about: Installation, configuration, REST API reference, troubleshooting.
+  - name: 💰 Buy a Pro / Lifetime plan
+    url: https://oxware.top/pricing/
+    about: Pricing — Standard $35/mo · Pro $250/yr · Lifetime $2000.
+  - name: 🤝 Partner program
+    url: https://oxware.top/partners/
+    about: Reseller / MSP — 30% recurring commission.
