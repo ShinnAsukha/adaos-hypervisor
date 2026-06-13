@@ -164,20 +164,6 @@ sudo bash install.sh
 
 ---
 
-## 📸 Screenshots
-
-> Add your screenshots under `docs/screenshots/`. The panel is dark-themed by default with one-click light/orange theme toggle.
-
-| Dashboard | VM detail | Topology |
-|---|---|---|
-| `docs/screenshots/dashboard.png` | `docs/screenshots/vm-detail.png` | `docs/screenshots/topology.png` |
-
-| Confidential VMs | Cluster federation | Runbooks |
-|---|---|---|
-| `docs/screenshots/cvm.png` | `docs/screenshots/federation.png` | `docs/screenshots/runbooks.png` |
-
----
-
 ## 🌍 Six interface languages
 
 Full parity, 2400+ entries per language. CI gate blocks any merge that introduces an untranslated Turkish string.
