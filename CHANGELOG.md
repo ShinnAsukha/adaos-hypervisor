@@ -9,6 +9,42 @@ Entries are written plainly. Marketing language is avoided.
 
 ---
 
+## [2.8.0-rc1] - 2026-06-13
+
+### Added — modularization seed
+- New `oxware/backend/blueprints/` package introducing 5 domain
+  blueprints under `/api/v2/`:
+  - `v28_auth`        — `/api/v2/auth/{me,sessions,csrf/rotate,
+    permissions,touch}` (5 routes)
+  - `v28_vms`         — `/api/v2/vms`, `/api/v2/vms/<id>`,
+    `/api/v2/vms/<id>/state`, `/api/v2/vms/<id>/snapshots/count`,
+    `/api/v2/vms/by-tag/<tag>` (5 routes)
+  - `v28_networks`    — `/api/v2/networks` + free-IP, attached-VMs,
+    host-interfaces helpers (5 routes)
+  - `v28_storage`     — `/api/v2/storage/{pools, pools/<name>,
+    pools/<name>/{volumes,free-space}, isos}` (5 routes)
+  - `v28_monitoring`  — `/api/v2/monitoring/{host,top,alerts/recent,
+    anomalies/recent,system-health}` (5 routes)
+- 25 new endpoints total. Legacy `/api/*` routes in `app.py` remain
+  unchanged for backward compatibility.
+- Each blueprint follows the late-bind dependency-injection contract
+  from `bp_v270`: imports nothing from `app.py`, accepts
+  `require_auth / require_role / ok / err / deps` via `init_*_bp()`.
+- `MODULARIZATION_PLAN.md` published — tracks which routes have moved,
+  per-domain target counts for v2.8 GA, migration rules of engagement.
+- `tests/test_blueprints_v28.py` smoke suite: import check, init with
+  empty deps, route-count parity against MODULARIZATION_PLAN.md.
+
+### Changed
+- `app.py` wires the new blueprints alongside `bp_v270` + `bp_v272`
+  using the same fallback-import pattern. Failure of any individual
+  blueprint registration is logged as a warning and does not crash
+  the app — graceful degradation is preserved.
+- Version bumped 2.7.2 → 2.8.0-rc1 in app.py to flag the modularization
+  in-flight state.
+
+---
+
 ## [2.7.2] - 2026-06-12
 
 ### Security

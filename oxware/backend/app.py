@@ -774,6 +774,61 @@ if bp_v272_mod is not None:
     except Exception as _bpe2:
         log.warning("bp_v272 register failed: %s", _bpe2)
 
+# ── v2.8 modularization: domain blueprints under /api/v2/{auth,vms,...}
+# Legacy /api/* routes in this file are unchanged. New work lands here.
+try:
+    from oxware.backend import blueprints as _v28
+except Exception:
+    try:
+        import blueprints as _v28  # type: ignore
+    except Exception:
+        _v28 = None
+
+if _v28 is not None:
+    _v28_deps = {
+        "vm_manager": _safe_import("vm_manager"),
+        "network_manager": _safe_import("network_manager"),
+        "storage_manager": _safe_import("storage_manager"),
+        "iso_manager": _safe_import("iso_manager"),
+        "ipam": _safe_import("ipam_manager") or _safe_import("ip_pool"),
+        "system_monitor": _safe_import("system_monitor"),
+        "alert_rules": _safe_import("alert_rules"),
+        "anomaly_detector": _safe_import("anomaly_detector"),
+        "snapshot_manager": _safe_import("snapshot_manager"),
+        "auth": _safe_import("auth"),
+        "session_manager": _safe_import("session_manager") or _safe_import("auth"),
+        "rbac": _safe_import("rbac") or _safe_import("auth"),
+        "audit_log": _safe_import("audit_log"),
+        "get_current_user": (
+            lambda: (_safe_import("auth").get_current_user()
+                     if _safe_import("auth")
+                     and hasattr(_safe_import("auth"), "get_current_user")
+                     else None)
+        ),
+        "rotate_csrf": (
+            lambda: (_safe_import("auth").rotate_csrf()
+                     if _safe_import("auth")
+                     and hasattr(_safe_import("auth"), "rotate_csrf")
+                     else None)
+        ),
+    }
+    for _bp_mod, _init_name, _bp_name in (
+        (_v28.auth_bp, "init_auth_bp", "v28_auth"),
+        (_v28.vms_bp, "init_vms_bp", "v28_vms"),
+        (_v28.networks_bp, "init_networks_bp", "v28_networks"),
+        (_v28.storage_bp, "init_storage_bp", "v28_storage"),
+        (_v28.monitoring_bp, "init_monitoring_bp", "v28_monitoring"),
+    ):
+        try:
+            getattr(_bp_mod, _init_name)(
+                require_auth=require_auth, require_role=require_role,
+                ok=ok, err=err, deps=_v28_deps,
+            )
+            app.register_blueprint(_bp_mod.bp)
+            log.info("v2.8 blueprint registered: %s", _bp_name)
+        except Exception as _bpe3:
+            log.warning("v2.8 blueprint %s failed: %s", _bp_name, _bpe3)
+
 
 def _vmuser_check(vm_id):
     """
@@ -4555,7 +4610,7 @@ def api_system_info():
     return ok(
         host=system_monitor.get_host_info(),
         libvirt=system_monitor.get_libvirt_version(),
-        oxware_version="2.7.2",
+        oxware_version="2.8.0-rc1",
     )
 
 @app.route("/api/system/stats")
@@ -10132,7 +10187,7 @@ def api_openapi_spec():
         "openapi": "3.0.3",
         "info": {
             "title": "OXware Hypervisor API",
-            "version": "2.7.2",
+            "version": "2.8.0-rc1",
             "description": "KVM tabanlı hypervisor yönetim API'si"
         },
         "servers": [{"url": "/api", "description": "OXware API"}],
@@ -11598,7 +11653,7 @@ def api_provision_ping():
     else:
         panel = "Billing Panel"
     ev.info(f"Provisioning: {panel} baglantisi dogrulandi — IP: {client_ip}", category="provision")
-    return ok(status="ok", panel=panel, version="2.7.2", connected=True)
+    return ok(status="ok", panel=panel, version="2.8.0-rc1", connected=True)
 
 
 @app.route("/api/provision/create", methods=["POST"])
