@@ -250,16 +250,43 @@
 <div class="container">
   <div class="policy-wrap">
 
-    <div class="policy-updated"><i class="fas fa-calendar-check"></i> Last updated: June 11, 2026</div>
+    <div class="policy-updated"><i class="fas fa-calendar-check"></i> Last updated: June 13, 2026</div>
 
     <div class="policy-highlight">
-      <p><strong>Short version:</strong> OXware is self-hosted software. When you run OXware on your own hardware, we collect no data. This policy covers the oxware.top website and any optional cloud services.</p>
+      <p><strong>Short version:</strong> OXware is self-hosted software. By default it sends zero data to us. You may <em>optionally</em> opt in to anonymous usage telemetry from the panel (default OFF). This policy covers the oxware.top website, the optional telemetry, and our cloud services.</p>
     </div>
 
     <div class="policy-section">
-      <h2><i class="fas fa-server"></i> 1. Self-hosted software</h2>
-      <p>OXware Hypervisor is open-source software you install and run on your own servers. The hypervisor process does not phone home, does not send telemetry, and does not contact oxware.top during normal operation. All data your VMs generate stays on your hardware.</p>
+      <h2><i class="fas fa-server"></i> 1. Self-hosted software (default behaviour)</h2>
+      <p>OXware Hypervisor is open-source software you install and run on your own servers. By default, the hypervisor process does not phone home, does not send telemetry, and does not contact oxware.top during normal operation. All data your VMs generate stays on your hardware.</p>
       <p>Your hypervisor configuration, VM disk images, audit logs, and credential vault data never leave your system unless you explicitly configure a remote backup target.</p>
+    </div>
+
+    <hr class="policy-divider" />
+
+    <div class="policy-section">
+      <h2><i class="fas fa-chart-line"></i> 1b. Anonymous usage telemetry (opt-in, default OFF)</h2>
+      <p>Starting with v2.8.0-rc1, the panel exposes a <strong>Settings &rarr; Anonymous Telemetry</strong> page where an administrator may turn on a weekly anonymous usage ping. This setting is OFF by default. No data leaves your host until you explicitly enable it.</p>
+      <p><strong>What we collect when you enable it:</strong></p>
+      <ul>
+        <li>OXware version, install age (whole days)</li>
+        <li>Host OS family (ubuntu, debian) + version (22.04, 12) — never the full FQDN</li>
+        <li>CPU architecture (x86_64, aarch64), kernel major version</li>
+        <li>Logical CPU core count, total RAM in GB</li>
+        <li>VM count (integer), federation node count (integer)</li>
+        <li>List of feature-flag IDs that are turned on</li>
+        <li>Country code derived from the system locale (never from IP geolocation)</li>
+        <li>A random <code>installation_id</code> (UUIDv4) so we can count unique installs without identifying you. Wiped the moment you disable telemetry.</li>
+      </ul>
+      <p><strong>What we never collect &mdash; not even when you enable it:</strong></p>
+      <ul>
+        <li>IP addresses, hostnames, MAC addresses</li>
+        <li>Usernames, emails, passwords, API keys, tokens, licence keys</li>
+        <li>VM names, network names, storage paths, backup destinations</li>
+        <li>libvirt domain XML, panel configuration, audit log contents</li>
+      </ul>
+      <p>The payload is field-allowlisted at both ends. The full source for the collector is in <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/oxware/backend/telemetry_collector.py" target="_blank" rel="noopener"><code>oxware/backend/telemetry_collector.py</code></a> &mdash; audit it yourself. The panel shows you the exact JSON we would send before you flip the toggle.</p>
+      <p>You can disable telemetry at any time from the same panel page. Disabling wipes the <code>installation_id</code> so the next opt-in is treated as a brand new install with no historical linkage.</p>
     </div>
 
     <hr class="policy-divider" />
@@ -268,12 +295,13 @@
       <h2><i class="fas fa-globe"></i> 2. Website (oxware.top)</h2>
       <p>When you visit oxware.top, we collect standard web server logs:</p>
       <ul>
-        <li>IP address (anonymised after 24 hours)</li>
+        <li>IP address (anonymised after 24 hours, never written to disk in raw form)</li>
         <li>Browser user agent and referrer</li>
         <li>Pages visited and time spent</li>
-        <li>Country of origin (derived from IP, not stored individually)</li>
+        <li>Country of origin (derived from IP at the edge, not stored individually)</li>
       </ul>
-      <p>We use these logs solely for understanding aggregate traffic and detecting abuse. We do not use third-party analytics services (no Google Analytics, no Facebook Pixel, no similar trackers).</p>
+      <p>For aggregate page-view analytics we run <strong>Plausible Analytics</strong> &mdash; a privacy-focused, GDPR-compliant alternative to Google Analytics. Plausible does <strong>not</strong> use cookies, does <strong>not</strong> track users across sites, does <strong>not</strong> collect personal data, and hashes the IP address before any storage so individual visitors cannot be re-identified. Full Plausible data policy: <a href="https://plausible.io/data-policy" target="_blank" rel="noopener">plausible.io/data-policy</a>.</p>
+      <p>We use no other third-party analytics, no Google Analytics, no Facebook Pixel, no advertising trackers.</p>
     </div>
 
     <hr class="policy-divider" />
@@ -425,5 +453,7 @@
     burger.innerHTML = drawer.classList.contains('open') ? iconClose : iconOpen;
   });
 </script>
+<!-- Plausible Analytics — privacy-focused, no cookies, no personal data. See /privacy/ -->
+<script defer data-domain="oxware.top" src="https://plausible.io/js/script.js"></script>
 </body>
 </html>
