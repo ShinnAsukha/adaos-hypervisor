@@ -7499,6 +7499,40 @@
           <div class="card"><div class="card-title">Bekleyen Onay (First-contact)</div><div class="table-wrap"><table><thead><tr><th>Host</th><th>Tür</th><th>Fingerprint</th><th>İlk Görülme</th><th>İşlem</th></tr></thead><tbody id="kh-tbody"><tr><td colspan="5" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody></table></div></div>
         </div>
 
+        <!-- ══ v2.8 — Anonymous Telemetry (opt-in, default OFF) ══ -->
+        <div id="ent-pane-telemetry" style="display:none">
+          <div class="section-header"><h2><i class="fa-solid fa-chart-line fa-fw" style="color:#22c55e"></i> Anonim Kullanım Telemetrisi</h2><div class="spacer"></div><button class="btn" onclick="loadTelemetryPage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
+          <div class="card" style="margin-bottom:12px;border-left:4px solid #22c55e;background:rgba(34,197,94,.04);padding:14px">
+            <div style="font-size:12px;line-height:1.6">
+              <b style="color:#22c55e">Bu Nedir?</b> İsteğe bağlı, varsayılan kapalı, anonim kullanım istatistiği. OXware'i geliştirmek için kaç kişinin kullandığını, hangi sürümleri, hangi özellikleri kullandığını öğrenmemize yardımcı olur.
+              <br><br>
+              <b style="color:#22c55e">✓ Toplanan:</b> Sürüm, host OS ailesi (ubuntu/debian), mimari, kernel major, CPU çekirdek sayısı, RAM GB, VM sayısı, node sayısı, aktif feature ID'leri, ülke kodu (locale).
+              <br><b style="color:#ef4444">✗ ASLA toplanmayan:</b> IP, hostname, MAC, kullanıcı adı, email, şifre, VM isimleri, ağ konfigürasyonu, dosya yolları, lisans anahtarı.
+              <br><br>
+              <b style="color:#22c55e">Kaynak kod:</b> <code>oxware/backend/telemetry_collector.py</code> — açık kaynak, kendin doğrula.
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-title">Durum</div>
+            <div id="tele-status" class="text-muted" style="font-size:12px;margin-bottom:10px">Yükleniyor...</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button id="tele-btn-enable" class="btn-primary" onclick="teleEnable()" style="font-size:12px"><i class="fa-solid fa-toggle-on"></i> Etkinleştir</button>
+              <button id="tele-btn-disable" class="btn" onclick="teleDisable()" style="font-size:12px;color:#ef4444;border-color:rgba(239,68,68,.4);display:none"><i class="fa-solid fa-toggle-off"></i> Devre dışı bırak</button>
+              <button class="btn" onclick="teleSendNow()" style="font-size:12px"><i class="fa-solid fa-paper-plane"></i> Şimdi Gönder (Test)</button>
+              <button class="btn" onclick="telePreview()" style="font-size:12px"><i class="fa-solid fa-eye"></i> Gönderilecek Payload</button>
+            </div>
+            <div id="tele-msg" style="margin-top:10px;font-size:12px;display:none"></div>
+          </div>
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-title">Gönderilecek Payload (Preview)</div>
+            <pre id="tele-preview" style="font-size:11px;color:var(--text-muted);background:var(--surface2);padding:10px;border-radius:6px;overflow-x:auto;max-height:300px">"Gönderilecek Payload" butonuna tıkla</pre>
+          </div>
+          <div class="card">
+            <div class="card-title">Gönderim Geçmişi (lokal)</div>
+            <div class="table-wrap"><table><thead><tr><th>Zaman</th><th>OK</th><th>Sürüm</th><th>VM</th><th>Node</th></tr></thead><tbody id="tele-history-tbody"><tr><td colspan="5" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody></table></div>
+          </div>
+        </div>
+
         </div><!-- /page-tab-enterprise -->
 
         <!-- ══════════ /v2.5.6 ══════════ -->
@@ -33963,7 +33997,8 @@ const ENT_LOADERS = {
   auditretention: () => { try { loadAuditRetentionPage(); } catch(e) { console.warn(e); } },
   sbom:           () => { try { loadSbomPage(); } catch(e) { console.warn(e); } },
   pwa:            () => { try { loadPwaPage(); } catch(e) { console.warn(e); } },
-  knownhosts:     () => { try { loadKnownHostsPage(); } catch(e) { console.warn(e); } }
+  knownhosts:     () => { try { loadKnownHostsPage(); } catch(e) { console.warn(e); } },
+  telemetry:      () => { try { loadTelemetryPage(); } catch(e) { console.warn(e); } }
 };
 
 function entSubTab(tab) {
@@ -37498,6 +37533,96 @@ async function khReject(id) {
   if (d) { toast('Reddedildi','warn'); loadKnownHostsPage(); }
 }
 
+/* ──── Anonymous Telemetry (opt-in, default OFF) ──── */
+async function loadTelemetryPage() {
+  const d = await _api('/api/v2/telemetry/status');
+  const s = document.getElementById('tele-status');
+  if (!d) {
+    if (s) s.textContent = 'Telemetri modülü yüklenmedi.';
+    return;
+  }
+  const enabled = !!d.enabled;
+  const en = document.getElementById('tele-btn-enable');
+  const dis = document.getElementById('tele-btn-disable');
+  if (en) en.style.display = enabled ? 'none' : 'inline-flex';
+  if (dis) dis.style.display = enabled ? 'inline-flex' : 'none';
+  if (s) {
+    const lastSent = d.last_sent_at ? new Date(d.last_sent_at*1000).toLocaleString() : 'henüz gönderilmedi';
+    const enabledAt = d.enabled_at ? new Date(d.enabled_at*1000).toLocaleString() : '-';
+    const okBadge = d.last_send_ok === true ? '<span style="color:#22c55e">✓ başarılı</span>' :
+                    d.last_send_ok === false ? '<span style="color:#ef4444">✗ başarısız</span>' :
+                    '<span class="text-muted">-</span>';
+    s.innerHTML = `
+      <div><b>Durum:</b> <span style="color:${enabled?'#22c55e':'#ef4444'}">${enabled?'AKTİF':'KAPALI'}</span></div>
+      <div><b>Endpoint:</b> <code style="font-size:11px">${escHtml(d.endpoint||'-')}</code></div>
+      <div><b>Installation ID:</b> <code style="font-size:11px">${escHtml(d.installation_id||'-')}</code></div>
+      <div><b>Etkinleştirildi:</b> ${enabledAt}</div>
+      <div><b>Son gönderim:</b> ${lastSent} ${okBadge}</div>
+    `;
+  }
+  loadTelemetryHistory();
+}
+async function loadTelemetryHistory() {
+  const d = await _api('/api/v2/telemetry/history');
+  const arr = (d && d.history) || [];
+  const tb = document.getElementById('tele-history-tbody');
+  if (!tb) return;
+  if (!arr.length) {
+    tb.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding:14px">Henüz gönderim yok</td></tr>';
+    return;
+  }
+  tb.innerHTML = arr.slice(-20).reverse().map(e => {
+    const p = e.payload || {};
+    return `<tr>
+      <td>${e.ts?new Date(e.ts*1000).toLocaleString():'-'}</td>
+      <td>${e.ok ? '<span style="color:#22c55e">✓</span>' : '<span style="color:#ef4444">✗</span>'}</td>
+      <td style="font-family:monospace;font-size:10px">${escHtml(p.oxware_version||'-')}</td>
+      <td>${p.vm_count||0}</td>
+      <td>${p.node_count||0}</td>
+    </tr>`;
+  }).join('');
+}
+async function teleEnable() {
+  if (!await showConfirm('Anonim telemetri etkinleştirilecek. Topladığımız her şey açık kaynak (telemetry_collector.py). Devam?', 'Telemetri Etkinleştir', false)) return;
+  const d = await _api('/api/v2/telemetry/enable','POST',{});
+  if (d) {
+    toast('Telemetri etkinleştirildi. İlk ping arka planda atılacak.','success');
+    loadTelemetryPage();
+  }
+}
+async function teleDisable() {
+  if (!await showConfirm('Telemetri devre dışı bırakılacak. Installation ID silinecek.', 'Telemetri Devre Dışı', true)) return;
+  const d = await _api('/api/v2/telemetry/disable','POST');
+  if (d) {
+    toast('Telemetri kapatıldı.','warn');
+    loadTelemetryPage();
+  }
+}
+async function teleSendNow() {
+  const d = await _api('/api/v2/telemetry/send-now','POST');
+  const m = document.getElementById('tele-msg');
+  if (m) {
+    m.style.display = 'block';
+    if (d && d.ok) {
+      m.style.color = '#22c55e';
+      m.innerHTML = '<i class="fa-solid fa-circle-check"></i> Test başarılı.';
+    } else {
+      m.style.color = '#ef4444';
+      m.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> ' + escHtml((d && (d.error || d.skipped)) || 'Hata');
+    }
+  }
+  loadTelemetryHistory();
+}
+async function telePreview() {
+  const d = await _api('/api/v2/telemetry/preview');
+  const pre = document.getElementById('tele-preview');
+  if (pre && d && d.preview) {
+    pre.textContent = JSON.stringify(d.preview, null, 2);
+  } else if (pre) {
+    pre.textContent = 'Preview alınamadı.';
+  }
+}
+
 /* Wire panel loaders into the enterprise pane registry. */
 (function _wireV272Loaders() {
   if (typeof window === 'undefined') return;
@@ -37511,6 +37636,7 @@ async function khReject(id) {
     'ent-pane-sbom': loadSbomPage,
     'ent-pane-pwa': loadPwaPage,
     'ent-pane-knownhosts': loadKnownHostsPage,
+    'ent-pane-telemetry': loadTelemetryPage,
   };
   window._v272PaneLoaders = map;
 })();
@@ -37772,6 +37898,7 @@ const _PAGE_TABS = {
     {key:'sbom', label:'SBOM', src:'ent-pane-sbom'},
     {key:'pwa', label:'PWA Offline', src:'ent-pane-pwa'},
     {key:'knownhosts', label:'SSH Known-Hosts', src:'ent-pane-knownhosts'},
+    {key:'telemetry', label:'Anonim Telemetri', src:'ent-pane-telemetry'},
   ],
 };
 

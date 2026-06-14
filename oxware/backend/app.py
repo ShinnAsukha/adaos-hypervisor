@@ -829,6 +829,44 @@ if _v28 is not None:
         except Exception as _bpe3:
             log.warning("v2.8 blueprint %s failed: %s", _bp_name, _bpe3)
 
+    # ── Anonymous opt-in telemetry (default OFF) ──────────────────────────
+    try:
+        _telemetry = _safe_import("telemetry_collector")
+    except Exception:
+        _telemetry = None
+
+    def _telemetry_deps_factory():
+        """Cheap snapshot used by the background ping and the panel preview.
+        Counts only — no names, no paths, no identifiers."""
+        try:
+            _vm = _safe_import("vm_manager")
+            _fed = _safe_import("cluster_federation")
+            _flags = _safe_import("feature_registry")
+            return {
+                "oxware_version": "2.8.0-rc1",
+                "vm_count": len((_vm.list_vms() if _vm else []) or []),
+                "node_count": len((_fed.list_members() if _fed else []) or []),
+                "enabled_features": [
+                    f["id"] for f in (_flags.list_enabled() if _flags else [])
+                ] if _flags and hasattr(_flags, "list_enabled") else [],
+            }
+        except Exception:
+            return {"oxware_version": "2.8.0-rc1"}
+
+    if _telemetry is not None:
+        try:
+            _v28.telemetry_bp.init_telemetry_bp(
+                require_auth=require_auth, require_role=require_role,
+                ok=ok, err=err,
+                telemetry_module=_telemetry,
+                deps_factory=_telemetry_deps_factory,
+            )
+            app.register_blueprint(_v28.telemetry_bp.bp)
+            _telemetry.start_background_sender(_telemetry_deps_factory)
+            log.info("v2.8 telemetry blueprint registered (opt-in, default OFF)")
+        except Exception as _bpe4:
+            log.warning("telemetry blueprint failed: %s", _bpe4)
+
 
 def _vmuser_check(vm_id):
     """

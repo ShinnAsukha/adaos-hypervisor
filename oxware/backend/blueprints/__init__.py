@@ -15,7 +15,7 @@ Wiring contract (mirrors bp_v270 / bp_v272):
                  deps={"audit_log": audit_log, "auth": auth, ...})
     app.register_blueprint(auth_bp.bp)
 """
-from . import auth_bp, vms_bp, networks_bp, storage_bp, monitoring_bp
+from . import auth_bp, vms_bp, networks_bp, storage_bp, monitoring_bp, telemetry_bp
 
 __all__ = [
     "auth_bp",
@@ -23,4 +23,5 @@ __all__ = [
     "networks_bp",
     "storage_bp",
     "monitoring_bp",
+    "telemetry_bp",
 ]
