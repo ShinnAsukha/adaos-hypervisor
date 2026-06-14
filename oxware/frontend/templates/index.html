@@ -7513,6 +7513,16 @@
             </div>
           </div>
           <div class="card" style="margin-bottom:12px">
+            <div class="card-title">Endpoint (Toplayıcı Adresi)</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">
+              Telemetrinin gönderileceği adres. Kendi toplayıcını çalıştırıyorsan (örn. <code>ngrok</code> veya yerel sunucu) URL'ini buraya yaz. Boş bırakırsan varsayılan <code>telemetry.oxware.top</code> kullanılır — bu adres yoksa <code>Name or service not known</code> hatası alırsın.
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input id="tele-endpoint" type="text" class="form-control" placeholder="https://abc123.ngrok-free.app/api/v1/ping" style="flex:1;min-width:280px;font-family:monospace;font-size:11px">
+              <button class="btn" onclick="teleSaveEndpoint()" style="font-size:12px;white-space:nowrap"><i class="fa-solid fa-floppy-disk"></i> Kaydet</button>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:12px">
             <div class="card-title">Durum</div>
             <div id="tele-status" class="text-muted" style="font-size:12px;margin-bottom:10px">Yükleniyor...</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -37546,6 +37556,9 @@ async function loadTelemetryPage() {
   const dis = document.getElementById('tele-btn-disable');
   if (en) en.style.display = enabled ? 'none' : 'inline-flex';
   if (dis) dis.style.display = enabled ? 'inline-flex' : 'none';
+  // Populate endpoint field unless the operator is mid-edit (focused).
+  const epIn = document.getElementById('tele-endpoint');
+  if (epIn && document.activeElement !== epIn && d.endpoint) epIn.value = d.endpoint;
   if (s) {
     const lastSent = d.last_sent_at ? new Date(d.last_sent_at*1000).toLocaleString() : 'henüz gönderilmedi';
     const enabledAt = d.enabled_at ? new Date(d.enabled_at*1000).toLocaleString() : '-';
@@ -37584,9 +37597,23 @@ async function loadTelemetryHistory() {
 }
 async function teleEnable() {
   if (!await showConfirm('Anonim telemetri etkinleştirilecek. Topladığımız her şey açık kaynak (telemetry_collector.py). Devam?', 'Telemetri Etkinleştir', false)) return;
-  const d = await _api('/api/v2/telemetry/enable','POST',{});
+  const epIn = document.getElementById('tele-endpoint');
+  const endpoint = epIn ? epIn.value.trim() : '';
+  const body = endpoint ? {endpoint} : {};
+  const d = await _api('/api/v2/telemetry/enable','POST',body);
   if (d) {
     toast('Telemetri etkinleştirildi. İlk ping arka planda atılacak.','success');
+    loadTelemetryPage();
+  }
+}
+async function teleSaveEndpoint() {
+  // Persists endpoint WITHOUT changing the on/off state.
+  const epIn = document.getElementById('tele-endpoint');
+  const endpoint = epIn ? epIn.value.trim() : '';
+  if (!endpoint) { toast('Endpoint boş olamaz','error'); return; }
+  const d = await _api('/api/v2/telemetry/endpoint','POST',{endpoint});
+  if (d) {
+    toast('Endpoint kaydedildi: ' + endpoint,'success');
     loadTelemetryPage();
   }
 }

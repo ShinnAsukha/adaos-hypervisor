@@ -75,6 +75,18 @@ def _register_routes():
         except Exception as e:
             return _err(str(e), 400)
 
+    @bp.route("/api/v2/telemetry/endpoint", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_v2_tele_set_endpoint():
+        if not _tele:
+            return _err("telemetry module unavailable", 503)
+        d = request.get_json(silent=True) or {}
+        try:
+            return _ok(**_tele.set_endpoint(d.get("endpoint", "")))
+        except Exception as e:
+            return _err(str(e), 400)
+
     @bp.route("/api/v2/telemetry/disable", methods=["POST"])
     @_require_auth
     @_require_role("admin", "administrator")

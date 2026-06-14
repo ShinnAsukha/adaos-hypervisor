@@ -162,6 +162,23 @@ def disable() -> dict:
     return status()
 
 
+def set_endpoint(endpoint: str) -> dict:
+    """Persist the receiver endpoint WITHOUT changing the enabled state.
+    Lets an operator point telemetry at their own receiver before opting in,
+    or change it later, without silently turning telemetry on."""
+    if not isinstance(endpoint, str) or not endpoint.strip():
+        raise ValueError("endpoint must be a non-empty string")
+    ep = endpoint.strip()
+    if not (ep.startswith("http://") or ep.startswith("https://")):
+        raise ValueError("endpoint must start with http:// or https://")
+    with _LOCK:
+        cfg = _load_cfg()
+        cfg["endpoint"] = ep
+        _save_cfg(cfg)
+    log.info("telemetry endpoint set: %s", ep)
+    return status()
+
+
 def _detect_host_facts(deps: dict) -> dict:
     """Build the payload from host facts. Everything that could identify the
     operator (hostname, MAC, IP, username, paths) is intentionally absent."""
