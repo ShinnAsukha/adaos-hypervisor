@@ -744,6 +744,13 @@
     .dash-widget-label{display:none;position:absolute;top:4px;right:8px;font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;z-index:3}
     .dash-edit-mode .dash-widget-label{display:block}
 
+    /* Maturity badges for experimental / beta modules */
+    .mat-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:10px;margin-left:10px;vertical-align:middle}
+    .mat-badge.beta{background:rgba(0,184,230,.14);color:#00b8e6;border:1px solid rgba(0,184,230,.35)}
+    .mat-badge.exp{background:rgba(245,166,35,.14);color:#f5a623;border:1px solid rgba(245,166,35,.35)}
+    .mat-badge.ready{background:rgba(34,197,94,.14);color:#22c55e;border:1px solid rgba(34,197,94,.35)}
+    .mat-badge.notready{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.3)}
+
     /* Topology */
     #topo-canvas-wrap{position:relative;border:1px solid var(--border);border-radius:4px;background:var(--surface);overflow:hidden}
     #topo-svg{width:100%;height:100%;cursor:grab;display:block}
@@ -1323,7 +1330,7 @@
                 </div>
                 <div class="esxi-meta-row">
                   <span class="esxi-meta-key">Version</span>
-                  <span class="esxi-meta-val" id="ns-oxware-ver">2.7.2</span>
+                  <span class="esxi-meta-val" id="ns-oxware-ver">2.8.0</span>
                 </div>
                 <div class="esxi-meta-row">
                   <span class="esxi-meta-key">Kernel</span>
@@ -7378,7 +7385,7 @@
 
         <!-- ══ v2.7.2 — Kubernetes CSI ══ -->
         <div id="ent-pane-csi" style="display:none">
-          <div class="section-header"><h2><i class="fa-brands fa-docker fa-fw" style="color:#2496ed"></i> Kubernetes CSI</h2><div class="spacer"></div><button class="btn" onclick="loadCsiPage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
+          <div class="section-header"><h2><i class="fa-brands fa-docker fa-fw" style="color:#2496ed"></i> Kubernetes CSI <span class="mat-badge beta">Beta</span><span id="csi-ready-badge"></span></h2><div class="spacer"></div><button class="btn" onclick="loadCsiPage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
           <div class="card" style="margin-bottom:12px;border-left:4px solid #2496ed;background:rgba(36,150,237,.04);padding:14px"><div style="font-size:12px;line-height:1.6"><b style="color:#2496ed">Bu Nedir?</b> OXware depolama havuzlarını Kubernetes PersistentVolume olarak sunar. Provision / Snapshot / Resize tek API'den.</div></div>
           <div class="card" style="margin-bottom:12px"><div class="card-title">Sürücü Bilgisi</div><div id="csi-info" class="text-muted" style="font-size:12px">Yükleniyor...</div></div>
           <div class="card" style="margin-bottom:12px"><div class="card-title">Yeni Volume</div>
@@ -7391,51 +7398,6 @@
               <button class="btn-primary" onclick="csiProvision()" style="font-size:12px"><i class="fa-solid fa-plus"></i> Provision</button>
             </div></div>
           <div class="card"><div class="card-title">Volume'ler</div><div class="table-wrap"><table><thead><tr><th>ID</th><th>Havuz</th><th>Boyut</th><th>Namespace</th><th>PVC</th><th>FS</th><th>Durum</th><th>İşlem</th></tr></thead><tbody id="csi-vol-tbody"><tr><td colspan="8" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody></table></div></div>
-        </div>
-
-        <!-- ══ v2.7.2 — KubeVirt Bridge ══ -->
-        <div id="ent-pane-kubevirt" style="display:none">
-          <div class="section-header"><h2><i class="fa-solid fa-cubes fa-fw" style="color:#326ce5"></i> KubeVirt Bridge</h2><div class="spacer"></div><button class="btn" onclick="loadKubeVirtPage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
-          <div class="card" style="margin-bottom:12px;border-left:4px solid #326ce5;background:rgba(50,108,229,.04);padding:14px"><div style="font-size:12px;line-height:1.6"><b style="color:#326ce5">Bu Nedir?</b> Kayıtlı Kubernetes cluster'larındaki KubeVirt VirtualMachine CR'lerini OXware'de VM olarak çalıştır.</div></div>
-          <div class="card" style="margin-bottom:12px"><div class="card-title">Cluster Kaydet</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-              <div class="form-group" style="margin:0"><label style="font-size:11px">Cluster Adı</label><input id="kv-name" class="form-control" style="width:160px;margin-top:4px"></div>
-              <div class="form-group" style="margin:0"><label style="font-size:11px">Watch Namespace</label><input id="kv-ns" class="form-control" style="width:160px;margin-top:4px" placeholder="* (hepsi)"></div>
-              <div class="form-group" style="margin:0;flex:1;min-width:280px"><label style="font-size:11px">kubeconfig (base64)</label><textarea id="kv-cfg" class="form-control" style="width:100%;margin-top:4px;font-family:monospace;font-size:11px;height:60px"></textarea></div>
-              <button class="btn-primary" onclick="kvRegister()" style="font-size:12px"><i class="fa-solid fa-plus"></i> Kaydet</button>
-            </div></div>
-          <div class="card"><div class="card-title">Kayıtlı Cluster'lar</div><div class="table-wrap"><table><thead><tr><th>Adı</th><th>Namespace</th><th>Durum</th><th>Eklenme</th><th>İşlem</th></tr></thead><tbody id="kv-tbody"><tr><td colspan="5" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody></table></div></div>
-        </div>
-
-        <!-- ══ v2.7.2 — GitOps ══ -->
-        <div id="ent-pane-gitops" style="display:none">
-          <div class="section-header"><h2><i class="fa-solid fa-code-branch fa-fw" style="color:#f1502f"></i> GitOps Manager</h2><div class="spacer"></div><button class="btn" onclick="loadGitOpsPage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
-          <div class="card" style="margin-bottom:12px;border-left:4px solid #f1502f;background:rgba(241,80,47,.04);padding:14px"><div style="font-size:12px;line-height:1.6"><b style="color:#f1502f">Bu Nedir?</b> ArgoCD/Flux dizin yapısıyla uyumlu git repo sync. <code>vms/&lt;name&gt;.yaml</code> + <code>networks/&lt;name&gt;.yaml</code> manifesto'ları izle, drift raporu üret.</div></div>
-          <div class="card" style="margin-bottom:12px"><div class="card-title">Repo Ekle</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-              <div class="form-group" style="margin:0"><label style="font-size:11px">Ad</label><input id="go-name" class="form-control" style="width:140px;margin-top:4px"></div>
-              <div class="form-group" style="margin:0;flex:1;min-width:280px"><label style="font-size:11px">URL</label><input id="go-url" class="form-control" style="width:100%;margin-top:4px" placeholder="https://github.com/org/repo.git"></div>
-              <div class="form-group" style="margin:0"><label style="font-size:11px">Branch</label><input id="go-branch" class="form-control" style="width:100px;margin-top:4px" value="main"></div>
-              <div class="form-group" style="margin:0"><label style="font-size:11px">Auto-apply</label><div style="margin-top:8px"><input id="go-auto" type="checkbox"></div></div>
-              <button class="btn-primary" onclick="goAddRepo()" style="font-size:12px"><i class="fa-solid fa-plus"></i> Ekle</button>
-            </div></div>
-          <div class="card"><div class="card-title">Repo'lar</div><div class="table-wrap"><table><thead><tr><th>Ad</th><th>URL</th><th>Branch</th><th>Auto</th><th>Son Sync</th><th>Drift</th><th>İşlem</th></tr></thead><tbody id="go-tbody"><tr><td colspan="7" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody></table></div></div>
-        </div>
-
-        <!-- ══ v2.7.2 — Firecracker microVMs ══ -->
-        <div id="ent-pane-firecracker" style="display:none">
-          <div class="section-header"><h2><i class="fa-solid fa-fire fa-fw" style="color:#ff8000"></i> Firecracker microVMs</h2><div class="spacer"></div><button class="btn" onclick="loadFirecrackerPage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
-          <div class="card" style="margin-bottom:12px;border-left:4px solid #ff8000;background:rgba(255,128,0,.04);padding:14px"><div style="font-size:12px;line-height:1.6"><b style="color:#ff8000">Bu Nedir?</b> &lt;125 ms boot, &lt;5 MB overhead microVM ikinci-katman runtime. Serverless / CI runner / per-request VM.</div></div>
-          <div class="card" style="margin-bottom:12px"><div class="card-title">microVM Başlat</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-              <div class="form-group" style="margin:0"><label style="font-size:11px">Ad</label><input id="fc-name" class="form-control" style="width:140px;margin-top:4px"></div>
-              <div class="form-group" style="margin:0;flex:1;min-width:240px"><label style="font-size:11px">Kernel Yolu</label><input id="fc-kernel" class="form-control" style="width:100%;margin-top:4px" placeholder="/var/lib/oxware/vmlinux"></div>
-              <div class="form-group" style="margin:0;flex:1;min-width:240px"><label style="font-size:11px">RootFS Yolu</label><input id="fc-rootfs" class="form-control" style="width:100%;margin-top:4px" placeholder="/var/lib/oxware/rootfs.ext4"></div>
-              <div class="form-group" style="margin:0"><label style="font-size:11px">vCPU</label><input id="fc-vcpu" type="number" class="form-control" style="width:70px;margin-top:4px" value="1"></div>
-              <div class="form-group" style="margin:0"><label style="font-size:11px">RAM (MB)</label><input id="fc-mem" type="number" class="form-control" style="width:90px;margin-top:4px" value="128"></div>
-              <button class="btn-primary" onclick="fcLaunch()" style="font-size:12px"><i class="fa-solid fa-fire"></i> Başlat</button>
-            </div></div>
-          <div class="card"><div class="card-title">Aktif microVM'ler</div><div class="table-wrap"><table><thead><tr><th>ID</th><th>Ad</th><th>vCPU</th><th>RAM</th><th>Durum</th><th>Socket</th><th>İşlem</th></tr></thead><tbody id="fc-tbody"><tr><td colspan="7" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody></table></div></div>
         </div>
 
         <!-- ══ v2.7.2 — OAuth2 Presets ══ -->
@@ -23256,7 +23218,7 @@ function buildContextNav(type) {
     <!-- Key facts -->
     <div style="display:flex;flex-direction:column;gap:3px;color:var(--text-muted);font-size:10px">
       <div style="display:flex;justify-content:space-between"><span>Host IP</span><span id="sb-host-ip" style="color:var(--text);font-family:monospace">—</span></div>
-      <div style="display:flex;justify-content:space-between"><span>Sürüm</span><span id="sb-version" style="color:var(--text)">2.7.2</span></div>
+      <div style="display:flex;justify-content:space-between"><span>Sürüm</span><span id="sb-version" style="color:var(--text)">2.8.0</span></div>
       <div style="display:flex;justify-content:space-between"><span>Uptime</span><span id="sb-uptime" style="color:var(--text)">—</span></div>
       <div style="display:flex;justify-content:space-between"><span>CPU</span><span id="sb-cpu-count" style="color:var(--text)">—</span></div>
       <div style="display:flex;justify-content:space-between"><span>KVM</span><span id="sb-kvm" style="color:#22c55e">—</span></div>
@@ -24111,11 +24073,11 @@ async function loadNodeSummary() {
 
     // System info
     document.getElementById("ns-cpuinfo").textContent = `${cpuCount} x ${infoData.host?.cpu_model || "—"}`;
-    document.getElementById("ns-kernel").textContent = `OXware-${infoData.oxware_version || "2.7.2"}-generic#${infoData.host?.distro || 'Linux'}`;
+    document.getElementById("ns-kernel").textContent = `OXware-${infoData.oxware_version || "2.8.0"}-generic#${infoData.host?.distro || 'Linux'}`;
     document.getElementById("ns-kvm").textContent = infoData.host?.kvm_available ? "Available " : "Not Available ";
     document.getElementById("ns-arch").textContent = infoData.host?.architecture || "—";
     document.getElementById("ns-iodelay").textContent = ((s.disk_io?.read_count || 0) > 0 ? "< 1%" : "0%");
-    document.getElementById("ns-hv").textContent = `OXware ${infoData.oxware_version || "2.7.2"}`;
+    document.getElementById("ns-hv").textContent = `OXware ${infoData.oxware_version || "2.8.0"}`;
 
     // Center panel: VM counts
     const _vmRun = vmSumData?.running ?? '—';
@@ -33998,11 +33960,9 @@ const ENT_LOADERS = {
   runbook:     () => { try { loadRunbookPage(); } catch(e) { console.warn(e); } },
   federation:  () => { try { loadFederationPage(); } catch(e) { console.warn(e); } },
   apidocs: () => { try { loadApiDocsPage(); } catch(e) { console.warn(e); } },
-  // v2.7.2 — Cloud-Native panes
+  // v2.7.2 — Cloud-Native panes (kubevirt/gitops/firecracker dispatch
+  // handled by the original entries above — do not re-add to avoid dup keys)
   csi:            () => { try { loadCsiPage(); } catch(e) { console.warn(e); } },
-  kubevirt:       () => { try { loadKubeVirtPage(); } catch(e) { console.warn(e); } },
-  gitops:         () => { try { loadGitOpsPage(); } catch(e) { console.warn(e); } },
-  firecracker:    () => { try { loadFirecrackerPage(); } catch(e) { console.warn(e); } },
   oauth2presets:  () => { try { loadOauth2PresetsPage(); } catch(e) { console.warn(e); } },
   auditretention: () => { try { loadAuditRetentionPage(); } catch(e) { console.warn(e); } },
   sbom:           () => { try { loadSbomPage(); } catch(e) { console.warn(e); } },
@@ -37324,6 +37284,10 @@ async function loadCsiPage() {
   const info = await _api('/api/v2/csi/info');
   const inf = document.getElementById('csi-info');
   if (inf) inf.innerHTML = info ? _entKV(info) : '<span class="text-muted">Veri yok</span>';
+  const rb = document.getElementById('csi-ready-badge');
+  if (rb) rb.outerHTML = info && info.backend_ready
+    ? '<span id="csi-ready-badge" class="mat-badge ready">qemu-img ready</span>'
+    : '<span id="csi-ready-badge" class="mat-badge notready">qemu-img yok</span>';
   const vols = await _api('/api/v2/csi/volumes');
   const arr = (vols && vols.volumes) || [];
   const tb = document.getElementById('csi-vol-tbody');
@@ -37346,80 +37310,11 @@ async function csiDelete(id) {
   if (d) { toast('Volume silindi','success'); loadCsiPage(); }
 }
 
-/* ──── KubeVirt Bridge ──── */
-async function loadKubeVirtPage() {
-  const d = await _api('/api/v2/kubevirt/clusters');
-  const arr = (d && d.clusters) || [];
-  const tb = document.getElementById('kv-tbody');
-  if (tb) tb.innerHTML = arr.length ? arr.map(c => `<tr><td><b>${_esc(c.name||'-')}</b></td><td>${_esc(c.watch_namespace||'*')}</td><td>${_esc(c.state||'-')}</td><td>${c.added_at?new Date(c.added_at*1000).toLocaleString():'-'}</td><td><button class="btn sm danger" onclick="kvDel('${_esc(c.name)}')"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="5" class="text-center text-muted" style="padding:14px">Kayıtlı cluster yok</td></tr>';
-}
-async function kvRegister() {
-  const body = {
-    name: document.getElementById('kv-name').value.trim(),
-    kubeconfig_b64: document.getElementById('kv-cfg').value.trim(),
-    watch_namespace: document.getElementById('kv-ns').value.trim(),
-  };
-  if (!body.name || !body.kubeconfig_b64) { toast('Ad ve kubeconfig gerekli','error'); return; }
-  const d = await _api('/api/v2/kubevirt/clusters','POST',body);
-  if (d) { toast('Cluster kaydedildi','success'); loadKubeVirtPage(); }
-}
-async function kvDel(n) {
-  if (!await showConfirm(`${n} cluster kaydı silinecek. Devam?`,'Cluster Sil',true)) return;
-  const d = await _api(`/api/v2/kubevirt/clusters/${encodeURIComponent(n)}`,'DELETE');
-  if (d) { toast('Silindi','success'); loadKubeVirtPage(); }
-}
-
-/* ──── GitOps Manager ──── */
-async function loadGitOpsPage() {
-  const d = await _api('/api/v2/gitops/repos');
-  const arr = (d && d.repos) || [];
-  const tb = document.getElementById('go-tbody');
-  if (tb) tb.innerHTML = arr.length ? arr.map(r => `<tr><td><b>${_esc(r.name||'-')}</b></td><td style="font-family:monospace;font-size:10px">${_esc(r.url||'-')}</td><td>${_esc(r.branch||'main')}</td><td>${r.auto_apply?'<span style="color:#3fb950">✓</span>':'<span class="text-muted">-</span>'}</td><td>${r.last_sync?new Date(r.last_sync*1000).toLocaleString():'-'}</td><td>${r.drift_count||0}</td><td><button class="btn sm" onclick="goSync('${_esc(r.name)}')"><i class="fa-solid fa-rotate"></i></button> <button class="btn sm danger" onclick="goDel('${_esc(r.name)}')"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="7" class="text-center text-muted" style="padding:14px">Repo yok</td></tr>';
-}
-async function goAddRepo() {
-  const body = {
-    name: document.getElementById('go-name').value.trim(),
-    url: document.getElementById('go-url').value.trim(),
-    branch: document.getElementById('go-branch').value.trim() || 'main',
-    auto_apply: document.getElementById('go-auto').checked,
-  };
-  if (!body.name || !body.url) { toast('Ad ve URL gerekli','error'); return; }
-  const d = await _api('/api/v2/gitops/repos','POST',body);
-  if (d) { toast('Repo eklendi','success'); loadGitOpsPage(); }
-}
-async function goSync(n) {
-  const d = await _api(`/api/v2/gitops/repos/${encodeURIComponent(n)}/sync`,'POST');
-  if (d) { toast('Sync başlatıldı','success'); loadGitOpsPage(); }
-}
-async function goDel(n) {
-  if (!await showConfirm(`${n} repo'su silinecek. Devam?`,'Repo Sil',true)) return;
-  const d = await _api(`/api/v2/gitops/repos/${encodeURIComponent(n)}`,'DELETE');
-  if (d) { toast('Silindi','success'); loadGitOpsPage(); }
-}
-
-/* ──── Firecracker microVMs ──── */
-async function loadFirecrackerPage() {
-  const d = await _api('/api/v3/firecracker/vms');
-  const arr = (d && d.vms) || [];
-  const tb = document.getElementById('fc-tbody');
-  if (tb) tb.innerHTML = arr.length ? arr.map(v => `<tr><td style="font-family:monospace;font-size:10px">${_esc(v.id||'-')}</td><td><b>${_esc(v.name||'-')}</b></td><td>${v.vcpus||1}</td><td>${v.memory_mb||0} MB</td><td>${_esc(v.state||'-')}</td><td style="font-family:monospace;font-size:10px">${_esc((v.api_socket||'').split('/').pop())}</td><td><button class="btn sm" onclick="fcStop('${_esc(v.id)}')"><i class="fa-solid fa-stop"></i></button></td></tr>`).join('') : '<tr><td colspan="7" class="text-center text-muted" style="padding:14px">microVM yok</td></tr>';
-}
-async function fcLaunch() {
-  const body = {
-    name: document.getElementById('fc-name').value.trim(),
-    kernel_path: document.getElementById('fc-kernel').value.trim(),
-    rootfs_path: document.getElementById('fc-rootfs').value.trim(),
-    vcpus: parseInt(document.getElementById('fc-vcpu').value || '1', 10),
-    memory_mb: parseInt(document.getElementById('fc-mem').value || '128', 10),
-  };
-  if (!body.name || !body.kernel_path || !body.rootfs_path) { toast('Ad / kernel / rootfs gerekli','error'); return; }
-  const d = await _api('/api/v3/firecracker/vms','POST',body);
-  if (d) { toast('microVM sıraya alındı','success'); loadFirecrackerPage(); }
-}
-async function fcStop(id) {
-  const d = await _api(`/api/v3/firecracker/vms/${id}/stop`,'POST');
-  if (d) { toast('Durduruldu','success'); loadFirecrackerPage(); }
-}
+/* KubeVirt / GitOps / Firecracker panes are served by the original
+   enterprise-tab implementations (loadKubevirtPage / loadGitopsPage /
+   loadFirecrackerPage). The v2.7.2 real backends are reachable at
+   /api/v2/kubevirt, /api/v2/gitops, /api/v3/firecracker. Duplicate
+   panes + loaders removed to avoid clashing element IDs. */
 
 /* ──── OAuth2 Presets ──── */
 let _opCurrentPreset = null;
@@ -37655,9 +37550,6 @@ async function telePreview() {
   if (typeof window === 'undefined') return;
   const map = {
     'ent-pane-csi': loadCsiPage,
-    'ent-pane-kubevirt': loadKubeVirtPage,
-    'ent-pane-gitops': loadGitOpsPage,
-    'ent-pane-firecracker': loadFirecrackerPage,
     'ent-pane-oauth2presets': loadOauth2PresetsPage,
     'ent-pane-auditretention': loadAuditRetentionPage,
     'ent-pane-sbom': loadSbomPage,
@@ -37915,11 +37807,8 @@ const _PAGE_TABS = {
     {key:'cloudburst', label:'Cloud Burst', src:'ent-pane-cloudburst'},
     {key:'baremetal', label:'Bare-Metal', src:'ent-pane-baremetal'},
     {key:'apidocs', label:'API Docs', src:'ent-pane-apidocs'},
-    // v2.7.2 — Cloud-Native
+    // v2.7.2 — Cloud-Native (kubevirt/gitops/firecracker already registered above)
     {key:'csi', label:'Kubernetes CSI', src:'ent-pane-csi'},
-    {key:'kubevirt', label:'KubeVirt Bridge', src:'ent-pane-kubevirt'},
-    {key:'gitops', label:'GitOps', src:'ent-pane-gitops'},
-    {key:'firecracker', label:'Firecracker', src:'ent-pane-firecracker'},
     {key:'oauth2presets', label:'OAuth2 Presets', src:'ent-pane-oauth2presets'},
     {key:'auditretention', label:'Audit Retention', src:'ent-pane-auditretention'},
     {key:'sbom', label:'SBOM', src:'ent-pane-sbom'},
