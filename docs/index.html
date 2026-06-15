@@ -186,7 +186,7 @@
       <span class="dot"></span>
       <span>All systems operational</span>
       <span style="color: var(--border-2)">·</span>
-      <span>v2.7.2 GA</span>
+      <span>v2.8.0 GA</span>
     </div>
     <div class="topbar-links">
       <a href="https://github.com/ShinnAsukha/oxware-hypervisor" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a>
@@ -354,8 +354,8 @@
     <a href="#v270-runbook" class="sidebar-sub"><i class="fas fa-robot"></i> Auto-Remediation</a>
     <a href="#v270-federation" class="sidebar-sub"><i class="fas fa-network-wired"></i> Cluster Federation</a>
 
-    <div class="sidebar-section">v2.7.2 — Cloud-Native</div>
-    <a href="#v272-features"><i class="fas fa-rocket"></i> v2.7.2 Overview</a>
+    <div class="sidebar-section">v2.8.0 — Cloud-Native</div>
+    <a href="#v272-features"><i class="fas fa-rocket"></i> v2.8.0 Overview</a>
     <a href="#v272-csi" class="sidebar-sub"><i class="fab fa-docker"></i> Kubernetes CSI</a>
     <a href="#v272-kubevirt" class="sidebar-sub"><i class="fas fa-cubes"></i> KubeVirt Bridge</a>
     <a href="#v272-gitops" class="sidebar-sub"><i class="fas fa-code-branch"></i> GitOps</a>
@@ -404,7 +404,7 @@
 
     <section id="overview">
       <h1>OXware Hypervisor Documentation</h1>
-      <p><span class="ver-badge"><span class="ver-dot"></span> v2.7.2</span> &nbsp;<span class="tag tag-green">Latest GA</span></p>
+      <p><span class="ver-badge"><span class="ver-dot"></span> v2.8.0</span> &nbsp;<span class="tag tag-green">Latest GA</span></p>
       <p>OXware is an open-source hypervisor management platform built on KVM/QEMU and Ubuntu/Debian. It provides a complete web-based control plane for virtual machine lifecycle, role-based access, networking, storage, security, monitoring, and an AI assistant — accessible at <code>https://&lt;server-ip&gt;:8006</code>.</p>
 
       <h3>Architecture</h3>
@@ -767,8 +767,8 @@ ethernets:
     </section>
 
     <section id="v272-features">
-      <h2>v2.7.2 — Cloud-Native &amp; Hardening</h2>
-      <p><span class="ver-badge"><span class="ver-dot"></span> v2.7.2</span> <span class="tag tag-green">Latest GA</span> &mdash; Five new security patches plus eight new feature modules covering Kubernetes, GitOps, microVMs, SSO presets, audit retention, SBOM, PWA offline, and SSH known-hosts hardening.</p>
+      <h2>v2.8.0 — Cloud-Native &amp; Hardening</h2>
+      <p><span class="ver-badge"><span class="ver-dot"></span> v2.8.0</span> <span class="tag tag-green">Latest GA</span> &mdash; Five new security patches plus eight new feature modules covering Kubernetes, GitOps, microVMs, SSO presets, audit retention, SBOM, PWA offline, and SSH known-hosts hardening.</p>
 
       <h3 id="v272-csi">Kubernetes CSI Driver</h3>
       <p>OXware storage pools surface as Kubernetes PersistentVolumes via a CSI 1.8 driver. Provision, snapshot, expand, and delete VMs from the cluster's PVC API. Supported filesystems: ext4, xfs, btrfs.</p>
@@ -819,7 +819,7 @@ ethernets:
       <div class="endpoint"><span class="method post">POST</span> /api/v3/pwa/status</div>
 
       <h3 id="v272-ssh-known-hosts">SSH Known-Hosts &amp; First-Contact Approval</h3>
-      <p>Outbound SSH (SFTP backup, ESXi import) used to trust whatever key the peer presented. v2.7.2 ships <code>ssh_known_hosts</code>: a persistent <code>/var/lib/oxware/known_hosts</code> file plus a panel queue of pending fingerprint approvals. Trust-on-first-use is opt-in via <code>OXWARE_SSH_TOFU=1</code> for migration.</p>
+      <p>Outbound SSH (SFTP backup, ESXi import) used to trust whatever key the peer presented. v2.8.0 ships <code>ssh_known_hosts</code>: a persistent <code>/var/lib/oxware/known_hosts</code> file plus a panel queue of pending fingerprint approvals. Trust-on-first-use is opt-in via <code>OXWARE_SSH_TOFU=1</code> for migration.</p>
       <div class="endpoint"><span class="method get">GET</span> /api/v2/security/known-hosts/pending</div>
       <div class="endpoint"><span class="method post">POST</span> /api/v2/security/known-hosts/&lt;id&gt;/approve</div>
       <div class="endpoint"><span class="method post">POST</span> /api/v2/security/known-hosts/&lt;id&gt;/reject</div>
@@ -1142,7 +1142,7 @@ curl -k https://host:8006/api/vms \
     <div class="footer-bottom">
       <div>
         &copy; 2026 OXware. Released under the MIT Licence.
-        <span class="ver-pill" style="margin-left: 0.5rem;"><span class="dot"></span>v2.7.2</span>
+        <span class="ver-pill" style="margin-left: 0.5rem;"><span class="dot"></span>v2.8.0</span>
       </div>
       <div class="legal-links">
         <a href="https://github.com/ShinnAsukha/oxware-hypervisor/blob/main/SECURITY.md" target="_blank" rel="noopener">Security</a>
