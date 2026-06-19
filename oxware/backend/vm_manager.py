@@ -1083,6 +1083,8 @@ _CLOUD_IMAGE_URLS: dict[str, str] = {
     "ubuntu24.04": "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img",
     "debian12":    "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2",
     "debian11":    "https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-generic-amd64.qcow2",
+    "rocky9":      "https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2",
+    "alma9":       "https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/AlmaLinux-9-GenericCloud-latest.x86_64.qcow2",
 }
 _CLOUD_CACHE_DIR = "/var/lib/libvirt/images"
 

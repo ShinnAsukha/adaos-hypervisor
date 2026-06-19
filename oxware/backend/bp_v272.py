@@ -281,3 +281,32 @@ def _register_routes():
             return _err("module unavailable", 503)
         r = kh.reject(prompt_id)
         return (_ok(**r) if r.get("ok") else _err(r.get("error"), 404))
+
+    # ── Golden-image marketplace ─────────────────────────────────────────
+    mkt = _safe_import("template_marketplace")
+
+    @bp_v272.route("/api/v2/templates/marketplace", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_mkt_catalog():
+        if not mkt:
+            return _err("module unavailable", 503)
+        return _ok(catalog=mkt.catalog())
+
+    @bp_v272.route("/api/v2/templates/marketplace/status", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_mkt_status():
+        if not mkt:
+            return _err("module unavailable", 503)
+        return _ok(**mkt.status())
+
+    @bp_v272.route("/api/v2/templates/marketplace/<os_variant>/prefetch",
+                   methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_mkt_prefetch(os_variant):
+        if not mkt:
+            return _err("module unavailable", 503)
+        r = mkt.prefetch(os_variant)
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
