@@ -81,6 +81,8 @@ _ALLOWED_FIELDS = frozenset({
     "node_count",
     "enabled_features",
     "country_iso2",
+    "integrity_ok",
+    "integrity_fp",
     "nonce",
     "ts",
 })
@@ -266,6 +268,15 @@ def build_payload(deps: dict | None = None) -> dict:
     enabled_at = cfg.get("enabled_at") or time.time()
     facts["install_age_days"] = max(int((time.time() - enabled_at) / 86400), 0)
     facts["installation_id"] = cfg.get("installation_id") or ""
+    # Brand integrity signal (opt-in: only travels if telemetry is enabled).
+    # Lets the author see if a phoned-home install is a stripped rebrand.
+    try:
+        import brand_integrity as _bi
+        v = _bi.verify()
+        facts["integrity_ok"] = bool(v.get("ok"))
+        facts["integrity_fp"] = v.get("fingerprint")
+    except Exception:
+        pass
     facts["nonce"] = uuid.uuid4().hex
     facts["ts"] = time.time()
     return _scrub(facts)

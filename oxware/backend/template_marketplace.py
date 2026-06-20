@@ -1,3 +1,5 @@
+# OXware Hypervisor — Copyright (c) 2026 Ada Gürsoy.
+# Licensed under the MIT License (see LICENSE). Retain this notice in forks.
 """OXware Golden-Image Marketplace (v2.8).
 
 A thin presentation + cache-management layer on top of the cloud-image

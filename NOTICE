@@ -1,0 +1,20 @@
+OXware Hypervisor
+Copyright (c) 2026 Ada Gürsoy
+https://github.com/ShinnAsukha/oxware-hypervisor
+
+This product is licensed under the MIT License (see the LICENSE file).
+
+ATTRIBUTION
+-----------
+The MIT License permits forking, modification, and redistribution — including
+under a different name — ONLY IF the above copyright notice and the LICENSE
+text are retained in all copies or substantial portions of the software.
+
+Removing or altering the copyright notice, the LICENSE, or the embedded
+provenance markers and then redistributing the software is a license
+violation. The codebase carries encrypted provenance markers and a stable
+provenance fingerprint that allow the original authorship to be proven
+regardless of any rebranding.
+
+If you fork this project, keep this NOTICE and the LICENSE intact and clearly
+state your modifications.

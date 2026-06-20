@@ -1,3 +1,5 @@
+# OXware Hypervisor — Copyright (c) 2026 Ada Gürsoy.
+# Licensed under the MIT License (see LICENSE). Retain this notice in forks.
 """OXware AI tool layer — lets the chat assistant actually DO things.
 
 Instead of printing shell commands, the assistant calls these tools and the

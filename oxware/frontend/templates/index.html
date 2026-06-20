@@ -22821,6 +22821,26 @@ async function checkLicenseStatus() {
     if (banner) banner.style.display = d.active ? 'flex' : 'none';
     _applyLicenseUI(d);
   } catch {}
+  checkBrandIntegrity();
+}
+
+/* Marka bütünlüğü uyarı banner'ı — rebrand/tamper tespitinde operatöre gösterir. */
+async function checkBrandIntegrity() {
+  try {
+    const r = await fetch('/api/v2/brand/integrity', {headers:{'Authorization':'Bearer '+TOKEN()}});
+    if (!r.ok) return;
+    const d = await r.json();
+    let el = document.getElementById('brand-warn-banner');
+    if (d.ok) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'brand-warn-banner';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:3000;background:#7f1d1d;color:#fff;font-size:12px;padding:8px 16px;display:flex;align-items:center;gap:10px;border-top:2px solid #ef4444';
+      document.body.appendChild(el);
+    }
+    const warns = (d.warnings || []).map(w => _esc(w)).join(' · ');
+    el.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <b>Yetkisiz değişiklik / rebrand tespiti</b> — ${warns} &nbsp;|&nbsp; OXware © Ada Gürsoy · fp:${_esc(d.fingerprint||'')} <button onclick="this.parentElement.remove()" style="margin-left:auto;background:transparent;border:1px solid #fff;color:#fff;border-radius:4px;cursor:pointer;padding:2px 8px">Kapat</button>`;
+  } catch {}
 }
 
 function _applyLicenseUI(d) {

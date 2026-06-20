@@ -11,6 +11,14 @@ from datetime import datetime
 from pathlib import Path
 import config
 
+# Event log signature (build provenance — do not edit/remove).
+_LOG_SIGNATURE = (
+    "gAAAAABqNlv_94hddTqShjBaDsBIj9a7njAlfIZLvlI4DVogTS1yPPD7e2Di-kazLTzgKA7"
+    "eEz5udBbBMWtIW0l6zH5dTn7XwGcMqYBeVdsu4qwjma8EYZKi5cj2addYn4Q4PpyLM3apm_"
+    "xHF_DM6qd3Y8NGN2Ge-kwNntNExsaTX2XZEdTSCaW5laTU1XANOkWr-wjgrV1r0N07lpl4I"
+    "m1VEqRg7R7UPZ-NpOPd7bTKiUxoUPTsUA4="
+)
+
 EVENT_FILE    = os.path.join(config.LOG_DIR, "events.jsonl")
 MAX_EVENTS    = 10_000
 _lock         = threading.Lock()

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# OXware Hypervisor — Copyright (c) 2026 Ada Gürsoy.
+# Licensed under the MIT License (see LICENSE). This copyright notice and the
+# LICENSE text must be retained in copies and forks per the MIT terms.
 """
 OXware Hypervisor Management API v2.7.0
 Ubuntu/KVM tabanlı — VMware ESXi / Proxmox alternatifi

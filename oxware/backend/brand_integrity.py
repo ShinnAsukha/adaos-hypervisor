@@ -1,3 +1,6 @@
+# OXware Hypervisor — Copyright (c) 2026 Ada Gürsoy.
+# Licensed under the MIT License (see LICENSE). This copyright notice and the
+# LICENSE text must be retained in copies/forks per the MIT terms.
 """OXware brand-integrity / provenance check.
 
 PURPOSE — tamper-evidence and forensic proof of origin, NOT unbreakable DRM.
@@ -71,15 +74,38 @@ def _decrypt(tok: str) -> dict | None:
         return None
 
 
-def _secondary_token() -> str | None:
-    """A second copy of the token is stashed in config under an innocuous
-    name. If a rebrander deletes this module but keeps config (or vice versa),
-    the mismatch is still detectable."""
-    try:
-        import config
-        return getattr(config, "_BUILD_PROVENANCE", None)
-    except Exception:
-        return None
+# Extra copies of the token are stashed across innocuous-looking modules
+# under misleading names. A rebrander has to find and strip ALL of them; miss
+# one and the mismatch (or its survival) proves origin.
+_CANARY_SOURCES = [
+    ("config", "_BUILD_PROVENANCE"),
+    ("system_monitor", "_METRICS_SALT"),
+    ("event_logger", "_LOG_SIGNATURE"),
+    ("notifications", "_DELIVERY_KEY"),
+]
+
+
+def _canaries() -> tuple[list, list]:
+    """Returns (intact, broken) canary names."""
+    intact, broken = [], []
+    for mod, attr in _CANARY_SOURCES:
+        val = None
+        try:
+            m = __import__(mod)
+            val = getattr(m, attr, None)
+        except Exception:
+            try:
+                m = __import__(f"oxware.backend.{mod}", fromlist=["*"])
+                val = getattr(m, attr, None)
+            except Exception:
+                val = None
+        if val is None:
+            broken.append(f"{mod}.{attr} (kaldırılmış)")
+        elif val != _TOKEN:
+            broken.append(f"{mod}.{attr} (değiştirilmiş)")
+        else:
+            intact.append(f"{mod}.{attr}")
+    return intact, broken
 
 
 def _license_has_author() -> bool:
@@ -111,12 +137,13 @@ def verify() -> dict:
         res["tampered"] = True
         res["warnings"].append("provenance token doğrulanamadı/değiştirilmiş")
 
-    sec = _secondary_token()
-    if sec is None:
-        res["warnings"].append("ikincil provenance kaydı kaldırılmış")
-        res["tampered"] = True
-    elif sec != _TOKEN:
-        res["warnings"].append("ikincil provenance kaydı değiştirilmiş")
+    intact, broken = _canaries()
+    res["canaries_intact"] = len(intact)
+    res["canaries_total"] = len(_CANARY_SOURCES)
+    if broken:
+        res["warnings"].append("provenance canary'leri: " + ", ".join(broken))
+    # Tampered if more canaries are broken than intact (some were stripped).
+    if len(broken) > len(intact):
         res["tampered"] = True
 
     if not _license_has_author():

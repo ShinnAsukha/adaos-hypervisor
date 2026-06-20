@@ -1,3 +1,5 @@
+# OXware Hypervisor — Copyright (c) 2026 Ada Gürsoy.
+# Licensed under the MIT License (see LICENSE). Retain this notice in forks.
 """OXware AI Chat — multi-conversation chat on top of configured AI agents.
 
 Design goal: keep the server light. Conversations are persisted as a small
