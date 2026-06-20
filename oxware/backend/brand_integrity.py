@@ -108,16 +108,35 @@ def _canaries() -> tuple[list, list]:
     return intact, broken
 
 
-def _license_has_author() -> bool:
-    for p in ("LICENSE", "LICENSE.txt", "LICENSE.md",
-              os.path.join(os.path.dirname(__file__), "..", "..", "LICENSE")):
+def _license_status() -> str:
+    """'present' (author found), 'stripped' (LICENSE exists but author gone),
+    or 'absent' (no LICENSE file located). 'absent' must NOT raise an alarm —
+    a deployed install may simply not ship LICENSE next to the code."""
+    found_file = False
+    cands = []
+    here = os.path.dirname(os.path.abspath(__file__))
+    for base in (here, os.getcwd()):
+        d = base
+        for _ in range(6):
+            for name in ("LICENSE", "LICENSE.txt", "LICENSE.md", "COPYING", "NOTICE"):
+                cands.append(os.path.join(d, name))
+            nd = os.path.dirname(d)
+            if nd == d:
+                break
+            d = nd
+    seen = set()
+    for p in cands:
+        if p in seen:
+            continue
+        seen.add(p)
         try:
             t = Path(p).read_text(encoding="utf-8", errors="ignore")
-            if "Ada Gürsoy" in t or "Ada Gursoy" in t:
-                return True
         except Exception:
             continue
-    return False
+        found_file = True
+        if "Ada Gürsoy" in t or "Ada Gursoy" in t:
+            return "present"
+    return "stripped" if found_file else "absent"
 
 
 def verify() -> dict:
@@ -146,9 +165,14 @@ def verify() -> dict:
     if len(broken) > len(intact):
         res["tampered"] = True
 
-    if not _license_has_author():
+    lic = _license_status()
+    if lic == "stripped":
         res["attribution_removed"] = True
         res["warnings"].append("LICENSE telif sahibi (Ada Gürsoy) kaldırılmış — MIT ihlali")
+    elif lic == "absent":
+        # LICENSE not shipped next to the code — informational only, not a
+        # violation. Provenance is proven by the token + canaries, not files.
+        res["warnings"].append("LICENSE dosyası bulunamadı (bilgilendirme)")
 
     try:
         import config
