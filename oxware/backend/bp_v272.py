@@ -434,6 +434,21 @@ def _register_routes():
         r = aii.analyze_health(d.get("agent_id", ""))
         return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
 
+    # ── Carbon / energy footprint (ESG) ──────────────────────────────────
+    carbon = _safe_import("carbon_report")
+
+    @bp_v272.route("/api/v2/sustainability/carbon", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_carbon_report():
+        if not carbon:
+            return _err("module unavailable", 503)
+        try:
+            days = int(request.args.get("days", 30))
+        except ValueError:
+            days = 30
+        return _ok(**carbon.report(days))
+
     # ── Brand integrity / provenance ─────────────────────────────────────
     brand = _safe_import("brand_integrity")
 

@@ -7373,7 +7373,8 @@
 
         <!-- ══ Green Mode ══ -->
         <div id="ent-pane-greenmode" style="display:none">
-          <div class="section-header"><h2><i class="fa-solid fa-leaf fa-fw" style="color:#3fb950"></i> Green Mode</h2><div class="spacer"></div><button class="btn" onclick="loadGreenModePage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
+          <div class="section-header"><h2><i class="fa-solid fa-leaf fa-fw" style="color:#3fb950"></i> Green Mode</h2><div class="spacer"></div><button class="btn" onclick="carbonReport()" style="font-size:12px"><i class="fa-solid fa-smog"></i> Karbon Raporu</button><button class="btn" onclick="loadGreenModePage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
+          <div class="card" id="gm-carbon-card" style="display:none;margin-bottom:12px;border-left:4px solid #3fb950"><div class="card-title"><i class="fa-solid fa-smog" style="margin-right:6px;color:#3fb950"></i>Karbon / Enerji Ayak İzi</div><div id="gm-carbon-body" style="padding:0 14px 12px;font-size:12px">Yükleniyor...</div></div>
           <div class="card" style="margin-bottom:12px;border-left:4px solid #3fb950;background:rgba(63,185,80,.04);padding:14px"><div style="font-size:12px;line-height:1.6"><b style="color:#3fb950">Bu Nedir?</b> AI cluster güç optimizasyonu — düşük yük zamanlarında VM'leri tek node'a topla, boş node'ları uyut (ACPI/IPMI/WoL). Elektrik tasarrufu.</div></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
             <div class="card"><div class="card-title">Yeşil Skor</div><div id="gm-score" class="text-muted" style="font-size:12px">Yükleniyor...</div></div>
@@ -37649,6 +37650,27 @@ async function _aiInsight(title, url, body) {
 }
 function aiInsightEvents() { _aiInsight('Olay Özeti (son 12 saat)', '/api/v2/ai/insights/events', { hours: 12 }); }
 function aiInsightHealth() { _aiInsight('Sağlık Analizi & Aksiyonlar', '/api/v2/ai/insights/health', {}); }
+
+/* ──── Karbon / Enerji Raporu (v2.8) ──── */
+async function carbonReport() {
+  const card = document.getElementById('gm-carbon-card');
+  const body = document.getElementById('gm-carbon-body');
+  card.style.display = 'block';
+  body.innerHTML = '<span class="text-muted"><i class="fa-solid fa-spinner fa-spin"></i> Hesaplanıyor...</span>';
+  const d = await _api('/api/v2/sustainability/carbon?days=30');
+  if (!d) { body.innerHTML = '<span style="color:var(--red)">Rapor alınamadı</span>'; return; }
+  const s = d.saved_by_green_mode || {};
+  const eq = d.equivalent || {};
+  body.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:6px 0 10px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px"><div style="font-size:18px;font-weight:700">${d.energy_kwh} kWh</div><div style="font-size:10px;color:var(--text-muted)">30 günde enerji</div></div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px"><div style="font-size:18px;font-weight:700;color:#f59e0b">${d.co2_kg} kg</div><div style="font-size:10px;color:var(--text-muted)">CO₂ salımı</div></div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px"><div style="font-size:18px;font-weight:700">$${d.cost_usd}</div><div style="font-size:10px;color:var(--text-muted)">tahmini elektrik</div></div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px"><div style="font-size:18px;font-weight:700;color:var(--success)">${s.co2_kg||0} kg</div><div style="font-size:10px;color:var(--text-muted)">Green Mode tasarrufu</div></div>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted)">${d.nodes} node · ort. %${d.avg_utilization_pct} kullanım · ~${d.avg_power_w}W &nbsp;|&nbsp; ≈ ${eq.trees_year} ağaç/yıl · ${eq.car_km} km araba</div>
+    <div style="font-size:10px;color:var(--text-muted);margin-top:6px"><i class="fa-solid fa-circle-info"></i> ${_esc((d.assumptions||{}).note||'Tahmini değer')} (idle ${d.assumptions.idle_w}W / peak ${d.assumptions.peak_w}W, ${d.assumptions.co2_kg_per_kwh} kgCO₂/kWh)</div>`;
+}
 
 /* ──── Disk I/O QoS (v2.8) ──── */
 const _DQ_FIELDS = ['total_iops_sec','read_iops_sec','write_iops_sec','total_bytes_sec','read_bytes_sec','write_bytes_sec'];
