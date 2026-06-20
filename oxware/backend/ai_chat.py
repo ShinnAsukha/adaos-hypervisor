@@ -130,11 +130,15 @@ def delete_chat(chat_id: str) -> dict:
 
 _SYSTEM_PROMPT = (
     "Sen OXware Hypervisor için bir yapay zeka asistanısın. Türkçe, kısa ve "
-    "net yanıt ver. Teknik terimleri doğru kullan. Sana iletilen canlı sistem "
-    "durumunu dikkate al. Görsel verildiğinde içeriğini analiz et.\n"
-    "BİÇİM: Sayısal veya çok alanlı verileri her zaman Markdown tablo olarak "
-    "ver (| sütun | sütun | + ayraç satırı). Önemli değerleri **kalın** yap. "
-    "Kod/komut/yol için `backtick` kullan. Kısa başlıklar için ## kullan.\n\n"
+    "net yanıt ver. Teknik terimleri doğru kullan. Görsel verildiğinde "
+    "içeriğini analiz et.\n"
+    "ARAÇLAR: Gerçekten işlem yapabilirsin. Kullanıcı bir şey isterse (VM "
+    "oluştur/başlat/durdur/sil/listele, sistem durumu, golden image) shell "
+    "komutu YAZMA — sağlanan araçları çağır ve gerçekten yap. İşi yaptıktan "
+    "sonra sonucu özetle. VM silme gibi geri alınamaz işlemlerde önce "
+    "kullanıcıdan onay iste; onaylarsa confirm=true ile çağır.\n"
+    "BİÇİM: Sayısal/çok alanlı veriyi Markdown tablo ver (| sütun | + ayraç "
+    "satırı). Önemli değerleri **kalın** yap. Yol/değer için `backtick`.\n\n"
 )
 
 
@@ -180,10 +184,23 @@ def send_message(chat_id: str, text: str, images: list = None,
     except Exception:
         pass
 
+    # Tool-capable path: the assistant can actually operate OXware.
+    tools_used = []
     try:
-        reply = agent.query_agent_chat(use_agent, model_messages, sys_prompt)
+        try:
+            import ai_tools
+        except Exception:
+            from oxware.backend import ai_tools  # type: ignore
+        out = agent.query_agent_tools(use_agent, model_messages, sys_prompt,
+                                      ai_tools.SPECS, ai_tools.execute)
+        reply = out.get("text", "")
+        tools_used = out.get("tools_used", [])
     except Exception as e:
-        return {"ok": False, "error": str(e)[:300]}
+        # Fall back to plain chat if tool use is unavailable for this provider.
+        try:
+            reply = agent.query_agent_chat(use_agent, model_messages, sys_prompt)
+        except Exception as e2:
+            return {"ok": False, "error": str(e2 or e)[:300]}
 
     now = time.time()
     with _LOCK:
@@ -205,4 +222,5 @@ def send_message(chat_id: str, text: str, images: list = None,
             chat["agent_id"] = agent_id
         _save(d)
 
-    return {"ok": True, "reply": reply, "agent_id": use_agent}
+    return {"ok": True, "reply": reply, "agent_id": use_agent,
+            "tools_used": tools_used}

@@ -37678,6 +37678,10 @@ async function aiChatSend() {
   if (btn) btn.disabled = false;
   if (d && d.reply) {
     box.insertAdjacentHTML('beforeend', aiChatBubble('assistant', d.reply, false));
+    if (d.tools_used && d.tools_used.length) {
+      const uniq = [...new Set(d.tools_used)];
+      box.insertAdjacentHTML('beforeend', `<div style="display:flex;justify-content:flex-start;gap:4px;flex-wrap:wrap;margin-top:-6px">${uniq.map(t=>`<span style="font-size:10px;color:var(--success);background:rgba(0,195,137,.1);border:1px solid rgba(0,195,137,.3);border-radius:10px;padding:1px 8px"><i class="fa-solid fa-bolt"></i> ${_esc(t)}</span>`).join('')}</div>`);
+    }
     box.scrollTop = box.scrollHeight;
     const c = _aiChats.find(x => x.id === _aiCur);
     if (c) { c.message_count = (c.message_count||0) + 2; c.preview = d.reply.slice(0,80); }

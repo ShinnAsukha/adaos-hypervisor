@@ -646,6 +646,131 @@ def live_system_context() -> str:
     return _build_system_context()
 
 
+# ── Araç kullanımı (tool use / function calling) ────────────────────────────
+# Asistanın gerçekten işlem yapabilmesi için: model bir araç çağırır, biz
+# sunucuda çalıştırır, sonucu geri veririz; model nihai yanıtı üretene kadar
+# döngü sürer. Hem Anthropic hem OpenAI-uyumlu sağlayıcılar desteklenir.
+
+def _anthropic_msg(m: dict) -> dict:
+    imgs = m.get("images") or []
+    if imgs:
+        blocks = []
+        for img in imgs:
+            mt, data = _split_data_url(img)
+            if data:
+                blocks.append({"type": "image", "source": {
+                    "type": "base64", "media_type": mt, "data": data}})
+        if m.get("content"):
+            blocks.append({"type": "text", "text": m["content"]})
+        return {"role": m["role"], "content": blocks or m.get("content", "")}
+    return {"role": m["role"], "content": m.get("content", "")}
+
+
+def _call_anthropic_tools(agent, messages, system_prompt, tools, executor,
+                          max_rounds, max_tokens):
+    import json as _json
+    url = "https://api.anthropic.com/v1/messages"
+    headers = {"x-api-key": agent["api_key"],
+               "anthropic-version": "2023-06-01",
+               "Content-Type": "application/json"}
+    a_tools = [{"name": t["name"], "description": t["description"],
+                "input_schema": t["parameters"]} for t in tools]
+    convo = [_anthropic_msg(m) for m in messages]
+    used = []
+    for _ in range(max_rounds):
+        body = {"model": agent["model"], "max_tokens": max_tokens,
+                "messages": convo, "tools": a_tools}
+        if system_prompt:
+            body["system"] = system_prompt
+        r = requests.post(url, headers=headers, json=body, timeout=90)
+        r.raise_for_status()
+        data = r.json()
+        blocks = data.get("content", [])
+        if data.get("stop_reason") == "tool_use":
+            convo.append({"role": "assistant", "content": blocks})
+            results = []
+            for b in blocks:
+                if b.get("type") == "tool_use":
+                    used.append(b.get("name"))
+                    res = executor(b.get("name"), b.get("input") or {})
+                    results.append({"type": "tool_result",
+                                    "tool_use_id": b.get("id"),
+                                    "content": _json.dumps(res, ensure_ascii=False)})
+            convo.append({"role": "user", "content": results})
+            continue
+        text = "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
+        return {"text": text.strip(), "tools_used": used}
+    return {"text": "(Araç döngüsü sınırına ulaşıldı.)", "tools_used": used}
+
+
+def _call_openai_tools(agent, messages, system_prompt, tools, executor,
+                       max_rounds, max_tokens):
+    import json as _json
+    url = agent["base_url"].rstrip("/") + PROVIDERS.get(
+        agent["provider"], PROVIDERS["custom"])["chat_endpoint"]
+    headers = {"Authorization": f"Bearer {agent['api_key']}",
+               "Content-Type": "application/json"}
+    if agent.get("provider") == "openrouter":
+        headers["HTTP-Referer"] = "https://oxware-hypervisor.local"
+        headers["X-Title"] = "OXware Hypervisor"
+    o_tools = [{"type": "function", "function": {
+        "name": t["name"], "description": t["description"],
+        "parameters": t["parameters"]}} for t in tools]
+    convo = []
+    if system_prompt:
+        convo.append({"role": "system", "content": system_prompt})
+    for m in messages:
+        imgs = m.get("images") or []
+        if imgs:
+            parts = []
+            if m.get("content"):
+                parts.append({"type": "text", "text": m["content"]})
+            for img in imgs:
+                u = img if img.startswith("data:") else "data:image/png;base64," + img
+                parts.append({"type": "image_url", "image_url": {"url": u}})
+            convo.append({"role": m["role"], "content": parts})
+        else:
+            convo.append({"role": m["role"], "content": m.get("content", "")})
+    used = []
+    for _ in range(max_rounds):
+        body = {"model": agent["model"], "messages": convo,
+                "tools": o_tools, "max_tokens": max_tokens, "temperature": 0.3}
+        r = requests.post(url, headers=headers, json=body, timeout=90)
+        r.raise_for_status()
+        msg = r.json()["choices"][0]["message"]
+        calls = msg.get("tool_calls") or []
+        if calls:
+            convo.append(msg)
+            for c in calls:
+                fn = c.get("function", {})
+                used.append(fn.get("name"))
+                try:
+                    args = _json.loads(fn.get("arguments") or "{}")
+                except Exception:
+                    args = {}
+                res = executor(fn.get("name"), args)
+                convo.append({"role": "tool", "tool_call_id": c.get("id"),
+                              "content": _json.dumps(res, ensure_ascii=False)})
+            continue
+        return {"text": (msg.get("content") or "").strip(), "tools_used": used}
+    return {"text": "(Araç döngüsü sınırına ulaşıldı.)", "tools_used": used}
+
+
+def query_agent_tools(agent_id: str, messages: list, system_prompt: str,
+                      tools: list, executor, max_rounds: int = 6,
+                      max_tokens: int = 1500) -> dict:
+    """Araç kullanımı ile sohbet. Dönüş: {text, tools_used}."""
+    cfg = _load_ai_config()
+    agent = cfg["agents"].get(agent_id)
+    if not agent:
+        raise KeyError(f"Agent bulunamadı: {agent_id}")
+    if agent.get("provider") == "anthropic":
+        return _call_anthropic_tools(agent, messages, system_prompt, tools,
+                                     executor, max_rounds, max_tokens)
+    return _call_openai_tools(agent, messages, system_prompt, tools,
+                              executor, max_rounds, max_tokens)
+
+
 def ask_agent_about_vm(agent_id: str, vm_id: str, question: str) -> str:
     """Belirli bir VM hakkında AI'ya soru sor."""
     try:
