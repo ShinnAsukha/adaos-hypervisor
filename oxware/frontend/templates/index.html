@@ -9200,6 +9200,28 @@ function clearAppInstall() {
   </div>
 </div>
 
+<!-- ══════════════════════ VM HEALTH-CHECK MODAL ══════════════════════ -->
+<div class="modal-overlay" id="modal-vm-health">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h2><i class="fa-solid fa-heart-pulse" style="margin-right:6px;color:#34d399"></i> Sağlık Kontrolü: <span id="vmh-title"></span></h2>
+      <button class="modal-close" onclick="closeModal('modal-vm-health')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="vmh-vmid">
+      <div id="vmh-result" style="margin-bottom:14px"><div class="text-muted" style="font-size:12px">Yükleniyor...</div></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:10px 0">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Beklenen servisler (systemd) ve portlar — virgülle ayır. Boş bırakırsan sadece boot + guest-agent kontrol edilir.</div>
+      <div class="form-row"><label>Servisler</label><input id="vmh-services" placeholder="nginx, sshd, postgresql"></div>
+      <div class="form-row"><label>Portlar</label><input id="vmh-ports" placeholder="80, 443, 22"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="vmHealthSavePolicy()"><i class="fa-solid fa-floppy-disk"></i> Politikayı Kaydet</button>
+      <button class="btn primary" onclick="vmHealthRun()"><i class="fa-solid fa-rotate"></i> Tekrar Kontrol</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════ GOLDEN IMAGE DEPLOY MODAL ══════════════════════ -->
 <div class="modal-overlay" id="modal-gi-deploy">
   <div class="modal" style="max-width:560px">
@@ -24502,6 +24524,7 @@ async function loadVMDetail(vmId) {
       secondaryHtml += `</div>`;
       secondaryHtml += `<div class="vd-actions-divider"></div>`;
       secondaryHtml += `<div class="vd-actions-group">`;
+      secondaryHtml += `<button class="vd-btn-icon" onclick="vmHealthOpen('${_vid}','${_vnm}')" title="Boot/servis sağlık kontrolü" style="color:#34d399"><i class="fa-solid fa-heart-pulse"></i> Sağlık</button>`;
       secondaryHtml += `<button class="vd-btn-icon" onclick="vmEnableSsh('${_vid}')" title="SSH"> SSH</button>`;
       secondaryHtml += `<button class="vd-btn-icon" onclick="vmResetPassword('${_vid}','${_vnm}')" title="VM içinde şifreyi sıfırla (QEMU Guest Agent)" style="color:#f59e0b"> Şifre</button>`;
       secondaryHtml += `<button class="vd-btn-icon" onclick="sendWoL('${_vid}','${_vnm}')" title="Wake-on-LAN" style="color:#60a5fa"> WoL</button>`;
@@ -37521,6 +37544,49 @@ async function giDeploy() {
     if (typeof navigate === 'function') navigate('vms');
     if (typeof loadVMs === 'function') loadVMs();
   }
+}
+
+/* ──── VM Sağlık Kontrolü (v2.8) ──── */
+async function vmHealthOpen(vmId, vmName) {
+  document.getElementById('vmh-vmid').value = vmId;
+  document.getElementById('vmh-title').textContent = vmName || vmId;
+  document.getElementById('vmh-result').innerHTML = '<div class="text-muted" style="font-size:12px">Yükleniyor...</div>';
+  document.getElementById('vmh-services').value = '';
+  document.getElementById('vmh-ports').value = '';
+  openModal('modal-vm-health');
+  const pol = await _api(`/api/v2/vms/${vmId}/health/policy`);
+  if (pol && pol.policy) {
+    document.getElementById('vmh-services').value = (pol.policy.services || []).join(', ');
+    document.getElementById('vmh-ports').value = (pol.policy.ports || []).join(', ');
+  }
+  vmHealthRun();
+}
+async function vmHealthRun() {
+  const id = document.getElementById('vmh-vmid').value;
+  const box = document.getElementById('vmh-result');
+  box.innerHTML = '<div class="text-muted" style="font-size:12px"><i class="fa-solid fa-spinner fa-spin"></i> Kontrol ediliyor...</div>';
+  const d = await _api(`/api/v2/vms/${id}/health`);
+  if (!d) { box.innerHTML = '<div style="color:var(--red);font-size:12px">Kontrol başarısız</div>'; return; }
+  const big = d.healthy
+    ? '<span style="color:var(--success);font-weight:700"><i class="fa-solid fa-circle-check"></i> SAĞLIKLI</span>'
+    : '<span style="color:#f59e0b;font-weight:700"><i class="fa-solid fa-triangle-exclamation"></i> DİKKAT</span>';
+  const yn = (v) => v ? '<i class="fa-solid fa-check" style="color:var(--success)"></i>' : '<i class="fa-solid fa-xmark" style="color:var(--red)"></i>';
+  let rows = '';
+  rows += `<tr><td>VM durumu</td><td>${_esc(d.state||'-')} ${yn(d.running)}</td></tr>`;
+  rows += `<tr><td>Guest Agent</td><td>${yn(d.agent_responsive)} ${d.agent_responsive?'yanıt veriyor':'yanıt yok'}</td></tr>`;
+  if (d.boot_state) rows += `<tr><td>Boot durumu</td><td><code>${_esc(d.boot_state)}</code></td></tr>`;
+  if (d.ip) rows += `<tr><td>IP</td><td><code>${_esc(d.ip)}</code></td></tr>`;
+  (d.services||[]).forEach(s => rows += `<tr><td>Servis: ${_esc(s.name)}</td><td>${yn(s.active)} ${s.active?'aktif':'pasif'}</td></tr>`);
+  (d.ports||[]).forEach(p => rows += `<tr><td>Port: ${p.port}</td><td>${yn(p.open)} ${p.open?'açık':'kapalı'}</td></tr>`);
+  box.innerHTML = `<div style="font-size:15px;margin-bottom:8px">${big} <span style="font-size:12px;color:var(--text-muted)">· ${_esc(d.summary||'')}</span></div>
+    <table style="width:100%;font-size:12px;border-collapse:collapse">${rows.replace(/<td>/g,'<td style="padding:4px 8px;border-bottom:1px solid var(--border)">')}</table>`;
+}
+async function vmHealthSavePolicy() {
+  const id = document.getElementById('vmh-vmid').value;
+  const services = document.getElementById('vmh-services').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const ports = document.getElementById('vmh-ports').value.split(',').map(s=>parseInt(s.trim(),10)).filter(n=>n>0);
+  const d = await _api(`/api/v2/vms/${id}/health/policy`, 'POST', { services, ports });
+  if (d) { toast('Sağlık politikası kaydedildi', 'success'); vmHealthRun(); }
 }
 
 /* ──── AI Asistan Sohbet (v2.8) ──── */

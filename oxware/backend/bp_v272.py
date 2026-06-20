@@ -353,6 +353,38 @@ def _register_routes():
                              d.get("images") or [], d.get("agent_id"))
         return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
 
+    # ── VM boot health-check ─────────────────────────────────────────────
+    vmh = _safe_import("vm_health")
+
+    @bp_v272.route("/api/v2/vms/<vm_id>/health", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_vm_health(vm_id):
+        if not vmh:
+            return _err("module unavailable", 503)
+        r = vmh.check(vm_id)
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 404))
+
+    @bp_v272.route("/api/v2/vms/<vm_id>/health/policy", methods=["GET", "POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_vm_health_policy(vm_id):
+        if not vmh:
+            return _err("module unavailable", 503)
+        # policy is keyed by VM name; resolve via vm_manager
+        try:
+            import vm_manager as _vmm
+        except Exception:
+            from oxware.backend import vm_manager as _vmm  # type: ignore
+        try:
+            name = _vmm.get_vm(vm_id)["name"]
+        except Exception as e:
+            return _err(f"VM bulunamadı: {str(e)[:120]}", 404)
+        if request.method == "GET":
+            return _ok(policy=vmh.get_policy(name))
+        d = request.get_json(silent=True) or {}
+        return _ok(**vmh.set_policy(name, d.get("services"), d.get("ports")))
+
     # ── Brand integrity / provenance ─────────────────────────────────────
     brand = _safe_import("brand_integrity")
 
