@@ -9216,6 +9216,59 @@ function clearAppInstall() {
   </div>
 </div>
 
+<!-- ══════════════════════ SNAPSHOT CHAIN MODAL ══════════════════════ -->
+<div class="modal-overlay" id="modal-snap-chain">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h2><i class="fa-solid fa-layer-group" style="margin-right:6px;color:#22d3ee"></i> Snapshot Zinciri: <span id="sc-title"></span></h2>
+      <button class="modal-close" onclick="closeModal('modal-snap-chain')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body"><div id="sc-body"><div class="text-muted" style="font-size:12px">Yükleniyor...</div></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ VAULT INJECT MODAL ══════════════════════ -->
+<div class="modal-overlay" id="modal-vault-inject">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h2><i class="fa-solid fa-key" style="margin-right:6px;color:#facc15"></i> Vault Secret Enjekte: <span id="vi-title"></span></h2>
+      <button class="modal-close" onclick="closeModal('modal-vault-inject')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="vi-vmid">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Vault'taki secret çalışan VM içine guest-agent ile yazılır (SSH yok). VM çalışır + guest-agent gerekli.</div>
+      <div class="form-row"><label>Vault Yolu</label><input id="vi-path" placeholder="secret/data/myapp"></div>
+      <div class="form-row"><label>Hedef Dosya</label><input id="vi-target" placeholder="/etc/myapp/secrets.env"></div>
+      <div style="display:flex;gap:10px">
+        <div class="form-row" style="flex:1"><label>Format</label><select id="vi-format" class="form-control"><option value="env">env (KEY=VAL)</option><option value="json">json</option></select></div>
+        <div class="form-row" style="flex:1"><label>Mode</label><input id="vi-mode" value="0600"></div>
+      </div>
+      <div id="vi-result" style="font-size:12px;margin-top:6px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-vault-inject')">İptal</button>
+      <button class="btn primary" onclick="vaultInjectRun()"><i class="fa-solid fa-syringe"></i> Enjekte Et</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ ATTESTATION MODAL ══════════════════════ -->
+<div class="modal-overlay" id="modal-attest">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h2><i class="fa-solid fa-shield-halved" style="margin-right:6px;color:#34d399"></i> Attestation: <span id="at-title"></span></h2>
+      <button class="modal-close" onclick="closeModal('modal-attest')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="at-vmid">
+      <div id="at-body"><div class="text-muted" style="font-size:12px">Yükleniyor...</div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn primary" onclick="attestCapture()"><i class="fa-solid fa-fingerprint"></i> Yeni Attestation Al</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════ VM HEALTH-CHECK MODAL ══════════════════════ -->
 <div class="modal-overlay" id="modal-vm-health">
   <div class="modal" style="max-width:560px">
@@ -24565,6 +24618,9 @@ async function loadVMDetail(vmId) {
       secondaryHtml += `<button class="vd-btn-icon" onclick="openMacModal('${_vid}','${_vnm}')" title="MAC Adresi" style="color:#38bdf8"> MAC</button>`;
       secondaryHtml += `<button class="vd-btn-icon" onclick="openSpiceInfo('${_vid}','${_vnm}')" title="SPICE Konsol" style="color:#34d399"> SPICE</button>`;
       secondaryHtml += `<button class="vd-btn-icon" onclick="diskQosOpen('${_vnm}')" title="Disk I/O QoS (IOPS/bant limiti)" style="color:#a78bfa"><i class="fa-solid fa-gauge"></i> Disk QoS</button>`;
+      secondaryHtml += `<button class="vd-btn-icon" onclick="snapChainOpen('${_vid}','${_vnm}')" title="Snapshot/backing-chain analizi" style="color:#22d3ee"><i class="fa-solid fa-layer-group"></i> Zincir</button>`;
+      secondaryHtml += `<button class="vd-btn-icon" onclick="vaultInjectOpen('${_vid}','${_vnm}')" title="Vault secret'ı VM'e enjekte et" style="color:#facc15"><i class="fa-solid fa-key"></i> Vault</button>`;
+      secondaryHtml += `<button class="vd-btn-icon" onclick="attestOpen('${_vid}','${_vnm}')" title="Measured-boot attestation" style="color:#34d399"><i class="fa-solid fa-shield-halved"></i> Attestation</button>`;
       secondaryHtml += `</div>`;
       secondaryHtml += `<div class="vd-actions-divider"></div>`;
       secondaryHtml += `<div class="vd-actions-group">`;
@@ -37671,6 +37727,74 @@ async function carbonReport() {
     <div style="font-size:11px;color:var(--text-muted)">${d.nodes} node · ort. %${d.avg_utilization_pct} kullanım · ~${d.avg_power_w}W &nbsp;|&nbsp; ≈ ${eq.trees_year} ağaç/yıl · ${eq.car_km} km araba</div>
     <div style="font-size:10px;color:var(--text-muted);margin-top:6px"><i class="fa-solid fa-circle-info"></i> ${_esc((d.assumptions||{}).note||'Tahmini değer')} (idle ${d.assumptions.idle_w}W / peak ${d.assumptions.peak_w}W, ${d.assumptions.co2_kg_per_kwh} kgCO₂/kWh)</div>`;
 }
+
+/* ──── Snapshot Zinciri (v2.8) ──── */
+async function snapChainOpen(vmId, vmName) {
+  document.getElementById('sc-title').textContent = vmName || vmId;
+  document.getElementById('sc-body').innerHTML = '<div class="text-muted" style="font-size:12px"><i class="fa-solid fa-spinner fa-spin"></i> Analiz...</div>';
+  openModal('modal-snap-chain');
+  const d = await _api(`/api/v2/vms/${vmId}/snapshot-chain`);
+  if (!d) { document.getElementById('sc-body').innerHTML = '<div style="color:var(--red);font-size:12px">Analiz başarısız</div>'; return; }
+  const big = d.healthy
+    ? '<span style="color:var(--success);font-weight:700"><i class="fa-solid fa-circle-check"></i> SAĞLIKLI</span>'
+    : '<span style="color:#f59e0b;font-weight:700"><i class="fa-solid fa-triangle-exclamation"></i> DİKKAT</span>';
+  let disks = (d.disks||[]).map(x => `<tr><td style="padding:4px 8px;border-bottom:1px solid var(--border)"><code>${_esc(x.target)}</code></td><td style="padding:4px 8px;border-bottom:1px solid var(--border)">derinlik: ${x.chain_depth==null?'?':x.chain_depth}</td></tr>`).join('');
+  let warns = (d.warnings||[]).map(w => `<li style="color:#f59e0b">${_esc(w)}</li>`).join('');
+  document.getElementById('sc-body').innerHTML = `
+    <div style="font-size:15px;margin-bottom:8px">${big} <span style="font-size:12px;color:var(--text-muted)">· ${d.snapshot_count} snapshot · max zincir ${d.max_chain_depth}</span></div>
+    <table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:8px">${disks||'<tr><td class="text-muted">disk bilgisi yok</td></tr>'}</table>
+    ${warns?`<ul style="margin:0 0 8px 18px;font-size:12px">${warns}</ul>`:''}
+    <div style="font-size:11px;color:var(--text-muted)"><i class="fa-solid fa-circle-info"></i> ${_esc(d.recommendation||'')}</div>`;
+}
+
+/* ──── Vault Secret Injection (v2.8) ──── */
+function vaultInjectOpen(vmId, vmName) {
+  document.getElementById('vi-vmid').value = vmId;
+  document.getElementById('vi-title').textContent = vmName || vmId;
+  document.getElementById('vi-path').value = '';
+  document.getElementById('vi-target').value = '';
+  document.getElementById('vi-mode').value = '0600';
+  document.getElementById('vi-result').innerHTML = '';
+  openModal('modal-vault-inject');
+}
+async function vaultInjectRun() {
+  const id = document.getElementById('vi-vmid').value;
+  const body = {
+    vault_path: document.getElementById('vi-path').value.trim(),
+    target_file: document.getElementById('vi-target').value.trim(),
+    format: document.getElementById('vi-format').value,
+    mode: document.getElementById('vi-mode').value.trim() || '0600',
+  };
+  if (!body.vault_path || !body.target_file) return toast('Vault yolu ve hedef dosya gerekli', 'error');
+  const res = document.getElementById('vi-result');
+  res.innerHTML = '<span class="text-muted"><i class="fa-solid fa-spinner fa-spin"></i> Enjekte ediliyor...</span>';
+  const d = await _api(`/api/v2/vms/${id}/vault-inject`, 'POST', body);
+  if (d) {
+    res.innerHTML = `<span style="color:var(--success)"><i class="fa-solid fa-check"></i> ${d.bytes} bayt yazıldı (${_esc((d.keys||[]).join(', '))})</span>`;
+    toast('Secret enjekte edildi', 'success');
+  } else {
+    res.innerHTML = '<span style="color:var(--red)">Enjeksiyon başarısız</span>';
+  }
+}
+
+/* ──── Measured-boot Attestation (v2.8) ──── */
+function attestOpen(vmId, vmName) {
+  document.getElementById('at-vmid').value = vmId;
+  document.getElementById('at-title').textContent = vmName || vmId;
+  openModal('modal-attest');
+  attestLoad(false);
+}
+async function attestLoad(capture) {
+  const id = document.getElementById('at-vmid').value;
+  const body = document.getElementById('at-body');
+  body.innerHTML = '<div class="text-muted" style="font-size:12px"><i class="fa-solid fa-spinner fa-spin"></i> ' + (capture?'Attestation alınıyor...':'Yükleniyor...') + '</div>';
+  const d = capture
+    ? await _api(`/api/confidential-vm/vms/${id}/attestation/capture`, 'POST')
+    : await _api(`/api/confidential-vm/vms/${id}/attestation`);
+  if (!d) { body.innerHTML = '<div style="color:var(--text-muted);font-size:12px">Attestation verisi yok. "Yeni Attestation Al" deneyin (confidential VM gerekli).</div>'; return; }
+  body.innerHTML = `<div class="ai-md">${_aiMd('```json\n'+JSON.stringify(d, null, 2)+'\n```')}</div>`;
+}
+function attestCapture() { attestLoad(true); }
 
 /* ──── Disk I/O QoS (v2.8) ──── */
 const _DQ_FIELDS = ['total_iops_sec','read_iops_sec','write_iops_sec','total_bytes_sec','read_bytes_sec','write_bytes_sec'];

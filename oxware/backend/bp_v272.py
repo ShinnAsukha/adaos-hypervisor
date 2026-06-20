@@ -449,6 +449,106 @@ def _register_routes():
             days = 30
         return _ok(**carbon.report(days))
 
+    # ── Snapshot / backing-chain analysis ────────────────────────────────
+    snc = _safe_import("snapshot_chain")
+
+    @bp_v272.route("/api/v2/vms/<vm_id>/snapshot-chain", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_snapshot_chain(vm_id):
+        if not snc:
+            return _err("module unavailable", 503)
+        r = snc.analyze(vm_id)
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 404))
+
+    # ── Vault → VM secret injection ──────────────────────────────────────
+    vij = _safe_import("vault_inject")
+
+    @bp_v272.route("/api/v2/vms/<vm_id>/vault-inject", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_vault_inject(vm_id):
+        if not vij:
+            return _err("module unavailable", 503)
+        d = request.get_json(silent=True) or {}
+        r = vij.inject_to_vm(vm_id, d.get("vault_path", ""),
+                             d.get("target_file", ""),
+                             d.get("format", "env"), d.get("mode", "0600"))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    # ── Federation mTLS identity ─────────────────────────────────────────
+    mtls = _safe_import("mtls_identity")
+
+    @bp_v272.route("/api/v2/federation/mtls/ca", methods=["GET", "POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_mtls_ca():
+        if not mtls:
+            return _err("module unavailable", 503)
+        if request.method == "POST":
+            r = mtls.ensure_ca()
+            return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+        return _ok(fingerprint=mtls.ca_fingerprint(), nodes=mtls.list_nodes(),
+                   available=mtls.available())
+
+    @bp_v272.route("/api/v2/federation/mtls/nodes/<node>", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_mtls_issue(node):
+        if not mtls:
+            return _err("module unavailable", 503)
+        r = mtls.issue_node_cert(node)
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    # ── SDN overlay (VXLAN) ──────────────────────────────────────────────
+    sdn = _safe_import("sdn_overlay")
+
+    @bp_v272.route("/api/v2/sdn/overlays", methods=["GET", "POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_sdn_overlays():
+        if not sdn:
+            return _err("module unavailable", 503)
+        if request.method == "GET":
+            return _ok(overlays=sdn.list_overlays(), available=sdn.available())
+        d = request.get_json(silent=True) or {}
+        r = sdn.create_overlay(d.get("name", ""), d.get("vni", 0),
+                               d.get("dev", ""), int(d.get("mtu", 1450)))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    @bp_v272.route("/api/v2/sdn/overlays/<name>", methods=["DELETE"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_sdn_delete(name):
+        if not sdn:
+            return _err("module unavailable", 503)
+        r = sdn.delete_overlay(name)
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    # ── Built-in L4 load balancer ────────────────────────────────────────
+    lb = _safe_import("load_balancer")
+
+    @bp_v272.route("/api/v2/lb/pools", methods=["GET", "POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_lb_pools():
+        if not lb:
+            return _err("module unavailable", 503)
+        if request.method == "GET":
+            return _ok(pools=lb.list_pools(), available=lb.available())
+        d = request.get_json(silent=True) or {}
+        r = lb.upsert_pool(d.get("name", ""), d.get("port", 0),
+                           d.get("backends") or [], d.get("algo", "roundrobin"))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    @bp_v272.route("/api/v2/lb/pools/<name>", methods=["DELETE"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_lb_delete(name):
+        if not lb:
+            return _err("module unavailable", 503)
+        return _ok(**lb.delete_pool(name))
+
     # ── Brand integrity / provenance ─────────────────────────────────────
     brand = _safe_import("brand_integrity")
 
