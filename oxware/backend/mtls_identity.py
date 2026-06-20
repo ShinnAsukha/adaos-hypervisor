@@ -141,8 +141,11 @@ def verify_peer(cert_pem: str) -> dict:
             __import__("cryptography").hazmat.primitives.asymmetric.padding.PKCS1v15(),
             peer.signature_hash_algorithm)
         cn = peer.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
-        now = datetime.datetime.utcnow()
-        valid = peer.not_valid_before <= now <= peer.not_valid_after
+        # Prefer tz-aware *_utc accessors (newer cryptography); fall back.
+        nb = getattr(peer, "not_valid_before_utc", None) or peer.not_valid_before
+        na = getattr(peer, "not_valid_after_utc", None) or peer.not_valid_after
+        now = datetime.datetime.now(getattr(nb, "tzinfo", None))
+        valid = nb <= now <= na
         return {"ok": True, "trusted": True, "cn": cn, "valid_dates": valid}
     except Exception as e:
         return {"ok": True, "trusted": False, "error": str(e)[:160]}

@@ -7470,6 +7470,51 @@
           </div>
         </div>
 
+        <!-- ══ v2.8 — SDN VXLAN Overlay ══ -->
+        <div id="ent-pane-sdn" style="display:none">
+          <div class="section-header"><h2><i class="fa-solid fa-diagram-project fa-fw" style="color:#22d3ee"></i> SDN Overlay (VXLAN) <span id="sdn-ready"></span></h2><div class="spacer"></div><button class="btn" onclick="loadSdnPage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
+          <div class="card" style="margin-bottom:12px;border-left:4px solid #22d3ee;background:rgba(34,211,238,.04);padding:14px"><div style="font-size:12px;line-height:1.6"><b style="color:#22d3ee">Bu Nedir?</b> L2-over-L3 overlay ağlar — kiracılar VLAN değişikliği olmadan host'lar arası izole ağ alır. iproute2 (ip link vxlan) gerekir.</div></div>
+          <div class="card" style="margin-bottom:12px"><div class="card-title">Yeni Overlay</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+              <div class="form-group" style="margin:0"><label style="font-size:11px">Ad</label><input id="sdn-name" class="form-control" style="width:120px;margin-top:4px" placeholder="vxlan0"></div>
+              <div class="form-group" style="margin:0"><label style="font-size:11px">VNI</label><input id="sdn-vni" type="number" class="form-control" style="width:110px;margin-top:4px" placeholder="100"></div>
+              <div class="form-group" style="margin:0"><label style="font-size:11px">Dev (ops)</label><input id="sdn-dev" class="form-control" style="width:110px;margin-top:4px" placeholder="eth0"></div>
+              <div class="form-group" style="margin:0"><label style="font-size:11px">MTU</label><input id="sdn-mtu" type="number" class="form-control" style="width:90px;margin-top:4px" value="1450"></div>
+              <button class="btn-primary" onclick="sdnCreate()" style="font-size:12px"><i class="fa-solid fa-plus"></i> Oluştur</button>
+            </div></div>
+          <div class="card"><div class="card-title">Overlay Ağları</div><div class="table-wrap"><table><thead><tr><th>Ad</th><th>VNI</th><th>Dev</th><th>MTU</th><th>Durum</th><th>İşlem</th></tr></thead><tbody id="sdn-tbody"><tr><td colspan="6" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody></table></div></div>
+        </div>
+
+        <!-- ══ v2.8 — Load Balancer ══ -->
+        <div id="ent-pane-lb" style="display:none">
+          <div class="section-header"><h2><i class="fa-solid fa-scale-balanced fa-fw" style="color:#34d399"></i> L4 Load Balancer <span id="lb-ready"></span></h2><div class="spacer"></div><button class="btn" onclick="loadLbPage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
+          <div class="card" style="margin-bottom:12px;border-left:4px solid #34d399;background:rgba(52,211,153,.04);padding:14px"><div style="font-size:12px;line-height:1.6"><b style="color:#34d399">Bu Nedir?</b> VM'lerin önüne TCP yük dengeleyici. İzole HAProxy instance'ı (sistem haproxy'sine dokunmaz). Sağlık kontrollü backend havuzları.</div></div>
+          <div class="card" style="margin-bottom:12px"><div class="card-title">Havuz Ekle / Güncelle</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+              <div class="form-group" style="margin:0"><label style="font-size:11px">Ad</label><input id="lb-name" class="form-control" style="width:120px;margin-top:4px" placeholder="web"></div>
+              <div class="form-group" style="margin:0"><label style="font-size:11px">Port</label><input id="lb-port" type="number" class="form-control" style="width:90px;margin-top:4px" placeholder="80"></div>
+              <div class="form-group" style="margin:0"><label style="font-size:11px">Algoritma</label><select id="lb-algo" class="form-control" style="width:130px;margin-top:4px"><option value="roundrobin">roundrobin</option><option value="leastconn">leastconn</option><option value="source">source</option></select></div>
+              <div class="form-group" style="margin:0;flex:1"><label style="font-size:11px">Backend'ler (ip:port, virgül)</label><input id="lb-backends" class="form-control" style="min-width:220px;margin-top:4px" placeholder="10.0.0.10:8080, 10.0.0.11:8080"></div>
+              <button class="btn-primary" onclick="lbUpsert()" style="font-size:12px"><i class="fa-solid fa-plus"></i> Kaydet</button>
+            </div></div>
+          <div class="card"><div class="card-title">Havuzlar</div><div class="table-wrap"><table><thead><tr><th>Ad</th><th>Port</th><th>Algoritma</th><th>Backend'ler</th><th>İşlem</th></tr></thead><tbody id="lb-tbody"><tr><td colspan="5" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody></table></div></div>
+        </div>
+
+        <!-- ══ v2.8 — Federation mTLS ══ -->
+        <div id="ent-pane-mtls" style="display:none">
+          <div class="section-header"><h2><i class="fa-solid fa-certificate fa-fw" style="color:#f59e0b"></i> Federation mTLS Kimlik</h2><div class="spacer"></div><button class="btn" onclick="loadMtlsPage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
+          <div class="card" style="margin-bottom:12px;border-left:4px solid #f59e0b;background:rgba(245,166,35,.04);padding:14px"><div style="font-size:12px;line-height:1.6"><b style="color:#f59e0b">Bu Nedir?</b> Federation node'ları arası karşılıklı TLS. Özel CA + node sertifikaları. Paylaşılan token yerine kriptografik kimlik.</div></div>
+          <div class="card" style="margin-bottom:12px"><div class="card-title">Sertifika Otoritesi (CA)</div><div id="mtls-ca" class="text-muted" style="font-size:12px;margin-bottom:8px">Yükleniyor...</div><button class="btn-primary" onclick="mtlsEnsureCa()" style="font-size:12px"><i class="fa-solid fa-shield"></i> CA Oluştur/Doğrula</button></div>
+          <div class="card" style="margin-bottom:12px"><div class="card-title">Node Sertifikası Ver</div>
+            <div style="display:flex;gap:8px;align-items:flex-end">
+              <div class="form-group" style="margin:0"><label style="font-size:11px">Node Adı</label><input id="mtls-node" class="form-control" style="width:180px;margin-top:4px" placeholder="node-2"></div>
+              <button class="btn-primary" onclick="mtlsIssue()" style="font-size:12px"><i class="fa-solid fa-plus"></i> Sertifika Ver</button>
+            </div>
+            <div id="mtls-issue-result" style="margin-top:10px"></div>
+          </div>
+          <div class="card"><div class="card-title">Verilmiş Node'lar</div><div id="mtls-nodes" class="text-muted" style="font-size:12px">Yükleniyor...</div></div>
+        </div>
+
         <!-- ══ v2.7.2 — OAuth2 Presets ══ -->
         <div id="ent-pane-oauth2presets" style="display:none">
           <div class="section-header"><h2><i class="fa-solid fa-key fa-fw" style="color:#7c3aed"></i> OAuth2 Sağlayıcı Hazır Setleri</h2><div class="spacer"></div><button class="btn" onclick="loadOauth2PresetsPage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
@@ -34203,6 +34248,9 @@ const ENT_LOADERS = {
   // handled by the original entries above — do not re-add to avoid dup keys)
   csi:            () => { try { loadCsiPage(); } catch(e) { console.warn(e); } },
   goldenimages:   () => { try { loadGoldenImages(); } catch(e) { console.warn(e); } },
+  sdn:            () => { try { loadSdnPage(); } catch(e) { console.warn(e); } },
+  lb:             () => { try { loadLbPage(); } catch(e) { console.warn(e); } },
+  mtls:           () => { try { loadMtlsPage(); } catch(e) { console.warn(e); } },
   oauth2presets:  () => { try { loadOauth2PresetsPage(); } catch(e) { console.warn(e); } },
   auditretention: () => { try { loadAuditRetentionPage(); } catch(e) { console.warn(e); } },
   sbom:           () => { try { loadSbomPage(); } catch(e) { console.warn(e); } },
@@ -37646,6 +37694,82 @@ async function giDeploy() {
   }
 }
 
+/* ──── SDN Overlay (v2.8) ──── */
+async function loadSdnPage() {
+  const d = await _api('/api/v2/sdn/overlays');
+  const rb = document.getElementById('sdn-ready');
+  if (rb) rb.outerHTML = d && d.available
+    ? '<span id="sdn-ready" class="mat-badge ready">iproute2 hazır</span>'
+    : '<span id="sdn-ready" class="mat-badge notready">ip yok</span>';
+  const tb = document.getElementById('sdn-tbody');
+  const arr = (d && d.overlays) || [];
+  if (tb) tb.innerHTML = arr.length ? arr.map(o => `<tr><td><code>${_esc(o.name)}</code></td><td>${o.vni}</td><td>${_esc(o.dev||'-')}</td><td>${o.mtu||'-'}</td><td>${o.up?'<span class="mat-badge ready">up</span>':'<span class="mat-badge notready">down</span>'}</td><td><button class="btn sm danger" onclick="sdnDelete('${_esc(o.name)}')"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="6" class="text-center text-muted" style="padding:14px">Overlay yok</td></tr>';
+}
+async function sdnCreate() {
+  const body = { name: document.getElementById('sdn-name').value.trim(), vni: parseInt(document.getElementById('sdn-vni').value||'0',10), dev: document.getElementById('sdn-dev').value.trim(), mtu: parseInt(document.getElementById('sdn-mtu').value||'1450',10) };
+  if (!body.name || !body.vni) return toast('Ad ve VNI gerekli', 'error');
+  const d = await _api('/api/v2/sdn/overlays', 'POST', body);
+  if (d) { toast('Overlay oluşturuldu', 'success'); loadSdnPage(); }
+}
+async function sdnDelete(name) {
+  if (!await showConfirm(`${name} silinecek. Devam?`, 'Overlay Sil', true)) return;
+  const d = await _api(`/api/v2/sdn/overlays/${name}`, 'DELETE');
+  if (d) { toast('Overlay silindi', 'success'); loadSdnPage(); }
+}
+
+/* ──── Load Balancer (v2.8) ──── */
+async function loadLbPage() {
+  const d = await _api('/api/v2/lb/pools');
+  const rb = document.getElementById('lb-ready');
+  if (rb) rb.outerHTML = d && d.available
+    ? '<span id="lb-ready" class="mat-badge ready">haproxy hazır</span>'
+    : '<span id="lb-ready" class="mat-badge notready">haproxy yok</span>';
+  const tb = document.getElementById('lb-tbody');
+  const arr = (d && d.pools) || [];
+  if (tb) tb.innerHTML = arr.length ? arr.map(p => `<tr><td><code>${_esc(p.name)}</code></td><td>${p.port}</td><td>${_esc(p.algo||'-')}</td><td style="font-size:11px">${(p.backends||[]).map(_esc).join('<br>')}</td><td><button class="btn sm danger" onclick="lbDelete('${_esc(p.name)}')"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="5" class="text-center text-muted" style="padding:14px">Havuz yok</td></tr>';
+}
+async function lbUpsert() {
+  const backends = document.getElementById('lb-backends').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const body = { name: document.getElementById('lb-name').value.trim(), port: parseInt(document.getElementById('lb-port').value||'0',10), algo: document.getElementById('lb-algo').value, backends };
+  if (!body.name || !body.port || !backends.length) return toast('Ad, port ve en az bir backend gerekli', 'error');
+  const d = await _api('/api/v2/lb/pools', 'POST', body);
+  if (d) { toast(d.applied ? 'Havuz kaydedildi + uygulandı' : 'Havuz kaydedildi', 'success'); loadLbPage(); }
+}
+async function lbDelete(name) {
+  if (!await showConfirm(`${name} havuzu silinecek. Devam?`, 'Havuz Sil', true)) return;
+  const d = await _api(`/api/v2/lb/pools/${name}`, 'DELETE');
+  if (d) { toast('Havuz silindi', 'success'); loadLbPage(); }
+}
+
+/* ──── Federation mTLS (v2.8) ──── */
+async function loadMtlsPage() {
+  const d = await _api('/api/v2/federation/mtls/ca');
+  const ca = document.getElementById('mtls-ca');
+  if (ca) ca.innerHTML = d && d.fingerprint
+    ? `<span class="mat-badge ready">CA aktif</span> Parmak izi: <code>${_esc(d.fingerprint)}</code>`
+    : (d && !d.available ? '<span class="mat-badge notready">cryptography yok</span>' : '<span class="text-muted">CA henüz yok — oluşturun</span>');
+  const nodes = (d && d.nodes) || [];
+  const nb = document.getElementById('mtls-nodes');
+  if (nb) nb.innerHTML = nodes.length ? nodes.map(n => `<span class="mat-badge ready" style="margin:2px"><i class="fa-solid fa-server"></i> ${_esc(n)}</span>`).join('') : '<span class="text-muted">Henüz node sertifikası yok</span>';
+}
+async function mtlsEnsureCa() {
+  const d = await _api('/api/v2/federation/mtls/ca', 'POST');
+  if (d) { toast(d.created ? 'CA oluşturuldu' : 'CA mevcut', 'success'); loadMtlsPage(); }
+}
+async function mtlsIssue() {
+  const node = document.getElementById('mtls-node').value.trim();
+  if (!node) return toast('Node adı gerekli', 'error');
+  const d = await _api(`/api/v2/federation/mtls/nodes/${node}`, 'POST');
+  const res = document.getElementById('mtls-issue-result');
+  if (d && d.cert_pem) {
+    res.innerHTML = `<div style="font-size:11px;color:var(--success);margin-bottom:6px"><i class="fa-solid fa-check"></i> ${_esc(node)} için sertifika verildi (CA fp: ${_esc(d.ca_fingerprint||'')})</div>
+      <div class="ai-md">${_aiMd('```\n'+_esc(d.cert_pem)+'\n```')}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Node anahtarı + CA panel sunucusunda saklandı. Node'a güvenli şekilde dağıtın.</div>`;
+    toast('Sertifika verildi', 'success');
+    loadMtlsPage();
+  } else { res.innerHTML = '<span style="color:var(--red);font-size:12px">Sertifika verilemedi</span>'; }
+}
+
 /* ──── VM Sağlık Kontrolü (v2.8) ──── */
 async function vmHealthOpen(vmId, vmName) {
   document.getElementById('vmh-vmid').value = vmId;
@@ -38435,6 +38559,9 @@ const _PAGE_TABS = {
     {key:'tab-firewall', label:'Güvenlik Duvarı', src:'page-tab-firewall'},
     {key:'topology', label:'Topoloji', src:'page-topology'},
     {key:'nioc', label:'NIOC', src:'ent-pane-nioc'},
+    {key:'sdn', label:'SDN Overlay', src:'ent-pane-sdn'},
+    {key:'lb', label:'Load Balancer', src:'ent-pane-lb'},
+    {key:'mtls', label:'Federation mTLS', src:'ent-pane-mtls'},
     {key:'net-adv', label:'Ağ+', src:'ent-pane-net-adv'},
     {key:'microseg', label:'Mikrosegment', src:'ent-pane-microseg'},
     {key:'bfd', label:'BFD', src:'ent-pane-bfd'},
