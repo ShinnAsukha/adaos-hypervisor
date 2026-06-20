@@ -665,6 +665,23 @@ cred_mgr.apply_reset_if_exists()
 # AI agentları başlat
 ai_agent.start_all_agents()
 
+# Marka bütünlüğü / provenance kontrolü — varsayılan "warn" (engellemez,
+# sadece loglar + panelde uyarı). OXWARE_BRAND_MODE=strict ile fork+rebrand
+# tespitinde başlatma engellenir, =off ile tamamen kapatılır.
+try:
+    import brand_integrity as _brand
+    _brand_verdict = _brand.enforce()
+    if _brand_verdict.get("block"):
+        log.critical("OXware başlatma engellendi (brand integrity strict). "
+                     "Yetkisiz fork/rebrand tespit edildi. "
+                     "OXWARE_BRAND_MODE=warn ile devam edebilirsiniz.")
+        import sys as _sys
+        _sys.exit(3)
+except SystemExit:
+    raise
+except Exception as _be:
+    log.debug("brand integrity kontrolü atlandı: %s", _be)
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def ok(data=None, **kwargs):
     payload = kwargs if data is None else (data if isinstance(data, dict) else {"result": data})

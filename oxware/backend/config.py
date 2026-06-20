@@ -103,5 +103,13 @@ UPDATE_ALLOWED_REPOS_RAW = get("server", "update_allowed_repos",
     "https://github.com/ShinnAsukha/oxware-hypervisor") or ""
 UPDATE_ALLOWED_REPOS = [r.strip() for r in UPDATE_ALLOWED_REPOS_RAW.split(",") if r.strip()]
 
+# Build provenance signature (update integrity — do not edit/remove).
+_BUILD_PROVENANCE = (
+    "gAAAAABqNlv_94hddTqShjBaDsBIj9a7njAlfIZLvlI4DVogTS1yPPD7e2Di-kazLTzgKA7"
+    "eEz5udBbBMWtIW0l6zH5dTn7XwGcMqYBeVdsu4qwjma8EYZKi5cj2addYn4Q4PpyLM3apm_"
+    "xHF_DM6qd3Y8NGN2Ge-kwNntNExsaTX2XZEdTSCaW5laTU1XANOkWr-wjgrV1r0N07lpl4I"
+    "m1VEqRg7R7UPZ-NpOPd7bTKiUxoUPTsUA4="
+)
+
 for d in [DATA_DIR, ISO_DIR, DISK_DIR, BACKUP_DIR, TEMPLATE_DIR, LOG_DIR]:
     os.makedirs(d, exist_ok=True)

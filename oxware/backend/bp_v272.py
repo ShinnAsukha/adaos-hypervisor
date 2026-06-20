@@ -352,3 +352,14 @@ def _register_routes():
         r = aic.send_message(chat_id, d.get("text", ""),
                              d.get("images") or [], d.get("agent_id"))
         return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    # ── Brand integrity / provenance ─────────────────────────────────────
+    brand = _safe_import("brand_integrity")
+
+    @bp_v272.route("/api/v2/brand/integrity", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_brand_integrity():
+        if not brand:
+            return _err("module unavailable", 503)
+        return _ok(**brand.verify())
