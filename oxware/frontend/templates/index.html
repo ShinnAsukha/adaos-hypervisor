@@ -9063,34 +9063,34 @@ function clearAppInstall() {
       <div class="form-row"><label>Model</label><input id="agent-model" placeholder="anthropic/claude-3-haiku"></div>
       <div class="form-row"><label>Kontrol Aralığı (dk)</label><input id="agent-interval" type="number" value="15" min="1" max="1440"></div>
       <div class="form-row" style="flex-direction:column;align-items:flex-start;gap:8px">
-        <label style="margin-bottom:4px"> Yetki Alanları</label>
+        <label style="margin-bottom:4px"><i class="fa-solid fa-shield-halved" style="margin-right:6px;color:var(--accent-lt)"></i>Yetki Alanları</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;font-size:12px">
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
-            <input type="checkbox" id="perm-monitor" checked> Sistem İzleme
+            <input type="checkbox" id="perm-monitor" checked> <i class="fa-solid fa-gauge-high fa-fw" style="color:#3b82f6"></i> Sistem İzleme
           </label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
-            <input type="checkbox" id="perm-events" checked> Olay Takibi
+            <input type="checkbox" id="perm-events" checked> <i class="fa-solid fa-list-check fa-fw" style="color:#8b5cf6"></i> Olay Takibi
           </label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
-            <input type="checkbox" id="perm-alerts" checked> Uyarı Oluşturma
+            <input type="checkbox" id="perm-alerts" checked> <i class="fa-solid fa-bell fa-fw" style="color:#f5a623"></i> Uyarı Oluşturma
           </label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
-            <input type="checkbox" id="perm-vm-read"> ️ VM Durumu Okuma
+            <input type="checkbox" id="perm-vm-read"> <i class="fa-solid fa-eye fa-fw" style="color:#06b6d4"></i> VM Durumu Okuma
           </label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
-            <input type="checkbox" id="perm-vm-manage"> ️ VM Başlat/Durdur
+            <input type="checkbox" id="perm-vm-manage"> <i class="fa-solid fa-power-off fa-fw" style="color:#22c55e"></i> VM Başlat/Durdur
           </label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
-            <input type="checkbox" id="perm-vm-delete"> ️ VM Silme
+            <input type="checkbox" id="perm-vm-delete"> <i class="fa-solid fa-trash fa-fw" style="color:#ef4444"></i> VM Silme
           </label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
-            <input type="checkbox" id="perm-network"> Ağ Yönetimi
+            <input type="checkbox" id="perm-network"> <i class="fa-solid fa-network-wired fa-fw" style="color:#14b8a6"></i> Ağ Yönetimi
           </label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
-            <input type="checkbox" id="perm-storage"> Depolama Erişimi
+            <input type="checkbox" id="perm-storage"> <i class="fa-solid fa-hard-drive fa-fw" style="color:#a78bfa"></i> Depolama Erişimi
           </label>
         </div>
-        <p style="font-size:11px;color:var(--text-muted);margin-top:2px">️ Yalnızca gerekli yetkileri verin. Ajan sadece verilen yetki alanlarında işlem yapabilir.</p>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:2px"><i class="fa-solid fa-circle-info" style="margin-right:4px;color:var(--orange)"></i>Yalnızca gerekli yetkileri verin. Ajan sadece verilen yetki alanlarında işlem yapabilir.</p>
       </div>
     </div>
     <div class="modal-footer">
@@ -12539,7 +12539,7 @@ const PAGE_STRINGS = {
     '️ VM Başlat/Durdur':'️ VM Start/Stop',
     '️ Windows 10 / 11 — Otomatik İndirme Desteklenmiyor':'️ Windows 10 / 11 — Auto Download Not Supported',
     '️ Windows için standart cloud image desteği yoktur.':'️ Windows için standart cloud image desteği yoktur.',
-    '️ Yalnızca gerekli yetkileri verin. Ajan sadece verilen yetki alanlarında işlem yapabilir.':'️ Only grant necessary permissions. The agent can only operate within granted permission scopes.',
+    'Yalnızca gerekli yetkileri verin. Ajan sadece verilen yetki alanlarında işlem yapabilir.':'️ Only grant necessary permissions. The agent can only operate within granted permission scopes.',
     '️ İstemciler':'️ İstemciler',
     '️ İşlemci (CPU)':'️ Processor (CPU)',
     '💽 Taşı':'💽 Taşı',
@@ -15056,7 +15056,7 @@ const PAGE_STRINGS = {
     '️ VM Başlat/Durdur':'️ VM Start/Stop',
     '️ Windows 10 / 11 — Otomatik İndirme Desteklenmiyor':'️ Windows 10 / 11 — Auto Download Not Supported',
     '️ Windows için standart cloud image desteği yoktur.':'️ Windows için standart cloud image desteği yoktur.',
-    '️ Yalnızca gerekli yetkileri verin. Ajan sadece verilen yetki alanlarında işlem yapabilir.':'️ Only grant necessary permissions. The agent can only operate within granted permission scopes.',
+    'Yalnızca gerekli yetkileri verin. Ajan sadece verilen yetki alanlarında işlem yapabilir.':'️ Only grant necessary permissions. The agent can only operate within granted permission scopes.',
     '️ İstemciler':'️ İstemciler',
     '️ İşlemci (CPU)':'️ Processor (CPU)',
     '💽 Taşı':'💽 Taşı',
@@ -17567,7 +17567,7 @@ const PAGE_STRINGS = {
     '️ VM Başlat/Durdur':'️ VM Start/Stop',
     '️ Windows 10 / 11 — Otomatik İndirme Desteklenmiyor':'️ Windows 10 / 11 — Auto Download Not Supported',
     '️ Windows için standart cloud image desteği yoktur.':'️ Windows için standart cloud image desteği yoktur.',
-    '️ Yalnızca gerekli yetkileri verin. Ajan sadece verilen yetki alanlarında işlem yapabilir.':'️ Only grant necessary permissions. The agent can only operate within granted permission scopes.',
+    'Yalnızca gerekli yetkileri verin. Ajan sadece verilen yetki alanlarında işlem yapabilir.':'️ Only grant necessary permissions. The agent can only operate within granted permission scopes.',
     '️ İstemciler':'️ İstemciler',
     '️ İşlemci (CPU)':'️ Processor (CPU)',
     '💽 Taşı':'💽 Taşı',
@@ -20079,7 +20079,7 @@ const PAGE_STRINGS = {
     '️ VM Başlat/Durdur':'️ VM Start/Stop',
     '️ Windows 10 / 11 — Otomatik İndirme Desteklenmiyor':'️ Windows 10 / 11 — Auto Download Not Supported',
     '️ Windows için standart cloud image desteği yoktur.':'️ Windows için standart cloud image desteği yoktur.',
-    '️ Yalnızca gerekli yetkileri verin. Ajan sadece verilen yetki alanlarında işlem yapabilir.':'️ Only grant necessary permissions. The agent can only operate within granted permission scopes.',
+    'Yalnızca gerekli yetkileri verin. Ajan sadece verilen yetki alanlarında işlem yapabilir.':'️ Only grant necessary permissions. The agent can only operate within granted permission scopes.',
     '️ İstemciler':'️ İstemciler',
     '️ İşlemci (CPU)':'️ Processor (CPU)',
     '💽 Taşı':'💽 Taşı',
@@ -22561,7 +22561,7 @@ const PAGE_STRINGS = {
     '️ VM Başlat/Durdur':'️ VM Start/Stop',
     '️ Windows 10 / 11 — Otomatik İndirme Desteklenmiyor':'️ Windows 10 / 11 — Auto Download Not Supported',
     '️ Windows için standart cloud image desteği yoktur.':'️ Windows için standart cloud image desteği yoktur.',
-    '️ Yalnızca gerekli yetkileri verin. Ajan sadece verilen yetki alanlarında işlem yapabilir.':'️ Only grant necessary permissions. The agent can only operate within granted permission scopes.',
+    'Yalnızca gerekli yetkileri verin. Ajan sadece verilen yetki alanlarında işlem yapabilir.':'️ Only grant necessary permissions. The agent can only operate within granted permission scopes.',
     '️ İstemciler':'️ İstemciler',
     '️ İşlemci (CPU)':'️ Processor (CPU)',
     '💽 Taşı':'💽 Taşı',
