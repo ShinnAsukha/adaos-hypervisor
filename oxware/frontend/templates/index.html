@@ -3382,6 +3382,24 @@
 
         <!-- ─────── AI Chat Page ─────── -->
         <div class="page" id="page-aichat">
+          <style>
+            .ai-md{font-size:13px;line-height:1.6}
+            .ai-md p{margin:0 0 8px}
+            .ai-md p:last-child{margin-bottom:0}
+            .ai-md h1,.ai-md h2,.ai-md h3{margin:10px 0 6px;font-weight:700;font-size:14px}
+            .ai-md ul,.ai-md ol{margin:6px 0 8px 20px}
+            .ai-md li{margin:2px 0}
+            .ai-md code{background:rgba(127,127,127,.2);padding:1px 5px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px}
+            .ai-md pre{background:rgba(0,0,0,.28);border:1px solid var(--border);border-radius:6px;padding:10px;overflow:auto;margin:6px 0}
+            .ai-md pre code{background:none;padding:0}
+            .ai-md table{border-collapse:collapse;margin:8px 0;width:100%;font-size:12px}
+            .ai-md th,.ai-md td{border:1px solid var(--border);padding:5px 9px;text-align:left;white-space:nowrap}
+            .ai-md th{background:rgba(127,127,127,.16);font-weight:600}
+            .ai-md tr:nth-child(even) td{background:rgba(127,127,127,.05)}
+            .ai-md a{color:var(--accent-lt)}
+            .ai-md hr{border:none;border-top:1px solid var(--border);margin:8px 0}
+            .ai-md strong{font-weight:700;color:var(--text)}
+          </style>
           <div class="section-header">
             <h2><i class="fa-solid fa-robot" style="margin-right:8px;color:var(--accent-lt)"></i>AI Asistan Sohbet</h2>
             <div class="spacer"></div>
@@ -37536,14 +37554,71 @@ function aiChatRenderMessages(msgs) {
   box.innerHTML = msgs.map(m => aiChatBubble(m.role, m.content, m.has_image)).join('');
   box.scrollTop = box.scrollHeight;
 }
+// Minimal, safe markdown → HTML (escape-first). Tables, bold/italic, code,
+// fenced blocks, headings, lists, links, hr. Used for assistant replies.
+function _aiMd(src) {
+  if (!src) return '';
+  let s = src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const blocks = [];
+  s = s.replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => {
+    blocks.push('<pre><code>' + code.replace(/\n$/, '') + '</code></pre>');
+    return ' B' + (blocks.length - 1) + ' ';
+  });
+  const inline = (t) => t
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, txt, url) =>
+      /^(https?:|mailto:)/i.test(url)
+        ? `<a href="${url}" target="_blank" rel="noopener">${txt}</a>` : txt);
+  const splitRow = (r) => r.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map(c => c.trim());
+  const lines = s.split('\n'), out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (/\|/.test(line) && i + 1 < lines.length &&
+        /\|/.test(lines[i + 1]) && /^[\s|:-]*-[\s|:-]*$/.test(lines[i + 1])) {
+      const header = splitRow(line); i += 2; const rows = [];
+      while (i < lines.length && /\|/.test(lines[i]) && lines[i].trim() !== '') { rows.push(splitRow(lines[i])); i++; }
+      out.push('<table><thead><tr>' + header.map(h => '<th>' + inline(h) + '</th>').join('') +
+        '</tr></thead><tbody>' + rows.map(r => '<tr>' + r.map(c => '<td>' + inline(c) + '</td>').join('') + '</tr>').join('') +
+        '</tbody></table>');
+      continue;
+    }
+    const hm = line.match(/^(#{1,3})\s+(.*)$/);
+    if (hm) { out.push(`<h${hm[1].length}>` + inline(hm[2]) + `</h${hm[1].length}>`); i++; continue; }
+    if (/^\s*([-*_])\1\1+\s*$/.test(line)) { out.push('<hr>'); i++; continue; }
+    if (/^\s*[-*]\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) { items.push('<li>' + inline(lines[i].replace(/^\s*[-*]\s+/, '')) + '</li>'); i++; }
+      out.push('<ul>' + items.join('') + '</ul>'); continue;
+    }
+    if (/^\s*\d+\.\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) { items.push('<li>' + inline(lines[i].replace(/^\s*\d+\.\s+/, '')) + '</li>'); i++; }
+      out.push('<ol>' + items.join('') + '</ol>'); continue;
+    }
+    if (line.trim() === '') { i++; continue; }
+    const para = [line]; i++;
+    while (i < lines.length && lines[i].trim() !== '' &&
+           !/^\s*[-*#]|\|/.test(lines[i]) && !/^\s*\d+\.\s/.test(lines[i])) { para.push(lines[i]); i++; }
+    out.push('<p>' + para.map(inline).join('<br>') + '</p>');
+  }
+  let html = out.join('\n');
+  html = html.replace(/ B(\d+) /g, (m, n) => blocks[+n]);
+  return html;
+}
 function aiChatBubble(role, content, hasImage, imgs) {
   const me = role === 'user';
   const imgHtml = (imgs && imgs.length)
     ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${imgs.map(s=>`<img src="${s}" style="max-width:120px;max-height:120px;border-radius:6px;border:1px solid var(--border)">`).join('')}</div>`
     : (hasImage ? '<div style="font-size:10px;color:var(--text-muted);margin-bottom:4px"><i class="fa-solid fa-image"></i> görsel</div>' : '');
+  const bodyHtml = me
+    ? `<span style="white-space:pre-wrap;word-break:break-word">${_esc(content)}</span>`
+    : `<div class="ai-md">${_aiMd(content)}</div>`;
   return `<div style="display:flex;justify-content:${me?'flex-end':'flex-start'}">
-    <div style="max-width:78%;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word;background:${me?'var(--accent)':'var(--bg)'};color:${me?'#fff':'var(--text)'};border:1px solid ${me?'transparent':'var(--border)'}">
-      ${imgHtml}${_esc(content)}
+    <div style="max-width:82%;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.55;background:${me?'var(--accent)':'var(--bg)'};color:${me?'#fff':'var(--text)'};border:1px solid ${me?'transparent':'var(--border)'}">
+      ${imgHtml}${bodyHtml}
     </div></div>`;
 }
 async function aiChatSetAgent() {
