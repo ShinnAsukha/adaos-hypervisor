@@ -385,6 +385,32 @@ def _register_routes():
         d = request.get_json(silent=True) or {}
         return _ok(**vmh.set_policy(name, d.get("services"), d.get("ports")))
 
+    # ── Per-VM disk QoS (storage I/O throttling) ─────────────────────────
+    sqos = _safe_import("storage_qos")
+
+    @bp_v272.route("/api/v2/vms/<vm_name>/disk-qos", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_disk_qos_list(vm_name):
+        if not sqos:
+            return _err("module unavailable", 503)
+        r = sqos.list_disks(vm_name)
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    @bp_v272.route("/api/v2/vms/<vm_name>/disk-qos/<dev>",
+                   methods=["GET", "PUT"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_disk_qos(vm_name, dev):
+        if not sqos:
+            return _err("module unavailable", 503)
+        if request.method == "GET":
+            r = sqos.get_qos(vm_name, dev)
+        else:
+            d = request.get_json(silent=True) or {}
+            r = sqos.set_qos(vm_name, dev, d.get("limits") or d)
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
     # ── Brand integrity / provenance ─────────────────────────────────────
     brand = _safe_import("brand_integrity")
 

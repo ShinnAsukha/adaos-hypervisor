@@ -9222,6 +9222,33 @@ function clearAppInstall() {
   </div>
 </div>
 
+<!-- ══════════════════════ DISK QOS MODAL ══════════════════════ -->
+<div class="modal-overlay" id="modal-disk-qos">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h2><i class="fa-solid fa-gauge" style="margin-right:6px;color:#a78bfa"></i> Disk I/O QoS: <span id="dq-title"></span></h2>
+      <button class="modal-close" onclick="closeModal('modal-disk-qos')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="dq-vm">
+      <div class="form-row"><label>Disk</label><select id="dq-dev" onchange="diskQosLoadDev()" class="form-control"></select></div>
+      <div style="font-size:11px;color:var(--text-muted);margin:6px 0 10px">0 = sınırsız. Bir eksende <b>total</b> ile <b>okuma/yazma</b> aynı anda kullanılamaz (libvirt kuralı). IOPS = saniyedeki işlem, bytes/sec = bant.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="form-row" style="margin:0"><label style="font-size:11px">Total IOPS</label><input id="dq-total_iops_sec" type="number" min="0" placeholder="0"></div>
+        <div class="form-row" style="margin:0"><label style="font-size:11px">Read IOPS</label><input id="dq-read_iops_sec" type="number" min="0" placeholder="0"></div>
+        <div class="form-row" style="margin:0"><label style="font-size:11px">Write IOPS</label><input id="dq-write_iops_sec" type="number" min="0" placeholder="0"></div>
+        <div class="form-row" style="margin:0"><label style="font-size:11px">Total B/s</label><input id="dq-total_bytes_sec" type="number" min="0" placeholder="0"></div>
+        <div class="form-row" style="margin:0"><label style="font-size:11px">Read B/s</label><input id="dq-read_bytes_sec" type="number" min="0" placeholder="0"></div>
+        <div class="form-row" style="margin:0"><label style="font-size:11px">Write B/s</label><input id="dq-write_bytes_sec" type="number" min="0" placeholder="0"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-disk-qos')">İptal</button>
+      <button class="btn primary" onclick="diskQosApply()"><i class="fa-solid fa-check"></i> Uygula (canlı + kalıcı)</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════ GOLDEN IMAGE DEPLOY MODAL ══════════════════════ -->
 <div class="modal-overlay" id="modal-gi-deploy">
   <div class="modal" style="max-width:560px">
@@ -24521,6 +24548,7 @@ async function loadVMDetail(vmId) {
       secondaryHtml += `<button class="vd-btn-icon" onclick="openCpuPinModal('${_vid}','${_vnm}')" title="CPU Pinning" style="color:#e879f9"> CPU Pin</button>`;
       secondaryHtml += `<button class="vd-btn-icon" onclick="openMacModal('${_vid}','${_vnm}')" title="MAC Adresi" style="color:#38bdf8"> MAC</button>`;
       secondaryHtml += `<button class="vd-btn-icon" onclick="openSpiceInfo('${_vid}','${_vnm}')" title="SPICE Konsol" style="color:#34d399"> SPICE</button>`;
+      secondaryHtml += `<button class="vd-btn-icon" onclick="diskQosOpen('${_vnm}')" title="Disk I/O QoS (IOPS/bant limiti)" style="color:#a78bfa"><i class="fa-solid fa-gauge"></i> Disk QoS</button>`;
       secondaryHtml += `</div>`;
       secondaryHtml += `<div class="vd-actions-divider"></div>`;
       secondaryHtml += `<div class="vd-actions-group">`;
@@ -37587,6 +37615,39 @@ async function vmHealthSavePolicy() {
   const ports = document.getElementById('vmh-ports').value.split(',').map(s=>parseInt(s.trim(),10)).filter(n=>n>0);
   const d = await _api(`/api/v2/vms/${id}/health/policy`, 'POST', { services, ports });
   if (d) { toast('Sağlık politikası kaydedildi', 'success'); vmHealthRun(); }
+}
+
+/* ──── Disk I/O QoS (v2.8) ──── */
+const _DQ_FIELDS = ['total_iops_sec','read_iops_sec','write_iops_sec','total_bytes_sec','read_bytes_sec','write_bytes_sec'];
+async function diskQosOpen(vmName) {
+  document.getElementById('dq-vm').value = vmName;
+  document.getElementById('dq-title').textContent = vmName;
+  const sel = document.getElementById('dq-dev');
+  sel.innerHTML = '<option>Yükleniyor...</option>';
+  openModal('modal-disk-qos');
+  const d = await _api(`/api/v2/vms/${vmName}/disk-qos`);
+  const disks = (d && d.disks) || [];
+  if (!disks.length) { sel.innerHTML = '<option value="">Disk yok</option>'; return; }
+  sel.innerHTML = disks.map(x => `<option value="${_esc(x.target)}">${_esc(x.target)}${x.source?(' — '+_esc(x.source.split('/').pop())):''}</option>`).join('');
+  diskQosLoadDev();
+}
+async function diskQosLoadDev() {
+  const vm = document.getElementById('dq-vm').value;
+  const dev = document.getElementById('dq-dev').value;
+  if (!dev) return;
+  _DQ_FIELDS.forEach(f => document.getElementById('dq-'+f).value = '');
+  const d = await _api(`/api/v2/vms/${vm}/disk-qos/${dev}`);
+  if (d && d.qos) _DQ_FIELDS.forEach(f => { if (d.qos[f] != null) document.getElementById('dq-'+f).value = d.qos[f]; });
+}
+async function diskQosApply() {
+  const vm = document.getElementById('dq-vm').value;
+  const dev = document.getElementById('dq-dev').value;
+  if (!dev) return toast('Disk seç', 'error');
+  const limits = {};
+  _DQ_FIELDS.forEach(f => { const v = document.getElementById('dq-'+f).value; if (v !== '') limits[f] = parseInt(v,10); });
+  if (!Object.keys(limits).length) return toast('En az bir limit gir', 'error');
+  const d = await _api(`/api/v2/vms/${vm}/disk-qos/${dev}`, 'PUT', { limits });
+  if (d) { toast('Disk QoS uygulandı', 'success'); closeModal('modal-disk-qos'); }
 }
 
 /* ──── AI Asistan Sohbet (v2.8) ──── */
