@@ -3390,7 +3390,7 @@
           <div id="ai-chat-noagent" class="card" style="display:none;margin-bottom:12px;border-left:4px solid var(--orange);background:rgba(251,146,60,.06);padding:14px">
             <div style="font-size:12px;line-height:1.6"><b style="color:var(--orange)">AI ajanı yok.</b> Önce <a href="#" onclick="navigate('settings');return false" style="color:var(--accent-lt)">AI Asistan</a> sayfasından bir ajan ekleyin (Anthropic/OpenAI/OpenRouter). Her sohbet için ajan seçilebilir.</div>
           </div>
-          <div style="display:flex;gap:12px;height:calc(100vh - 170px);min-height:420px">
+          <div style="display:flex;gap:12px;height:calc(100vh - var(--topbar-h) - var(--taskbar-h) - 96px);min-height:300px;overflow:hidden">
             <!-- conversation list -->
             <div style="width:250px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden">
               <div style="padding:10px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text-muted)">Sohbetler</div>
@@ -3406,7 +3406,7 @@
                 <select id="ai-chat-agent" onchange="aiChatSetAgent()" class="form-control" style="width:180px;font-size:12px"></select>
                 <button class="btn sm danger" onclick="aiChatDelete()" title="Sohbeti sil"><i class="fa-solid fa-trash"></i></button>
               </div>
-              <div id="ai-chat-messages" style="flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px">
+              <div id="ai-chat-messages" style="flex:1;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px">
                 <div class="empty-state" style="margin:auto;text-align:center"><div class="icon"><i class="fa-solid fa-comments" style="font-size:32px;opacity:.4"></i></div><h3>Sohbet seçin veya yeni başlatın</h3><p>Sistem durumu, kapasite, VM analizi — doğal dilde sor.</p></div>
               </div>
               <div id="ai-chat-attachments" style="display:none;padding:6px 12px;gap:6px;flex-wrap:wrap;border-top:1px solid var(--border)"></div>
