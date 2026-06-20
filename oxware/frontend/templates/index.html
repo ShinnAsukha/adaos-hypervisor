@@ -7468,6 +7468,19 @@
           <div id="gi-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
             <div class="text-muted" style="padding:14px">Yükleniyor...</div>
           </div>
+          <div class="card" style="margin-top:14px;border-left:4px solid #0091da">
+            <div class="card-title"><i class="fa-solid fa-tv" style="margin-right:6px;color:#0091da"></i>VM Boot Splash (firmware logosu)</div>
+            <div style="padding:0 14px 12px;font-size:12px">
+              <div style="color:var(--text-muted);margin-bottom:8px">Açıkken her yeni VM, herhangi bir OS'tan ÖNCE BIOS POST'ta OXware logosunu gösterir (VMware tarzı). SeaBIOS fw_cfg ile eklenir, boot sırasına dokunmaz. Önce tek VM'de doğrula.</div>
+              <div id="bsplash-status" style="margin-bottom:8px"></div>
+              <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="bsplash-enabled"> Etkin</label>
+                <div class="form-group" style="margin:0"><label style="font-size:11px">Süre (ms)</label><input id="bsplash-time" type="number" class="form-control" style="width:110px;margin-top:4px" value="5000"></div>
+                <button class="btn-primary" onclick="bsplashSave()" style="font-size:12px"><i class="fa-solid fa-floppy-disk"></i> Kaydet</button>
+                <button class="btn" onclick="bsplashGen()" style="font-size:12px"><i class="fa-solid fa-image"></i> Görseli Üret</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- ══ v2.8 — SDN VXLAN Overlay ══ -->
@@ -37622,6 +37635,29 @@ async function loadGoldenImages() {
     return;
   }
   grid.innerHTML = _giCatalog.map(giCardHtml).join('');
+  bsplashLoad();
+}
+async function bsplashLoad() {
+  const d = await _api('/api/v2/boot-splash');
+  if (!d) return;
+  const cb = document.getElementById('bsplash-enabled');
+  const tm = document.getElementById('bsplash-time');
+  const st = document.getElementById('bsplash-status');
+  if (cb) cb.checked = !!d.enabled;
+  if (tm) tm.value = d.splash_time_ms || 5000;
+  if (st) st.innerHTML =
+    (d.pillow ? '' : '<span class="mat-badge notready">Pillow yok — görsel üretilemez</span> ') +
+    (d.image_ready ? '<span class="mat-badge ready">görsel hazır</span>' : '<span class="mat-badge notready">görsel yok</span>');
+}
+async function bsplashSave() {
+  const body = { enabled: document.getElementById('bsplash-enabled').checked,
+                 splash_time_ms: parseInt(document.getElementById('bsplash-time').value||'5000',10) };
+  const d = await _api('/api/v2/boot-splash', 'POST', body);
+  if (d) { toast('Boot splash kaydedildi', 'success'); bsplashLoad(); }
+}
+async function bsplashGen() {
+  const d = await _api('/api/v2/boot-splash/generate', 'POST');
+  if (d) { toast('Splash görseli üretildi', 'success'); bsplashLoad(); }
 }
 function giCardHtml(e) {
   const cached = e.cached || e.state === 'cached';

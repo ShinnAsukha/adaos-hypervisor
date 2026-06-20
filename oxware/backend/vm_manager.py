@@ -1261,7 +1261,15 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
       <reset state='on'/>
     </hyperv>""" if is_windows else ""
 
-    xml = f"""<domain type='kvm'>
+    # Optional OXware firmware boot splash (additive fw_cfg; safe no-op when
+    # disabled or image missing).
+    try:
+        import boot_splash as _bsplash
+        _splash_ns, _splash_cmd = _bsplash.domain_inject()
+    except Exception:
+        _splash_ns, _splash_cmd = "", ""
+
+    xml = f"""<domain type='kvm'{_splash_ns}>
   <name>{name}</name>
   <uuid>{vm_uuid}</uuid>
   <memory unit='MiB'>{memory_mb}</memory>
@@ -1329,7 +1337,7 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
     <rng model='virtio'>
       <backend model='random'>/dev/urandom</backend>
     </rng>
-  </devices>
+  </devices>{_splash_cmd}
 </domain>"""
 
     conn = _connect()

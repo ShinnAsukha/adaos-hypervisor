@@ -88,7 +88,51 @@ SPECS = [
      "description": "VM SİL (geri alınamaz). confirm=true zorunlu.",
      "parameters": {"type": "object", "properties": {
          "name": {"type": "string"}, "confirm": {"type": "boolean"}}, "required": ["name", "confirm"]}},
+    {"name": "list_users",
+     "description": "Kullanıcı hesaplarını ve rollerini listele.",
+     "parameters": {"type": "object", "properties": {}}},
+    {"name": "list_user_sessions",
+     "description": ("Aktif kullanıcı oturumlarını listele: kullanıcı, IP, "
+                     "giriş zamanı, son görülme. HASSAS — yalnızca ana yönetici."),
+     "parameters": {"type": "object", "properties": {}}},
+    {"name": "recent_logins",
+     "description": ("Son giriş kayıtları (kullanıcı, zaman, IP, başarılı/başarısız). "
+                     "HASSAS — yalnızca ana yönetici."),
+     "parameters": {"type": "object", "properties": {
+         "limit": {"type": "integer", "description": "kaç kayıt (varsayılan 30)"}}}},
+    {"name": "audit_log_tail",
+     "description": ("Son denetim (audit) kayıtları. HASSAS — yalnızca ana yönetici."),
+     "parameters": {"type": "object", "properties": {
+         "limit": {"type": "integer", "description": "kaç kayıt (varsayılan 30)"}}}},
 ]
+
+# Per-tool minimum authority. 'operator' = read-ish, 'admin' = change ops,
+# 'primary' = ONLY the main/primary administrator (cred_mgr.get_username()).
+_MIN_ROLE = {
+    "list_vms": "operator", "system_status": "operator",
+    "list_golden_images": "operator",
+    "create_vm": "admin", "start_vm": "admin", "stop_vm": "admin",
+    "reboot_vm": "admin", "list_users": "admin",
+    "delete_vm": "primary", "list_user_sessions": "primary",
+    "recent_logins": "primary", "audit_log_tail": "primary",
+}
+_ROLE_RANK = {"operator": 1, "admin": 2, "primary": 3}
+
+
+def _caller_rank(ctx: dict) -> int:
+    if ctx.get("is_primary"):
+        return 3
+    role = (ctx.get("role") or "").lower()
+    if role in ("admin", "administrator"):
+        return 2
+    if role in ("operator",):
+        return 1
+    return 0
+
+
+def _allowed(tool_name: str, ctx: dict) -> bool:
+    need = _ROLE_RANK.get(_MIN_ROLE.get(tool_name, "admin"), 2)
+    return _caller_rank(ctx or {}) >= need
 
 
 # ── Handlers ─────────────────────────────────────────────────────────────────
@@ -211,6 +255,66 @@ def _t_delete_vm(a):
         return {"error": str(e)[:200]}
 
 
+def _t_list_users(_):
+    um = _mod("user_manager")
+    if not um:
+        return {"error": "user_manager yok"}
+    try:
+        users = um.list_users()
+        out = [{"username": u.get("username"), "role": u.get("role")} for u in users] \
+            if users and isinstance(users[0], dict) else users
+        return {"count": len(out), "users": out}
+    except Exception as e:
+        return {"error": str(e)[:200]}
+
+
+def _t_user_sessions(_):
+    sm = _mod("session_manager")
+    if not sm:
+        return {"error": "session_manager yok"}
+    try:
+        sess = [s for s in sm.get_all_sessions() if not s.get("revoked")]
+        return {"count": len(sess), "sessions": [
+            {"username": s.get("username"), "ip": s.get("ip"),
+             "login": s.get("created_at"), "last_seen": s.get("last_seen"),
+             "age_minutes": s.get("age_minutes")} for s in sess]}
+    except Exception as e:
+        return {"error": str(e)[:200]}
+
+
+def _t_recent_logins(a):
+    limit = max(1, min(int(a.get("limit", 30) or 30), 200))
+    al = _mod("audit_log")
+    if al and hasattr(al, "get_logs"):
+        try:
+            logs = al.get_logs(action="login", limit=limit) or []
+            if logs:
+                return {"count": len(logs), "logins": logs}
+        except Exception:
+            pass
+    ev = _mod("event_logger")
+    if ev:
+        try:
+            evs = ev.get_events(limit=limit, category="auth") or []
+            return {"count": len(evs), "logins": [
+                {"time": e.get("datetime") or e.get("timestamp"),
+                 "level": e.get("level"), "message": e.get("message")} for e in evs]}
+        except Exception as e:
+            return {"error": str(e)[:200]}
+    return {"error": "giriş kaydı kaynağı yok"}
+
+
+def _t_audit_tail(a):
+    limit = max(1, min(int(a.get("limit", 30) or 30), 200))
+    al = _mod("audit_log")
+    if not al or not hasattr(al, "get_logs"):
+        return {"error": "audit_log yok"}
+    try:
+        return {"count": limit, "audit": al.get_logs(limit=limit) or []}
+    except Exception as e:
+        return {"error": str(e)[:200]}
+
+
 _HANDLERS = {
     "list_vms": _t_list_vms,
     "system_status": _t_system_status,
@@ -220,16 +324,30 @@ _HANDLERS = {
     "stop_vm": lambda a: _vm_action(a, "stop_vm"),
     "reboot_vm": lambda a: _vm_action(a, "reboot_vm"),
     "delete_vm": _t_delete_vm,
+    "list_users": _t_list_users,
+    "list_user_sessions": _t_user_sessions,
+    "recent_logins": _t_recent_logins,
+    "audit_log_tail": _t_audit_tail,
 }
 
 
-def execute(name: str, args: dict) -> dict:
-    """Run a tool by name. Always returns a JSON-serializable dict."""
+def execute(name: str, args: dict, ctx: dict = None) -> dict:
+    """Run a tool by name with caller authority context.
+    ctx: {username, role, is_primary}. Always returns a JSON dict."""
     fn = _HANDLERS.get(name)
     if not fn:
         return {"error": f"bilinmeyen araç: {name}"}
+    if not _allowed(name, ctx or {}):
+        need = _MIN_ROLE.get(name, "admin")
+        msg = ("Bu bilgi yalnızca ana yönetici tarafından alınabilir."
+               if need == "primary" else
+               "Bu işlem için yönetici yetkisi gerekli.")
+        log.warning("ai_tool reddedildi: %s (gerekli=%s, caller=%s)",
+                    name, need, (ctx or {}).get("username"))
+        return {"error": msg, "denied": True, "required": need}
     try:
-        log.info("ai_tool exec: %s args=%s", name, {k: args.get(k) for k in args if k != "password"})
+        log.info("ai_tool exec: %s by=%s args=%s", name, (ctx or {}).get("username"),
+                 {k: args.get(k) for k in args if k != "password"})
         return fn(args or {})
     except Exception as e:
         return {"error": str(e)[:200]}

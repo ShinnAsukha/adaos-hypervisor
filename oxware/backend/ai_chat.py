@@ -140,12 +140,16 @@ _SYSTEM_PROMPT = (
     "sonra sonucu özetle. VM silme gibi geri alınamaz işlemlerde önce "
     "kullanıcıdan onay iste; onaylarsa confirm=true ile çağır.\n"
     "BİÇİM: Sayısal/çok alanlı veriyi Markdown tablo ver (| sütun | + ayraç "
-    "satırı). Önemli değerleri **kalın** yap. Yol/değer için `backtick`.\n\n"
+    "satırı). Önemli değerleri **kalın** yap. Yol/değer için `backtick`.\n"
+    "YETKİ: Bazı bilgiler role bağlıdır. Kullanıcı oturumları, giriş IP'leri "
+    "ve denetim (audit) kaydı YALNIZCA ana yöneticiye verilir; ilgili araç "
+    "'denied' dönerse uydurma — kullanıcıya bu bilgiyi görme yetkisi "
+    "olmadığını kibarca söyle.\n\n"
 )
 
 
 def send_message(chat_id: str, text: str, images: list = None,
-                 agent_id: str = None) -> dict:
+                 agent_id: str = None, ctx: dict = None) -> dict:
     """Append the user message, call the selected agent with recent history
     (text + this turn's images), store the assistant reply. Images are not
     persisted — only the text transcript is."""
@@ -193,8 +197,10 @@ def send_message(chat_id: str, text: str, images: list = None,
             import ai_tools
         except Exception:
             from oxware.backend import ai_tools  # type: ignore
-        out = agent.query_agent_tools(use_agent, model_messages, sys_prompt,
-                                      ai_tools.SPECS, ai_tools.execute)
+        _ctx = ctx or {}
+        out = agent.query_agent_tools(
+            use_agent, model_messages, sys_prompt, ai_tools.SPECS,
+            lambda n, a: ai_tools.execute(n, a, _ctx))
         reply = out.get("text", "")
         tools_used = out.get("tools_used", [])
     except Exception as e:

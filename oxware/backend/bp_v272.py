@@ -35,6 +35,36 @@ def _safe_import(name):
             return None
 
 
+def _caller_ctx() -> dict:
+    """Resolve {username, role, is_primary} of the authenticated caller so the
+    AI tool layer can gate sensitive tools. is_primary == main administrator
+    (cred_mgr.get_username())."""
+    ctx = {"username": "", "role": "", "is_primary": False}
+    try:
+        from flask_jwt_extended import get_jwt_identity
+        ctx["username"] = (get_jwt_identity() or "")
+    except Exception:
+        return ctx
+    cred = _safe_import("credentials") or _safe_import("cred_manager")
+    primary = ""
+    try:
+        if cred and hasattr(cred, "get_username"):
+            primary = cred.get_username() or ""
+    except Exception:
+        pass
+    if primary and ctx["username"].lower() == primary.lower():
+        ctx["is_primary"] = True
+        ctx["role"] = "administrator"
+        return ctx
+    um = _safe_import("user_manager")
+    try:
+        if um and hasattr(um, "get_user_role"):
+            ctx["role"] = um.get_user_role(ctx["username"]) or ""
+    except Exception:
+        pass
+    return ctx
+
+
 def _register_routes():
     # ── CSI driver ───────────────────────────────────────────────────────
     csi = _safe_import("csi_driver")
@@ -350,7 +380,8 @@ def _register_routes():
             return _err("module unavailable", 503)
         d = request.get_json(silent=True) or {}
         r = aic.send_message(chat_id, d.get("text", ""),
-                             d.get("images") or [], d.get("agent_id"))
+                             d.get("images") or [], d.get("agent_id"),
+                             ctx=_caller_ctx())
         return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
 
     # ── VM boot health-check ─────────────────────────────────────────────
@@ -548,6 +579,30 @@ def _register_routes():
         if not lb:
             return _err("module unavailable", 503)
         return _ok(**lb.delete_pool(name))
+
+    # ── VM boot splash (firmware branding) ───────────────────────────────
+    bsplash = _safe_import("boot_splash")
+
+    @bp_v272.route("/api/v2/boot-splash", methods=["GET", "POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_boot_splash():
+        if not bsplash:
+            return _err("module unavailable", 503)
+        if request.method == "GET":
+            return _ok(**bsplash.get_config())
+        d = request.get_json(silent=True) or {}
+        r = bsplash.set_config(d.get("enabled"), d.get("splash_time_ms"))
+        return (_ok(**r) if r.get("ok", True) else _err(r.get("error"), 400))
+
+    @bp_v272.route("/api/v2/boot-splash/generate", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_boot_splash_gen():
+        if not bsplash:
+            return _err("module unavailable", 503)
+        r = bsplash.ensure_image()
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
 
     # ── Brand integrity / provenance ─────────────────────────────────────
     brand = _safe_import("brand_integrity")
