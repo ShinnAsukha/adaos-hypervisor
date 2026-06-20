@@ -547,6 +547,105 @@ def get_agent_logs(agent_id: str = None, limit: int = 50) -> list:
     return sorted(logs, key=lambda x: x.get("timestamp", 0), reverse=True)[:limit]
 
 
+# ── Çok turlu sohbet + görsel (vision) ─────────────────────────────────────────
+# query_agent tek-tur/metin. Sohbet penceresi için çok turlu + görsel desteği.
+# Görseller diske yazılmaz; yalnız bu istekte modele iletilir (sunucu hafif kalır).
+
+def _split_data_url(s: str):
+    """data:image/png;base64,XXXX → (media_type, base64). Düz base64 → png varsay."""
+    if not s:
+        return "image/png", ""
+    if s.startswith("data:"):
+        try:
+            head, b64 = s.split(",", 1)
+            mt = head[5:].split(";")[0] or "image/png"
+            return mt, b64
+        except Exception:
+            return "image/png", ""
+    return "image/png", s
+
+
+def _call_anthropic_chat(agent: dict, messages: list, system_prompt: str,
+                         max_tokens: int) -> str:
+    url = "https://api.anthropic.com/v1/messages"
+    headers = {
+        "x-api-key":         agent["api_key"],
+        "anthropic-version": "2023-06-01",
+        "Content-Type":      "application/json",
+    }
+    out = []
+    for m in messages:
+        imgs = m.get("images") or []
+        if imgs:
+            blocks = []
+            for img in imgs:
+                mt, data = _split_data_url(img)
+                if data:
+                    blocks.append({"type": "image", "source": {
+                        "type": "base64", "media_type": mt, "data": data}})
+            if m.get("content"):
+                blocks.append({"type": "text", "text": m["content"]})
+            out.append({"role": m["role"], "content": blocks or m.get("content", "")})
+        else:
+            out.append({"role": m["role"], "content": m.get("content", "")})
+    body = {"model": agent["model"], "max_tokens": max_tokens, "messages": out}
+    if system_prompt:
+        body["system"] = system_prompt
+    r = requests.post(url, headers=headers, json=body, timeout=60)
+    r.raise_for_status()
+    return r.json()["content"][0]["text"].strip()
+
+
+def _call_openai_chat(agent: dict, messages: list, system_prompt: str,
+                      max_tokens: int) -> str:
+    url = agent["base_url"].rstrip("/") + PROVIDERS.get(
+        agent["provider"], PROVIDERS["custom"])["chat_endpoint"]
+    headers = {
+        "Authorization": f"Bearer {agent['api_key']}",
+        "Content-Type":  "application/json",
+    }
+    if agent.get("provider") == "openrouter":
+        headers["HTTP-Referer"] = "https://oxware-hypervisor.local"
+        headers["X-Title"] = "OXware Hypervisor"
+    out = []
+    if system_prompt:
+        out.append({"role": "system", "content": system_prompt})
+    for m in messages:
+        imgs = m.get("images") or []
+        if imgs:
+            parts = []
+            if m.get("content"):
+                parts.append({"type": "text", "text": m["content"]})
+            for img in imgs:
+                u = img if img.startswith("data:") else "data:image/png;base64," + img
+                parts.append({"type": "image_url", "image_url": {"url": u}})
+            out.append({"role": m["role"], "content": parts})
+        else:
+            out.append({"role": m["role"], "content": m.get("content", "")})
+    body = {"model": agent["model"], "messages": out,
+            "max_tokens": max_tokens, "temperature": 0.4}
+    r = requests.post(url, headers=headers, json=body, timeout=60)
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"].strip()
+
+
+def query_agent_chat(agent_id: str, messages: list, system_prompt: str = "",
+                     max_tokens: int = 1024) -> str:
+    """Çok turlu sohbet. messages: [{role, content, images?}]. Görsel destekli."""
+    cfg = _load_ai_config()
+    agent = cfg["agents"].get(agent_id)
+    if not agent:
+        raise KeyError(f"Agent bulunamadı: {agent_id}")
+    if agent.get("provider") == "anthropic":
+        return _call_anthropic_chat(agent, messages, system_prompt, max_tokens)
+    return _call_openai_chat(agent, messages, system_prompt, max_tokens)
+
+
+def live_system_context() -> str:
+    """Sohbet için canlı sistem özeti (system prompt'a gömülür)."""
+    return _build_system_context()
+
+
 def ask_agent_about_vm(agent_id: str, vm_id: str, question: str) -> str:
     """Belirli bir VM hakkında AI'ya soru sor."""
     try:

@@ -1194,7 +1194,7 @@
         <span>Yükle</span>
       </button>
       <!-- OXY AI Chat Button -->
-      <button id="oxy-btn" onclick="toggleOxyPanel()" title="OXY — AI Asistan" style="display:inline-flex;align-items:center;gap:6px">
+      <button id="oxy-btn" onclick="navigate('aichat')" title="OXY — AI Asistan Sohbet" style="display:inline-flex;align-items:center;gap:6px">
         <i class="fa-solid fa-robot fa-fw" style="color:var(--accent-lt)"></i>
         <span style="font-weight:700;color:var(--accent-lt)">OXY</span>
         <div id="oxy-notif"></div>
@@ -3379,6 +3379,46 @@
         </div>
 
         <!-- Settings page removed — content moved to Integrations and AI Asistan -->
+
+        <!-- ─────── AI Chat Page ─────── -->
+        <div class="page" id="page-aichat">
+          <div class="section-header">
+            <h2><i class="fa-solid fa-robot" style="margin-right:8px;color:var(--accent-lt)"></i>AI Asistan Sohbet</h2>
+            <div class="spacer"></div>
+            <button class="btn primary" onclick="aiChatNew()"><i class="fa-solid fa-plus" style="margin-right:4px"></i>Yeni Sohbet</button>
+          </div>
+          <div id="ai-chat-noagent" class="card" style="display:none;margin-bottom:12px;border-left:4px solid var(--orange);background:rgba(251,146,60,.06);padding:14px">
+            <div style="font-size:12px;line-height:1.6"><b style="color:var(--orange)">AI ajanı yok.</b> Önce <a href="#" onclick="navigate('settings');return false" style="color:var(--accent-lt)">AI Asistan</a> sayfasından bir ajan ekleyin (Anthropic/OpenAI/OpenRouter). Her sohbet için ajan seçilebilir.</div>
+          </div>
+          <div style="display:flex;gap:12px;height:calc(100vh - 170px);min-height:420px">
+            <!-- conversation list -->
+            <div style="width:250px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden">
+              <div style="padding:10px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text-muted)">Sohbetler</div>
+              <div id="ai-chat-list" style="flex:1;overflow:auto;padding:6px">
+                <div class="text-muted" style="padding:12px;font-size:12px">Yükleniyor...</div>
+              </div>
+            </div>
+            <!-- chat window -->
+            <div style="flex:1;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden">
+              <div id="ai-chat-header" style="display:none;padding:10px 12px;border-bottom:1px solid var(--border);align-items:center;gap:10px">
+                <input id="ai-chat-title" onchange="aiChatRename()" style="flex:1;background:transparent;border:none;color:var(--text);font-weight:600;font-size:14px;outline:none" placeholder="Sohbet başlığı">
+                <label style="font-size:11px;color:var(--text-muted)">Ajan:</label>
+                <select id="ai-chat-agent" onchange="aiChatSetAgent()" class="form-control" style="width:180px;font-size:12px"></select>
+                <button class="btn sm danger" onclick="aiChatDelete()" title="Sohbeti sil"><i class="fa-solid fa-trash"></i></button>
+              </div>
+              <div id="ai-chat-messages" style="flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px">
+                <div class="empty-state" style="margin:auto;text-align:center"><div class="icon"><i class="fa-solid fa-comments" style="font-size:32px;opacity:.4"></i></div><h3>Sohbet seçin veya yeni başlatın</h3><p>Sistem durumu, kapasite, VM analizi — doğal dilde sor.</p></div>
+              </div>
+              <div id="ai-chat-attachments" style="display:none;padding:6px 12px;gap:6px;flex-wrap:wrap;border-top:1px solid var(--border)"></div>
+              <div id="ai-chat-input-row" style="display:none;padding:10px 12px;border-top:1px solid var(--border);gap:8px;align-items:flex-end">
+                <input type="file" id="ai-chat-file" accept="image/*" multiple style="display:none" onchange="aiChatPickImages(this)">
+                <button class="btn" onclick="document.getElementById('ai-chat-file').click()" title="Görsel ekle" style="flex-shrink:0"><i class="fa-solid fa-image"></i></button>
+                <textarea id="ai-chat-text" rows="1" placeholder="Mesaj yaz... (Enter gönder, Shift+Enter satır)" oninput="aiChatAutoGrow(this)" onkeydown="aiChatKey(event)" style="flex:1;resize:none;max-height:120px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;font-family:inherit;outline:none"></textarea>
+                <button class="btn primary" id="ai-chat-send" onclick="aiChatSend()" style="flex-shrink:0"><i class="fa-solid fa-paper-plane"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- ─────── Updates Page ─────── -->
         <div class="page" id="page-updates">
@@ -23830,6 +23870,7 @@ function navigate(page) {
     containers: loadContainers,
     ha: loadHaPage,
     'cf-tunnels': loadCfTunnels,
+    aichat: loadAiChat,
   };
   if (loaders[page]) {
     loaders[page]();
@@ -37441,6 +37482,131 @@ async function giDeploy() {
     closeModal('modal-gi-deploy');
     if (typeof navigate === 'function') navigate('vms');
     if (typeof loadVMs === 'function') loadVMs();
+  }
+}
+
+/* ──── AI Asistan Sohbet (v2.8) ──── */
+let _aiChats = [], _aiAgents = [], _aiCur = null, _aiImages = [];
+
+async function loadAiChat() {
+  const ag = await _api('/api/ai/agents');
+  _aiAgents = (ag && ag.agents) || [];
+  const noAg = document.getElementById('ai-chat-noagent');
+  if (noAg) noAg.style.display = _aiAgents.length ? 'none' : 'block';
+  const ch = await _api('/api/v2/ai/chats');
+  _aiChats = (ch && ch.chats) || [];
+  aiChatRenderList();
+  if (_aiCur && _aiChats.some(c => c.id === _aiCur)) aiChatOpen(_aiCur);
+}
+function _aiAgentOptions(sel) {
+  return _aiAgents.map(a => `<option value="${_esc(a.id)}"${a.id===sel?' selected':''}>${_esc(a.name)} (${_esc(a.provider||'')})</option>`).join('');
+}
+function aiChatRenderList() {
+  const box = document.getElementById('ai-chat-list');
+  if (!box) return;
+  if (!_aiChats.length) { box.innerHTML = '<div class="text-muted" style="padding:12px;font-size:12px">Sohbet yok. "Yeni Sohbet" ile başla.</div>'; return; }
+  box.innerHTML = _aiChats.map(c => `
+    <div onclick="aiChatOpen('${_esc(c.id)}')" style="padding:8px 10px;border-radius:6px;cursor:pointer;margin-bottom:4px;background:${c.id===_aiCur?'var(--accent-bg,rgba(42,109,217,.12))':'transparent'};border:1px solid ${c.id===_aiCur?'var(--accent)':'transparent'}">
+      <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_esc(c.title)}</div>
+      <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_esc(c.preview||'—')} · ${c.message_count} mesaj</div>
+    </div>`).join('');
+}
+async function aiChatNew() {
+  if (!_aiAgents.length) { toast('Önce AI ajanı ekleyin', 'error'); navigate('settings'); return; }
+  const d = await _api('/api/v2/ai/chats', 'POST', { agent_id: _aiAgents[0].id });
+  if (d && d.chat) { await loadAiChat(); aiChatOpen(d.chat.id); }
+}
+async function aiChatOpen(id) {
+  _aiCur = id; _aiImages = [];
+  const d = await _api(`/api/v2/ai/chats/${id}`);
+  if (!d || !d.chat) return;
+  const chat = d.chat;
+  document.getElementById('ai-chat-header').style.display = 'flex';
+  document.getElementById('ai-chat-input-row').style.display = 'flex';
+  document.getElementById('ai-chat-title').value = chat.title || '';
+  document.getElementById('ai-chat-agent').innerHTML = _aiAgentOptions(chat.agent_id);
+  aiChatRenderMessages(chat.messages || []);
+  aiChatRenderAttachments();
+  aiChatRenderList();
+}
+function aiChatRenderMessages(msgs) {
+  const box = document.getElementById('ai-chat-messages');
+  if (!box) return;
+  if (!msgs.length) { box.innerHTML = '<div class="empty-state" style="margin:auto;text-align:center"><div class="icon"><i class="fa-solid fa-comments" style="font-size:32px;opacity:.4"></i></div><h3>Mesaj yok</h3><p>İlk mesajını yaz.</p></div>'; return; }
+  box.innerHTML = msgs.map(m => aiChatBubble(m.role, m.content, m.has_image)).join('');
+  box.scrollTop = box.scrollHeight;
+}
+function aiChatBubble(role, content, hasImage, imgs) {
+  const me = role === 'user';
+  const imgHtml = (imgs && imgs.length)
+    ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${imgs.map(s=>`<img src="${s}" style="max-width:120px;max-height:120px;border-radius:6px;border:1px solid var(--border)">`).join('')}</div>`
+    : (hasImage ? '<div style="font-size:10px;color:var(--text-muted);margin-bottom:4px"><i class="fa-solid fa-image"></i> görsel</div>' : '');
+  return `<div style="display:flex;justify-content:${me?'flex-end':'flex-start'}">
+    <div style="max-width:78%;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word;background:${me?'var(--accent)':'var(--bg)'};color:${me?'#fff':'var(--text)'};border:1px solid ${me?'transparent':'var(--border)'}">
+      ${imgHtml}${_esc(content)}
+    </div></div>`;
+}
+async function aiChatSetAgent() {
+  if (!_aiCur) return;
+  const aid = document.getElementById('ai-chat-agent').value;
+  await _api(`/api/v2/ai/chats/${_aiCur}`, 'PUT', { agent_id: aid });
+}
+async function aiChatRename() {
+  if (!_aiCur) return;
+  const t = document.getElementById('ai-chat-title').value.trim();
+  await _api(`/api/v2/ai/chats/${_aiCur}`, 'PUT', { title: t });
+  const c = _aiChats.find(x => x.id === _aiCur); if (c) c.title = t;
+  aiChatRenderList();
+}
+async function aiChatDelete() {
+  if (!_aiCur) return;
+  if (!await showConfirm('Bu sohbet silinecek. Devam?', 'Sohbeti Sil', true)) return;
+  const d = await _api(`/api/v2/ai/chats/${_aiCur}`, 'DELETE');
+  if (d) { _aiCur = null; document.getElementById('ai-chat-header').style.display='none'; document.getElementById('ai-chat-input-row').style.display='none'; document.getElementById('ai-chat-messages').innerHTML=''; toast('Sohbet silindi','success'); loadAiChat(); }
+}
+function aiChatPickImages(input) {
+  const files = Array.from(input.files || []);
+  input.value = '';
+  for (const f of files) {
+    if (_aiImages.length >= 6) { toast('En fazla 6 görsel', 'error'); break; }
+    if (f.size > 6 * 1024 * 1024) { toast(`${f.name} çok büyük (>6MB)`, 'error'); continue; }
+    const r = new FileReader();
+    r.onload = () => { _aiImages.push(r.result); aiChatRenderAttachments(); };
+    r.readAsDataURL(f);
+  }
+}
+function aiChatRenderAttachments() {
+  const box = document.getElementById('ai-chat-attachments');
+  if (!box) return;
+  if (!_aiImages.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = 'flex';
+  box.innerHTML = _aiImages.map((s, i) => `<div style="position:relative"><img src="${s}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--border)"><button onclick="_aiImages.splice(${i},1);aiChatRenderAttachments()" style="position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer">×</button></div>`).join('');
+}
+function aiChatAutoGrow(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+function aiChatKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); aiChatSend(); } }
+async function aiChatSend() {
+  if (!_aiCur) return;
+  const ta = document.getElementById('ai-chat-text');
+  const text = ta.value.trim();
+  const imgs = _aiImages.slice();
+  if (!text && !imgs.length) return;
+  const box = document.getElementById('ai-chat-messages');
+  // optimistic user bubble (with image previews for this turn)
+  if (box.querySelector('.empty-state')) box.innerHTML = '';
+  box.insertAdjacentHTML('beforeend', aiChatBubble('user', text, false, imgs));
+  box.insertAdjacentHTML('beforeend', `<div id="ai-typing" style="display:flex;justify-content:flex-start"><div style="padding:10px 12px;border-radius:10px;font-size:13px;background:var(--bg);border:1px solid var(--border);color:var(--text-muted)"><i class="fa-solid fa-ellipsis fa-fade"></i> yazıyor...</div></div>`);
+  box.scrollTop = box.scrollHeight;
+  ta.value = ''; aiChatAutoGrow(ta); _aiImages = []; aiChatRenderAttachments();
+  const btn = document.getElementById('ai-chat-send'); if (btn) btn.disabled = true;
+  const d = await _api(`/api/v2/ai/chats/${_aiCur}/send`, 'POST', { text, images: imgs });
+  document.getElementById('ai-typing')?.remove();
+  if (btn) btn.disabled = false;
+  if (d && d.reply) {
+    box.insertAdjacentHTML('beforeend', aiChatBubble('assistant', d.reply, false));
+    box.scrollTop = box.scrollHeight;
+    const c = _aiChats.find(x => x.id === _aiCur);
+    if (c) { c.message_count = (c.message_count||0) + 2; c.preview = d.reply.slice(0,80); }
+    aiChatRenderList();
   }
 }
 

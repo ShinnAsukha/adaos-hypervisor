@@ -310,3 +310,45 @@ def _register_routes():
             return _err("module unavailable", 503)
         r = mkt.prefetch(os_variant)
         return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    # ── AI chat (multi-conversation, server-light) ───────────────────────
+    aic = _safe_import("ai_chat")
+
+    @bp_v272.route("/api/v2/ai/chats", methods=["GET", "POST"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_ai_chats():
+        if not aic:
+            return _err("module unavailable", 503)
+        if request.method == "GET":
+            return _ok(chats=aic.list_chats())
+        d = request.get_json(silent=True) or {}
+        return _ok(chat=aic.create_chat(d.get("title", ""),
+                                        d.get("agent_id", "")))
+
+    @bp_v272.route("/api/v2/ai/chats/<chat_id>", methods=["GET", "PUT", "DELETE"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_ai_chat(chat_id):
+        if not aic:
+            return _err("module unavailable", 503)
+        if request.method == "GET":
+            c = aic.get_chat(chat_id)
+            return (_ok(chat=c) if c else _err("not found", 404))
+        if request.method == "DELETE":
+            r = aic.delete_chat(chat_id)
+            return (_ok(**r) if r.get("ok") else _err(r.get("error"), 404))
+        d = request.get_json(silent=True) or {}
+        r = aic.update_chat(chat_id, d.get("title"), d.get("agent_id"))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 404))
+
+    @bp_v272.route("/api/v2/ai/chats/<chat_id>/send", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_ai_chat_send(chat_id):
+        if not aic:
+            return _err("module unavailable", 503)
+        d = request.get_json(silent=True) or {}
+        r = aic.send_message(chat_id, d.get("text", ""),
+                             d.get("images") or [], d.get("agent_id"))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
