@@ -3403,6 +3403,8 @@
           <div class="section-header">
             <h2><i class="fa-solid fa-robot" style="margin-right:8px;color:var(--accent-lt)"></i>AI Asistan Sohbet</h2>
             <div class="spacer"></div>
+            <button class="btn" onclick="aiInsightEvents()" title="Son olayların AI özeti"><i class="fa-solid fa-newspaper" style="margin-right:4px"></i>Olay Özeti</button>
+            <button class="btn" onclick="aiInsightHealth()" title="Anomali + kapasite → öncelikli aksiyon önerileri"><i class="fa-solid fa-stethoscope" style="margin-right:4px"></i>Sağlık Analizi</button>
             <button class="btn primary" onclick="aiChatNew()"><i class="fa-solid fa-plus" style="margin-right:4px"></i>Yeni Sohbet</button>
           </div>
           <div id="ai-chat-noagent" class="card" style="display:none;margin-bottom:12px;border-left:4px solid var(--orange);background:rgba(251,146,60,.06);padding:14px">
@@ -9196,6 +9198,19 @@ function clearAppInstall() {
         </div>
       </div>
       <div id="custom-template-list" style="margin-top:14px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ AI INSIGHT MODAL ══════════════════════ -->
+<div class="modal-overlay" id="modal-ai-insight">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <h2><i class="fa-solid fa-wand-magic-sparkles" style="margin-right:6px;color:var(--accent-lt)"></i> <span id="aii-title">AI Insight</span></h2>
+      <button class="modal-close" onclick="closeModal('modal-ai-insight')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="aii-body" style="max-height:60vh;overflow:auto"><div class="text-muted" style="font-size:12px">Yükleniyor...</div></div>
     </div>
   </div>
 </div>
@@ -37616,6 +37631,24 @@ async function vmHealthSavePolicy() {
   const d = await _api(`/api/v2/vms/${id}/health/policy`, 'POST', { services, ports });
   if (d) { toast('Sağlık politikası kaydedildi', 'success'); vmHealthRun(); }
 }
+
+/* ──── AI Ops Insights (v2.8) ──── */
+function _aiiAgentId() {
+  return (typeof _aiAgents !== 'undefined' && _aiAgents.length) ? _aiAgents[0].id : '';
+}
+async function _aiInsight(title, url, body) {
+  if (!_aiiAgentId()) { toast('Önce AI ajanı ekleyin', 'error'); navigate('settings'); return; }
+  document.getElementById('aii-title').textContent = title;
+  document.getElementById('aii-body').innerHTML = '<div class="text-muted" style="font-size:12px"><i class="fa-solid fa-spinner fa-spin"></i> AI analiz ediyor...</div>';
+  openModal('modal-ai-insight');
+  const d = await _api(url, 'POST', { agent_id: _aiiAgentId(), ...body });
+  const md = d && (d.summary || d.analysis);
+  document.getElementById('aii-body').innerHTML = md
+    ? `<div class="ai-md">${_aiMd(md)}</div>`
+    : '<div style="color:var(--red);font-size:12px">Analiz başarısız (ajan/sağlayıcı kontrol edin)</div>';
+}
+function aiInsightEvents() { _aiInsight('Olay Özeti (son 12 saat)', '/api/v2/ai/insights/events', { hours: 12 }); }
+function aiInsightHealth() { _aiInsight('Sağlık Analizi & Aksiyonlar', '/api/v2/ai/insights/health', {}); }
 
 /* ──── Disk I/O QoS (v2.8) ──── */
 const _DQ_FIELDS = ['total_iops_sec','read_iops_sec','write_iops_sec','total_bytes_sec','read_bytes_sec','write_bytes_sec'];

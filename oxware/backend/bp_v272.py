@@ -411,6 +411,29 @@ def _register_routes():
             r = sqos.set_qos(vm_name, dev, d.get("limits") or d)
         return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
 
+    # ── AI Ops Insights (event summary + health analysis) ────────────────
+    aii = _safe_import("ai_insights")
+
+    @bp_v272.route("/api/v2/ai/insights/events", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_ai_insight_events():
+        if not aii:
+            return _err("module unavailable", 503)
+        d = request.get_json(silent=True) or {}
+        r = aii.summarize_events(int(d.get("hours", 12)), d.get("agent_id", ""))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    @bp_v272.route("/api/v2/ai/insights/health", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_ai_insight_health():
+        if not aii:
+            return _err("module unavailable", 503)
+        d = request.get_json(silent=True) or {}
+        r = aii.analyze_health(d.get("agent_id", ""))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
     # ── Brand integrity / provenance ─────────────────────────────────────
     brand = _safe_import("brand_integrity")
 
