@@ -41,6 +41,32 @@
       --warning: #eab308;
       --danger: #ef4444;
     }
+
+    /* ── Tema/Skin presetleri (html[data-skin]) — :root'u override eder ── */
+    html[data-skin="esxi"]{
+      --bg:#0f1b2d;--surface:#16263d;--surface2:#1b2f4a;--surface3:#213a5c;
+      --border:#244166;--border2:#2e5180;
+      --text:#cfe0f2;--text-muted:#7da0c4;
+      --accent:#00a1e0;--accent-lt:#3bc0ff;
+      --bg-primary:#0f1b2d;--bg-secondary:#16263d;--bg-card:#1b2f4a;
+      --border-color:#244166;--text-primary:#cfe0f2;--text-secondary:#7da0c4;--accent2:#00a1e0;
+    }
+    html[data-skin="proxmox"]{
+      --bg:#1a1a1a;--surface:#232323;--surface2:#2a2a2a;--surface3:#313131;
+      --border:#3a3a3a;--border2:#4a4a4a;
+      --text:#e6e6e6;--text-muted:#9a9a9a;
+      --accent:#e57000;--accent-lt:#ff8c1a;
+      --bg-primary:#1a1a1a;--bg-secondary:#232323;--bg-card:#2a2a2a;
+      --border-color:#3a3a3a;--text-primary:#e6e6e6;--text-secondary:#9a9a9a;--accent2:#e57000;
+    }
+    html[data-skin="midnight"]{
+      --bg:#0a0a12;--surface:#12121f;--surface2:#181828;--surface3:#1f1f33;
+      --border:#262640;--border2:#333355;
+      --text:#d8d8f0;--text-muted:#8888aa;
+      --accent:#7c5cff;--accent-lt:#a48bff;
+      --bg-primary:#0a0a12;--bg-secondary:#12121f;--bg-card:#181828;
+      --border-color:#262640;--text-primary:#d8d8f0;--text-secondary:#8888aa;--accent2:#7c5cff;
+    }
     .light-theme {
       --bg-primary: #f6f8fa;
       --bg-secondary: #ffffff;
@@ -1100,6 +1126,10 @@
       .dhcp-lease-row{grid-template-columns:1fr 1fr;row-gap:4px}
     }
   </style>
+  <script>
+    /* Skin'i boyamadan önce uygula (FOUC önle) */
+    (function(){try{var s=localStorage.getItem('ox-skin');if(s&&s!=='oxware')document.documentElement.setAttribute('data-skin',s);}catch(e){}})();
+  </script>
 </head>
 <body style="visibility:hidden">
 <script>
@@ -5153,6 +5183,15 @@
 
           <!-- ── General pane ── -->
           <div id="cfg-pane-general">
+
+          <!-- Görünüm / Tema -->
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-title"><i class="fa-solid fa-palette" style="color:var(--accent-lt);margin-right:6px"></i>Görünüm / Tema</div>
+            <div style="padding:0 14px 12px">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Panel temasını seç. Seçim tarayıcında kaydedilir.</div>
+              <div id="skin-picker" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px"></div>
+            </div>
+          </div>
 
           <!-- Oturum Güvenlik Ayarları -->
           <div class="card" style="margin-bottom:14px">
@@ -28513,6 +28552,7 @@ function _applyAdminGates() {
 
 async function loadSettings() {
   _applyAdminGates();
+  renderSkinPicker();
 
   try {
     const data = await api("/notifications/config");
@@ -29705,6 +29745,38 @@ function toggleTheme() {
   const ti = document.getElementById('themeIcon');
   if (ti) ti.className = isLight ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
   localStorage.setItem('oxware_theme', isLight ? 'light' : 'dark');
+}
+
+/* ══════════════════ Tema / Skin seçimi ══════════════════ */
+const OX_SKINS = [
+  { id: 'oxware',   name: 'OXware',   desc: 'Varsayılan mavi',   bg: '#111822', accent: '#1a82cc' },
+  { id: 'esxi',     name: 'ESXi',     desc: 'vSphere mavisi',    bg: '#0f1b2d', accent: '#00a1e0' },
+  { id: 'proxmox',  name: 'Proxmox',  desc: 'Turuncu / nötr',    bg: '#1a1a1a', accent: '#e57000' },
+  { id: 'midnight', name: 'Midnight', desc: 'Mor / koyu',        bg: '#0a0a12', accent: '#7c5cff' },
+];
+function currentSkin() { return localStorage.getItem('ox-skin') || 'oxware'; }
+function applySkin(id) {
+  if (id === 'oxware') document.documentElement.removeAttribute('data-skin');
+  else document.documentElement.setAttribute('data-skin', id);
+  localStorage.setItem('ox-skin', id);
+  renderSkinPicker();
+  if (typeof toast === 'function') toast('Tema uygulandı: ' + (OX_SKINS.find(s=>s.id===id)||{}).name, 'success');
+}
+function renderSkinPicker() {
+  const box = document.getElementById('skin-picker');
+  if (!box) return;
+  const cur = currentSkin();
+  box.innerHTML = OX_SKINS.map(s => `
+    <div onclick="applySkin('${s.id}')" style="cursor:pointer;border:2px solid ${s.id===cur?s.accent:'var(--border)'};border-radius:8px;overflow:hidden;background:var(--surface)">
+      <div style="height:46px;background:${s.bg};display:flex;align-items:center;justify-content:center;gap:6px">
+        <span style="width:22px;height:22px;border-radius:50%;background:${s.accent};box-shadow:0 0 8px ${s.accent}"></span>
+        <span style="width:60px;height:8px;border-radius:4px;background:${s.accent};opacity:.5"></span>
+      </div>
+      <div style="padding:7px 9px;display:flex;align-items:center;justify-content:space-between">
+        <div><div style="font-size:12px;font-weight:600">${s.name}</div><div style="font-size:10px;color:var(--text-muted)">${s.desc}</div></div>
+        ${s.id===cur?'<i class="fa-solid fa-circle-check" style="color:'+s.accent+'"></i>':''}
+      </div>
+    </div>`).join('');
 }
 
 /* ══════════════════ Proxy sub-tab ══════════════════ */
