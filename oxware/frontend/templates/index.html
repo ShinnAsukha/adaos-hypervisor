@@ -25692,11 +25692,14 @@ async function loadVMs() {
 
       const _oi = osIcon(v.os_type);
       const _osIconHtml = `<i class="${_oi.i}" style="color:${_oi.c};margin-right:6px;width:14px;text-align:center" title="${escHtml(v.os_type||'')}"></i>`;
+      const _thumbHtml = v.state === "running"
+        ? `<img class="vm-thumb" data-vmid="${v.id}" alt="" title="Canlı ekran (tıkla → konsol)" onclick="openConsole('${v.id}')" style="width:72px;height:46px;object-fit:cover;border-radius:4px;border:1px solid var(--border);vertical-align:middle;margin-right:10px;background:#000;cursor:pointer">`
+        : `<span style="display:inline-flex;width:72px;height:46px;border-radius:4px;border:1px dashed var(--border);vertical-align:middle;margin-right:10px;align-items:center;justify-content:center;color:var(--text-muted);font-size:9px">kapalı</span>`;
 
       // vm-user: minimal row (no checkboxes, no heavy action buttons)
       if (isVmUser) {
         return `<tr data-vmid="${v.id}">
-          <td>${_osIconHtml}<a style="color:var(--accent-lt);cursor:pointer" onclick="selectTreeItem('vm','${v.id}','${escHtml(v.name)}')"><strong>${escHtml(v.name)}</strong></a><br><small style="color:var(--text-muted);margin-left:20px">${v.id.slice(0,8)}</small></td>
+          <td>${_thumbHtml}<span style="display:inline-block;vertical-align:middle">${_osIconHtml}<a style="color:var(--accent-lt);cursor:pointer" onclick="selectTreeItem('vm','${v.id}','${escHtml(v.name)}')"><strong>${escHtml(v.name)}</strong></a><br><small style="color:var(--text-muted);margin-left:20px">${v.id.slice(0,8)}</small></span></td>
           <td>${stateBadge(v.state)}</td>
           <td>${v.vcpus} vCPU</td>
           <td>${(v.memory_mb||0).toLocaleString()} MB</td>
@@ -25715,7 +25718,7 @@ async function loadVMs() {
       // Full admin/operator row — 3 primary + ⋯ more + delete
       return `<tr data-vmid="${v.id}">
         <td style="width:32px" class="col-check"><input type="checkbox" class="vm-checkbox" data-vmid="${v.id}" ${checked} onchange="toggleVmSelection('${v.id}',this.checked)"></td>
-        <td>${_osIconHtml}<a style="color:var(--accent-lt);cursor:pointer" onclick="selectTreeItem('vm','${v.id}','${escHtml(v.name)}')"><strong>${escHtml(v.name)}</strong></a><br><small style="color:var(--text-muted);margin-left:20px">${v.id.slice(0, 8)}</small></td>
+        <td>${_thumbHtml}<span style="display:inline-block;vertical-align:middle">${_osIconHtml}<a style="color:var(--accent-lt);cursor:pointer" onclick="selectTreeItem('vm','${v.id}','${escHtml(v.name)}')"><strong>${escHtml(v.name)}</strong></a><br><small style="color:var(--text-muted);margin-left:20px">${v.id.slice(0, 8)}</small></span></td>
         <td>${stateBadge(v.state)}</td>
         <td class="col-cpu">${v.vcpus} vCPU</td>
         <td class="col-mem">${v.memory_mb.toLocaleString()} MB</td>
@@ -25735,8 +25738,30 @@ async function loadVMs() {
       </tr>`;
     }).join("");
     updateBatchBar();
+    _loadVmThumbs();
     if (!isVmUser) loadAllVmMetadata();
   } catch (e) { toast("VM listesi alınamadı: " + e.message, "error"); }
+}
+
+// Live VM screen thumbnails — fetched with auth (bearer can't go on <img src>),
+// turned into object URLs. Old URLs revoked to avoid leaks.
+let _vmThumbUrls = [];
+async function _loadVmThumbs() {
+  _vmThumbUrls.forEach(u => { try { URL.revokeObjectURL(u); } catch(e){} });
+  _vmThumbUrls = [];
+  const imgs = document.querySelectorAll('img.vm-thumb[data-vmid]');
+  for (const img of imgs) {
+    const id = img.getAttribute('data-vmid');
+    try {
+      const r = await fetch(`/api/vms/${id}/thumbnail.png`, { headers: { Authorization: 'Bearer ' + TOKEN() } });
+      if (!r.ok) continue;
+      const blob = await r.blob();
+      if (!blob.size) continue;
+      const url = URL.createObjectURL(blob);
+      _vmThumbUrls.push(url);
+      img.src = url;
+    } catch (e) { /* thumbnail yoksa boş kalır */ }
+  }
 }
 
 async function cloneVM(vmId, vmName) {
