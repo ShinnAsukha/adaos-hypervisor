@@ -42,31 +42,12 @@
       --danger: #ef4444;
     }
 
-    /* ── Tema/Skin presetleri (html[data-skin]) — :root'u override eder ── */
-    html[data-skin="esxi"]{
-      --bg:#0f1b2d;--surface:#16263d;--surface2:#1b2f4a;--surface3:#213a5c;
-      --border:#244166;--border2:#2e5180;
-      --text:#cfe0f2;--text-muted:#7da0c4;
-      --accent:#00a1e0;--accent-lt:#3bc0ff;
-      --bg-primary:#0f1b2d;--bg-secondary:#16263d;--bg-card:#1b2f4a;
-      --border-color:#244166;--text-primary:#cfe0f2;--text-secondary:#7da0c4;--accent2:#00a1e0;
-    }
-    html[data-skin="proxmox"]{
-      --bg:#1a1a1a;--surface:#232323;--surface2:#2a2a2a;--surface3:#313131;
-      --border:#3a3a3a;--border2:#4a4a4a;
-      --text:#e6e6e6;--text-muted:#9a9a9a;
-      --accent:#e57000;--accent-lt:#ff8c1a;
-      --bg-primary:#1a1a1a;--bg-secondary:#232323;--bg-card:#2a2a2a;
-      --border-color:#3a3a3a;--text-primary:#e6e6e6;--text-secondary:#9a9a9a;--accent2:#e57000;
-    }
-    html[data-skin="midnight"]{
-      --bg:#0a0a12;--surface:#12121f;--surface2:#181828;--surface3:#1f1f33;
-      --border:#262640;--border2:#333355;
-      --text:#d8d8f0;--text-muted:#8888aa;
-      --accent:#7c5cff;--accent-lt:#a48bff;
-      --bg-primary:#0a0a12;--bg-secondary:#12121f;--bg-card:#181828;
-      --border-color:#262640;--text-primary:#d8d8f0;--text-secondary:#8888aa;--accent2:#7c5cff;
-    }
+    /* ── Skin layout varyantları (body class) — palet JS ile inline set edilir ── */
+    body.skin-accentbar #topbar{border-top:3px solid var(--accent)}
+    body.skin-navaccent #nav-panel{border-right:2px solid var(--accent)}
+    body.skin-flat .card,body.skin-flat .esxi-host-card{border-radius:2px!important}
+    body.skin-round .card,body.skin-round .esxi-host-card{border-radius:12px!important}
+    body.skin-topaccent #topbar{background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 22%,var(--surface)),var(--surface))!important}
     .light-theme {
       --bg-primary: #f6f8fa;
       --bg-secondary: #ffffff;
@@ -24853,6 +24834,7 @@ function cfgTab(name) {
   if (name === 'migration') migRefreshJobs();
   if (name === 'host') { loadHostInfo(); loadNtpStatus(); loadHostProfiles(); }
   if (name === 'dpm') { loadDpmNodes(); }
+  if (name === 'general') { try { renderSkinPicker(); } catch(e){} }
 }
 
 // ── VM Detail Tab Switch ──────────────────────────────────────────────────────
@@ -29748,35 +29730,77 @@ function toggleTheme() {
 }
 
 /* ══════════════════ Tema / Skin seçimi ══════════════════ */
+// id,name,desc,light?,classes[],c:{bg,surface,s2,s3,border,b2,text,muted,accent,lt}
 const OX_SKINS = [
-  { id: 'oxware',   name: 'OXware',   desc: 'Varsayılan mavi',   bg: '#111822', accent: '#1a82cc' },
-  { id: 'esxi',     name: 'ESXi',     desc: 'vSphere mavisi',    bg: '#0f1b2d', accent: '#00a1e0' },
-  { id: 'proxmox',  name: 'Proxmox',  desc: 'Turuncu / nötr',    bg: '#1a1a1a', accent: '#e57000' },
-  { id: 'midnight', name: 'Midnight', desc: 'Mor / koyu',        bg: '#0a0a12', accent: '#7c5cff' },
+  { id:'oxware',   name:'OXware',     desc:'Varsayılan mavi',     classes:[], c:null },
+  { id:'esxi',     name:'ESXi',       desc:'vSphere mavisi',      classes:['skin-topaccent'],  c:{bg:'#0f1b2d',surface:'#16263d',s2:'#1b2f4a',s3:'#213a5c',border:'#244166',b2:'#2e5180',text:'#cfe0f2',muted:'#7da0c4',accent:'#00a1e0',lt:'#3bc0ff'} },
+  { id:'proxmox',  name:'Proxmox',    desc:'Turuncu / nötr',      classes:['skin-accentbar'],  c:{bg:'#1a1a1a',surface:'#232323',s2:'#2a2a2a',s3:'#313131',border:'#3a3a3a',b2:'#4a4a4a',text:'#e6e6e6',muted:'#9a9a9a',accent:'#e57000',lt:'#ff8c1a'} },
+  { id:'midnight', name:'Midnight',   desc:'Mor / koyu',          classes:['skin-navaccent'],  c:{bg:'#0a0a12',surface:'#12121f',s2:'#181828',s3:'#1f1f33',border:'#262640',b2:'#333355',text:'#d8d8f0',muted:'#8888aa',accent:'#7c5cff',lt:'#a48bff'} },
+  { id:'nord',     name:'Nord',       desc:'Kuzey buzulu',        classes:['skin-round'],      c:{bg:'#2e3440',surface:'#3b4252',s2:'#434c5e',s3:'#4c566a',border:'#434c5e',b2:'#4c566a',text:'#eceff4',muted:'#a3adc2',accent:'#88c0d0',lt:'#8fbcbb'} },
+  { id:'dracula',  name:'Dracula',    desc:'Mor / pembe',         classes:['skin-round'],      c:{bg:'#282a36',surface:'#343746',s2:'#3c3f51',s3:'#44475a',border:'#44475a',b2:'#565a72',text:'#f8f8f2',muted:'#a8aac0',accent:'#bd93f9',lt:'#ff79c6'} },
+  { id:'solarized',name:'Solarized',  desc:'Deniz tonu',          classes:[],                  c:{bg:'#002b36',surface:'#073642',s2:'#0a4250',s3:'#0e4d5c',border:'#0e4d5c',b2:'#13606f',text:'#93a1a1',muted:'#6a8389',accent:'#268bd2',lt:'#2aa198'} },
+  { id:'monokai',  name:'Monokai',    desc:'Yeşil / amber',       classes:['skin-flat'],       c:{bg:'#272822',surface:'#2f302a',s2:'#383933',s3:'#41423b',border:'#41423b',b2:'#54564d',text:'#f8f8f2',muted:'#a6a89a',accent:'#a6e22e',lt:'#fd971f'} },
+  { id:'cyberpunk',name:'Cyberpunk',  desc:'Neon pembe/cam',      classes:['skin-accentbar','skin-navaccent'], c:{bg:'#0d0221',surface:'#160a33',s2:'#1e1145',s3:'#271857',border:'#3a1f7a',b2:'#5a2fb0',text:'#f0e6ff',muted:'#9a7fd0',accent:'#ff2e88',lt:'#00f0ff'} },
+  { id:'matrix',   name:'Matrix',     desc:'Yeşil terminal',      classes:['skin-topaccent','skin-flat'], c:{bg:'#000000',surface:'#0a140a',s2:'#0f1f0f',s3:'#142914',border:'#1a3a1a',b2:'#246024',text:'#9dffb0',muted:'#3fae5a',accent:'#00ff66',lt:'#39ff14'} },
+  { id:'hyperv',   name:'Hyper-V',    desc:'Teal / mavi-yeşil',   classes:[],                  c:{bg:'#0f1f1d',surface:'#15302c',s2:'#1a3b36',s3:'#204740',border:'#26544c',b2:'#2f6b61',text:'#cdeee8',muted:'#79b3a8',accent:'#2dd4bf',lt:'#5eead4'} },
+  { id:'sunset',   name:'Sunset',     desc:'Mercan / kehribar',   classes:['skin-round'],      c:{bg:'#1a1320',surface:'#241a2e',s2:'#2e2138',s3:'#382943',border:'#3f2e4a',b2:'#553d63',text:'#f5e6f0',muted:'#b596aa',accent:'#fb7185',lt:'#fbbf24'} },
+  { id:'corporate',name:'Kurumsal',   desc:'Beyaz / aydınlık',    light:true, classes:[],       c:{bg:'#f6f8fa',surface:'#ffffff',s2:'#ffffff',s3:'#f0f2f5',border:'#d0d7de',b2:'#c0c8d0',text:'#1f2328',muted:'#57606a',accent:'#0969da',lt:'#0969da'} },
+  { id:'ghlight',  name:'GitHub Light',desc:'Aydınlık nötr',      light:true, classes:[],       c:{bg:'#ffffff',surface:'#f6f8fa',s2:'#ffffff',s3:'#eaeef2',border:'#d0d7de',b2:'#c0c8d0',text:'#24292f',muted:'#57606a',accent:'#1f6feb',lt:'#218bff'} },
 ];
+const _SKIN_CLASSES = ['skin-accentbar','skin-navaccent','skin-flat','skin-round','skin-topaccent'];
+const _SKIN_VARS = ['--bg','--surface','--surface2','--surface3','--border','--border2','--text','--text-muted','--accent','--accent-lt','--bg-primary','--bg-secondary','--bg-card','--border-color','--text-primary','--text-secondary','--accent2'];
 function currentSkin() { return localStorage.getItem('ox-skin') || 'oxware'; }
 function applySkin(id) {
-  if (id === 'oxware') document.documentElement.removeAttribute('data-skin');
-  else document.documentElement.setAttribute('data-skin', id);
+  const skin = OX_SKINS.find(s => s.id === id) || OX_SKINS[0];
+  const rs = document.documentElement.style;
+  _SKIN_VARS.forEach(v => rs.removeProperty(v));
+  _SKIN_CLASSES.forEach(c => document.body.classList.remove(c));
+  if (skin.c) {
+    const c = skin.c;
+    const m = { '--bg':c.bg,'--surface':c.surface,'--surface2':c.s2,'--surface3':c.s3,
+      '--border':c.border,'--border2':c.b2,'--text':c.text,'--text-muted':c.muted,
+      '--accent':c.accent,'--accent-lt':c.lt,'--bg-primary':c.bg,'--bg-secondary':c.surface,
+      '--bg-card':c.s2,'--border-color':c.border,'--text-primary':c.text,
+      '--text-secondary':c.muted,'--accent2':c.accent };
+    Object.keys(m).forEach(k => rs.setProperty(k, m[k]));
+  }
+  (skin.classes || []).forEach(c => document.body.classList.add(c));
+  // Light skins enable the structural light-theme rules; dark skins force
+  // dark; the default 'oxware' leaves the dark/light toggle alone.
+  if (skin.light) document.body.classList.add('light-theme');
+  else if (skin.c) document.body.classList.remove('light-theme');
+  if (skin.light || skin.c) {
+    const ti = document.getElementById('themeIcon');
+    if (ti) ti.className = skin.light ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+  }
   localStorage.setItem('ox-skin', id);
   renderSkinPicker();
-  if (typeof toast === 'function') toast('Tema uygulandı: ' + (OX_SKINS.find(s=>s.id===id)||{}).name, 'success');
+  if (typeof toast === 'function') toast('Tema: ' + skin.name, 'success');
 }
+// Apply saved skin on load (body is hidden until reveal → no flash).
+document.addEventListener('DOMContentLoaded', function () {
+  try { const s = currentSkin(); if (s && s !== 'oxware') applySkin(s); renderSkinPicker(); } catch (e) {}
+});
 function renderSkinPicker() {
   const box = document.getElementById('skin-picker');
   if (!box) return;
   const cur = currentSkin();
-  box.innerHTML = OX_SKINS.map(s => `
-    <div onclick="applySkin('${s.id}')" style="cursor:pointer;border:2px solid ${s.id===cur?s.accent:'var(--border)'};border-radius:8px;overflow:hidden;background:var(--surface)">
-      <div style="height:46px;background:${s.bg};display:flex;align-items:center;justify-content:center;gap:6px">
-        <span style="width:22px;height:22px;border-radius:50%;background:${s.accent};box-shadow:0 0 8px ${s.accent}"></span>
-        <span style="width:60px;height:8px;border-radius:4px;background:${s.accent};opacity:.5"></span>
+  box.innerHTML = OX_SKINS.map(s => {
+    const bg = s.c ? s.c.bg : '#111822';
+    const ac = s.c ? s.c.accent : '#1a82cc';
+    const tx = s.c ? s.c.text : '#c2d4e8';
+    return `<div onclick="applySkin('${s.id}')" style="cursor:pointer;border:2px solid ${s.id===cur?ac:'var(--border)'};border-radius:8px;overflow:hidden;background:var(--surface);transition:border-color .15s">
+      <div style="height:48px;background:${bg};display:flex;align-items:center;gap:6px;padding:0 10px">
+        <span style="width:20px;height:20px;border-radius:50%;background:${ac};box-shadow:0 0 8px ${ac}"></span>
+        <span style="flex:1;height:7px;border-radius:4px;background:${ac};opacity:.45"></span>
+        <span style="width:18px;height:7px;border-radius:4px;background:${tx};opacity:.5"></span>
       </div>
       <div style="padding:7px 9px;display:flex;align-items:center;justify-content:space-between">
         <div><div style="font-size:12px;font-weight:600">${s.name}</div><div style="font-size:10px;color:var(--text-muted)">${s.desc}</div></div>
-        ${s.id===cur?'<i class="fa-solid fa-circle-check" style="color:'+s.accent+'"></i>':''}
+        ${s.id===cur?'<i class="fa-solid fa-circle-check" style="color:'+ac+'"></i>':''}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 /* ══════════════════ Proxy sub-tab ══════════════════ */
