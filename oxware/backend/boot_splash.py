@@ -120,13 +120,17 @@ def ensure_image() -> dict:
     return {"ok": True, "path": str(_IMG)}
 
 
+def _active() -> bool:
+    cfg = get_config()
+    return bool(cfg.get("enabled")) and _IMG.exists()
+
+
 def domain_inject() -> tuple[str, str]:
     """Return (namespace_attr, commandline_block) for the libvirt domain XML.
     Empty strings when disabled or image missing (→ no change to the VM)."""
-    cfg = get_config()
-    if not cfg.get("enabled") or not _IMG.exists():
+    if not _active():
         return "", ""
-    wait = int(cfg.get("splash_time_ms", 5000))
+    wait = int(get_config().get("splash_time_ms", 5000))
     ns = f" xmlns:qemu='{_QEMU_NS}'"
     block = (
         "\n  <qemu:commandline>\n"
@@ -136,3 +140,20 @@ def domain_inject() -> tuple[str, str]:
         f"    <qemu:arg value='name=etc/boot-menu-wait,string={wait}'/>\n"
         "  </qemu:commandline>")
     return ns, block
+
+
+def os_bootmenu_xml() -> str:
+    """libvirt <os> snippet — enabling the boot menu makes SeaBIOS reliably
+    display the splash for the wait window. Empty when splash inactive."""
+    if not _active():
+        return ""
+    wait = int(get_config().get("splash_time_ms", 5000))
+    return f"\n    <bootmenu enable='yes' timeout='{wait}'/>"
+
+
+def image_bytes() -> bytes | None:
+    """Raw JPEG for the panel preview, or None."""
+    try:
+        return _IMG.read_bytes() if _IMG.exists() else None
+    except Exception:
+        return None

@@ -7471,7 +7471,8 @@
           <div class="card" style="margin-top:14px;border-left:4px solid #0091da">
             <div class="card-title"><i class="fa-solid fa-tv" style="margin-right:6px;color:#0091da"></i>VM Boot Splash (firmware logosu)</div>
             <div style="padding:0 14px 12px;font-size:12px">
-              <div style="color:var(--text-muted);margin-bottom:8px">Açıkken her yeni VM, herhangi bir OS'tan ÖNCE BIOS POST'ta OXware logosunu gösterir (VMware tarzı). SeaBIOS fw_cfg ile eklenir, boot sırasına dokunmaz. Önce tek VM'de doğrula.</div>
+              <div style="color:var(--text-muted);margin-bottom:8px">Açıkken her yeni VM, herhangi bir OS'tan ÖNCE BIOS POST'ta OXware logosunu gösterir (VMware tarzı). SeaBIOS (varsayılan q35) VM'lerde <b style="color:var(--success)">garanti</b> — fw_cfg + boot menüsü ile. <b style="color:var(--warning)">UEFI/Secure-Boot</b> (ör. Windows 11) VM'lerde firmware logosu değiştirilemediğinden gösterilmez. Boot sırasına dokunmaz; sadece YENİ VM'lere uygulanır.</div>
+              <div id="bsplash-preview" style="margin-bottom:8px"></div>
               <div id="bsplash-status" style="margin-bottom:8px"></div>
               <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="bsplash-enabled"> Etkin</label>
@@ -37673,7 +37674,22 @@ async function bsplashLoad() {
   if (st) st.innerHTML =
     (d.pillow ? '' : '<span class="mat-badge notready">Pillow yok — görsel üretilemez</span> ') +
     (d.image_ready ? '<span class="mat-badge ready">görsel hazır</span>' : '<span class="mat-badge notready">görsel yok</span>');
+  const pv = document.getElementById('bsplash-preview');
+  if (pv) {
+    if (_bsplashUrl) { try { URL.revokeObjectURL(_bsplashUrl); } catch(e){} _bsplashUrl = null; }
+    if (d.image_ready) {
+      try {
+        const r = await fetch('/api/v2/boot-splash/image', { headers: { Authorization: 'Bearer ' + TOKEN() } });
+        if (r.ok) {
+          const blob = await r.blob();
+          _bsplashUrl = URL.createObjectURL(blob);
+          pv.innerHTML = `<img src="${_bsplashUrl}" alt="Boot splash önizleme" style="max-width:320px;width:100%;border:1px solid var(--border);border-radius:6px">`;
+        } else { pv.innerHTML = ''; }
+      } catch(e) { pv.innerHTML = ''; }
+    } else { pv.innerHTML = ''; }
+  }
 }
+let _bsplashUrl = null;
 async function bsplashSave() {
   const body = { enabled: document.getElementById('bsplash-enabled').checked,
                  splash_time_ms: parseInt(document.getElementById('bsplash-time').value||'5000',10) };

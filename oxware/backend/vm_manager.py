@@ -1266,8 +1266,9 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
     try:
         import boot_splash as _bsplash
         _splash_ns, _splash_cmd = _bsplash.domain_inject()
+        _splash_bootmenu = _bsplash.os_bootmenu_xml()
     except Exception:
-        _splash_ns, _splash_cmd = "", ""
+        _splash_ns, _splash_cmd, _splash_bootmenu = "", "", ""
 
     xml = f"""<domain type='kvm'{_splash_ns}>
   <name>{name}</name>
@@ -1277,7 +1278,7 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
   <vcpu placement='static'>{vcpus}</vcpu>
   <os>
     <type arch='x86_64' machine='pc-q35-6.2'>hvm</type>
-    {boot_xml}
+    {boot_xml}{_splash_bootmenu}
   </os>
   <features>
     <acpi/>

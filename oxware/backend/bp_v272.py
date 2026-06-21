@@ -604,6 +604,19 @@ def _register_routes():
         r = bsplash.ensure_image()
         return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
 
+    @bp_v272.route("/api/v2/boot-splash/image", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_boot_splash_image():
+        from flask import Response
+        if not bsplash:
+            return _err("module unavailable", 503)
+        data = bsplash.image_bytes()
+        if not data:
+            return _err("görsel yok", 404)
+        return Response(data, mimetype="image/jpeg",
+                        headers={"Cache-Control": "no-store"})
+
     # ── Brand integrity / provenance ─────────────────────────────────────
     brand = _safe_import("brand_integrity")
 
