@@ -15094,6 +15094,23 @@ def api_dvs_add_portgroup(dvs_id):
     except Exception as e:
         return err(e)
 
+@app.route("/api/dvs/<dvs_id>/portgroups/<pg_id>", methods=["DELETE"])
+@require_auth
+@require_role("admin", "administrator")
+def api_dvs_del_portgroup(dvs_id, pg_id):
+    if not dvs_mgr: return err("DVS modülü yüklenemedi")
+    return ok(deleted=dvs_mgr.delete_port_group(dvs_id, pg_id))
+
+@app.route("/api/dvs/<dvs_id>/uplinks", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator")
+def api_dvs_set_uplinks(dvs_id):
+    if not dvs_mgr: return err("DVS modülü yüklenemedi")
+    d = request.get_json(silent=True) or {}
+    res = dvs_mgr.set_uplinks(dvs_id, d.get("uplinks") or [],
+                              d.get("teaming_mode", "active-backup"))
+    return (ok(dvs=res) if res else err("DVS bulunamadı", 404))
+
 @app.route("/api/dvs/ovs-bridges")
 @require_auth
 @require_role("admin", "administrator", "operator")

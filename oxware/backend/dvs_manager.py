@@ -79,6 +79,38 @@ def add_port_group(dvs_id, pg_name, vlan_id=0, pg_type="vm"):
     return None
 
 
+def delete_port_group(dvs_id, pg_id):
+    with _lock:
+        all_dvs = _load()
+        for dvs in all_dvs:
+            if dvs["id"] == dvs_id:
+                pgs = dvs.get("port_groups", [])
+                new = [p for p in pgs if p.get("id") != pg_id]
+                if len(new) != len(pgs):
+                    dvs["port_groups"] = new
+                    _save(all_dvs)
+                    return True
+    return False
+
+
+_TEAMING = ("active-backup", "balance-slb", "balance-tcp", "lacp")
+
+
+def set_uplinks(dvs_id, uplinks, teaming_mode="active-backup"):
+    """Set the uplink pNIC list + NIC-teaming (bond) mode for a DVS."""
+    if teaming_mode not in _TEAMING:
+        teaming_mode = "active-backup"
+    with _lock:
+        all_dvs = _load()
+        for dvs in all_dvs:
+            if dvs["id"] == dvs_id:
+                dvs["uplinks"] = [str(u).strip() for u in (uplinks or []) if str(u).strip()]
+                dvs["teaming_mode"] = teaming_mode
+                _save(all_dvs)
+                return dvs
+    return None
+
+
 def add_node(dvs_id, node_ip):
     """Associate a cluster node with this DVS."""
     with _lock:

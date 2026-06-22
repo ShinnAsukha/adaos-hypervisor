@@ -163,6 +163,8 @@ ROWS = [
  ('Küçük resimler açık', 'Thumbnails on', 'Miniaturas activadas', 'Vorschaubilder an', '缩略图已开启', 'Miniatures activées'),
  ('Küçük resimler kapalı', 'Thumbnails off', 'Miniaturas desactivadas', 'Vorschaubilder aus', '缩略图已关闭', 'Miniatures désactivées'),
  ("Gerçek IP guest-agent'tan", 'Real IP from guest agent', 'IP real desde el guest agent', 'Echte IP vom Guest-Agent', '来自 guest-agent 的真实 IP', 'IP réelle depuis l\'agent invité'),
+ ('Port grup adı gerekli', 'Port group name required', 'Se requiere nombre de grupo de puertos', 'Portgruppenname erforderlich', '需要端口组名称', 'Nom de groupe de ports requis'),
+ ('Port Grup', 'Port Groups', 'Grupos de puertos', 'Portgruppen', '端口组', 'Groupes de ports'),
 ]
 
 LANG_IDX = {"en": 1, "es": 2, "de": 3, "zh": 4, "fr": 5}

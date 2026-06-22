@@ -2862,10 +2862,11 @@
             </div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Ad</th><th>Açıklama</th><th>VLAN</th><th>MTU</th><th>Nodes</th><th>Sil</th></tr></thead>
-                <tbody id="dvs-tbody"><tr><td colspan="6" class="text-center text-muted" style="padding:10px">Yüklemek için ↻ Yenile tıklayın</td></tr></tbody>
+                <thead><tr><th>Ad</th><th>Açıklama</th><th>VLAN</th><th>MTU</th><th>Port Grup</th><th>Uplink</th><th>Nodes</th><th>Sil</th></tr></thead>
+                <tbody id="dvs-tbody"><tr><td colspan="8" class="text-center text-muted" style="padding:10px">Yüklemek için ↻ Yenile tıklayın</td></tr></tbody>
               </table>
             </div>
+            <div id="dvs-detail" style="display:none;margin-top:14px"></div>
           </div>
 
         </div>
@@ -11832,7 +11833,9 @@ const PAGE_STRINGS = {
     'Port':'Port',
     'Port (ör: 80)':'Port (ör: 80)',
     'Port (örn: 22 veya 8080-8090):':'Port (örn: 22 veya 8080-8090):',
+    'Port Grup':'Port Groups',
     'Port Yönlendirme':'Port Forwarding',
+    'Port grup adı gerekli':'Port group name required',
     'Pre-cache Kaynakları':'Pre-cache Kaynakları',
     'Prefix Uzunluğu':'Prefix Uzunluğu',
     'Profil':'Profile',
@@ -14476,7 +14479,9 @@ const PAGE_STRINGS = {
     'Port':'Puerto',
     'Port (ör: 80)':'Port (ör: 80)',
     'Port (örn: 22 veya 8080-8090):':'Port (örn: 22 veya 8080-8090):',
+    'Port Grup':'Grupos de puertos',
     'Port Yönlendirme':'Port Forwarding',
+    'Port grup adı gerekli':'Se requiere nombre de grupo de puertos',
     'Pre-cache Kaynakları':'Pre-cache Kaynakları',
     'Prefix Uzunluğu':'Prefix Uzunluğu',
     'Profil':'Perfil',
@@ -17129,7 +17134,9 @@ const PAGE_STRINGS = {
     'Port':'Port',
     'Port (ör: 80)':'Port (ör: 80)',
     'Port (örn: 22 veya 8080-8090):':'Port (örn: 22 veya 8080-8090):',
+    'Port Grup':'Portgruppen',
     'Port Yönlendirme':'Port Forwarding',
+    'Port grup adı gerekli':'Portgruppenname erforderlich',
     'Pre-cache Kaynakları':'Pre-cache Kaynakları',
     'Prefix Uzunluğu':'Prefix Uzunluğu',
     'Profil':'Profil',
@@ -19780,7 +19787,9 @@ const PAGE_STRINGS = {
     'Port':'端口',
     'Port (ör: 80)':'Port (ör: 80)',
     'Port (örn: 22 veya 8080-8090):':'Port (örn: 22 veya 8080-8090):',
+    'Port Grup':'端口组',
     'Port Yönlendirme':'Port Forwarding',
+    'Port grup adı gerekli':'需要端口组名称',
     'Pre-cache Kaynakları':'Pre-cache Kaynakları',
     'Prefix Uzunluğu':'Prefix Uzunluğu',
     'Profil':'配置文件',
@@ -22414,7 +22423,9 @@ const PAGE_STRINGS = {
     'Port':'Port',
     'Port (ör: 80)':'Port (ör: 80)',
     'Port (örn: 22 veya 8080-8090):':'Port (örn: 22 veya 8080-8090):',
+    'Port Grup':'Groupes de ports',
     'Port Yönlendirme':'Port Forwarding',
+    'Port grup adı gerekli':'Nom de groupe de ports requis',
     'Pre-cache Kaynakları':'Pre-cache Kaynakları',
     'Prefix Uzunluğu':'Prefix Uzunluğu',
     'Profil':'Profile',
@@ -36537,32 +36548,117 @@ async function loadVsanStatus() {
 }
 
 /* ══════════════════ DVS (Distributed Virtual Switch) ══════════════════ */
+let _dvsCache = [], _dvsSel = null;
 async function loadDvsList() {
   const d = await _api('/api/dvs');
   const tbody = document.getElementById('dvs-tbody');
   if (!tbody) return;
   const switches = d.switches || [];
-  tbody.innerHTML = switches.length ? switches.map(s => `<tr>
-    <td><strong>${escHtml(s.name||'')}</strong></td>
+  _dvsCache = switches;
+  tbody.innerHTML = switches.length ? switches.map(s => `<tr style="cursor:pointer${s.id===_dvsSel?';background:rgba(88,166,255,.08)':''}" onclick="dvsSelect('${escHtml(s.id||'')}')">
+    <td><strong style="color:var(--accent-lt)">${escHtml(s.name||'')}</strong></td>
     <td style="font-size:11px">${escHtml(s.description||'—')}</td>
     <td><span class="badge-muted" style="font-size:10px">VLAN ${escHtml(String(s.vlan_id||0))}</span></td>
     <td style="font-family:monospace;font-size:11px">${escHtml(String(s.mtu||1500))} MTU</td>
+    <td>${(s.port_groups||[]).length} PG</td>
+    <td>${(s.uplinks||[]).length} uplink${s.teaming_mode?(' · '+escHtml(s.teaming_mode)):''}</td>
     <td>${(s.nodes||[]).length} node</td>
-    <td><button class="btn sm danger" onclick="deleteDvs('${escHtml(s.id||'')}')">Sil</button></td>
-  </tr>`).join('') : '<tr><td colspan="6" class="text-center text-muted" style="padding:10px">DVS yok</td></tr>';
+    <td><button class="btn sm danger" onclick="event.stopPropagation();deleteDvs('${escHtml(s.id||'')}')">Sil</button></td>
+  </tr>`).join('') : '<tr><td colspan="8" class="text-center text-muted" style="padding:10px">DVS yok</td></tr>';
 }
 async function createDvs() {
   const name = document.getElementById('dvs-name')?.value;
   const vlan = document.getElementById('dvs-vlan')?.value || '0';
   if (!name) { toast('DVS adı zorunlu', 'error'); return; }
   const d = await _api('/api/dvs', 'POST', {name, vlan_id: parseInt(vlan)});
-  if (d && d.dvs) { toast('DVS oluşturuldu: ' + d.dvs.name, 'success'); loadDvsList(); }
+  if (d && d.dvs) { toast('DVS oluşturuldu: ' + d.dvs.name, 'success'); _dvsSel = d.dvs.id; loadDvsList().then(()=>dvsSelect(d.dvs.id)); }
   else toast('Hata: ' + escHtml(d?.error||''), 'error');
 }
 async function deleteDvs(id) {
   if (!await showConfirm('DVS silinecek.', 'DVS Sil', true)) return;
   await _api(`/api/dvs/${id}`, 'DELETE');
+  if (_dvsSel === id) { _dvsSel = null; document.getElementById('dvs-detail').style.display='none'; }
   loadDvsList();
+}
+function dvsSelect(id) {
+  _dvsSel = id;
+  loadDvsList();
+  const s = _dvsCache.find(x => x.id === id);
+  if (!s) return;
+  const box = document.getElementById('dvs-detail');
+  box.style.display = 'block';
+  box.innerHTML = _dvsTopology(s) + _dvsManagers(s);
+}
+// vDS-style visual topology: Control plane → DVS → port groups (VLAN) → uplinks (teaming) → physical
+function _dvsTopology(s) {
+  const pgs = s.port_groups || [];
+  const ups = s.uplinks || [];
+  const pgCards = pgs.length ? pgs.map(p => `
+    <div style="background:var(--surface2);border:1px solid var(--accent);border-radius:6px;padding:8px 12px;min-width:130px;text-align:center">
+      <div style="font-weight:600;font-size:12px">${escHtml(p.name)}</div>
+      <div style="font-size:10px;color:var(--text-muted)">VLAN ${p.vlan_id||0} · ${escHtml(p.type||'vm')} · Tagged</div>
+    </div>`).join('') : '<div style="font-size:11px;color:var(--text-muted)">Port grup yok</div>';
+  const upStr = ups.length ? (ups.map(escHtml).join(' + ') + ' — ' + escHtml(s.teaming_mode||'active-backup')) : 'uplink yok';
+  return `<div style="border:1px dashed var(--accent);border-radius:8px;padding:14px;background:rgba(0,145,218,.03)">
+    <div style="text-align:right;font-size:9px;letter-spacing:.1em;color:var(--accent-lt)">DATA PLANE</div>
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:10px;text-align:center;margin-bottom:8px">
+      <div style="font-weight:700">vCenter / Control Plane</div><div style="font-size:10px;color:var(--text-muted)">${escHtml(s.nodes&&s.nodes.length?s.nodes.length+' node':'tek node')} · merkezi yönetim</div>
+    </div>
+    <div style="text-align:center;color:var(--text-muted)">▼</div>
+    <div style="background:var(--surface);border:1px solid var(--accent);border-radius:6px;padding:10px;margin-bottom:8px">
+      <div style="text-align:center;font-weight:700">Distributed vSwitch — ${escHtml(s.name)}</div>
+      <div style="text-align:center;font-size:10px;color:var(--text-muted);margin-bottom:8px">Birden fazla host'a yayılan tek mantıksal switch · MTU ${s.mtu||1500}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">${pgCards}</div>
+      <div style="text-align:center;font-size:10px;color:var(--text-muted);margin-top:8px">Uplink: ${upStr}</div>
+    </div>
+    <div style="text-align:center;color:var(--text-muted)">▼</div>
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:8px;text-align:center">
+      <div style="font-weight:600;font-size:12px">Fiziksel Ağ — Trunk Port</div><div style="font-size:10px;color:var(--text-muted)">802.1Q VLAN tagging ile çoklu VLAN taşıma</div>
+    </div>
+  </div>`;
+}
+function _dvsManagers(s) {
+  const pgRows = (s.port_groups||[]).map(p => `<tr>
+    <td>${escHtml(p.name)}</td><td>VLAN ${p.vlan_id||0}</td><td>${escHtml(p.type||'vm')}</td>
+    <td><button class="btn sm danger" onclick="dvsDelPg('${escHtml(s.id)}','${escHtml(p.id)}')"><i class="fa-solid fa-trash"></i></button></td>
+  </tr>`).join('') || '<tr><td colspan="4" class="text-center text-muted">Port grup yok</td></tr>';
+  const teamOpts = ['active-backup','balance-slb','balance-tcp','lacp'].map(m=>`<option value="${m}"${m===(s.teaming_mode||'active-backup')?' selected':''}>${m}</option>`).join('');
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+    <div class="card" style="margin:0"><div class="card-title">Port Grupları</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;padding:0 10px 8px">
+        <input id="dvs-pg-name" class="form-control" placeholder="prod" style="width:100px"><input id="dvs-pg-vlan" type="number" class="form-control" placeholder="VLAN" style="width:80px">
+        <select id="dvs-pg-type" class="form-control" style="width:90px"><option value="vm">vm</option><option value="mgmt">mgmt</option><option value="vmotion">vmotion</option><option value="storage">storage</option></select>
+        <button class="btn-primary" onclick="dvsAddPg('${escHtml(s.id)}')" style="font-size:12px">+ Ekle</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Ad</th><th>VLAN</th><th>Tip</th><th></th></tr></thead><tbody>${pgRows}</tbody></table></div>
+    </div>
+    <div class="card" style="margin:0"><div class="card-title">Uplink & NIC Teaming</div>
+      <div style="padding:0 10px 10px">
+        <label style="font-size:11px;color:var(--text-muted)">Uplink pNIC'ler (virgül)</label>
+        <input id="dvs-uplinks" class="form-control" placeholder="pNIC1, pNIC2" value="${escHtml((s.uplinks||[]).join(', '))}" style="margin:4px 0 8px">
+        <label style="font-size:11px;color:var(--text-muted)">Teaming modu</label>
+        <select id="dvs-teaming" class="form-control" style="margin:4px 0 8px">${teamOpts}</select>
+        <button class="btn-primary" onclick="dvsSaveUplinks('${escHtml(s.id)}')" style="font-size:12px"><i class="fa-solid fa-floppy-disk"></i> Kaydet</button>
+      </div>
+    </div>
+  </div>`;
+}
+async function dvsAddPg(id) {
+  const name = document.getElementById('dvs-pg-name').value.trim();
+  if (!name) return toast('Port grup adı gerekli', 'error');
+  const body = { name, vlan_id: parseInt(document.getElementById('dvs-pg-vlan').value||'0',10), type: document.getElementById('dvs-pg-type').value };
+  const d = await _api(`/api/dvs/${id}/portgroups`, 'POST', body);
+  if (d) { toast('Port grup eklendi', 'success'); await loadDvsList(); dvsSelect(id); }
+}
+async function dvsDelPg(id, pgId) {
+  const d = await _api(`/api/dvs/${id}/portgroups/${pgId}`, 'DELETE');
+  if (d) { toast('Port grup silindi', 'success'); await loadDvsList(); dvsSelect(id); }
+}
+async function dvsSaveUplinks(id) {
+  const uplinks = document.getElementById('dvs-uplinks').value.split(',').map(x=>x.trim()).filter(Boolean);
+  const teaming_mode = document.getElementById('dvs-teaming').value;
+  const d = await _api(`/api/dvs/${id}/uplinks`, 'POST', { uplinks, teaming_mode });
+  if (d) { toast('Uplink/teaming kaydedildi', 'success'); await loadDvsList(); dvsSelect(id); }
 }
 
 /* ══════════════════ DPM (Distributed Power Management) ══════════════════ */
