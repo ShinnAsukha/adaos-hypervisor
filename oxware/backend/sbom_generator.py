@@ -71,9 +71,9 @@ def generate(out_path: str | Path = _OUT_PATH) -> dict:
             "component": {
                 "type": "application",
                 "name": "oxware-hypervisor",
-                "version": os.environ.get("OXWARE_VERSION", "2.8.0"),
+                "version": os.environ.get("OXWARE_VERSION", "2.8.1"),
                 "purl": "pkg:generic/oxware-hypervisor@"
-                + os.environ.get("OXWARE_VERSION", "2.8.0"),
+                + os.environ.get("OXWARE_VERSION", "2.8.1"),
             },
             "properties": [
                 {"name": "python_version", "value": platform.python_version()},

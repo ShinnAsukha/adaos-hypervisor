@@ -871,7 +871,7 @@ if _v28 is not None:
             _fed = _safe_import("cluster_federation")
             _flags = _safe_import("feature_registry")
             return {
-                "oxware_version": "2.8.0",
+                "oxware_version": "2.8.1",
                 "vm_count": len((_vm.list_vms() if _vm else []) or []),
                 "node_count": len((_fed.list_members() if _fed else []) or []),
                 "enabled_features": [
@@ -879,7 +879,7 @@ if _v28 is not None:
                 ] if _flags and hasattr(_flags, "list_enabled") else [],
             }
         except Exception:
-            return {"oxware_version": "2.8.0"}
+            return {"oxware_version": "2.8.1"}
 
     if _telemetry is not None:
         try:
@@ -4676,7 +4676,7 @@ def api_system_info():
     return ok(
         host=system_monitor.get_host_info(),
         libvirt=system_monitor.get_libvirt_version(),
-        oxware_version="2.8.0",
+        oxware_version="2.8.1",
     )
 
 @app.route("/api/system/stats")
@@ -10253,7 +10253,7 @@ def api_openapi_spec():
         "openapi": "3.0.3",
         "info": {
             "title": "OXware Hypervisor API",
-            "version": "2.8.0",
+            "version": "2.8.1",
             "description": "KVM tabanlı hypervisor yönetim API'si"
         },
         "servers": [{"url": "/api", "description": "OXware API"}],
@@ -11719,7 +11719,7 @@ def api_provision_ping():
     else:
         panel = "Billing Panel"
     ev.info(f"Provisioning: {panel} baglantisi dogrulandi — IP: {client_ip}", category="provision")
-    return ok(status="ok", panel=panel, version="2.8.0", connected=True)
+    return ok(status="ok", panel=panel, version="2.8.1", connected=True)
 
 
 @app.route("/api/provision/create", methods=["POST"])

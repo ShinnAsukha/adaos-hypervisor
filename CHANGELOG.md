@@ -9,6 +9,31 @@ Entries are written plainly. Marketing language is avoided.
 
 ---
 
+## [2.8.1] - 2026-06-22
+
+### Added
+- VM boot health-check (guest-agent service/port verification).
+- Per-VM disk I/O QoS (IOPS/bandwidth throttling).
+- AI Ops Insights (event digest + advisory health analysis); role-gated AI
+  tools (sensitive queries restricted to the primary administrator).
+- Carbon/energy footprint report.
+- Snapshot/backing-chain analysis; Vault → VM secret injection.
+- Measured-boot attestation dashboard.
+- Federation mTLS identity; SDN VXLAN overlays; built-in L4 load balancer.
+- Golden-image marketplace; OVA/OVF export; vApp boot orchestration.
+- Scheduled reports (inventory/compliance/cost/audit → notifications).
+- Live VM screen thumbnails; 14 selectable panel themes; onboarding tour;
+  dashboard KPI strip; firmware boot splash (SeaBIOS).
+
+### Changed
+- Version bumped 2.8.0 → 2.8.1 across panel, public site, and docs.
+
+### Pending
+- Full internationalization pass: extract every Turkish string and translate
+  to all supported languages (scheduled for the next iteration).
+
+---
+
 ## [2.8.0-rc1] - 2026-06-13
 
 ### Added — modularization seed
