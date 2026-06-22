@@ -5183,6 +5183,7 @@
             <div class="card-title"><i class="fa-solid fa-palette" style="color:var(--accent-lt);margin-right:6px"></i>Görünüm / Tema</div>
             <div style="padding:0 14px 12px">
               <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Panel temasını seç. Seçim tarayıcında kaydedilir. <button class="btn sm" style="margin-left:8px" onclick="startTour()"><i class="fa-solid fa-route"></i> Tanıtım Turu</button></div>
+              <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:10px;cursor:pointer"><input type="checkbox" id="opt-thumbs" onchange="toggleVmThumbs(this.checked)"> VM canlı küçük resimleri (kapatmak CPU/bant tasarrufu sağlar)</label>
               <div id="skin-picker" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px"></div>
             </div>
           </div>
@@ -11126,6 +11127,7 @@ const PAGE_STRINGS = {
     'Geri yüklendi':'Restored',
     'Geri yükleniyor — VM durduruluyor, disk yazılıyor...':'Restoring — stopping VM, writing disk...',
     'Gerçek IP (guest-agent)':'Real IP (guest-agent)',
+    'Gerçek IP guest-agent\'tan':'Real IP from guest agent',
     'Gerçek Zamanlı Metrikler':'Gerçek Zamanlı Metrikler',
     'Geçerli boyut girin':'Enter a valid size',
     'Geçerli sayı girin':'Enter a valid number',
@@ -11545,6 +11547,8 @@ const PAGE_STRINGS = {
     'Kök':'Kök',
     'Köprü':'Bridge',
     'Köprü Ağı':'Köprü Ağı',
+    'Küçük resimler açık':'Thumbnails on',
+    'Küçük resimler kapalı':'Thumbnails off',
     'Küçült':'Küçült',
     'Kısayollar':'Shortcuts',
     'Kısayolları Göster':'Show Shortcuts',
@@ -12263,6 +12267,7 @@ const PAGE_STRINGS = {
     'VM başına ağ bant garantisi verir (10Mbps gibi). DDoS bir VM diğer VM\'lerin trafiğini etkilemesin diye.':'VM başına ağ bant garantisi verir (10Mbps gibi). DDoS bir VM diğer VM\'lerin trafiğini etkilemesin diye.',
     'VM başına saklanan kimlik bilgileri. Şifreler tarayıcıda maskelenir, sunucuda şifreli tutulur.':'Credentials stored per VM. Passwords masked in browser, encrypted on server.',
     'VM bulunamadı':'VM not found',
+    'VM canlı küçük resimleri (kapatmak CPU/bant tasarrufu sağlar)':'Live VM thumbnails (turn off to save CPU/bandwidth)',
     'VM detayı alınamadı:':'VM detayı alınamadı:',
     'VM detayı alınamadı: ':'VM detayı alınamadı: ',
     'VM disk dosyalarını LUKS2 + AES-XTS-256 ile şifreler. Disk fiziksel olarak çalınsa bile veriler okunamaz.':'VM disk dosyalarını LUKS2 + AES-XTS-256 ile şifreler. Disk fiziksel olarak çalınsa bile veriler okunamaz.',
@@ -13761,6 +13766,7 @@ const PAGE_STRINGS = {
     'Geri yüklendi':'Restaurado',
     'Geri yükleniyor — VM durduruluyor, disk yazılıyor...':'Restaurando — deteniendo VM, escribiendo disco...',
     'Gerçek IP (guest-agent)':'IP real (guest-agent)',
+    'Gerçek IP guest-agent\'tan':'IP real desde el guest agent',
     'Gerçek Zamanlı Metrikler':'Gerçek Zamanlı Metrikler',
     'Geçerli boyut girin':'Ingrese un tamaño válido',
     'Geçerli sayı girin':'Ingrese un número válido',
@@ -14182,6 +14188,8 @@ const PAGE_STRINGS = {
     'Kök':'Kök',
     'Köprü':'Puente',
     'Köprü Ağı':'Köprü Ağı',
+    'Küçük resimler açık':'Miniaturas activadas',
+    'Küçük resimler kapalı':'Miniaturas desactivadas',
     'Küçült':'Küçült',
     'Kısayollar':'Shortcuts',
     'Kısayolları Göster':'Show Shortcuts',
@@ -14912,6 +14920,7 @@ const PAGE_STRINGS = {
     'VM başına ağ bant garantisi verir (10Mbps gibi). DDoS bir VM diğer VM\'lerin trafiğini etkilemesin diye.':'VM başına ağ bant garantisi verir (10Mbps gibi). DDoS bir VM diğer VM\'lerin trafiğini etkilemesin diye.',
     'VM başına saklanan kimlik bilgileri. Şifreler tarayıcıda maskelenir, sunucuda şifreli tutulur.':'Credentials stored per VM. Passwords masked in browser, encrypted on server.',
     'VM bulunamadı':'VM no encontrada',
+    'VM canlı küçük resimleri (kapatmak CPU/bant tasarrufu sağlar)':'Miniaturas en vivo de VM (desactiva para ahorrar CPU/ancho de banda)',
     'VM detayı alınamadı:':'VM detayı alınamadı:',
     'VM detayı alınamadı: ':'VM detayı alınamadı: ',
     'VM disk dosyalarını LUKS2 + AES-XTS-256 ile şifreler. Disk fiziksel olarak çalınsa bile veriler okunamaz.':'VM disk dosyalarını LUKS2 + AES-XTS-256 ile şifreler. Disk fiziksel olarak çalınsa bile veriler okunamaz.',
@@ -16410,6 +16419,7 @@ const PAGE_STRINGS = {
     'Geri yüklendi':'Wiederhergestellt',
     'Geri yükleniyor — VM durduruluyor, disk yazılıyor...':'Wiederherstellung — VM wird gestoppt, Festplatte wird geschrieben...',
     'Gerçek IP (guest-agent)':'Echte IP (Guest-Agent)',
+    'Gerçek IP guest-agent\'tan':'Echte IP vom Guest-Agent',
     'Gerçek Zamanlı Metrikler':'Gerçek Zamanlı Metrikler',
     'Geçerli boyut girin':'Gültige Größe eingeben',
     'Geçerli sayı girin':'Gültige Zahl eingeben',
@@ -16831,6 +16841,8 @@ const PAGE_STRINGS = {
     'Kök':'Kök',
     'Köprü':'Brücke',
     'Köprü Ağı':'Köprü Ağı',
+    'Küçük resimler açık':'Vorschaubilder an',
+    'Küçük resimler kapalı':'Vorschaubilder aus',
     'Küçült':'Küçült',
     'Kısayollar':'Shortcuts',
     'Kısayolları Göster':'Show Shortcuts',
@@ -17561,6 +17573,7 @@ const PAGE_STRINGS = {
     'VM başına ağ bant garantisi verir (10Mbps gibi). DDoS bir VM diğer VM\'lerin trafiğini etkilemesin diye.':'VM başına ağ bant garantisi verir (10Mbps gibi). DDoS bir VM diğer VM\'lerin trafiğini etkilemesin diye.',
     'VM başına saklanan kimlik bilgileri. Şifreler tarayıcıda maskelenir, sunucuda şifreli tutulur.':'Credentials stored per VM. Passwords masked in browser, encrypted on server.',
     'VM bulunamadı':'VM nicht gefunden',
+    'VM canlı küçük resimleri (kapatmak CPU/bant tasarrufu sağlar)':'Live-VM-Vorschaubilder (zum Sparen von CPU/Bandbreite deaktivieren)',
     'VM detayı alınamadı:':'VM detayı alınamadı:',
     'VM detayı alınamadı: ':'VM detayı alınamadı: ',
     'VM disk dosyalarını LUKS2 + AES-XTS-256 ile şifreler. Disk fiziksel olarak çalınsa bile veriler okunamaz.':'VM disk dosyalarını LUKS2 + AES-XTS-256 ile şifreler. Disk fiziksel olarak çalınsa bile veriler okunamaz.',
@@ -19057,6 +19070,7 @@ const PAGE_STRINGS = {
     'Geri yüklendi':'已恢复',
     'Geri yükleniyor — VM durduruluyor, disk yazılıyor...':'正在恢复 — 停止VM，写入磁盘...',
     'Gerçek IP (guest-agent)':'真实 IP (guest-agent)',
+    'Gerçek IP guest-agent\'tan':'来自 guest-agent 的真实 IP',
     'Gerçek Zamanlı Metrikler':'Gerçek Zamanlı Metrikler',
     'Geçerli boyut girin':'输入有效大小',
     'Geçerli sayı girin':'输入有效数字',
@@ -19478,6 +19492,8 @@ const PAGE_STRINGS = {
     'Kök':'Kök',
     'Köprü':'网桥',
     'Köprü Ağı':'Köprü Ağı',
+    'Küçük resimler açık':'缩略图已开启',
+    'Küçük resimler kapalı':'缩略图已关闭',
     'Küçült':'Küçült',
     'Kısayollar':'Shortcuts',
     'Kısayolları Göster':'Show Shortcuts',
@@ -20208,6 +20224,7 @@ const PAGE_STRINGS = {
     'VM başına ağ bant garantisi verir (10Mbps gibi). DDoS bir VM diğer VM\'lerin trafiğini etkilemesin diye.':'VM başına ağ bant garantisi verir (10Mbps gibi). DDoS bir VM diğer VM\'lerin trafiğini etkilemesin diye.',
     'VM başına saklanan kimlik bilgileri. Şifreler tarayıcıda maskelenir, sunucuda şifreli tutulur.':'Credentials stored per VM. Passwords masked in browser, encrypted on server.',
     'VM bulunamadı':'未找到VM',
+    'VM canlı küçük resimleri (kapatmak CPU/bant tasarrufu sağlar)':'虚拟机实时缩略图（关闭可节省 CPU/带宽）',
     'VM detayı alınamadı:':'VM detayı alınamadı:',
     'VM detayı alınamadı: ':'VM detayı alınamadı: ',
     'VM disk dosyalarını LUKS2 + AES-XTS-256 ile şifreler. Disk fiziksel olarak çalınsa bile veriler okunamaz.':'VM disk dosyalarını LUKS2 + AES-XTS-256 ile şifreler. Disk fiziksel olarak çalınsa bile veriler okunamaz.',
@@ -21692,6 +21709,7 @@ const PAGE_STRINGS = {
     'Geri yüklendi':'Restored',
     'Geri yükleniyor — VM durduruluyor, disk yazılıyor...':'Restoring — stopping VM, writing disk...',
     'Gerçek IP (guest-agent)':'IP réelle (agent invité)',
+    'Gerçek IP guest-agent\'tan':'IP réelle depuis l\'agent invité',
     'Gerçek Zamanlı Metrikler':'Gerçek Zamanlı Metrikler',
     'Geçerli boyut girin':'Enter a valid size',
     'Geçerli sayı girin':'Enter a valid number',
@@ -22111,6 +22129,8 @@ const PAGE_STRINGS = {
     'Kök':'Kök',
     'Köprü':'Pont',
     'Köprü Ağı':'Köprü Ağı',
+    'Küçük resimler açık':'Miniatures activées',
+    'Küçük resimler kapalı':'Miniatures désactivées',
     'Küçült':'Küçült',
     'Kısayollar':'Shortcuts',
     'Kısayolları Göster':'Show Shortcuts',
@@ -22829,6 +22849,7 @@ const PAGE_STRINGS = {
     'VM başına ağ bant garantisi verir (10Mbps gibi). DDoS bir VM diğer VM\'lerin trafiğini etkilemesin diye.':'VM başına ağ bant garantisi verir (10Mbps gibi). DDoS bir VM diğer VM\'lerin trafiğini etkilemesin diye.',
     'VM başına saklanan kimlik bilgileri. Şifreler tarayıcıda maskelenir, sunucuda şifreli tutulur.':'Credentials stored per VM. Passwords masked in browser, encrypted on server.',
     'VM bulunamadı':'VM not found',
+    'VM canlı küçük resimleri (kapatmak CPU/bant tasarrufu sağlar)':'Miniatures de VM en direct (désactiver pour économiser CPU/bande passante)',
     'VM detayı alınamadı:':'VM detayı alınamadı:',
     'VM detayı alınamadı: ':'VM detayı alınamadı: ',
     'VM disk dosyalarını LUKS2 + AES-XTS-256 ile şifreler. Disk fiziksel olarak çalınsa bile veriler okunamaz.':'VM disk dosyalarını LUKS2 + AES-XTS-256 ile şifreler. Disk fiziksel olarak çalınsa bile veriler okunamaz.',
@@ -26462,7 +26483,7 @@ async function loadVMs() {
           <td>${stateBadge(v.state)}</td>
           <td>${v.vcpus} vCPU</td>
           <td>${(v.memory_mb||0).toLocaleString()} MB</td>
-          <td>${ipHtml}</td>
+          <td data-vmip="${v.id}">${ipHtml}</td>
           <td>
             <div class="action-btns">
               ${v.state !== "running"
@@ -26482,7 +26503,7 @@ async function loadVMs() {
         <td class="col-cpu">${v.vcpus} vCPU</td>
         <td class="col-mem">${v.memory_mb.toLocaleString()} MB</td>
         <td class="col-disk" style="font-size:11px;line-height:1.8">${disks}</td>
-        <td style="font-size:11px">${ipHtml}</td>
+        <td style="font-size:11px" data-vmip="${v.id}">${ipHtml}</td>
         <td>
           <div class="action-btns" style="flex-wrap:nowrap;gap:3px">
             ${v.state !== "running"
@@ -26497,15 +26518,43 @@ async function loadVMs() {
       </tr>`;
     }).join("");
     updateBatchBar();
-    _loadVmThumbs();
+    if (localStorage.getItem('ox-thumbs') !== '0') _loadVmThumbs();
+    _enrichRealIPs();
     if (!isVmUser) loadAllVmMetadata();
   } catch (e) { toast("VM listesi alınamadı: " + e.message, "error"); }
 }
 
+// Real per-VM IP via guest agent — bridge/DHCP VMs report a wrong/host IP to
+// libvirt, so one ip-audit call (cached 30s) patches the list cells with the
+// true address. Perf-friendly: a single call, not per-VM, and cached.
+let _ipAuditCache = null, _ipAuditTs = 0;
+async function _enrichRealIPs() {
+  try {
+    if (!_ipAuditCache || Date.now() - _ipAuditTs > 30000) {
+      const d = await _api('/api/v2/network/ip-audit');
+      _ipAuditCache = (d && d.vms) || [];
+      _ipAuditTs = Date.now();
+    }
+    const byName = {}; (_gsCacheVMs || []).forEach(v => byName[v.name] = v.id);
+    for (const a of _ipAuditCache) {
+      const id = byName[a.vm]; if (!id) continue;
+      if (!a.agent_ip || a.agent_ip === '—') continue;
+      const cell = document.querySelector(`td[data-vmip="${id}"]`);
+      if (!cell) continue;
+      const real = a.real_ip || a.agent_ip;
+      const tag = a.mode === 'bridge'
+        ? ` <span style="font-size:9px;color:var(--text-muted)" title="Gerçek IP guest-agent'tan">agent</span>` : '';
+      cell.innerHTML = `<code style="font-size:11px;color:var(--accent-lt);background:rgba(88,166,255,.08);padding:1px 5px;border-radius:3px">${escHtml(real)}</code>${tag}`;
+    }
+  } catch (e) { /* guest-agent yoksa libvirt IP kalır */ }
+}
+
 // Live VM screen thumbnails — fetched with auth (bearer can't go on <img src>),
-// turned into object URLs. Old URLs revoked to avoid leaks.
+// turned into object URLs. Old URLs revoked to avoid leaks. Skips when the tab
+// is hidden (no needless virsh screenshots / bandwidth).
 let _vmThumbUrls = [];
 async function _loadVmThumbs() {
+  if (document.visibilityState === 'hidden') return;
   _vmThumbUrls.forEach(u => { try { URL.revokeObjectURL(u); } catch(e){} });
   _vmThumbUrls = [];
   const imgs = document.querySelectorAll('img.vm-thumb[data-vmid]');
@@ -30582,7 +30631,13 @@ document.addEventListener('DOMContentLoaded', function () {
   try { const s = currentSkin(); if (s && s !== 'oxware') applySkin(s); renderSkinPicker(); } catch (e) {}
   try { _maybeAutoTour(); } catch (e) {}
 });
+function toggleVmThumbs(on) {
+  localStorage.setItem('ox-thumbs', on ? '1' : '0');
+  toast(on ? 'Küçük resimler açık' : 'Küçük resimler kapalı', 'info');
+}
 function renderSkinPicker() {
+  const tcb = document.getElementById('opt-thumbs');
+  if (tcb) tcb.checked = localStorage.getItem('ox-thumbs') !== '0';
   const box = document.getElementById('skin-picker');
   if (!box) return;
   const cur = currentSkin();

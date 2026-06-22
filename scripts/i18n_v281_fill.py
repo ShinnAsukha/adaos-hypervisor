@@ -158,6 +158,11 @@ ROWS = [
  ('Cloud-Native', 'Cloud-Native', 'Cloud-Native', 'Cloud-Native', '云原生', 'Cloud-Native'),
  ('Araçlar', 'Tools', 'Herramientas', 'Werkzeuge', '工具', 'Outils'),
  ('Güvenlik & Uyum', 'Security & Compliance', 'Seguridad y cumplimiento', 'Sicherheit & Compliance', '安全与合规', 'Sécurité et conformité'),
+ # v2.8.1 — gerçek IP + thumbnail toggle
+ ('VM canlı küçük resimleri (kapatmak CPU/bant tasarrufu sağlar)', 'Live VM thumbnails (turn off to save CPU/bandwidth)', 'Miniaturas en vivo de VM (desactiva para ahorrar CPU/ancho de banda)', 'Live-VM-Vorschaubilder (zum Sparen von CPU/Bandbreite deaktivieren)', '虚拟机实时缩略图（关闭可节省 CPU/带宽）', 'Miniatures de VM en direct (désactiver pour économiser CPU/bande passante)'),
+ ('Küçük resimler açık', 'Thumbnails on', 'Miniaturas activadas', 'Vorschaubilder an', '缩略图已开启', 'Miniatures activées'),
+ ('Küçük resimler kapalı', 'Thumbnails off', 'Miniaturas desactivadas', 'Vorschaubilder aus', '缩略图已关闭', 'Miniatures désactivées'),
+ ("Gerçek IP guest-agent'tan", 'Real IP from guest agent', 'IP real desde el guest agent', 'Echte IP vom Guest-Agent', '来自 guest-agent 的真实 IP', 'IP réelle depuis l\'agent invité'),
 ]
 
 LANG_IDX = {"en": 1, "es": 2, "de": 3, "zh": 4, "fr": 5}
