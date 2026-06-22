@@ -5174,6 +5174,24 @@
             </div>
           </div>
 
+          <!-- Zamanlanmış Raporlar -->
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-title"><i class="fa-solid fa-file-lines" style="color:var(--accent-lt);margin-right:6px"></i>Raporlar</div>
+            <div style="padding:0 14px 12px;font-size:12px">
+              <div style="color:var(--text-muted);margin-bottom:8px">Envanter / uyumluluk / maliyet / denetim raporu üret, önizle, gönder (Telegram/Discord/e-posta) veya haftalık zamanla.</div>
+              <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">
+                <div class="form-group" style="margin:0"><label style="font-size:11px">Tür</label>
+                  <select id="rep-kind" class="form-control" style="width:150px;margin-top:4px"><option value="inventory">Envanter</option><option value="compliance">Uyumluluk</option><option value="cost">Maliyet</option><option value="audit">Denetim</option></select></div>
+                <button class="btn" onclick="reportPreview()" style="font-size:12px"><i class="fa-solid fa-eye"></i> Önizle</button>
+                <button class="btn" onclick="reportSend()" style="font-size:12px"><i class="fa-solid fa-paper-plane"></i> Şimdi Gönder</button>
+                <div class="form-group" style="margin:0"><label style="font-size:11px">Periyot (gün)</label><input id="rep-days" type="number" class="form-control" style="width:90px;margin-top:4px" value="7"></div>
+                <button class="btn-primary" onclick="reportSchedule()" style="font-size:12px"><i class="fa-solid fa-clock"></i> Zamanla</button>
+              </div>
+              <div id="rep-preview" style="margin-bottom:8px"></div>
+              <div id="rep-schedules"></div>
+            </div>
+          </div>
+
           <!-- Oturum Güvenlik Ayarları -->
           <div class="card" style="margin-bottom:14px">
             <div class="card-title"><i class="fa-solid fa-user-clock" style="color:var(--accent-lt);margin-right:6px"></i>Oturum Güvenlik Ayarları</div>
@@ -7502,6 +7520,23 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- ══ v2.8 — vApp VM Grupları ══ -->
+        <div id="ent-pane-vapp" style="display:none">
+          <div class="section-header"><h2><i class="fa-solid fa-layer-group fa-fw" style="color:#0091da"></i> vApp — VM Grupları</h2><div class="spacer"></div><button class="btn" onclick="loadVappPage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
+          <div class="card" style="margin-bottom:12px;border-left:4px solid #0091da;background:rgba(0,145,218,.04);padding:14px"><div style="font-size:12px;line-height:1.6"><b style="color:#0091da">Bu Nedir?</b> VM'leri grupla, <b>başlatma sırası + gecikme</b> ile aç/kapat (önce DB, 10sn bekle, sonra app). Kapatma ters sırada. vSphere vApp karşılığı.</div></div>
+          <div class="card" style="margin-bottom:12px"><div class="card-title">Yeni / Güncelle vApp</div>
+            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">
+              <div class="form-group" style="margin:0"><label style="font-size:11px">vApp Adı</label><input id="vapp-name" class="form-control" style="width:160px;margin-top:4px" placeholder="web-stack"></div>
+              <input type="hidden" id="vapp-id">
+              <button class="btn" onclick="vappAddRow()" style="font-size:12px"><i class="fa-solid fa-plus"></i> Üye Ekle</button>
+              <button class="btn-primary" onclick="vappSave()" style="font-size:12px"><i class="fa-solid fa-floppy-disk"></i> Kaydet</button>
+              <button class="btn" onclick="vappReset()" style="font-size:12px">Temizle</button>
+            </div>
+            <div id="vapp-members" style="display:flex;flex-direction:column;gap:6px"></div>
+          </div>
+          <div class="card"><div class="card-title">vApp'ler</div><div id="vapp-list"><div class="text-muted" style="font-size:12px;padding:10px">Yükleniyor...</div></div></div>
         </div>
 
         <!-- ══ v2.8 — SDN VXLAN Overlay ══ -->
@@ -24700,6 +24735,7 @@ async function loadVMDetail(vmId) {
       secondaryHtml += `<button class="vd-btn-icon" onclick="snapChainOpen('${_vid}','${_vnm}')" title="Snapshot/backing-chain analizi" style="color:#22d3ee"><i class="fa-solid fa-layer-group"></i> Zincir</button>`;
       secondaryHtml += `<button class="vd-btn-icon" onclick="vaultInjectOpen('${_vid}','${_vnm}')" title="Vault secret'ı VM'e enjekte et" style="color:#facc15"><i class="fa-solid fa-key"></i> Vault</button>`;
       secondaryHtml += `<button class="vd-btn-icon" onclick="attestOpen('${_vid}','${_vnm}')" title="Measured-boot attestation" style="color:#34d399"><i class="fa-solid fa-shield-halved"></i> Attestation</button>`;
+      secondaryHtml += `<button class="vd-btn-icon" onclick="ovaExport('${_vid}','${_vnm}')" title="OVA olarak dışa aktar (taşınabilir)" style="color:#38bdf8"><i class="fa-solid fa-file-export"></i> OVA Export</button>`;
       secondaryHtml += `</div>`;
       secondaryHtml += `<div class="vd-actions-divider"></div>`;
       secondaryHtml += `<div class="vd-actions-group">`;
@@ -28535,6 +28571,7 @@ function _applyAdminGates() {
 async function loadSettings() {
   _applyAdminGates();
   renderSkinPicker();
+  try { loadReportSchedules(); } catch(e) {}
 
   try {
     const data = await api("/notifications/config");
@@ -34383,6 +34420,7 @@ const ENT_LOADERS = {
   // handled by the original entries above — do not re-add to avoid dup keys)
   csi:            () => { try { loadCsiPage(); } catch(e) { console.warn(e); } },
   goldenimages:   () => { try { loadGoldenImages(); } catch(e) { console.warn(e); } },
+  vapp:           () => { try { loadVappPage(); } catch(e) { console.warn(e); } },
   sdn:            () => { try { loadSdnPage(); } catch(e) { console.warn(e); } },
   lb:             () => { try { loadLbPage(); } catch(e) { console.warn(e); } },
   mtls:           () => { try { loadMtlsPage(); } catch(e) { console.warn(e); } },
@@ -38025,6 +38063,135 @@ async function carbonReport() {
     <div style="font-size:10px;color:var(--text-muted);margin-top:6px"><i class="fa-solid fa-circle-info"></i> ${_esc((d.assumptions||{}).note||'Tahmini değer')} (idle ${d.assumptions.idle_w}W / peak ${d.assumptions.peak_w}W, ${d.assumptions.co2_kg_per_kwh} kgCO₂/kWh)</div>`;
 }
 
+/* ──── Zamanlanmış Raporlar (v2.8) ──── */
+async function reportPreview() {
+  const kind = document.getElementById('rep-kind').value;
+  const box = document.getElementById('rep-preview');
+  box.innerHTML = '<span class="text-muted" style="font-size:12px"><i class="fa-solid fa-spinner fa-spin"></i> Üretiliyor...</span>';
+  const d = await _api(`/api/v2/reports/generate/${kind}`);
+  box.innerHTML = (d && d.report)
+    ? `<div class="ai-md" style="max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:6px;padding:10px">${_aiMd(d.report)}</div>`
+    : '<span style="color:var(--red);font-size:12px">Üretilemedi</span>';
+}
+async function reportSend() {
+  const kind = document.getElementById('rep-kind').value;
+  const d = await _api(`/api/v2/reports/send/${kind}`, 'POST', {});
+  if (d) toast('Rapor gönderildi: ' + kind, 'success');
+  else toast('Gönderilemedi (bildirim kanalı yapılandırıldı mı?)', 'error');
+}
+async function reportSchedule() {
+  const kind = document.getElementById('rep-kind').value;
+  const days = parseInt(document.getElementById('rep-days').value || '7', 10);
+  const d = await _api('/api/v2/reports/schedules', 'POST', { kind, interval_days: days });
+  if (d) { toast('Rapor zamanlandı', 'success'); loadReportSchedules(); }
+}
+async function loadReportSchedules() {
+  const box = document.getElementById('rep-schedules');
+  if (!box) return;
+  const d = await _api('/api/v2/reports/schedules');
+  const arr = (d && d.schedules) || [];
+  box.innerHTML = arr.length
+    ? '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Zamanlanmış:</div>' + arr.map(s =>
+        `<span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:2px 10px;margin:2px;font-size:11px">${_esc(s.kind)} · ${s.interval_days}g <i class="fa-solid fa-xmark" style="cursor:pointer;color:var(--red)" onclick="reportSchedDel('${s.id}')"></i></span>`).join('')
+    : '';
+}
+async function reportSchedDel(sid) {
+  const d = await _api(`/api/v2/reports/schedules/${sid}`, 'DELETE');
+  if (d) { toast('Zamanlama silindi', 'success'); loadReportSchedules(); }
+}
+
+/* ──── vApp VM Grupları (v2.8) ──── */
+let _vappVmCache = [];
+function vappMemberRow(m) {
+  m = m || { vm: '', order: 1, delay_sec: 0 };
+  const opts = _vappVmCache.map(v => `<option value="${_esc(v.name)}"${v.name===m.vm?' selected':''}>${_esc(v.name)}</option>`).join('');
+  return `<div class="vapp-mrow" style="display:flex;gap:6px;align-items:center">
+    <select class="form-control vapp-m-vm" style="flex:1"><option value="">— VM —</option>${opts}</select>
+    <input type="number" class="form-control vapp-m-order" style="width:80px" value="${m.order||1}" title="Sıra" placeholder="sıra">
+    <input type="number" class="form-control vapp-m-delay" style="width:100px" value="${m.delay_sec||0}" title="Gecikme (sn)" placeholder="gecikme sn">
+    <button class="btn sm danger" onclick="this.parentElement.remove()"><i class="fa-solid fa-xmark"></i></button>
+  </div>`;
+}
+function vappAddRow(m) {
+  document.getElementById('vapp-members').insertAdjacentHTML('beforeend', vappMemberRow(m));
+}
+function vappReset() {
+  document.getElementById('vapp-id').value = '';
+  document.getElementById('vapp-name').value = '';
+  document.getElementById('vapp-members').innerHTML = '';
+}
+async function loadVappPage() {
+  try { const vd = await api('/vms'); _vappVmCache = (vd.vms || []); } catch(e) { _vappVmCache = []; }
+  if (!document.querySelector('#vapp-members .vapp-mrow')) vappAddRow();
+  const d = await _api('/api/v2/vapps');
+  const list = document.getElementById('vapp-list');
+  const arr = (d && d.vapps) || [];
+  list.innerHTML = arr.length ? arr.map(v => `
+    <div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <b>${_esc(v.name)}</b><span class="text-muted" style="font-size:11px">${v.members.length} VM</span>
+        <div style="flex:1"></div>
+        <button class="btn sm success" onclick="vappPower('${v.id}','start')"><i class="fa-solid fa-play"></i> Başlat</button>
+        <button class="btn sm" onclick="vappPower('${v.id}','stop')"><i class="fa-solid fa-stop"></i> Durdur</button>
+        <button class="btn sm" onclick="vappEdit('${v.id}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn sm danger" onclick="vappDelete('${v.id}')"><i class="fa-solid fa-trash"></i></button>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted)">${v.members.map(m=>`${_esc(m.vm)} (sıra ${m.order}${m.delay_sec?', +'+m.delay_sec+'sn':''})`).join(' → ')}</div>
+    </div>`).join('') : '<div class="text-muted" style="font-size:12px;padding:10px">vApp yok</div>';
+  _vappCache = arr;
+}
+let _vappCache = [];
+function vappEdit(id) {
+  const v = _vappCache.find(x => x.id === id); if (!v) return;
+  document.getElementById('vapp-id').value = v.id;
+  document.getElementById('vapp-name').value = v.name;
+  document.getElementById('vapp-members').innerHTML = '';
+  v.members.forEach(m => vappAddRow(m));
+  window.scrollTo(0, 0);
+}
+async function vappSave() {
+  const name = document.getElementById('vapp-name').value.trim();
+  if (!name) return toast('vApp adı gerekli', 'error');
+  const members = [...document.querySelectorAll('#vapp-members .vapp-mrow')].map(r => ({
+    vm: r.querySelector('.vapp-m-vm').value,
+    order: parseInt(r.querySelector('.vapp-m-order').value || '1', 10),
+    delay_sec: parseInt(r.querySelector('.vapp-m-delay').value || '0', 10),
+  })).filter(m => m.vm);
+  if (!members.length) return toast('En az bir üye VM seç', 'error');
+  const body = { name, members }; const id = document.getElementById('vapp-id').value;
+  if (id) body.id = id;
+  const d = await _api('/api/v2/vapps', 'POST', body);
+  if (d) { toast('vApp kaydedildi', 'success'); vappReset(); loadVappPage(); }
+}
+async function vappDelete(id) {
+  if (!await showConfirm('vApp silinecek (VM\'ler silinmez). Devam?', 'vApp Sil', true)) return;
+  const d = await _api(`/api/v2/vapps/${id}`, 'DELETE');
+  if (d) { toast('vApp silindi', 'success'); loadVappPage(); }
+}
+async function vappPower(id, action) {
+  const d = await _api(`/api/v2/vapps/${id}/${action}`, 'POST');
+  if (d) toast(d.note || (action + ' başladı'), 'info');
+}
+
+/* ──── OVA Export (v2.8) ──── */
+async function ovaExport(vmId, vmName) {
+  if (!await showConfirm(`${vmName} OVA olarak dışa aktarılacak (büyük disklerde dakikalar sürebilir). Başlat?`, 'OVA Export', false)) return;
+  const d = await _api(`/api/v2/vms/${vmId}/export-ova`, 'POST');
+  if (!d || !d.job_id) { toast('Export başlatılamadı (qemu-img/virsh?)', 'error'); return; }
+  toast('OVA export başladı...', 'info');
+  const jid = d.job_id;
+  const poll = setInterval(async () => {
+    const j = await _api('/api/v2/ova-exports');
+    const job = (j && j.jobs || []).find(x => x.id === jid);
+    if (!job) return;
+    if (job.done) {
+      clearInterval(poll);
+      if (job.ok) toast(`OVA hazır: ${job.path} (${job.size_mb} MB)`, 'success');
+      else toast('OVA export hata: ' + (job.error || ''), 'error');
+    }
+  }, 4000);
+}
+
 /* ──── Snapshot Zinciri (v2.8) ──── */
 async function snapChainOpen(vmId, vmName) {
   document.getElementById('sc-title').textContent = vmName || vmId;
@@ -38711,6 +38878,7 @@ const _PAGE_TABS = {
     {key:'list', label:'Liste', src:'native'},
     {key:'tab-templates', label:'Şablonlar', src:'page-tab-templates'},
     {key:'goldenimages', label:'Golden Images', src:'ent-pane-goldenimages'},
+    {key:'vapp', label:'vApp Grupları', src:'ent-pane-vapp'},
     {key:'snapshots', label:'Snapshot', src:'page-snapshots'},
     {key:'consolerec', label:'Konsol Kaydı', src:'ent-pane-consolerec'},
     {key:'drs', label:'DRS', src:'ent-pane-drs'},

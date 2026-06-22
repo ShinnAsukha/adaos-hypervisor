@@ -617,6 +617,101 @@ def _register_routes():
         return Response(data, mimetype="image/jpeg",
                         headers={"Cache-Control": "no-store"})
 
+    # ── OVA export ───────────────────────────────────────────────────────
+    ovae = _safe_import("ova_export")
+
+    @bp_v272.route("/api/v2/vms/<vm_id>/export-ova", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_ova_export(vm_id):
+        if not ovae:
+            return _err("module unavailable", 503)
+        r = ovae.start_export(vm_id)
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    @bp_v272.route("/api/v2/ova-exports", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_ova_jobs():
+        if not ovae:
+            return _err("module unavailable", 503)
+        return _ok(jobs=ovae.list_jobs(), available=ovae.available())
+
+    # ── vApp (VM group boot orchestration) ───────────────────────────────
+    vapp = _safe_import("vapp_manager")
+
+    @bp_v272.route("/api/v2/vapps", methods=["GET", "POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_vapps():
+        if not vapp:
+            return _err("module unavailable", 503)
+        if request.method == "GET":
+            return _ok(vapps=vapp.list_vapps())
+        d = request.get_json(silent=True) or {}
+        r = vapp.upsert_vapp(d.get("name", ""), d.get("members") or [], d.get("id"))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    @bp_v272.route("/api/v2/vapps/<vapp_id>", methods=["DELETE"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_vapp_delete(vapp_id):
+        if not vapp:
+            return _err("module unavailable", 503)
+        return _ok(**vapp.delete_vapp(vapp_id))
+
+    @bp_v272.route("/api/v2/vapps/<vapp_id>/<action>", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_vapp_power(vapp_id, action):
+        if not vapp:
+            return _err("module unavailable", 503)
+        r = vapp.power_vapp(vapp_id, action)
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    # ── Scheduled reports ────────────────────────────────────────────────
+    rep = _safe_import("report_scheduler")
+
+    @bp_v272.route("/api/v2/reports/generate/<kind>", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_report_gen(kind):
+        if not rep:
+            return _err("module unavailable", 503)
+        r = rep.generate(kind)
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    @bp_v272.route("/api/v2/reports/send/<kind>", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_report_send(kind):
+        if not rep:
+            return _err("module unavailable", 503)
+        d = request.get_json(silent=True) or {}
+        r = rep.send_now(kind, d.get("channel", "all"))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    @bp_v272.route("/api/v2/reports/schedules", methods=["GET", "POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_report_schedules():
+        if not rep:
+            return _err("module unavailable", 503)
+        if request.method == "GET":
+            return _ok(schedules=rep.list_schedules())
+        d = request.get_json(silent=True) or {}
+        r = rep.add_schedule(d.get("kind", ""), int(d.get("interval_days", 7)),
+                             d.get("channel", "all"))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    @bp_v272.route("/api/v2/reports/schedules/<sid>", methods=["DELETE"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_report_sched_del(sid):
+        if not rep:
+            return _err("module unavailable", 503)
+        return _ok(**rep.delete_schedule(sid))
+
     # ── Brand integrity / provenance ─────────────────────────────────────
     brand = _safe_import("brand_integrity")
 

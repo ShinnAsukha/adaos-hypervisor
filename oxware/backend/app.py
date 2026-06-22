@@ -668,6 +668,14 @@ cred_mgr.apply_reset_if_exists()
 # AI agentları başlat
 ai_agent.start_all_agents()
 
+# Zamanlanmış rapor gönderici (haftalık) — opsiyonel, hata olursa atla
+try:
+    _rep_sched = _safe_import("report_scheduler")
+    if _rep_sched:
+        _rep_sched.start_background()
+except Exception as _rs_e:
+    log.debug("report scheduler başlatılamadı: %s", _rs_e)
+
 # Marka bütünlüğü / provenance kontrolü — varsayılan "warn" (engellemez,
 # sadece loglar + panelde uyarı). OXWARE_BRAND_MODE=strict ile fork+rebrand
 # tespitinde başlatma engellenir, =off ile tamamen kapatılır.
