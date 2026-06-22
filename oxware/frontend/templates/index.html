@@ -48,6 +48,15 @@
     body.skin-flat .card,body.skin-flat .esxi-host-card{border-radius:2px!important}
     body.skin-round .card,body.skin-round .esxi-host-card{border-radius:12px!important}
     body.skin-topaccent #topbar{background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 22%,var(--surface)),var(--surface))!important}
+
+    /* ── Onboarding tur ── */
+    #ox-tour-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:9000;display:none}
+    #ox-tour-spot{position:fixed;z-index:9001;border-radius:8px;box-shadow:0 0 0 3px var(--accent),0 0 0 9999px rgba(0,0,0,.62);transition:all .25s;pointer-events:none;display:none}
+    #ox-tour-box{position:fixed;z-index:9002;max-width:320px;background:var(--surface);border:1px solid var(--accent);border-radius:10px;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.5);display:none}
+    #ox-tour-box h4{font-size:15px;margin:0 0 6px;color:var(--text)}
+    #ox-tour-box p{font-size:12px;color:var(--text-muted);margin:0 0 12px;line-height:1.55}
+    #ox-tour-box .ox-tour-actions{display:flex;align-items:center;gap:8px}
+    #ox-tour-step{font-size:11px;color:var(--text-muted);margin-right:auto}
     .light-theme {
       --bg-primary: #f6f8fa;
       --bg-secondary: #ffffff;
@@ -1287,6 +1296,8 @@
             <button class="btn sm" onclick="openModal('modal-setup-guide')" title="Kurulum Rehberi"> Kurulum Rehberi</button>
             <button id="dash-edit-btn" class="btn sm" onclick="toggleDashEdit()" title="Widget sıralamasını düzenle">️ Düzenle</button>
           </div>
+
+          <div id="ns-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:14px 0"></div>
 
           <div id="dashboard-container">
 
@@ -5169,7 +5180,7 @@
           <div class="card" style="margin-bottom:14px">
             <div class="card-title"><i class="fa-solid fa-palette" style="color:var(--accent-lt);margin-right:6px"></i>Görünüm / Tema</div>
             <div style="padding:0 14px 12px">
-              <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Panel temasını seç. Seçim tarayıcında kaydedilir.</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Panel temasını seç. Seçim tarayıcında kaydedilir. <button class="btn sm" style="margin-left:8px" onclick="startTour()"><i class="fa-solid fa-route"></i> Tanıtım Turu</button></div>
               <div id="skin-picker" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px"></div>
             </div>
           </div>
@@ -24339,7 +24350,45 @@ async function _loadSidebarHost() {
   } catch(e) { console.warn('sidebar host load fail', e); }
 }
 
+function _spark(vals, color) {
+  vals = (vals || []).filter(v => typeof v === 'number' && !isNaN(v));
+  if (vals.length < 2) return '';
+  const w = 120, h = 30, mn = Math.min(...vals), mx = Math.max(...vals), rng = (mx - mn) || 1;
+  const pts = vals.map((v, i) => `${(i / (vals.length - 1) * w).toFixed(1)},${(h - ((v - mn) / rng) * h).toFixed(1)}`).join(' ');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="display:block"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5"/></svg>`;
+}
+function _series(pts, keys) {
+  return pts.map(p => { for (const k of keys) { if (typeof p[k] === 'number') return p[k]; if (p[k] && typeof p[k].percent === 'number') return p[k].percent; } return NaN; });
+}
+async function renderKpiStrip() {
+  const box = document.getElementById('ns-kpi-strip');
+  if (!box) return;
+  let st = {}, vms = {}, hist = [];
+  try { st = await api('/system/stats') || {}; } catch (e) {}
+  try { vms = await api('/system/vmsummary') || {}; } catch (e) {}
+  try { const h = await api('/metrics/system'); hist = (h && h.data) || []; } catch (e) {}
+  const cpu = (st.cpu && st.cpu.percent) || 0;
+  const mem = (st.memory && st.memory.percent) || 0;
+  const disk = (st.disk_capacity && st.disk_capacity.percent) || (st.disk && st.disk.percent) || 0;
+  const run = vms.running != null ? vms.running : (vms.running_vms || 0);
+  const tot = vms.total != null ? vms.total : (vms.total_vms || 0);
+  const cards = [
+    { lbl: 'CPU', val: cpu.toFixed(0) + '%', c: '#3da3e5', sp: _spark(_series(hist, ['cpu', 'cpu_percent']), '#3da3e5') },
+    { lbl: 'RAM', val: mem.toFixed(0) + '%', c: '#22c55e', sp: _spark(_series(hist, ['mem', 'memory', 'memory_percent']), '#22c55e') },
+    { lbl: 'Disk', val: disk.toFixed(0) + '%', c: '#eab308', sp: _spark(_series(hist, ['disk', 'disk_percent']), '#eab308') },
+    { lbl: 'VM', val: run + '/' + tot, c: '#a48bff', sp: '<div style="font-size:10px;color:var(--text-muted);margin-top:8px">çalışan / toplam</div>' },
+  ];
+  box.innerHTML = cards.map(k => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">${k.lbl}</span>
+        <span style="font-size:24px;font-weight:800;color:${k.c}">${k.val}</span>
+      </div>
+      <div style="margin-top:6px">${k.sp}</div>
+    </div>`).join('');
+}
 async function loadNodeSummary() {
+  try { renderKpiStrip(); } catch (e) {}
   try {
     const [statsData, vmSumData, infoData, diskData, histData] = await Promise.all([
       api("/system/stats"),
@@ -29766,6 +29815,68 @@ function toggleTheme() {
   localStorage.setItem('oxware_theme', isLight ? 'light' : 'dark');
 }
 
+/* ══════════════════ Onboarding tur ══════════════════ */
+const OX_TOUR = [
+  { title: "OXware'e Hoş Geldin", text: "30 saniyelik hızlı tur. İstediğin an ‘Atla’ diyebilirsin." },
+  { sel: '#nav-panel', title: 'Navigasyon', text: 'Soldaki menüden VM, ağ, depolama, izleme ve kurumsal modüllere ulaşırsın.' },
+  { sel: '#oxy-btn', title: 'AI Asistan (OXY)', text: 'Doğal dilde sor; gerçek işlem yaptır (VM oluştur, durdur, durum sor). Yetkiye göre çalışır.' },
+  { sel: '#themeToggle', title: 'Tema', text: '14 hazır tema var. Ayarlar → Görünüm’den seç, anında değişir.' },
+  { title: 'Hazırsın! 🚀', text: 'İlk VM’ini oluştur ya da Golden Images’tan tek tık dağıt. Bu turu Ayarlar → Genel’den tekrar açabilirsin.' },
+];
+let _tourIdx = 0;
+function _tourEls() {
+  if (document.getElementById('ox-tour-backdrop')) return;
+  const bd = document.createElement('div'); bd.id = 'ox-tour-backdrop';
+  const sp = document.createElement('div'); sp.id = 'ox-tour-spot';
+  const bx = document.createElement('div'); bx.id = 'ox-tour-box';
+  bx.innerHTML = `<h4 id="ox-tour-title"></h4><p id="ox-tour-text"></p>
+    <div class="ox-tour-actions"><span id="ox-tour-step"></span>
+      <button class="btn sm" onclick="endTour()">Atla</button>
+      <button class="btn sm primary" id="ox-tour-next" onclick="tourNext()">İleri</button></div>`;
+  document.body.append(bd, sp, bx);
+  bd.onclick = endTour;
+}
+function startTour() {
+  _tourEls(); _tourIdx = 0; _tourShow();
+}
+function tourNext() { _tourIdx++; if (_tourIdx >= OX_TOUR.length) endTour(); else _tourShow(); }
+function _tourShow() {
+  const s = OX_TOUR[_tourIdx];
+  const bd = document.getElementById('ox-tour-backdrop');
+  const sp = document.getElementById('ox-tour-spot');
+  const bx = document.getElementById('ox-tour-box');
+  if (!bd) return;
+  bd.style.display = 'block'; bx.style.display = 'block';
+  document.getElementById('ox-tour-title').textContent = s.title;
+  document.getElementById('ox-tour-text').textContent = s.text;
+  document.getElementById('ox-tour-step').textContent = `${_tourIdx + 1}/${OX_TOUR.length}`;
+  document.getElementById('ox-tour-next').textContent = _tourIdx === OX_TOUR.length - 1 ? 'Bitir' : 'İleri';
+  const el = s.sel ? document.querySelector(s.sel) : null;
+  if (el) {
+    const r = el.getBoundingClientRect();
+    sp.style.display = 'block';
+    sp.style.left = (r.left - 4) + 'px'; sp.style.top = (r.top - 4) + 'px';
+    sp.style.width = (r.width + 8) + 'px'; sp.style.height = (r.height + 8) + 'px';
+    let bl = Math.min(r.left, window.innerWidth - 340);
+    let bt = r.bottom + 12;
+    if (bt + 160 > window.innerHeight) bt = Math.max(12, r.top - 172);
+    bx.style.left = Math.max(12, bl) + 'px'; bx.style.top = bt + 'px';
+  } else {
+    sp.style.display = 'none';
+    bx.style.left = (window.innerWidth / 2 - 160) + 'px';
+    bx.style.top = (window.innerHeight / 2 - 90) + 'px';
+  }
+}
+function endTour() {
+  ['ox-tour-backdrop', 'ox-tour-spot', 'ox-tour-box'].forEach(id => {
+    const e = document.getElementById(id); if (e) e.style.display = 'none';
+  });
+  localStorage.setItem('ox-tour-done', '1');
+}
+function _maybeAutoTour() {
+  try { if (!localStorage.getItem('ox-tour-done')) setTimeout(startTour, 1200); } catch (e) {}
+}
+
 /* ══════════════════ Tema / Skin seçimi ══════════════════ */
 // id,name,desc,light?,classes[],c:{bg,surface,s2,s3,border,b2,text,muted,accent,lt}
 const OX_SKINS = [
@@ -29817,6 +29928,7 @@ function applySkin(id) {
 // Apply saved skin on load (body is hidden until reveal → no flash).
 document.addEventListener('DOMContentLoaded', function () {
   try { const s = currentSkin(); if (s && s !== 'oxware') applySkin(s); renderSkinPicker(); } catch (e) {}
+  try { _maybeAutoTour(); } catch (e) {}
 });
 function renderSkinPicker() {
   const box = document.getElementById('skin-picker');
