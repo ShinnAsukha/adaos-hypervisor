@@ -9,7 +9,7 @@
 <br>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e.svg?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.8.0--rc1-0091da.svg?style=for-the-badge)](https://github.com/ShinnAsukha/oxware-hypervisor/releases)
+[![Version](https://img.shields.io/badge/version-2.8.1-0091da.svg?style=for-the-badge)](https://github.com/ShinnAsukha/oxware-hypervisor/releases)
 [![Discord](https://img.shields.io/badge/Discord-Join-5865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/c6yHhKrQs5)
 [![Get OXware](https://img.shields.io/badge/⬇️_Get_OXware-Free-ff6b1a.svg?style=for-the-badge)](https://github.com/ShinnAsukha/oxware-hypervisor/releases)
 
@@ -216,7 +216,11 @@ Full parity, 2400+ entries per language. CI gate blocks any merge that introduce
 
 ---
 
-## ⚡ What's new in v2.8.0-rc1
+## ⚡ What's new in v2.8.1
+
+VM boot health-check, per-VM disk I/O QoS, AI Ops Insights with role-gated tools, carbon/energy report, snapshot-chain analysis, Vault→VM secret injection, attestation dashboard, federation mTLS, SDN VXLAN overlays, built-in L4 load balancer, golden-image marketplace, OVA export, vApp boot orchestration, scheduled reports, live VM thumbnails, 14 panel themes, onboarding tour, firmware boot splash. Full i18n parity across EN/ES/DE/ZH/FR. See [`CHANGELOG.md`](CHANGELOG.md).
+
+## ⚡ v2.8.0 — Modularization
 
 **Modularization seed:** app.py split into 5 domain blueprints. New `/api/v2/` endpoints under `auth`, `vms`, `networks`, `storage`, `monitoring`. Legacy `/api/*` untouched. See [`MODULARIZATION_PLAN.md`](MODULARIZATION_PLAN.md).
 

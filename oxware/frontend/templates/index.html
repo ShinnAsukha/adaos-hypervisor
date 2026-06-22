@@ -49,6 +49,10 @@
     body.skin-round .card,body.skin-round .esxi-host-card{border-radius:12px!important}
     body.skin-topaccent #topbar{background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 22%,var(--surface)),var(--surface))!important}
 
+    /* ── Sub-tab grup etiketi ── */
+    .sub-tab-group{display:inline-flex;align-items:center;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:2px 9px;margin:0 2px 0 8px;align-self:center;white-space:nowrap}
+    .sub-tab-group:first-child{margin-left:0}
+
     /* ── Onboarding tur ── */
     #ox-tour-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:9000;display:none}
     #ox-tour-spot{position:fixed;z-index:9001;border-radius:8px;box-shadow:0 0 0 3px var(--accent),0 0 0 9999px rgba(0,0,0,.62);transition:all .25s;pointer-events:none;display:none}
@@ -1296,8 +1300,6 @@
             <button class="btn sm" onclick="openModal('modal-setup-guide')" title="Kurulum Rehberi"> Kurulum Rehberi</button>
             <button id="dash-edit-btn" class="btn sm" onclick="toggleDashEdit()" title="Widget sıralamasını düzenle">️ Düzenle</button>
           </div>
-
-          <div id="ns-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:14px 0"></div>
 
           <div id="dashboard-container">
 
@@ -7550,6 +7552,14 @@
           <div class="card"><div class="card-title">vApp'ler</div><div id="vapp-list"><div class="text-muted" style="font-size:12px;padding:10px">Yükleniyor...</div></div></div>
         </div>
 
+        <!-- ══ v2.8.1 — Ağ Modu & IP Tespiti ══ -->
+        <div id="ent-pane-netmode" style="display:none">
+          <div class="section-header"><h2><i class="fa-solid fa-circle-nodes fa-fw" style="color:#00b8e6"></i> Ağ Modu & IP Tespiti</h2><div class="spacer"></div><button class="btn" onclick="loadNetModePage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
+          <div class="card" style="margin-bottom:12px;border-left:4px solid #00b8e6;background:rgba(0,184,230,.04);padding:14px"><div style="font-size:12px;line-height:1.6"><b style="color:#00b8e6">Neden bazı VM'ler yanlış IP gösteriyor?</b> <b>NAT/Routed/İzole</b> ağlarda IP'yi libvirt'in kendi DHCP'si (dnsmasq) verir → panel lease'den <b>doğru</b> okur. <b>Bridge</b> ağlarda IP'yi <b>harici DHCP</b> verir, libvirt lease tutmaz → DHCP'ye bakan görünüm yanlış/host IP gösterebilir. Gerçek IP <b>guest-agent</b>'tan alınır. Aşağıda her ağın modu ve her VM'in gerçek IP'si görünür.</div></div>
+          <div class="card" style="margin-bottom:12px"><div class="card-title">Ağlar — Tespit Edilen Mod</div><div class="table-wrap"><table><thead><tr><th>Ağ</th><th>Mod</th><th>DHCP</th><th>Aralık</th><th>IP Kaynağı</th><th>Panel IP Güvenilir?</th></tr></thead><tbody id="netmode-tbody"><tr><td colspan="6" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody></table></div><div id="netmode-explain" style="margin-top:8px"></div></div>
+          <div class="card"><div class="card-title">VM IP Denetimi (gerçek vs panel)</div><div class="table-wrap"><table><thead><tr><th>VM</th><th>Ağ</th><th>Mod</th><th>Panel IP (libvirt)</th><th>Gerçek IP (guest-agent)</th><th>Durum</th></tr></thead><tbody id="netmode-vm-tbody"><tr><td colspan="6" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody></table></div></div>
+        </div>
+
         <!-- ══ v2.8 — SDN VXLAN Overlay ══ -->
         <div id="ent-pane-sdn" style="display:none">
           <div class="section-header"><h2><i class="fa-solid fa-diagram-project fa-fw" style="color:#22d3ee"></i> SDN Overlay (VXLAN) <span id="sdn-ready"></span></h2><div class="spacer"></div><button class="btn" onclick="loadSdnPage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
@@ -10379,6 +10389,7 @@ const PAGE_STRINGS = {
     '%40 indirim + tüm güncellemeler':'40% off + all updates',
     '\'i bridge\'e bağlar. Eğer OXware bu NIC üzerindeyse bağlantı kesilebilir.':'\'i bridge\'e bağlar. Eğer OXware bu NIC üzerindeyse bağlantı kesilebilir.',
     '\'ta yayınla.':'\'ta yayınla.',
+    '\'tan alınır. Aşağıda her ağın modu ve her VM\'in gerçek IP\'si görünür.':'is taken from it. Below, each network\'s mode and each VM\'s real IP are shown.',
     '(Cloudflare hesabı gerekli)':'(Cloudflare account required)',
     '(anlık)':'(live)',
     '(anlık, paylaşımlı temel disk)':'(live, shared base disk)',
@@ -10560,6 +10571,7 @@ const PAGE_STRINGS = {
     'Arama':'Search',
     'Arama Aç':'Open Search',
     'Arayüz':'Interface',
+    'Araçlar':'Tools',
     'Ardından paneldeki':'Ardından paneldeki',
     'ArgoCD/Flux dizin yapısıyla uyumlu git repo sync.':'ArgoCD/Flux dizin yapısıyla uyumlu git repo sync.',
     'Atama hatası:':'Atama hatası:',
@@ -10612,7 +10624,9 @@ const PAGE_STRINGS = {
     'Ağ Geçidi':'Gateway',
     'Ağ Geçidi IP':'Gateway IP',
     'Ağ Maskesi':'Network Mask',
+    'Ağ Modu & IP':'Network Mode & IP',
     'Ağ Modu & IP Rehberi':'Ağ Modu & IP Rehberi',
+    'Ağ Modu & IP Tespiti':'Network Mode & IP Detection',
     'Ağ Oluştur':'Create Network',
     'Ağ Sekmesine Git':'Go to Networks Tab',
     'Ağ Topoloji Haritası':'Network Topology Map',
@@ -10630,6 +10644,7 @@ const PAGE_STRINGS = {
     'Ağ topolojisi — node/VM/ağ grafiği, LLDP komşuları, VM-VM trafik matrisi.':'Ağ topolojisi — node/VM/ağ grafiği, LLDP komşuları, VM-VM trafik matrisi.',
     'Ağ+':'Network+',
     'Ağlar':'Networks',
+    'Ağlar — Tespit Edilen Mod':'Networks — Detected Mode',
     'Ağırlık':'Weight',
     'BFD Oturumları':'BFD Sessions',
     'BFD oturumu yok':'No BFD sessions',
@@ -10847,6 +10862,7 @@ const PAGE_STRINGS = {
     'Cloud Export':'Cloud Export',
     'Cloud export verisi alınamadı':'Cloud export data unavailable',
     'Cloud-Init & Gelişmiş (Opsiyonel)':'Cloud-Init & Gelişmiş (Opsiyonel)',
+    'Cloud-Native':'Cloud-Native',
     'CloudEvents':'CloudEvents',
     'CloudEvents v1.0 — standart olay formatı + sink yönlendirme.':'CloudEvents v1.0 — standart olay formatı + sink yönlendirme.',
     'CloudEvents verisi alınamadı':'CloudEvents data unavailable',
@@ -11109,6 +11125,7 @@ const PAGE_STRINGS = {
     'Geri alınamaz!':'Geri alınamaz!',
     'Geri yüklendi':'Restored',
     'Geri yükleniyor — VM durduruluyor, disk yazılıyor...':'Restoring — stopping VM, writing disk...',
+    'Gerçek IP (guest-agent)':'Real IP (guest-agent)',
     'Gerçek Zamanlı Metrikler':'Gerçek Zamanlı Metrikler',
     'Geçerli boyut girin':'Enter a valid size',
     'Geçerli sayı girin':'Enter a valid number',
@@ -11174,6 +11191,7 @@ const PAGE_STRINGS = {
     'Günlük Rapor':'Günlük Rapor',
     'Güvenli kullanım: İkinci bir NIC kullanın veya önce iSCSI/SSH bağlantısı kurun.':'Güvenli kullanım: İkinci bir NIC kullanın veya önce iSCSI/SSH bağlantısı kurun.',
     'Güvenlik':'Security',
+    'Güvenlik & Uyum':'Security & Compliance',
     'Güvenlik Denetimi':'Security Audit',
     'Güvenlik Duvarı':'Firewall',
     'Güvenlik Duvarı (nftables)':'Firewall (nftables)',
@@ -11308,6 +11326,7 @@ const PAGE_STRINGS = {
     'IP Havuzları':'IP Pools',
     'IP Havuzu':'IP Pool',
     'IP Havuzu *':'IP Havuzu *',
+    'IP Kaynağı':'IP Source',
     'IP Kontrol Et':'IP Kontrol Et',
     'IP ataması başarısız:':'IP ataması başarısız:',
     'IP ataması başarısız: ':'IP ataması başarısız: ',
@@ -11621,6 +11640,7 @@ const PAGE_STRINGS = {
     'NAT sync hatası:':'NAT sync hatası:',
     'NAT sync hatası: ':'NAT sync hatası: ',
     'NAT çalışmıyor':'NAT çalışmıyor',
+    'NAT/Routed/İzole':'NAT/Routed/Isolated',
     'NETWORK I/O':'NETWORK I/O',
     'NFS Depolama Havuzu Ekle':'NFS Depolama Havuzu Ekle',
     'NFS Havuz':'NFS Pool',
@@ -11643,6 +11663,7 @@ const PAGE_STRINGS = {
     'Ne tür bir VM oluşturmak istediğinizi açıklayın. AI otomatik yapılandırma önerisi oluşturur.':'Describe what VM you want. AI will automatically generate a configuration suggestion.',
     'Ne zaman kullanılır:':'Ne zaman kullanılır:',
     'Neden':'Reason',
+    'Neden bazı VM\'ler yanlış IP gösteriyor?':'Why do some VMs show the wrong IP?',
     'Nested virt değiştirilemedi:':'Nested virt değiştirilemedi:',
     'Nested virt değiştirilemedi: ':'Nested virt değiştirilemedi: ',
     'NetInst · Stable · ~0.68 GB':'NetInst · Stable · ~0.68 GB',
@@ -11711,6 +11732,7 @@ const PAGE_STRINGS = {
     'Operator Group':'Operator Group',
     'Operatör':'Operator',
     'Orta':'Medium',
+    'Otomasyon':'Automation',
     'Otomatik (önerilen):':'Otomatik (önerilen):',
     'Otomatik Başlat (autostart)':'Auto Start (autostart)',
     'Otomatik IP':'Otomatik IP',
@@ -11750,6 +11772,8 @@ const PAGE_STRINGS = {
     'PXE Sunucu Kur':'Setup PXE Server',
     'PXE sunucu yapılandırıldı':'PXE server configured',
     'Paket Sayısı':'Paket Sayısı',
+    'Panel IP (libvirt)':'Panel IP (libvirt)',
+    'Panel IP Güvenilir?':'Panel IP Reliable?',
     'Panel temasını seç. Seçim tarayıcında kaydedilir.':'Choose the panel theme. Your choice is saved in the browser.',
     'Pano erişimi reddedildi — Ctrl+Shift+V deneyin':'Clipboard access denied — try Ctrl+Shift+V',
     'Pano erişimi reddedildi — tarayıcı izni gerekli':'Clipboard access denied — browser permission required',
@@ -12209,6 +12233,7 @@ const PAGE_STRINGS = {
     'VM ID ve bölge gerekli':'VM ID ve bölge gerekli',
     'VM IP':'VM IP',
     'VM IP Adresi':'VM IP Adresi',
+    'VM IP Denetimi (gerçek vs panel)':'VM IP Audit (real vs panel)',
     'VM IP: <atanan_ip>/24':'VM IP: <atanan_ip>/24',
     'VM Import':'VM Import',
     'VM Kullanıcısı (yalnızca atanan VM\'ler)':'VM Kullanıcısı (yalnızca atanan VM\'ler)',
@@ -12512,6 +12537,8 @@ const PAGE_STRINGS = {
     'arayüzünü başlatır.':'arayüzünü başlatır.',
     'aynı anda kullanılamaz (libvirt kuralı). IOPS = saniyedeki işlem, bytes/sec = bant.':'cannot be used at the same time (libvirt rule). IOPS = operations per second, bytes/sec = bandwidth.',
     'aç':'open',
+    'ağlarda IP\'yi':'networks the IP',
+    'ağlarda IP\'yi libvirt\'in kendi DHCP\'si (dnsmasq) verir → panel lease\'den':'networks libvirt\'s own DHCP (dnsmasq) assigns the IP → the panel reads it from the lease',
     'başlatma sırası + gecikme':'start order + delay',
     'bulunamadı':'not found',
     'butonu ile kontrol edin.':'butonu ile kontrol edin.',
@@ -12526,6 +12553,7 @@ const PAGE_STRINGS = {
     'dizinine kaydedilir ve':'dizinine kaydedilir ve',
     'dosyasını alın — istemciye aktarın.':'dosyasını alın — istemciye aktarın.',
     'dosyasını istemciye aktarın:':'dosyasını istemciye aktarın:',
+    'doğru':'correctly',
     'eth0 (veya enp1s0, ens3...)':'eth0 (veya enp1s0, ens3...)',
     'etiket ekle...':'etiket ekle...',
     'ffmpeg ile VNC oturumlarını WebM video olarak kaydet. Geçmişe dönük oynatma.':'ffmpeg ile VNC oturumlarını WebM video olarak kaydet. Geçmişe dönük oynatma.',
@@ -12612,6 +12640,7 @@ const PAGE_STRINGS = {
     'vTPM eklendi. VM restart gerekli.':'vTPM added. VM restart required.',
     'vTPM kaldırıldı.':'vTPM removed.',
     've':'ve',
+    'verir, libvirt lease tutmaz → DHCP\'ye bakan görünüm yanlış/host IP gösterebilir. Gerçek IP':'assigns it, libvirt keeps no lease → a DHCP-based view may show a wrong/host IP. The real IP',
     'verisi alınamadı':'data could not be retrieved',
     'veya':'veya',
     'veya dosya:':'veya dosya:',
@@ -12979,6 +13008,7 @@ const PAGE_STRINGS = {
     '%40 indirim + tüm güncellemeler':'40% de descuento + todas las actualizaciones',
     '\'i bridge\'e bağlar. Eğer OXware bu NIC üzerindeyse bağlantı kesilebilir.':'\'i bridge\'e bağlar. Eğer OXware bu NIC üzerindeyse bağlantı kesilebilir.',
     '\'ta yayınla.':'\'ta yayınla.',
+    '\'tan alınır. Aşağıda her ağın modu ve her VM\'in gerçek IP\'si görünür.':'se toma de ahí. Abajo se muestran el modo de cada red y la IP real de cada VM.',
     '(Cloudflare hesabı gerekli)':'(Cloudflare account required)',
     '(anlık)':'(live)',
     '(anlık, paylaşımlı temel disk)':'(live, shared base disk)',
@@ -13164,6 +13194,7 @@ const PAGE_STRINGS = {
     'Arama':'Buscar',
     'Arama Aç':'Open Search',
     'Arayüz':'Interfaz',
+    'Araçlar':'Herramientas',
     'Ardından paneldeki':'Ardından paneldeki',
     'ArgoCD/Flux dizin yapısıyla uyumlu git repo sync.':'ArgoCD/Flux dizin yapısıyla uyumlu git repo sync.',
     'Atama hatası:':'Atama hatası:',
@@ -13217,7 +13248,9 @@ const PAGE_STRINGS = {
     'Ağ Geçidi IP':'IP de Puerta de Enlace',
     'Ağ I/O':'E/S de Red',
     'Ağ Maskesi':'Máscara de Red',
+    'Ağ Modu & IP':'Modo de red e IP',
     'Ağ Modu & IP Rehberi':'Ağ Modu & IP Rehberi',
+    'Ağ Modu & IP Tespiti':'Detección de modo de red e IP',
     'Ağ Oluştur':'Create Network',
     'Ağ Sekmesine Git':'Go to Networks Tab',
     'Ağ Topoloji Haritası':'Mapa de Topología de Red',
@@ -13235,6 +13268,7 @@ const PAGE_STRINGS = {
     'Ağ topolojisi — node/VM/ağ grafiği, LLDP komşuları, VM-VM trafik matrisi.':'Ağ topolojisi — node/VM/ağ grafiği, LLDP komşuları, VM-VM trafik matrisi.',
     'Ağ+':'Red+',
     'Ağlar':'Redes',
+    'Ağlar — Tespit Edilen Mod':'Redes — modo detectado',
     'Ağırlık':'Peso',
     'BFD Oturumları':'Sesiones BFD',
     'BFD oturumu yok':'No BFD sessions',
@@ -13459,6 +13493,7 @@ const PAGE_STRINGS = {
     'Cloud Export':'Exportación Cloud',
     'Cloud export verisi alınamadı':'Cloud export data unavailable',
     'Cloud-Init & Gelişmiş (Opsiyonel)':'Cloud-Init & Gelişmiş (Opsiyonel)',
+    'Cloud-Native':'Cloud-Native',
     'CloudEvents':'CloudEvents',
     'CloudEvents v1.0 — standart olay formatı + sink yönlendirme.':'CloudEvents v1.0 — standart olay formatı + sink yönlendirme.',
     'CloudEvents verisi alınamadı':'CloudEvents data unavailable',
@@ -13725,6 +13760,7 @@ const PAGE_STRINGS = {
     'Geri alınamaz!':'Geri alınamaz!',
     'Geri yüklendi':'Restaurado',
     'Geri yükleniyor — VM durduruluyor, disk yazılıyor...':'Restaurando — deteniendo VM, escribiendo disco...',
+    'Gerçek IP (guest-agent)':'IP real (guest-agent)',
     'Gerçek Zamanlı Metrikler':'Gerçek Zamanlı Metrikler',
     'Geçerli boyut girin':'Ingrese un tamaño válido',
     'Geçerli sayı girin':'Ingrese un número válido',
@@ -13790,6 +13826,7 @@ const PAGE_STRINGS = {
     'Günlük Rapor':'Günlük Rapor',
     'Güvenli kullanım: İkinci bir NIC kullanın veya önce iSCSI/SSH bağlantısı kurun.':'Güvenli kullanım: İkinci bir NIC kullanın veya önce iSCSI/SSH bağlantısı kurun.',
     'Güvenlik':'Seguridad',
+    'Güvenlik & Uyum':'Seguridad y cumplimiento',
     'Güvenlik Denetimi':'Auditoría de Seguridad',
     'Güvenlik Duvarı':'Firewall',
     'Güvenlik Duvarı (nftables)':'Firewall (nftables)',
@@ -13925,6 +13962,7 @@ const PAGE_STRINGS = {
     'IP Havuzları':'IP Pools',
     'IP Havuzu':'Pool de IP',
     'IP Havuzu *':'IP Havuzu *',
+    'IP Kaynağı':'Origen de IP',
     'IP Kontrol Et':'IP Kontrol Et',
     'IP ataması başarısız:':'IP ataması başarısız:',
     'IP ataması başarısız: ':'IP ataması başarısız: ',
@@ -14240,6 +14278,7 @@ const PAGE_STRINGS = {
     'NAT sync hatası:':'NAT sync hatası:',
     'NAT sync hatası: ':'NAT sync hatası: ',
     'NAT çalışmıyor':'NAT çalışmıyor',
+    'NAT/Routed/İzole':'NAT/Enrutado/Aislado',
     'NETWORK I/O':'NETWORK I/O',
     'NFS Depolama Havuzu Ekle':'NFS Depolama Havuzu Ekle',
     'NFS Havuz':'Pool NFS',
@@ -14262,6 +14301,7 @@ const PAGE_STRINGS = {
     'Ne tür bir VM oluşturmak istediğinizi açıklayın. AI otomatik yapılandırma önerisi oluşturur.':'Describe what VM you want. AI will automatically generate a configuration suggestion.',
     'Ne zaman kullanılır:':'Ne zaman kullanılır:',
     'Neden':'Reason',
+    'Neden bazı VM\'ler yanlış IP gösteriyor?':'¿Por qué algunas VM muestran la IP incorrecta?',
     'Nested virt değiştirilemedi:':'Nested virt değiştirilemedi:',
     'Nested virt değiştirilemedi: ':'Nested virt değiştirilemedi: ',
     'NetInst · Stable · ~0.68 GB':'NetInst · Stable · ~0.68 GB',
@@ -14331,6 +14371,7 @@ const PAGE_STRINGS = {
     'Operator Group':'Operator Group',
     'Operatör':'Operador',
     'Orta':'Medio',
+    'Otomasyon':'Automatización',
     'Otomatik (önerilen):':'Otomatik (önerilen):',
     'Otomatik Başlat (autostart)':'Auto Start (autostart)',
     'Otomatik IP':'Otomatik IP',
@@ -14371,6 +14412,8 @@ const PAGE_STRINGS = {
     'PXE Sunucu Kur':'Configurar Servidor PXE',
     'PXE sunucu yapılandırıldı':'Servidor PXE configurado',
     'Paket Sayısı':'Paket Sayısı',
+    'Panel IP (libvirt)':'IP del panel (libvirt)',
+    'Panel IP Güvenilir?':'¿IP del panel fiable?',
     'Panel temasını seç. Seçim tarayıcında kaydedilir.':'Elige el tema del panel. Tu elección se guarda en el navegador.',
     'Pano erişimi reddedildi — Ctrl+Shift+V deneyin':'Acceso al portapapeles denegado — intente Ctrl+Shift+V',
     'Pano erişimi reddedildi — tarayıcı izni gerekli':'Acceso al portapapeles denegado — se requiere permiso del navegador',
@@ -14839,6 +14882,7 @@ const PAGE_STRINGS = {
     'VM ID ve bölge gerekli':'VM ID ve bölge gerekli',
     'VM IP':'VM IP',
     'VM IP Adresi':'VM IP Adresi',
+    'VM IP Denetimi (gerçek vs panel)':'Auditoría de IP de VM (real vs panel)',
     'VM IP: <atanan_ip>/24':'VM IP: <atanan_ip>/24',
     'VM Import':'VM Import',
     'VM Kullanıcısı (yalnızca atanan VM\'ler)':'VM Kullanıcısı (yalnızca atanan VM\'ler)',
@@ -15142,6 +15186,8 @@ const PAGE_STRINGS = {
     'arayüzünü başlatır.':'arayüzünü başlatır.',
     'aynı anda kullanılamaz (libvirt kuralı). IOPS = saniyedeki işlem, bytes/sec = bant.':'no se pueden usar a la vez (regla de libvirt). IOPS = operaciones por segundo, bytes/s = ancho de banda.',
     'aç':'Abrir',
+    'ağlarda IP\'yi':'redes la IP',
+    'ağlarda IP\'yi libvirt\'in kendi DHCP\'si (dnsmasq) verir → panel lease\'den':'redes el propio DHCP de libvirt (dnsmasq) asigna la IP → el panel la lee del lease',
     'başlatma sırası + gecikme':'orden de inicio + retraso',
     'bulunamadı':'No encontrado',
     'butonu ile kontrol edin.':'butonu ile kontrol edin.',
@@ -15156,6 +15202,7 @@ const PAGE_STRINGS = {
     'dizinine kaydedilir ve':'dizinine kaydedilir ve',
     'dosyasını alın — istemciye aktarın.':'dosyasını alın — istemciye aktarın.',
     'dosyasını istemciye aktarın:':'dosyasını istemciye aktarın:',
+    'doğru':'correctamente',
     'eth0 (veya enp1s0, ens3...)':'eth0 (veya enp1s0, ens3...)',
     'etiket ekle...':'etiket ekle...',
     'ffmpeg ile VNC oturumlarını WebM video olarak kaydet. Geçmişe dönük oynatma.':'ffmpeg ile VNC oturumlarını WebM video olarak kaydet. Geçmişe dönük oynatma.',
@@ -15244,6 +15291,7 @@ const PAGE_STRINGS = {
     'vTPM eklendi. VM restart gerekli.':'vTPM añadido. Se requiere reiniciar la VM.',
     'vTPM kaldırıldı.':'vTPM eliminado.',
     've':'ve',
+    'verir, libvirt lease tutmaz → DHCP\'ye bakan görünüm yanlış/host IP gösterebilir. Gerçek IP':'la asigna, libvirt no mantiene lease → una vista basada en DHCP puede mostrar una IP errónea/del host. La IP real',
     'verisi alınamadı':'data could not be retrieved',
     'veya':'veya',
     'veya dosya:':'veya dosya:',
@@ -15612,6 +15660,7 @@ const PAGE_STRINGS = {
     '%40 indirim + tüm güncellemeler':'40% Rabatt + alle Updates',
     '\'i bridge\'e bağlar. Eğer OXware bu NIC üzerindeyse bağlantı kesilebilir.':'\'i bridge\'e bağlar. Eğer OXware bu NIC üzerindeyse bağlantı kesilebilir.',
     '\'ta yayınla.':'\'ta yayınla.',
+    '\'tan alınır. Aşağıda her ağın modu ve her VM\'in gerçek IP\'si görünür.':'wird daraus bezogen. Unten werden der Modus jedes Netzwerks und die echte IP jeder VM angezeigt.',
     '(Cloudflare hesabı gerekli)':'(Cloudflare account required)',
     '(anlık)':'(live)',
     '(anlık, paylaşımlı temel disk)':'(live, shared base disk)',
@@ -15796,6 +15845,7 @@ const PAGE_STRINGS = {
     'Arama':'Suchen',
     'Arama Aç':'Open Search',
     'Arayüz':'Schnittstelle',
+    'Araçlar':'Werkzeuge',
     'Ardından paneldeki':'Ardından paneldeki',
     'ArgoCD/Flux dizin yapısıyla uyumlu git repo sync.':'ArgoCD/Flux dizin yapısıyla uyumlu git repo sync.',
     'Atama hatası:':'Atama hatası:',
@@ -15848,7 +15898,9 @@ const PAGE_STRINGS = {
     'Ağ Geçidi':'Gateway',
     'Ağ Geçidi IP':'Gateway-IP',
     'Ağ Maskesi':'Netzmaske',
+    'Ağ Modu & IP':'Netzwerkmodus & IP',
     'Ağ Modu & IP Rehberi':'Ağ Modu & IP Rehberi',
+    'Ağ Modu & IP Tespiti':'Netzwerkmodus- & IP-Erkennung',
     'Ağ Oluştur':'Create Network',
     'Ağ Sekmesine Git':'Go to Networks Tab',
     'Ağ Topoloji Haritası':'Netzwerktopologiekarte',
@@ -15866,6 +15918,7 @@ const PAGE_STRINGS = {
     'Ağ topolojisi — node/VM/ağ grafiği, LLDP komşuları, VM-VM trafik matrisi.':'Ağ topolojisi — node/VM/ağ grafiği, LLDP komşuları, VM-VM trafik matrisi.',
     'Ağ+':'Netzwerk+',
     'Ağlar':'Netzwerke',
+    'Ağlar — Tespit Edilen Mod':'Netzwerke — erkannter Modus',
     'Ağırlık':'Gewicht',
     'BFD Oturumları':'BFD-Sitzungen',
     'BFD oturumu yok':'No BFD sessions',
@@ -16089,6 +16142,7 @@ const PAGE_STRINGS = {
     'Cloud Export':'Cloud-Export',
     'Cloud export verisi alınamadı':'Cloud export data unavailable',
     'Cloud-Init & Gelişmiş (Opsiyonel)':'Cloud-Init & Gelişmiş (Opsiyonel)',
+    'Cloud-Native':'Cloud-Native',
     'CloudEvents':'CloudEvents',
     'CloudEvents v1.0 — standart olay formatı + sink yönlendirme.':'CloudEvents v1.0 — standart olay formatı + sink yönlendirme.',
     'CloudEvents verisi alınamadı':'CloudEvents data unavailable',
@@ -16355,6 +16409,7 @@ const PAGE_STRINGS = {
     'Geri alınamaz!':'Geri alınamaz!',
     'Geri yüklendi':'Wiederhergestellt',
     'Geri yükleniyor — VM durduruluyor, disk yazılıyor...':'Wiederherstellung — VM wird gestoppt, Festplatte wird geschrieben...',
+    'Gerçek IP (guest-agent)':'Echte IP (Guest-Agent)',
     'Gerçek Zamanlı Metrikler':'Gerçek Zamanlı Metrikler',
     'Geçerli boyut girin':'Gültige Größe eingeben',
     'Geçerli sayı girin':'Gültige Zahl eingeben',
@@ -16420,6 +16475,7 @@ const PAGE_STRINGS = {
     'Günlük Rapor':'Günlük Rapor',
     'Güvenli kullanım: İkinci bir NIC kullanın veya önce iSCSI/SSH bağlantısı kurun.':'Güvenli kullanım: İkinci bir NIC kullanın veya önce iSCSI/SSH bağlantısı kurun.',
     'Güvenlik':'Sicherheit',
+    'Güvenlik & Uyum':'Sicherheit & Compliance',
     'Güvenlik Denetimi':'Sicherheitsaudit',
     'Güvenlik Duvarı':'Firewall',
     'Güvenlik Duvarı (nftables)':'Firewall (nftables)',
@@ -16555,6 +16611,7 @@ const PAGE_STRINGS = {
     'IP Havuzları':'IP Pools',
     'IP Havuzu':'IP-Pool',
     'IP Havuzu *':'IP Havuzu *',
+    'IP Kaynağı':'IP-Quelle',
     'IP Kontrol Et':'IP Kontrol Et',
     'IP ataması başarısız:':'IP ataması başarısız:',
     'IP ataması başarısız: ':'IP ataması başarısız: ',
@@ -16870,6 +16927,7 @@ const PAGE_STRINGS = {
     'NAT sync hatası:':'NAT sync hatası:',
     'NAT sync hatası: ':'NAT sync hatası: ',
     'NAT çalışmıyor':'NAT çalışmıyor',
+    'NAT/Routed/İzole':'NAT/Geroutet/Isoliert',
     'NETWORK I/O':'NETWORK I/O',
     'NFS Depolama Havuzu Ekle':'NFS Depolama Havuzu Ekle',
     'NFS Havuz':'NFS-Pool',
@@ -16892,6 +16950,7 @@ const PAGE_STRINGS = {
     'Ne tür bir VM oluşturmak istediğinizi açıklayın. AI otomatik yapılandırma önerisi oluşturur.':'Describe what VM you want. AI will automatically generate a configuration suggestion.',
     'Ne zaman kullanılır:':'Ne zaman kullanılır:',
     'Neden':'Reason',
+    'Neden bazı VM\'ler yanlış IP gösteriyor?':'Warum zeigen manche VMs die falsche IP?',
     'Nested virt değiştirilemedi:':'Nested virt değiştirilemedi:',
     'Nested virt değiştirilemedi: ':'Nested virt değiştirilemedi: ',
     'NetInst · Stable · ~0.68 GB':'NetInst · Stable · ~0.68 GB',
@@ -16961,6 +17020,7 @@ const PAGE_STRINGS = {
     'Operator Group':'Operator Group',
     'Operatör':'Operator',
     'Orta':'Mittel',
+    'Otomasyon':'Automatisierung',
     'Otomatik (önerilen):':'Otomatik (önerilen):',
     'Otomatik Başlat (autostart)':'Auto Start (autostart)',
     'Otomatik IP':'Otomatik IP',
@@ -17001,6 +17061,8 @@ const PAGE_STRINGS = {
     'PXE Sunucu Kur':'PXE-Server einrichten',
     'PXE sunucu yapılandırıldı':'PXE-Server konfiguriert',
     'Paket Sayısı':'Paket Sayısı',
+    'Panel IP (libvirt)':'Panel-IP (libvirt)',
+    'Panel IP Güvenilir?':'Panel-IP zuverlässig?',
     'Panel temasını seç. Seçim tarayıcında kaydedilir.':'Panel-Design wählen. Die Auswahl wird im Browser gespeichert.',
     'Pano erişimi reddedildi — Ctrl+Shift+V deneyin':'Zwischenablage-Zugriff verweigert — Ctrl+Shift+V versuchen',
     'Pano erişimi reddedildi — tarayıcı izni gerekli':'Zwischenablage-Zugriff verweigert — Browser-Berechtigung erforderlich',
@@ -17469,6 +17531,7 @@ const PAGE_STRINGS = {
     'VM ID ve bölge gerekli':'VM ID ve bölge gerekli',
     'VM IP':'VM IP',
     'VM IP Adresi':'VM IP Adresi',
+    'VM IP Denetimi (gerçek vs panel)':'VM-IP-Audit (echt vs. Panel)',
     'VM IP: <atanan_ip>/24':'VM IP: <atanan_ip>/24',
     'VM Import':'VM Import',
     'VM Kullanıcısı (yalnızca atanan VM\'ler)':'VM Kullanıcısı (yalnızca atanan VM\'ler)',
@@ -17772,6 +17835,8 @@ const PAGE_STRINGS = {
     'arayüzünü başlatır.':'arayüzünü başlatır.',
     'aynı anda kullanılamaz (libvirt kuralı). IOPS = saniyedeki işlem, bytes/sec = bant.':'können nicht gleichzeitig verwendet werden (libvirt-Regel). IOPS = Operationen pro Sekunde, Bytes/s = Bandbreite.',
     'aç':'Öffnen',
+    'ağlarda IP\'yi':'Netzwerken die IP',
+    'ağlarda IP\'yi libvirt\'in kendi DHCP\'si (dnsmasq) verir → panel lease\'den':'Netzwerken vergibt libvirts eigenes DHCP (dnsmasq) die IP → das Panel liest sie aus dem Lease',
     'başlatma sırası + gecikme':'Startreihenfolge + Verzögerung',
     'bulunamadı':'Nicht gefunden',
     'butonu ile kontrol edin.':'butonu ile kontrol edin.',
@@ -17786,6 +17851,7 @@ const PAGE_STRINGS = {
     'dizinine kaydedilir ve':'dizinine kaydedilir ve',
     'dosyasını alın — istemciye aktarın.':'dosyasını alın — istemciye aktarın.',
     'dosyasını istemciye aktarın:':'dosyasını istemciye aktarın:',
+    'doğru':'korrekt',
     'eth0 (veya enp1s0, ens3...)':'eth0 (veya enp1s0, ens3...)',
     'etiket ekle...':'etiket ekle...',
     'ffmpeg ile VNC oturumlarını WebM video olarak kaydet. Geçmişe dönük oynatma.':'ffmpeg ile VNC oturumlarını WebM video olarak kaydet. Geçmişe dönük oynatma.',
@@ -17874,6 +17940,7 @@ const PAGE_STRINGS = {
     'vTPM eklendi. VM restart gerekli.':'vTPM hinzugefügt. VM-Neustart erforderlich.',
     'vTPM kaldırıldı.':'vTPM entfernt.',
     've':'ve',
+    'verir, libvirt lease tutmaz → DHCP\'ye bakan görünüm yanlış/host IP gösterebilir. Gerçek IP':'vergibt sie, libvirt führt kein Lease → eine DHCP-basierte Ansicht kann eine falsche/Host-IP zeigen. Die echte IP',
     'verisi alınamadı':'data could not be retrieved',
     'veya':'veya',
     'veya dosya:':'veya dosya:',
@@ -18240,6 +18307,7 @@ const PAGE_STRINGS = {
     '%40 indirim + tüm güncellemeler':'四折优惠 + 所有更新',
     '\'i bridge\'e bağlar. Eğer OXware bu NIC üzerindeyse bağlantı kesilebilir.':'\'i bridge\'e bağlar. Eğer OXware bu NIC üzerindeyse bağlantı kesilebilir.',
     '\'ta yayınla.':'\'ta yayınla.',
+    '\'tan alınır. Aşağıda her ağın modu ve her VM\'in gerçek IP\'si görünür.':'由此获取。下方显示每个网络的模式和每台虚拟机的真实 IP。',
     '(Cloudflare hesabı gerekli)':'(Cloudflare account required)',
     '(anlık)':'(live)',
     '(anlık, paylaşımlı temel disk)':'(live, shared base disk)',
@@ -18424,6 +18492,7 @@ const PAGE_STRINGS = {
     'Arama':'搜索',
     'Arama Aç':'Open Search',
     'Arayüz':'接口',
+    'Araçlar':'工具',
     'Ardından paneldeki':'Ardından paneldeki',
     'ArgoCD/Flux dizin yapısıyla uyumlu git repo sync.':'ArgoCD/Flux dizin yapısıyla uyumlu git repo sync.',
     'Atama hatası:':'Atama hatası:',
@@ -18476,7 +18545,9 @@ const PAGE_STRINGS = {
     'Ağ Geçidi':'网关',
     'Ağ Geçidi IP':'网关IP',
     'Ağ Maskesi':'网络掩码',
+    'Ağ Modu & IP':'网络模式与 IP',
     'Ağ Modu & IP Rehberi':'Ağ Modu & IP Rehberi',
+    'Ağ Modu & IP Tespiti':'网络模式与 IP 检测',
     'Ağ Oluştur':'Create Network',
     'Ağ Sekmesine Git':'Go to Networks Tab',
     'Ağ Topoloji Haritası':'网络拓扑图',
@@ -18494,6 +18565,7 @@ const PAGE_STRINGS = {
     'Ağ topolojisi — node/VM/ağ grafiği, LLDP komşuları, VM-VM trafik matrisi.':'Ağ topolojisi — node/VM/ağ grafiği, LLDP komşuları, VM-VM trafik matrisi.',
     'Ağ+':'网络+',
     'Ağlar':'网络',
+    'Ağlar — Tespit Edilen Mod':'网络 — 检测到的模式',
     'Ağırlık':'权重',
     'BFD Oturumları':'BFD会话',
     'BFD oturumu yok':'No BFD sessions',
@@ -18717,6 +18789,7 @@ const PAGE_STRINGS = {
     'Cloud Export':'云导出',
     'Cloud export verisi alınamadı':'Cloud export data unavailable',
     'Cloud-Init & Gelişmiş (Opsiyonel)':'Cloud-Init & Gelişmiş (Opsiyonel)',
+    'Cloud-Native':'云原生',
     'CloudEvents':'CloudEvents',
     'CloudEvents v1.0 — standart olay formatı + sink yönlendirme.':'CloudEvents v1.0 — standart olay formatı + sink yönlendirme.',
     'CloudEvents verisi alınamadı':'CloudEvents data unavailable',
@@ -18983,6 +19056,7 @@ const PAGE_STRINGS = {
     'Geri alınamaz!':'Geri alınamaz!',
     'Geri yüklendi':'已恢复',
     'Geri yükleniyor — VM durduruluyor, disk yazılıyor...':'正在恢复 — 停止VM，写入磁盘...',
+    'Gerçek IP (guest-agent)':'真实 IP (guest-agent)',
     'Gerçek Zamanlı Metrikler':'Gerçek Zamanlı Metrikler',
     'Geçerli boyut girin':'输入有效大小',
     'Geçerli sayı girin':'输入有效数字',
@@ -19048,6 +19122,7 @@ const PAGE_STRINGS = {
     'Günlük Rapor':'Günlük Rapor',
     'Güvenli kullanım: İkinci bir NIC kullanın veya önce iSCSI/SSH bağlantısı kurun.':'Güvenli kullanım: İkinci bir NIC kullanın veya önce iSCSI/SSH bağlantısı kurun.',
     'Güvenlik':'安全',
+    'Güvenlik & Uyum':'安全与合规',
     'Güvenlik Denetimi':'安全审计',
     'Güvenlik Duvarı':'防火墙',
     'Güvenlik Duvarı (nftables)':'防火墙 (nftables)',
@@ -19183,6 +19258,7 @@ const PAGE_STRINGS = {
     'IP Havuzları':'IP Pools',
     'IP Havuzu':'IP池',
     'IP Havuzu *':'IP Havuzu *',
+    'IP Kaynağı':'IP 来源',
     'IP Kontrol Et':'IP Kontrol Et',
     'IP ataması başarısız:':'IP ataması başarısız:',
     'IP ataması başarısız: ':'IP ataması başarısız: ',
@@ -19498,6 +19574,7 @@ const PAGE_STRINGS = {
     'NAT sync hatası:':'NAT sync hatası:',
     'NAT sync hatası: ':'NAT sync hatası: ',
     'NAT çalışmıyor':'NAT çalışmıyor',
+    'NAT/Routed/İzole':'NAT/路由/隔离',
     'NETWORK I/O':'NETWORK I/O',
     'NFS Depolama Havuzu Ekle':'NFS Depolama Havuzu Ekle',
     'NFS Havuz':'NFS存储池',
@@ -19520,6 +19597,7 @@ const PAGE_STRINGS = {
     'Ne tür bir VM oluşturmak istediğinizi açıklayın. AI otomatik yapılandırma önerisi oluşturur.':'Describe what VM you want. AI will automatically generate a configuration suggestion.',
     'Ne zaman kullanılır:':'Ne zaman kullanılır:',
     'Neden':'Reason',
+    'Neden bazı VM\'ler yanlış IP gösteriyor?':'为什么有些虚拟机显示错误的 IP？',
     'Nested virt değiştirilemedi:':'Nested virt değiştirilemedi:',
     'Nested virt değiştirilemedi: ':'Nested virt değiştirilemedi: ',
     'NetInst · Stable · ~0.68 GB':'NetInst · Stable · ~0.68 GB',
@@ -19589,6 +19667,7 @@ const PAGE_STRINGS = {
     'Operator Group':'Operator Group',
     'Operatör':'Operator',
     'Orta':'中',
+    'Otomasyon':'自动化',
     'Otomatik (önerilen):':'Otomatik (önerilen):',
     'Otomatik Başlat (autostart)':'Auto Start (autostart)',
     'Otomatik IP':'Otomatik IP',
@@ -19629,6 +19708,8 @@ const PAGE_STRINGS = {
     'PXE Sunucu Kur':'配置PXE服务器',
     'PXE sunucu yapılandırıldı':'PXE服务器已配置',
     'Paket Sayısı':'Paket Sayısı',
+    'Panel IP (libvirt)':'面板 IP (libvirt)',
+    'Panel IP Güvenilir?':'面板 IP 可靠？',
     'Panel temasını seç. Seçim tarayıcında kaydedilir.':'选择面板主题。选择会保存在浏览器中。',
     'Pano erişimi reddedildi — Ctrl+Shift+V deneyin':'剪贴板访问被拒绝 — 请尝试Ctrl+Shift+V',
     'Pano erişimi reddedildi — tarayıcı izni gerekli':'剪贴板访问被拒绝 — 需要浏览器权限',
@@ -20097,6 +20178,7 @@ const PAGE_STRINGS = {
     'VM ID ve bölge gerekli':'VM ID ve bölge gerekli',
     'VM IP':'VM IP',
     'VM IP Adresi':'VM IP Adresi',
+    'VM IP Denetimi (gerçek vs panel)':'虚拟机 IP 审计（真实 vs 面板）',
     'VM IP: <atanan_ip>/24':'VM IP: <atanan_ip>/24',
     'VM Import':'VM Import',
     'VM Kullanıcısı (yalnızca atanan VM\'ler)':'VM Kullanıcısı (yalnızca atanan VM\'ler)',
@@ -20400,6 +20482,8 @@ const PAGE_STRINGS = {
     'arayüzünü başlatır.':'arayüzünü başlatır.',
     'aynı anda kullanılamaz (libvirt kuralı). IOPS = saniyedeki işlem, bytes/sec = bant.':'不能同时使用（libvirt 规则）。IOPS = 每秒操作数，bytes/sec = 带宽。',
     'aç':'打开',
+    'ağlarda IP\'yi':'网络中，IP',
+    'ağlarda IP\'yi libvirt\'in kendi DHCP\'si (dnsmasq) verir → panel lease\'den':'网络中，由 libvirt 自带的 DHCP (dnsmasq) 分配 IP → 面板从租约读取',
     'başlatma sırası + gecikme':'启动顺序 + 延迟',
     'bulunamadı':'未找到',
     'butonu ile kontrol edin.':'butonu ile kontrol edin.',
@@ -20414,6 +20498,7 @@ const PAGE_STRINGS = {
     'dizinine kaydedilir ve':'dizinine kaydedilir ve',
     'dosyasını alın — istemciye aktarın.':'dosyasını alın — istemciye aktarın.',
     'dosyasını istemciye aktarın:':'dosyasını istemciye aktarın:',
+    'doğru':'正确',
     'eth0 (veya enp1s0, ens3...)':'eth0 (veya enp1s0, ens3...)',
     'etiket ekle...':'etiket ekle...',
     'ffmpeg ile VNC oturumlarını WebM video olarak kaydet. Geçmişe dönük oynatma.':'ffmpeg ile VNC oturumlarını WebM video olarak kaydet. Geçmişe dönük oynatma.',
@@ -20502,6 +20587,7 @@ const PAGE_STRINGS = {
     'vTPM eklendi. VM restart gerekli.':'vTPM已添加。需要重启VM。',
     'vTPM kaldırıldı.':'vTPM已移除。',
     've':'ve',
+    'verir, libvirt lease tutmaz → DHCP\'ye bakan görünüm yanlış/host IP gösterebilir. Gerçek IP':'分配它，libvirt 不保留租约 → 基于 DHCP 的视图可能显示错误/主机 IP。真实 IP',
     'verisi alınamadı':'data could not be retrieved',
     'veya':'veya',
     'veya dosya:':'veya dosya:',
@@ -20869,6 +20955,7 @@ const PAGE_STRINGS = {
     '%40 indirim + tüm güncellemeler':'40 % de réduction + toutes les mises à jour',
     '\'i bridge\'e bağlar. Eğer OXware bu NIC üzerindeyse bağlantı kesilebilir.':'\'i bridge\'e bağlar. Eğer OXware bu NIC üzerindeyse bağlantı kesilebilir.',
     '\'ta yayınla.':'\'ta yayınla.',
+    '\'tan alınır. Aşağıda her ağın modu ve her VM\'in gerçek IP\'si görünür.':'en est issue. Ci-dessous, le mode de chaque réseau et l\'IP réelle de chaque VM sont affichés.',
     '(Cloudflare hesabı gerekli)':'(Cloudflare account required)',
     '(anlık)':'(live)',
     '(anlık, paylaşımlı temel disk)':'(live, shared base disk)',
@@ -21050,6 +21137,7 @@ const PAGE_STRINGS = {
     'Arama':'Rechercher',
     'Arama Aç':'Open Search',
     'Arayüz':'Interface',
+    'Araçlar':'Outils',
     'Ardından paneldeki':'Ardından paneldeki',
     'ArgoCD/Flux dizin yapısıyla uyumlu git repo sync.':'ArgoCD/Flux dizin yapısıyla uyumlu git repo sync.',
     'Atama hatası:':'Atama hatası:',
@@ -21102,7 +21190,9 @@ const PAGE_STRINGS = {
     'Ağ Geçidi':'Passerelle',
     'Ağ Geçidi IP':'Gateway IP',
     'Ağ Maskesi':'Masque réseau',
+    'Ağ Modu & IP':'Mode réseau et IP',
     'Ağ Modu & IP Rehberi':'Ağ Modu & IP Rehberi',
+    'Ağ Modu & IP Tespiti':'Détection du mode réseau et de l\'IP',
     'Ağ Oluştur':'Create Network',
     'Ağ Sekmesine Git':'Go to Networks Tab',
     'Ağ Topoloji Haritası':'Network Topology Map',
@@ -21120,6 +21210,7 @@ const PAGE_STRINGS = {
     'Ağ topolojisi — node/VM/ağ grafiği, LLDP komşuları, VM-VM trafik matrisi.':'Ağ topolojisi — node/VM/ağ grafiği, LLDP komşuları, VM-VM trafik matrisi.',
     'Ağ+':'Network+',
     'Ağlar':'Réseaux',
+    'Ağlar — Tespit Edilen Mod':'Réseaux — mode détecté',
     'Ağırlık':'Weight',
     'BFD Oturumları':'BFD Sessions',
     'BFD oturumu yok':'No BFD sessions',
@@ -21337,6 +21428,7 @@ const PAGE_STRINGS = {
     'Cloud Export':'Cloud Export',
     'Cloud export verisi alınamadı':'Cloud export data unavailable',
     'Cloud-Init & Gelişmiş (Opsiyonel)':'Cloud-Init & Gelişmiş (Opsiyonel)',
+    'Cloud-Native':'Cloud-Native',
     'CloudEvents':'CloudEvents',
     'CloudEvents v1.0 — standart olay formatı + sink yönlendirme.':'CloudEvents v1.0 — standart olay formatı + sink yönlendirme.',
     'CloudEvents verisi alınamadı':'CloudEvents data unavailable',
@@ -21523,7 +21615,7 @@ const PAGE_STRINGS = {
     'Endpoint (Toplayıcı Adresi)':'Point de terminaison (adresse du collecteur)',
     'Endpoint boş olamaz':'Le point de terminaison ne peut pas être vide',
     'Enlem':'Latitude',
-    'Entegrasyon':'Integration',
+    'Entegrasyon':'Intégration',
     'Entegrasyonlar':'Integrations',
     'Enter Seç':'Enter Select',
     'Enterprise Özellikleri':'Enterprise Özellikleri',
@@ -21599,6 +21691,7 @@ const PAGE_STRINGS = {
     'Geri alınamaz!':'Geri alınamaz!',
     'Geri yüklendi':'Restored',
     'Geri yükleniyor — VM durduruluyor, disk yazılıyor...':'Restoring — stopping VM, writing disk...',
+    'Gerçek IP (guest-agent)':'IP réelle (agent invité)',
     'Gerçek Zamanlı Metrikler':'Gerçek Zamanlı Metrikler',
     'Geçerli boyut girin':'Enter a valid size',
     'Geçerli sayı girin':'Enter a valid number',
@@ -21664,6 +21757,7 @@ const PAGE_STRINGS = {
     'Günlük Rapor':'Günlük Rapor',
     'Güvenli kullanım: İkinci bir NIC kullanın veya önce iSCSI/SSH bağlantısı kurun.':'Güvenli kullanım: İkinci bir NIC kullanın veya önce iSCSI/SSH bağlantısı kurun.',
     'Güvenlik':'Sécurité',
+    'Güvenlik & Uyum':'Sécurité et conformité',
     'Güvenlik Denetimi':'Security Audit',
     'Güvenlik Duvarı':'Pare-feu',
     'Güvenlik Duvarı (nftables)':'Firewall (nftables)',
@@ -21798,6 +21892,7 @@ const PAGE_STRINGS = {
     'IP Havuzları':'IP Pools',
     'IP Havuzu':'IP Pool',
     'IP Havuzu *':'IP Havuzu *',
+    'IP Kaynağı':'Source IP',
     'IP Kontrol Et':'IP Kontrol Et',
     'IP ataması başarısız:':'IP ataması başarısız:',
     'IP ataması başarısız: ':'IP ataması başarısız: ',
@@ -22111,6 +22206,7 @@ const PAGE_STRINGS = {
     'NAT sync hatası:':'NAT sync hatası:',
     'NAT sync hatası: ':'NAT sync hatası: ',
     'NAT çalışmıyor':'NAT çalışmıyor',
+    'NAT/Routed/İzole':'NAT/Routé/Isolé',
     'NETWORK I/O':'NETWORK I/O',
     'NFS Depolama Havuzu Ekle':'NFS Depolama Havuzu Ekle',
     'NFS Havuz':'NFS Pool',
@@ -22133,6 +22229,7 @@ const PAGE_STRINGS = {
     'Ne tür bir VM oluşturmak istediğinizi açıklayın. AI otomatik yapılandırma önerisi oluşturur.':'Describe what VM you want. AI will automatically generate a configuration suggestion.',
     'Ne zaman kullanılır:':'Ne zaman kullanılır:',
     'Neden':'Reason',
+    'Neden bazı VM\'ler yanlış IP gösteriyor?':'Pourquoi certaines VM affichent-elles une mauvaise IP ?',
     'Nested virt değiştirilemedi:':'Nested virt değiştirilemedi:',
     'Nested virt değiştirilemedi: ':'Nested virt değiştirilemedi: ',
     'NetInst · Stable · ~0.68 GB':'NetInst · Stable · ~0.68 GB',
@@ -22201,6 +22298,7 @@ const PAGE_STRINGS = {
     'Operator Group':'Operator Group',
     'Operatör':'Operator',
     'Orta':'Moyen',
+    'Otomasyon':'Automatisation',
     'Otomatik (önerilen):':'Otomatik (önerilen):',
     'Otomatik Başlat (autostart)':'Auto Start (autostart)',
     'Otomatik IP':'Otomatik IP',
@@ -22240,6 +22338,8 @@ const PAGE_STRINGS = {
     'PXE Sunucu Kur':'Setup PXE Server',
     'PXE sunucu yapılandırıldı':'PXE server configured',
     'Paket Sayısı':'Paket Sayısı',
+    'Panel IP (libvirt)':'IP du panneau (libvirt)',
+    'Panel IP Güvenilir?':'IP du panneau fiable ?',
     'Panel temasını seç. Seçim tarayıcında kaydedilir.':'Choisissez le thème du panneau. Votre choix est enregistré dans le navigateur.',
     'Pano erişimi reddedildi — Ctrl+Shift+V deneyin':'Clipboard access denied — try Ctrl+Shift+V',
     'Pano erişimi reddedildi — tarayıcı izni gerekli':'Clipboard access denied — browser permission required',
@@ -22699,6 +22799,7 @@ const PAGE_STRINGS = {
     'VM ID ve bölge gerekli':'VM ID ve bölge gerekli',
     'VM IP':'VM IP',
     'VM IP Adresi':'VM IP Adresi',
+    'VM IP Denetimi (gerçek vs panel)':'Audit IP de VM (réel vs panneau)',
     'VM IP: <atanan_ip>/24':'VM IP: <atanan_ip>/24',
     'VM Import':'VM Import',
     'VM Kullanıcısı (yalnızca atanan VM\'ler)':'VM Kullanıcısı (yalnızca atanan VM\'ler)',
@@ -23002,6 +23103,8 @@ const PAGE_STRINGS = {
     'arayüzünü başlatır.':'arayüzünü başlatır.',
     'aynı anda kullanılamaz (libvirt kuralı). IOPS = saniyedeki işlem, bytes/sec = bant.':'ne peuvent pas être utilisés en même temps (règle libvirt). IOPS = opérations par seconde, octets/s = bande passante.',
     'aç':'Ouvrir',
+    'ağlarda IP\'yi':'réseaux, l\'IP',
+    'ağlarda IP\'yi libvirt\'in kendi DHCP\'si (dnsmasq) verir → panel lease\'den':'réseaux, le DHCP propre à libvirt (dnsmasq) attribue l\'IP → le panneau la lit depuis le bail',
     'başlatma sırası + gecikme':'ordre de démarrage + délai',
     'bulunamadı':'Introuvable',
     'butonu ile kontrol edin.':'butonu ile kontrol edin.',
@@ -23016,6 +23119,7 @@ const PAGE_STRINGS = {
     'dizinine kaydedilir ve':'dizinine kaydedilir ve',
     'dosyasını alın — istemciye aktarın.':'dosyasını alın — istemciye aktarın.',
     'dosyasını istemciye aktarın:':'dosyasını istemciye aktarın:',
+    'doğru':'correctement',
     'eth0 (veya enp1s0, ens3...)':'eth0 (veya enp1s0, ens3...)',
     'etiket ekle...':'etiket ekle...',
     'ffmpeg ile VNC oturumlarını WebM video olarak kaydet. Geçmişe dönük oynatma.':'ffmpeg ile VNC oturumlarını WebM video olarak kaydet. Geçmişe dönük oynatma.',
@@ -23102,6 +23206,7 @@ const PAGE_STRINGS = {
     'vTPM eklendi. VM restart gerekli.':'vTPM added. VM restart required.',
     'vTPM kaldırıldı.':'vTPM removed.',
     've':'ve',
+    'verir, libvirt lease tutmaz → DHCP\'ye bakan görünüm yanlış/host IP gösterebilir. Gerçek IP':'l\'attribue, libvirt ne conserve pas de bail → une vue basée sur DHCP peut afficher une IP erronée/de l\'hôte. L\'IP réelle',
     'verisi alınamadı':'data could not be retrieved',
     'veya':'veya',
     'veya dosya:':'veya dosya:',
@@ -24935,45 +25040,7 @@ async function _loadSidebarHost() {
   } catch(e) { console.warn('sidebar host load fail', e); }
 }
 
-function _spark(vals, color) {
-  vals = (vals || []).filter(v => typeof v === 'number' && !isNaN(v));
-  if (vals.length < 2) return '';
-  const w = 120, h = 30, mn = Math.min(...vals), mx = Math.max(...vals), rng = (mx - mn) || 1;
-  const pts = vals.map((v, i) => `${(i / (vals.length - 1) * w).toFixed(1)},${(h - ((v - mn) / rng) * h).toFixed(1)}`).join(' ');
-  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="display:block"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5"/></svg>`;
-}
-function _series(pts, keys) {
-  return pts.map(p => { for (const k of keys) { if (typeof p[k] === 'number') return p[k]; if (p[k] && typeof p[k].percent === 'number') return p[k].percent; } return NaN; });
-}
-async function renderKpiStrip() {
-  const box = document.getElementById('ns-kpi-strip');
-  if (!box) return;
-  let st = {}, vms = {}, hist = [];
-  try { st = await api('/system/stats') || {}; } catch (e) {}
-  try { vms = await api('/system/vmsummary') || {}; } catch (e) {}
-  try { const h = await api('/metrics/system'); hist = (h && h.data) || []; } catch (e) {}
-  const cpu = (st.cpu && st.cpu.percent) || 0;
-  const mem = (st.memory && st.memory.percent) || 0;
-  const disk = (st.disk_capacity && st.disk_capacity.percent) || (st.disk && st.disk.percent) || 0;
-  const run = vms.running != null ? vms.running : (vms.running_vms || 0);
-  const tot = vms.total != null ? vms.total : (vms.total_vms || 0);
-  const cards = [
-    { lbl: 'CPU', val: cpu.toFixed(0) + '%', c: '#3da3e5', sp: _spark(_series(hist, ['cpu', 'cpu_percent']), '#3da3e5') },
-    { lbl: 'RAM', val: mem.toFixed(0) + '%', c: '#22c55e', sp: _spark(_series(hist, ['mem', 'memory', 'memory_percent']), '#22c55e') },
-    { lbl: 'Disk', val: disk.toFixed(0) + '%', c: '#eab308', sp: _spark(_series(hist, ['disk', 'disk_percent']), '#eab308') },
-    { lbl: 'VM', val: run + '/' + tot, c: '#a48bff', sp: '<div style="font-size:10px;color:var(--text-muted);margin-top:8px">çalışan / toplam</div>' },
-  ];
-  box.innerHTML = cards.map(k => `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline">
-        <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">${k.lbl}</span>
-        <span style="font-size:24px;font-weight:800;color:${k.c}">${k.val}</span>
-      </div>
-      <div style="margin-top:6px">${k.sp}</div>
-    </div>`).join('');
-}
 async function loadNodeSummary() {
-  try { renderKpiStrip(); } catch (e) {}
   try {
     const [statsData, vmSumData, infoData, diskData, histData] = await Promise.all([
       api("/system/stats"),
@@ -35118,6 +35185,7 @@ const ENT_LOADERS = {
   csi:            () => { try { loadCsiPage(); } catch(e) { console.warn(e); } },
   goldenimages:   () => { try { loadGoldenImages(); } catch(e) { console.warn(e); } },
   vapp:           () => { try { loadVappPage(); } catch(e) { console.warn(e); } },
+  netmode:        () => { try { loadNetModePage(); } catch(e) { console.warn(e); } },
   sdn:            () => { try { loadSdnPage(); } catch(e) { console.warn(e); } },
   lb:             () => { try { loadLbPage(); } catch(e) { console.warn(e); } },
   mtls:           () => { try { loadMtlsPage(); } catch(e) { console.warn(e); } },
@@ -38602,6 +38670,34 @@ async function giDeploy() {
   }
 }
 
+/* ──── Ağ Modu & IP Tespiti (v2.8.1) ──── */
+async function loadNetModePage() {
+  const d = await _api('/api/v2/network/detect');
+  const tb = document.getElementById('netmode-tbody');
+  const nets = (d && d.networks) || [];
+  if (tb) tb.innerHTML = nets.length ? nets.map(n => `<tr>
+    <td><code>${_esc(n.name)}</code></td>
+    <td><span class="mat-badge ${n.reliable_panel_ip?'ready':'notready'}">${_esc(n.label)}</span></td>
+    <td>${n.dhcp_enabled?'<i class="fa-solid fa-check" style="color:var(--success)"></i>':'<i class="fa-solid fa-xmark" style="color:var(--text-muted)"></i>'}</td>
+    <td style="font-size:11px">${_esc(n.dhcp_range)}</td>
+    <td><code>${_esc(n.ip_source)}</code></td>
+    <td>${n.reliable_panel_ip?'<span style="color:var(--success)">Evet</span>':'<span style="color:#f59e0b">Hayır — guest-agent kullan</span>'}</td>
+  </tr>`).join('') : '<tr><td colspan="6" class="text-center text-muted" style="padding:14px">Ağ yok</td></tr>';
+  const ex = document.getElementById('netmode-explain');
+  if (ex) ex.innerHTML = nets.map(n => `<div style="font-size:11px;color:var(--text-muted);margin-top:4px"><b>${_esc(n.name)}</b> (${_esc(n.label)}): ${_esc(n.explain)}</div>`).join('');
+  const a = await _api('/api/v2/network/ip-audit');
+  const vtb = document.getElementById('netmode-vm-tbody');
+  const vms = (a && a.vms) || [];
+  if (vtb) vtb.innerHTML = vms.length ? vms.map(v => `<tr>
+    <td><b>${_esc(v.vm)}</b></td>
+    <td>${_esc(v.network||'—')}</td>
+    <td><code>${_esc(v.mode)}</code></td>
+    <td><code>${_esc(v.panel_ip)}</code></td>
+    <td><code style="color:var(--accent-lt)">${_esc(v.agent_ip)}</code></td>
+    <td>${v.mismatch?'<span class="mat-badge notready">uyuşmuyor → gerçek: '+_esc(v.real_ip)+'</span>':(v.agent_ip!=='—'?'<span class="mat-badge ready">doğru</span>':'<span class="text-muted">guest-agent yok</span>')}</td>
+  </tr>`).join('') : '<tr><td colspan="6" class="text-center text-muted" style="padding:14px">Çalışan VM yok</td></tr>';
+}
+
 /* ──── SDN Overlay (v2.8) ──── */
 async function loadSdnPage() {
   const d = await _api('/api/v2/sdn/overlays');
@@ -39597,6 +39693,7 @@ const _PAGE_TABS = {
     {key:'tab-firewall', label:'Güvenlik Duvarı', src:'page-tab-firewall'},
     {key:'topology', label:'Topoloji', src:'page-topology'},
     {key:'nioc', label:'NIOC', src:'ent-pane-nioc'},
+    {key:'netmode', label:'Ağ Modu & IP', src:'ent-pane-netmode'},
     {key:'sdn', label:'SDN Overlay', src:'ent-pane-sdn'},
     {key:'lb', label:'Load Balancer', src:'ent-pane-lb'},
     {key:'mtls', label:'Federation mTLS', src:'ent-pane-mtls'},
@@ -39649,37 +39746,36 @@ const _PAGE_TABS = {
     {key:'rate-limit', label:'Rate Limit', src:'ent-pane-rate-limit'},
   ],
   'page-tab-settings': [
-    {key:'list', label:'Genel', src:'native'},
-    {key:'tab-ai', label:'AI', src:'page-tab-ai'},
-    {key:'tab-integrations', label:'Entegrasyon', src:'page-tab-integrations'},
-    {key:'tab-hosting', label:'Hosting API', src:'page-tab-hosting'},
-    {key:'tab-plugins', label:'Eklentiler', src:'page-tab-plugins'},
-    {key:'updates', label:'Güncelleme', src:'page-updates'},
-    {key:'workflow', label:'Workflow', src:'ent-pane-workflow'},
-    {key:'opa', label:'Policy (OPA)', src:'ent-pane-opa'},
-    {key:'cloudevents', label:'CloudEvents', src:'ent-pane-cloudevents'},
-    {key:'desktop', label:'Desktop Client', src:'ent-pane-desktop'},
-    {key:'cloudexport', label:'Cloud Export', src:'ent-pane-cloudexport'},
-    {key:'k8scsi', label:'K8s CSI', src:'ent-pane-k8scsi'},
-    {key:'k8sop', label:'K8s Operator', src:'ent-pane-k8sop'},
-    {key:'kubevirt', label:'KubeVirt', src:'ent-pane-kubevirt'},
-    {key:'gitops', label:'GitOps', src:'ent-pane-gitops'},
-    {key:'pulumi', label:'Pulumi', src:'ent-pane-pulumi'},
-    {key:'wasm', label:'WASM', src:'ent-pane-wasm'},
-    {key:'edge', label:'Edge', src:'ent-pane-edge'},
-    {key:'greenmode', label:'Green Mode', src:'ent-pane-greenmode'},
-    {key:'multiregion', label:'Multi-Region', src:'ent-pane-multiregion'},
-    {key:'cloudburst', label:'Cloud Burst', src:'ent-pane-cloudburst'},
-    {key:'baremetal', label:'Bare-Metal', src:'ent-pane-baremetal'},
-    {key:'apidocs', label:'API Docs', src:'ent-pane-apidocs'},
-    // v2.7.2 — Cloud-Native (kubevirt/gitops/firecracker already registered above)
-    {key:'csi', label:'Kubernetes CSI', src:'ent-pane-csi'},
-    {key:'oauth2presets', label:'OAuth2 Presets', src:'ent-pane-oauth2presets'},
-    {key:'auditretention', label:'Audit Retention', src:'ent-pane-auditretention'},
-    {key:'sbom', label:'SBOM', src:'ent-pane-sbom'},
-    {key:'pwa', label:'PWA Offline', src:'ent-pane-pwa'},
-    {key:'knownhosts', label:'SSH Known-Hosts', src:'ent-pane-knownhosts'},
-    {key:'telemetry', label:'Anonim Telemetri', src:'ent-pane-telemetry'},
+    {key:'list', label:'Genel', src:'native', g:'Sistem'},
+    {key:'tab-ai', label:'AI', src:'page-tab-ai', g:'Sistem'},
+    {key:'updates', label:'Güncelleme', src:'page-updates', g:'Sistem'},
+    {key:'tab-integrations', label:'Entegrasyon', src:'page-tab-integrations', g:'Entegrasyon'},
+    {key:'tab-hosting', label:'Hosting API', src:'page-tab-hosting', g:'Entegrasyon'},
+    {key:'tab-plugins', label:'Eklentiler', src:'page-tab-plugins', g:'Entegrasyon'},
+    {key:'cloudevents', label:'CloudEvents', src:'ent-pane-cloudevents', g:'Entegrasyon'},
+    {key:'oauth2presets', label:'OAuth2 Presets', src:'ent-pane-oauth2presets', g:'Entegrasyon'},
+    {key:'workflow', label:'Workflow', src:'ent-pane-workflow', g:'Otomasyon'},
+    {key:'opa', label:'Policy (OPA)', src:'ent-pane-opa', g:'Otomasyon'},
+    {key:'greenmode', label:'Green Mode', src:'ent-pane-greenmode', g:'Otomasyon'},
+    {key:'csi', label:'Kubernetes CSI', src:'ent-pane-csi', g:'Cloud-Native'},
+    {key:'k8scsi', label:'K8s CSI', src:'ent-pane-k8scsi', g:'Cloud-Native'},
+    {key:'k8sop', label:'K8s Operator', src:'ent-pane-k8sop', g:'Cloud-Native'},
+    {key:'kubevirt', label:'KubeVirt', src:'ent-pane-kubevirt', g:'Cloud-Native'},
+    {key:'gitops', label:'GitOps', src:'ent-pane-gitops', g:'Cloud-Native'},
+    {key:'pulumi', label:'Pulumi', src:'ent-pane-pulumi', g:'Cloud-Native'},
+    {key:'wasm', label:'WASM', src:'ent-pane-wasm', g:'Cloud-Native'},
+    {key:'edge', label:'Edge', src:'ent-pane-edge', g:'Cloud-Native'},
+    {key:'multiregion', label:'Multi-Region', src:'ent-pane-multiregion', g:'Cloud-Native'},
+    {key:'cloudburst', label:'Cloud Burst', src:'ent-pane-cloudburst', g:'Cloud-Native'},
+    {key:'baremetal', label:'Bare-Metal', src:'ent-pane-baremetal', g:'Cloud-Native'},
+    {key:'cloudexport', label:'Cloud Export', src:'ent-pane-cloudexport', g:'Araçlar'},
+    {key:'desktop', label:'Desktop Client', src:'ent-pane-desktop', g:'Araçlar'},
+    {key:'apidocs', label:'API Docs', src:'ent-pane-apidocs', g:'Araçlar'},
+    {key:'auditretention', label:'Audit Retention', src:'ent-pane-auditretention', g:'Güvenlik & Uyum'},
+    {key:'sbom', label:'SBOM', src:'ent-pane-sbom', g:'Güvenlik & Uyum'},
+    {key:'pwa', label:'PWA Offline', src:'ent-pane-pwa', g:'Güvenlik & Uyum'},
+    {key:'knownhosts', label:'SSH Known-Hosts', src:'ent-pane-knownhosts', g:'Güvenlik & Uyum'},
+    {key:'telemetry', label:'Anonim Telemetri', src:'ent-pane-telemetry', g:'Güvenlik & Uyum'},
   ],
 };
 
@@ -39733,7 +39829,14 @@ function _pgInstallTabs(mainPageId) {
   const bar = document.createElement('div');
   bar.className = 'page-subtabs sub-tabs';
   bar.style.cssText = 'margin-bottom:12px;display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--border);padding-bottom:8px';
-  bar.innerHTML = tabs.map((t, i) => `<button class="sub-tab${i===0?' active':''}" data-pg-tab="${t.key}" onclick="_pgSwitchTab('${mainPageId}','${t.key}')">${_esc(_t(t.label))}</button>`).join('');
+  // Render tabs; when entries carry a group (`g`), emit a small group label
+  // before each new group so long strips read as categorized sections.
+  let _lastG = null;
+  bar.innerHTML = tabs.map((t, i) => {
+    let pre = '';
+    if (t.g && t.g !== _lastG) { pre = `<span class="sub-tab-group">${_esc(_t(t.g))}</span>`; _lastG = t.g; }
+    return pre + `<button class="sub-tab${i===0?' active':''}" data-pg-tab="${t.key}" onclick="_pgSwitchTab('${mainPageId}','${t.key}')">${_esc(_t(t.label))}</button>`;
+  }).join('');
 
   // Slot for embedded panes
   const slot = document.createElement('div');

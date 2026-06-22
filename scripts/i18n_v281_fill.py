@@ -135,6 +135,29 @@ ROWS = [
  ('İndirme başladı: ', 'Download started: ', 'Descarga iniciada: ', 'Download gestartet: ', '下载已开始：', 'Téléchargement démarré : '),
  ('— açık kaynak, kendin doğrula.', '— open source, verify it yourself.', '— código abierto, verifícalo tú mismo.', '— Open Source, überprüfe es selbst.', '— 开源，你可以自行验证。', '— open source, vérifiez par vous-même.'),
  ('— fw_cfg + boot menüsü ile.', '— via fw_cfg + boot menu.', '— mediante fw_cfg + menú de arranque.', '— über fw_cfg + Boot-Menü.', '— 通过 fw_cfg + 启动菜单。', '— via fw_cfg + menu de démarrage.'),
+ # v2.8.1 — Ağ Modu & IP tespiti + sekme grupları
+ ('Ağ Modu & IP', 'Network Mode & IP', 'Modo de red e IP', 'Netzwerkmodus & IP', '网络模式与 IP', 'Mode réseau et IP'),
+ ('Ağ Modu & IP Tespiti', 'Network Mode & IP Detection', 'Detección de modo de red e IP', 'Netzwerkmodus- & IP-Erkennung', '网络模式与 IP 检测', 'Détection du mode réseau et de l\'IP'),
+ ('Ağlar — Tespit Edilen Mod', 'Networks — Detected Mode', 'Redes — modo detectado', 'Netzwerke — erkannter Modus', '网络 — 检测到的模式', 'Réseaux — mode détecté'),
+ ('Gerçek IP (guest-agent)', 'Real IP (guest-agent)', 'IP real (guest-agent)', 'Echte IP (Guest-Agent)', '真实 IP (guest-agent)', 'IP réelle (agent invité)'),
+ ('IP Kaynağı', 'IP Source', 'Origen de IP', 'IP-Quelle', 'IP 来源', 'Source IP'),
+ ('NAT/Routed/İzole', 'NAT/Routed/Isolated', 'NAT/Enrutado/Aislado', 'NAT/Geroutet/Isoliert', 'NAT/路由/隔离', 'NAT/Routé/Isolé'),
+ ('Neden bazı VM\'ler yanlış IP gösteriyor?', 'Why do some VMs show the wrong IP?', '¿Por qué algunas VM muestran la IP incorrecta?', 'Warum zeigen manche VMs die falsche IP?', '为什么有些虚拟机显示错误的 IP？', 'Pourquoi certaines VM affichent-elles une mauvaise IP ?'),
+ ('Panel IP (libvirt)', 'Panel IP (libvirt)', 'IP del panel (libvirt)', 'Panel-IP (libvirt)', '面板 IP (libvirt)', 'IP du panneau (libvirt)'),
+ ('Panel IP Güvenilir?', 'Panel IP Reliable?', '¿IP del panel fiable?', 'Panel-IP zuverlässig?', '面板 IP 可靠？', 'IP du panneau fiable ?'),
+ ('VM IP Denetimi (gerçek vs panel)', 'VM IP Audit (real vs panel)', 'Auditoría de IP de VM (real vs panel)', 'VM-IP-Audit (echt vs. Panel)', '虚拟机 IP 审计（真实 vs 面板）', 'Audit IP de VM (réel vs panneau)'),
+ ('ağlarda IP\'yi', 'networks the IP', 'redes la IP', 'Netzwerken die IP', '网络中，IP', 'réseaux, l\'IP'),
+ ('ağlarda IP\'yi libvirt\'in kendi DHCP\'si (dnsmasq) verir → panel lease\'den', "networks libvirt's own DHCP (dnsmasq) assigns the IP → the panel reads it from the lease", "redes el propio DHCP de libvirt (dnsmasq) asigna la IP → el panel la lee del lease", "Netzwerken vergibt libvirts eigenes DHCP (dnsmasq) die IP → das Panel liest sie aus dem Lease", '网络中，由 libvirt 自带的 DHCP (dnsmasq) 分配 IP → 面板从租约读取', "réseaux, le DHCP propre à libvirt (dnsmasq) attribue l'IP → le panneau la lit depuis le bail"),
+ ('doğru', 'correctly', 'correctamente', 'korrekt', '正确', 'correctement'),
+ ('verir, libvirt lease tutmaz → DHCP\'ye bakan görünüm yanlış/host IP gösterebilir. Gerçek IP', 'assigns it, libvirt keeps no lease → a DHCP-based view may show a wrong/host IP. The real IP', 'la asigna, libvirt no mantiene lease → una vista basada en DHCP puede mostrar una IP errónea/del host. La IP real', 'vergibt sie, libvirt führt kein Lease → eine DHCP-basierte Ansicht kann eine falsche/Host-IP zeigen. Die echte IP', '分配它，libvirt 不保留租约 → 基于 DHCP 的视图可能显示错误/主机 IP。真实 IP', 'l\'attribue, libvirt ne conserve pas de bail → une vue basée sur DHCP peut afficher une IP erronée/de l\'hôte. L\'IP réelle'),
+ ("'tan alınır. Aşağıda her ağın modu ve her VM'in gerçek IP'si görünür.", 'is taken from it. Below, each network\'s mode and each VM\'s real IP are shown.', 'se toma de ahí. Abajo se muestran el modo de cada red y la IP real de cada VM.', 'wird daraus bezogen. Unten werden der Modus jedes Netzwerks und die echte IP jeder VM angezeigt.', '由此获取。下方显示每个网络的模式和每台虚拟机的真实 IP。', 'en est issue. Ci-dessous, le mode de chaque réseau et l\'IP réelle de chaque VM sont affichés.'),
+ # sekme grupları
+ ('Sistem', 'System', 'Sistema', 'System', '系统', 'Système'),
+ ('Entegrasyon', 'Integration', 'Integración', 'Integration', '集成', 'Intégration'),
+ ('Otomasyon', 'Automation', 'Automatización', 'Automatisierung', '自动化', 'Automatisation'),
+ ('Cloud-Native', 'Cloud-Native', 'Cloud-Native', 'Cloud-Native', '云原生', 'Cloud-Native'),
+ ('Araçlar', 'Tools', 'Herramientas', 'Werkzeuge', '工具', 'Outils'),
+ ('Güvenlik & Uyum', 'Security & Compliance', 'Seguridad y cumplimiento', 'Sicherheit & Compliance', '安全与合规', 'Sécurité et conformité'),
 ]
 
 LANG_IDX = {"en": 1, "es": 2, "de": 3, "zh": 4, "fr": 5}

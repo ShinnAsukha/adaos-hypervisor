@@ -712,6 +712,27 @@ def _register_routes():
             return _err("module unavailable", 503)
         return _ok(**rep.delete_schedule(sid))
 
+    # ── Network mode detection + VM IP audit ─────────────────────────────
+    netd = _safe_import("network_detect")
+
+    @bp_v272.route("/api/v2/network/detect", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_net_detect():
+        if not netd:
+            return _err("module unavailable", 503)
+        r = netd.analyze_networks()
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    @bp_v272.route("/api/v2/network/ip-audit", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_net_ip_audit():
+        if not netd:
+            return _err("module unavailable", 503)
+        r = netd.vm_ip_audit()
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
     # ── Brand integrity / provenance ─────────────────────────────────────
     brand = _safe_import("brand_integrity")
 
