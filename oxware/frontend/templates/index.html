@@ -25069,6 +25069,8 @@ function navigate(page) {
     page = "summary";
   }
   currentPage = page;
+  // Remember last page so a refresh restores it instead of dropping to summary.
+  try { if (page !== "vm-detail") localStorage.setItem("ox-page", page); } catch (e) {}
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   const pageEl = document.getElementById("page-" + page);
   if (pageEl) pageEl.classList.add("active");
@@ -27716,7 +27718,8 @@ async function deleteVM(id, name) {
     completeTaskPanel(taskId, 'success');
     toast(`"${name}" silindi`, "success");
     loadVMs(); refreshTreeVMs();
-    if (currentVmId === id) { selectTreeItem("node"); }
+    // Açık olan VM silindiyse summary'e değil VM listesine dön.
+    if (currentVmId === id) { currentVmId = null; navigate("vms"); }
   } catch (e) { completeTaskPanel(taskId, 'error'); toast(e.message, "error"); }
 }
 
@@ -32865,6 +32868,14 @@ window.addEventListener("DOMContentLoaded", () => {
   refreshTreeVMs();
   loadEventLog();
   checkLicenseStatus();
+
+  // Son kalınan sayfayı geri yükle — yenileme/VM silme sonrası summary'e düşmesin.
+  try {
+    const _lp = localStorage.getItem("ox-page");
+    if (_lp && _lp !== "summary" && document.getElementById("page-" + _lp)) {
+      navigate(_lp);
+    }
+  } catch (e) {}
 
   // Skip all polling when tab is hidden (saves server load on background tabs)
   // IMPORTANT: Keep interval long (30s) to avoid overloading server with concurrent API calls.
