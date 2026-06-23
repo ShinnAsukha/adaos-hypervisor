@@ -676,6 +676,14 @@ try:
 except Exception as _rs_e:
     log.debug("report scheduler başlatılamadı: %s", _rs_e)
 
+# ChatOps (Telegram iki-yön) — yalnızca panelden etkinleştirilmişse başlar
+try:
+    _cops = _safe_import("chatops")
+    if _cops:
+        _cops.start_background()
+except Exception as _co_e:
+    log.debug("chatops başlatılamadı: %s", _co_e)
+
 # Marka bütünlüğü / provenance kontrolü — varsayılan "warn" (engellemez,
 # sadece loglar + panelde uyarı). OXWARE_BRAND_MODE=strict ile fork+rebrand
 # tespitinde başlatma engellenir, =off ile tamamen kapatılır.

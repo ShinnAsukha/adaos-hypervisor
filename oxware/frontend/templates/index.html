@@ -7563,6 +7563,28 @@
           <div class="card"><div class="card-title">VM IP Denetimi (gerçek vs panel)</div><div class="table-wrap"><table><thead><tr><th>VM</th><th>Ağ</th><th>Mod</th><th>Panel IP (libvirt)</th><th>Gerçek IP (guest-agent)</th><th>Durum</th></tr></thead><tbody id="netmode-vm-tbody"><tr><td colspan="6" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody></table></div></div>
         </div>
 
+        <!-- ══ v2.8.1 — Cluster Zaman Makinesi ══ -->
+        <div id="ent-pane-timemachine" style="display:none">
+          <div class="section-header"><h2><i class="fa-solid fa-clock-rotate-left fa-fw" style="color:#22d3ee"></i> Cluster Zaman Makinesi</h2><div class="spacer"></div><button class="btn-primary" onclick="tmSnapshot()" style="font-size:12px"><i class="fa-solid fa-camera"></i> Anlık Görüntü Al</button><button class="btn" onclick="loadTimeMachine()" style="font-size:12px;margin-left:6px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
+          <div class="card" style="margin-bottom:12px;border-left:4px solid #22d3ee;background:rgba(34,211,238,.04);padding:14px"><div style="font-size:12px;line-height:1.6"><b style="color:#22d3ee">Bu Nedir?</b> Tüm cluster yapılandırmasının (VM/ağ/DVS/vApp) zaman damgalı anlık görüntüsü + iki nokta arası git-tarzı fark. Ne, ne zaman değişti gör. Geri yükleme bilgilendiricidir (farkı gösterir).</div></div>
+          <div class="card" style="margin-bottom:12px"><div class="card-title">Karşılaştır</div><div style="display:flex;gap:8px;align-items:flex-end;padding:0 14px 10px;flex-wrap:wrap"><select id="tm-a" class="form-control" style="width:200px"></select><span style="align-self:center">→</span><select id="tm-b" class="form-control" style="width:200px"></select><button class="btn-primary" onclick="tmDiff()" style="font-size:12px">Farkı Göster</button></div><div id="tm-diff" style="padding:0 14px 12px"></div></div>
+          <div class="card"><div class="card-title">Anlık Görüntüler</div><div class="table-wrap"><table><thead><tr><th>Etiket</th><th>Tarih</th><th>VM</th><th>Ağ</th><th>DVS</th><th>vApp</th><th>Sil</th></tr></thead><tbody id="tm-tbody"><tr><td colspan="7" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody></table></div></div>
+        </div>
+
+        <!-- ══ v2.8.1 — ChatOps ══ -->
+        <div id="ent-pane-chatops" style="display:none">
+          <div class="section-header"><h2><i class="fa-brands fa-telegram fa-fw" style="color:#229ED9"></i> ChatOps — Telegram'dan Yönet</h2><div class="spacer"></div><button class="btn" onclick="loadChatOps()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
+          <div class="card" style="margin-bottom:12px;border-left:4px solid #229ED9;background:rgba(34,158,217,.04);padding:14px"><div style="font-size:12px;line-height:1.6"><b style="color:#229ED9">Bu Nedir?</b> Datacenter'ı Telegram'dan AI ile yönet — "vm-3 neden yavaş?", "yeni ubuntu VM aç", "cluster durumu". Rakipler sadece tek-yön uyarı yollar; OXware iki-yön + AI. Telegram bot token'ı Bildirimler'den alınır.</div></div>
+          <div class="card"><div class="card-title">Yapılandırma</div><div style="padding:0 14px 12px">
+            <div id="chatops-status" style="margin-bottom:10px"></div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:10px;cursor:pointer"><input type="checkbox" id="chatops-enabled"> Etkin</label>
+            <div class="form-row"><label>İzinli Chat ID'ler (virgül)</label><input id="chatops-ids" placeholder="123456789, 987654321"></div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:8px 0;cursor:pointer"><input type="checkbox" id="chatops-mut"> Değişiklik işlemlerine izin ver (VM oluştur/durdur/sil) — dikkatli</label>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Kapalıyken AI yalnızca okuma/sorgu yapar (operatör yetkisi). İzinli chat ID girilmezse herkes (token'ı bilen) erişebilir — mutlaka ID girin.</div>
+            <button class="btn-primary" onclick="chatOpsSave()" style="font-size:12px"><i class="fa-solid fa-floppy-disk"></i> Kaydet</button>
+          </div></div>
+        </div>
+
         <!-- ══ v2.8.1 — What-If Kapasite Simülatörü ══ -->
         <div id="ent-pane-whatif" style="display:none">
           <div class="section-header"><h2><i class="fa-solid fa-flask fa-fw" style="color:#a78bfa"></i> What-If Kapasite Simülatörü</h2></div>
@@ -10621,6 +10643,10 @@ const PAGE_STRINGS = {
     'Analiz alınamadı':'Could not load analysis',
     'Analiz ediliyor...':'Analysing...',
     'Analiz için Dry Run çalıştırın':'Run Dry Run for analysis',
+    'Anlık Görüntü Al':'Take Snapshot',
+    'Anlık Görüntüler':'Snapshots',
+    'Anlık görüntü alındı':'Snapshot taken',
+    'Anlık görüntü etiketi (opsiyonel):':'Snapshot label (optional):',
     'Anomali + kapasite → öncelikli aksiyon önerileri':'Anomalies + capacity → prioritized action suggestions',
     'Anomali Dedektörü':'Anomaly Detector',
     'Anomali dedektörü yüksek güvenle olay yakaladığında, eşleşen onaylı runbook\'lar otomatik çalışır. Her runbook için cooldown ve saatlik kota uygulanır.':'Anomali dedektörü yüksek güvenle olay yakaladığında, eşleşen onaylı runbook\'lar otomatik çalışır. Her runbook için cooldown ve saatlik kota uygulanır.',
@@ -10919,6 +10945,7 @@ const PAGE_STRINGS = {
     'Chargeback Motor':'Chargeback Engine',
     'Chargeback Raporu':'Chargeback Report',
     'Chat ID':'Chat ID',
+    'ChatOps — Telegram\'dan Yönet':'ChatOps — Manage from Telegram',
     'Checkpoint tabanlı VM koruması. Host çöktüğünde ikincil VM devreye girer, kesinti olmaz.':'Checkpoint tabanlı VM koruması. Host çöktüğünde ikincil VM devreye girer, kesinti olmaz.',
     'Cihaz seçin':'Select device',
     'Client ID':'Client ID',
@@ -10982,6 +11009,7 @@ const PAGE_STRINGS = {
     'DVS oluşturuldu: ':'DVS oluşturuldu: ',
     'DVS silinecek.':'DVS will be deleted.',
     'Daralt':'Collapse',
+    'Datacenter\'ı Telegram\'dan AI ile yönet — "vm-3 neden yavaş?", "yeni ubuntu VM aç", "cluster durumu". Rakipler sadece tek-yön uyarı yollar; OXware iki-yön + AI. Telegram bot token\'ı Bildirimler\'den alınır.':'Manage the datacenter from Telegram with AI — "why is vm-3 slow?", "create a new ubuntu VM", "cluster status". Competitors only push one-way alerts; OXware is two-way + AI. The Telegram bot token comes from Notifications.',
     'Dağıtık izleme — API isteklerinin span\'lerini OpenTelemetry uyumlu kaydeder, OTLP export.':'Dağıtık izleme — API isteklerinin span\'lerini OpenTelemetry uyumlu kaydeder, OTLP export.',
     'Dağıtık İzleme':'Distributed Tracing',
     'Dağıtım':'Dağıtım',
@@ -11003,6 +11031,7 @@ const PAGE_STRINGS = {
     'Devre dışı':'Disabled',
     'Devre dışı bırak':'Disable',
     'Değer':'Value',
+    'Değişiklik işlemlerine izin ver (VM oluştur/durdur/sil) — dikkatli':'Allow mutating operations (create/stop/delete VM) — careful',
     'Değişiklikler iptal edildi':'Changes cancelled',
     'Değişiklikler kaydedildi':'Changes saved',
     'Değiştirilme':'Değiştirilme',
@@ -11153,6 +11182,7 @@ const PAGE_STRINGS = {
     'FT Çifti Oluştur':'Create FT Pair',
     'FT Çiftleri':'FT Pairs',
     'FT çifti oluşturuldu':'FT çifti oluşturuldu',
+    'Farkı Göster':'Show Diff',
     'Federasyon API token:':'Federasyon API token:',
     'Federasyon Üyeleri':'Federasyon Üyeleri',
     'Federation node\'ları arası karşılıklı TLS. Özel CA + node sertifikaları. Paylaşılan token yerine kriptografik kimlik.':'Mutual TLS between federation nodes. Private CA + node certificates. Cryptographic identity instead of a shared token.',
@@ -11473,6 +11503,7 @@ const PAGE_STRINGS = {
     'Kaldırılamadı:':'Kaldırılamadı:',
     'Kaldırılamadı: ':'Kaldırılamadı: ',
     'Kaldırıldı':'Removed',
+    'Kapalıyken AI yalnızca okuma/sorgu yapar (operatör yetkisi). İzinli chat ID girilmezse herkes (token\'ı bilen) erişebilir — mutlaka ID girin.':'When off, the AI only reads/queries (operator authority). If no allowed chat IDs are set, anyone who knows the token can access — always set IDs.',
     'Kapasite':'Capacity',
     'Kapasite Tahmini':'Capacity Forecast',
     'Kapasite Özeti':'Kapasite Özeti',
@@ -11480,6 +11511,7 @@ const PAGE_STRINGS = {
     'Kapsam':'Scope',
     'Kara kutu kaydı için "Kaydı Getir" tıkla.':'Click "Fetch Record" for the black-box recording.',
     'Karbon / Enerji Ayak İzi':'Carbon / Energy Footprint',
+    'Karşılaştır':'Compare',
     'Kata Container\'ları':'Kata Container\'ları',
     'Kata Containers':'Kata Containers',
     'Kata Containers — container güvenliği + VM izolasyonu.':'Kata Containers — container güvenliği + VM izolasyonu.',
@@ -12229,6 +12261,7 @@ const PAGE_STRINGS = {
     'Tüm alanlar gerekli':'Tüm alanlar gerekli',
     'Tüm alanlar zorunlu':'All fields are required',
     'Tüm alanları doldurun':'Fill in all fields',
+    'Tüm cluster yapılandırmasının (VM/ağ/DVS/vApp) zaman damgalı anlık görüntüsü + iki nokta arası git-tarzı fark. Ne, ne zaman değişti gör. Geri yükleme bilgilendiricidir (farkı gösterir).':'A timestamped snapshot of the whole cluster config (VM/network/DVS/vApp) + a git-style diff between any two points. See what changed and when. Restore is advisory (shows the delta).',
     'Tüm event\'leri Splunk, Elastic, Wazuh gibi SIEM araçlarına CEF veya syslog formatında akıtır. Güvenlik operasyon merkezi entegrasyonu.':'Tüm event\'leri Splunk, Elastic, Wazuh gibi SIEM araçlarına CEF veya syslog formatında akıtır. Güvenlik operasyon merkezi entegrasyonu.',
     'Tüm kurallar silindi':'All rules deleted',
     'Tüm kurtarma kodları iptal edilecek. Emin misiniz?':'Tüm kurtarma kodları iptal edilecek. Emin misiniz?',
@@ -12798,6 +12831,7 @@ const PAGE_STRINGS = {
     'örn: lan-pool':'örn: lan-pool',
     'örn: sshd':'örn: sshd',
     'üretilir; onaylayıp etkinleştirirsin.':'is generated; you review and enable it.',
+    'İki anlık görüntü seç':'Select two snapshots',
     'İkincil Depolama Havuzu':'Secondary Storage Pool',
     'İkincil VM':'Secondary VM',
     'İleri →':'İleri →',
@@ -12835,6 +12869,7 @@ const PAGE_STRINGS = {
     'İzin kaydedildi':'Permission saved',
     'İzin verilmiyor':'Not permitted',
     'İzinler':'İzinler',
+    'İzinli Chat ID\'ler (virgül)':'Allowed Chat IDs (comma)',
     'İzleme':'Monitoring',
     'İzleme & Depolama':'Monitoring & Storage',
     'İzleme Sekmesine Git':'Go to Monitoring Tab',
@@ -13266,6 +13301,10 @@ const PAGE_STRINGS = {
     'Analiz alınamadı':'Could not load analysis',
     'Analiz ediliyor...':'Analizando...',
     'Analiz için Dry Run çalıştırın':'Ejecute Dry Run para análisis',
+    'Anlık Görüntü Al':'Tomar instantánea',
+    'Anlık Görüntüler':'Instantáneas',
+    'Anlık görüntü alındı':'Instantánea tomada',
+    'Anlık görüntü etiketi (opsiyonel):':'Etiqueta de instantánea (opcional):',
     'Anomali + kapasite → öncelikli aksiyon önerileri':'Anomalías + capacidad → sugerencias de acción priorizadas',
     'Anomali Dedektörü':'Detector de Anomalías',
     'Anomali dedektörü yüksek güvenle olay yakaladığında, eşleşen onaylı runbook\'lar otomatik çalışır. Her runbook için cooldown ve saatlik kota uygulanır.':'Anomali dedektörü yüksek güvenle olay yakaladığında, eşleşen onaylı runbook\'lar otomatik çalışır. Her runbook için cooldown ve saatlik kota uygulanır.',
@@ -13573,6 +13612,7 @@ const PAGE_STRINGS = {
     'Chargeback Motor':'Chargeback Engine',
     'Chargeback Raporu':'Informe Chargeback',
     'Chat ID':'Chat ID',
+    'ChatOps — Telegram\'dan Yönet':'ChatOps — Gestiona desde Telegram',
     'Checkpoint tabanlı VM koruması. Host çöktüğünde ikincil VM devreye girer, kesinti olmaz.':'Checkpoint tabanlı VM koruması. Host çöktüğünde ikincil VM devreye girer, kesinti olmaz.',
     'Cihaz seçin':'Seleccione dispositivo',
     'Client ID':'ID de Cliente',
@@ -13636,6 +13676,7 @@ const PAGE_STRINGS = {
     'DVS oluşturuldu: ':'DVS oluşturuldu: ',
     'DVS silinecek.':'DVS será eliminado.',
     'Daralt':'Collapse',
+    'Datacenter\'ı Telegram\'dan AI ile yönet — "vm-3 neden yavaş?", "yeni ubuntu VM aç", "cluster durumu". Rakipler sadece tek-yön uyarı yollar; OXware iki-yön + AI. Telegram bot token\'ı Bildirimler\'den alınır.':'Gestiona el datacenter desde Telegram con IA — "¿por qué vm-3 va lenta?", "crea una VM ubuntu", "estado del clúster". Los competidores solo envían alertas de una vía; OXware es bidireccional + IA. El token del bot de Telegram viene de Notificaciones.',
     'Dağıtık izleme — API isteklerinin span\'lerini OpenTelemetry uyumlu kaydeder, OTLP export.':'Dağıtık izleme — API isteklerinin span\'lerini OpenTelemetry uyumlu kaydeder, OTLP export.',
     'Dağıtık İzleme':'Trazado Distribuido',
     'Dağıtım':'Dağıtım',
@@ -13657,6 +13698,7 @@ const PAGE_STRINGS = {
     'Devre dışı':'Deshabilitado',
     'Devre dışı bırak':'Desactivar',
     'Değer':'Valor',
+    'Değişiklik işlemlerine izin ver (VM oluştur/durdur/sil) — dikkatli':'Permitir operaciones de cambio (crear/detener/eliminar VM) — cuidado',
     'Değişiklikler iptal edildi':'Changes cancelled',
     'Değişiklikler kaydedildi':'Changes saved',
     'Değiştirilme':'Değiştirilme',
@@ -13810,6 +13852,7 @@ const PAGE_STRINGS = {
     'FT Çifti Oluştur':'Crear Par FT',
     'FT Çiftleri':'Pares FT',
     'FT çifti oluşturuldu':'FT çifti oluşturuldu',
+    'Farkı Göster':'Mostrar diferencia',
     'Federasyon API token:':'Federasyon API token:',
     'Federasyon Üyeleri':'Federasyon Üyeleri',
     'Federation node\'ları arası karşılıklı TLS. Özel CA + node sertifikaları. Paylaşılan token yerine kriptografik kimlik.':'TLS mutuo entre nodos de federación. CA privada + certificados de nodo. Identidad criptográfica en vez de un token compartido.',
@@ -14132,6 +14175,7 @@ const PAGE_STRINGS = {
     'Kaldırılamadı:':'Kaldırılamadı:',
     'Kaldırılamadı: ':'Kaldırılamadı: ',
     'Kaldırıldı':'Eliminado',
+    'Kapalıyken AI yalnızca okuma/sorgu yapar (operatör yetkisi). İzinli chat ID girilmezse herkes (token\'ı bilen) erişebilir — mutlaka ID girin.':'Cuando está desactivado, la IA solo lee/consulta (autoridad de operador). Si no se establecen IDs de chat permitidos, cualquiera que conozca el token puede acceder — establece siempre IDs.',
     'Kapasite':'Capacidad',
     'Kapasite Tahmini':'Pronóstico de Capacidad',
     'Kapasite Özeti':'Kapasite Özeti',
@@ -14139,6 +14183,7 @@ const PAGE_STRINGS = {
     'Kapsam':'Scope',
     'Kara kutu kaydı için "Kaydı Getir" tıkla.':'Haz clic en "Obtener registro" para la grabación de la caja negra.',
     'Karbon / Enerji Ayak İzi':'Huella de carbono / energía',
+    'Karşılaştır':'Comparar',
     'Kata Container\'ları':'Kata Container\'ları',
     'Kata Containers':'Kata Containers',
     'Kata Containers — container güvenliği + VM izolasyonu.':'Kata Containers — container güvenliği + VM izolasyonu.',
@@ -14899,6 +14944,7 @@ const PAGE_STRINGS = {
     'Tüm alanlar gerekli':'Tüm alanlar gerekli',
     'Tüm alanlar zorunlu':'Todos los campos son obligatorios',
     'Tüm alanları doldurun':'Complete todos los campos',
+    'Tüm cluster yapılandırmasının (VM/ağ/DVS/vApp) zaman damgalı anlık görüntüsü + iki nokta arası git-tarzı fark. Ne, ne zaman değişti gör. Geri yükleme bilgilendiricidir (farkı gösterir).':'Una instantánea con marca de tiempo de toda la configuración del clúster (VM/red/DVS/vApp) + una diferencia estilo git entre dos puntos. Ve qué cambió y cuándo. La restauración es informativa (muestra el delta).',
     'Tüm event\'leri Splunk, Elastic, Wazuh gibi SIEM araçlarına CEF veya syslog formatında akıtır. Güvenlik operasyon merkezi entegrasyonu.':'Tüm event\'leri Splunk, Elastic, Wazuh gibi SIEM araçlarına CEF veya syslog formatında akıtır. Güvenlik operasyon merkezi entegrasyonu.',
     'Tüm kurallar silindi':'Todas las reglas eliminadas',
     'Tüm kurtarma kodları iptal edilecek. Emin misiniz?':'Tüm kurtarma kodları iptal edilecek. Emin misiniz?',
@@ -15473,6 +15519,7 @@ const PAGE_STRINGS = {
     'örn: lan-pool':'örn: lan-pool',
     'örn: sshd':'örn: sshd',
     'üretilir; onaylayıp etkinleştirirsin.':'se genera; lo revisas y lo activas.',
+    'İki anlık görüntü seç':'Selecciona dos instantáneas',
     'İkincil Depolama Havuzu':'Pool de Almacenamiento Secundario',
     'İkincil VM':'VM Secundaria',
     'İleri →':'İleri →',
@@ -15510,6 +15557,7 @@ const PAGE_STRINGS = {
     'İzin kaydedildi':'Permiso guardado',
     'İzin verilmiyor':'Not permitted',
     'İzinler':'İzinler',
+    'İzinli Chat ID\'ler (virgül)':'IDs de chat permitidos (coma)',
     'İzleme':'Monitoreo',
     'İzleme & Depolama':'Monitoring & Storage',
     'İzleme Sekmesine Git':'Go to Monitoring Tab',
@@ -15940,6 +15988,10 @@ const PAGE_STRINGS = {
     'Analiz alınamadı':'Could not load analysis',
     'Analiz ediliyor...':'Wird analysiert...',
     'Analiz için Dry Run çalıştırın':'Dry Run für Analyse ausführen',
+    'Anlık Görüntü Al':'Snapshot erstellen',
+    'Anlık Görüntüler':'Snapshots',
+    'Anlık görüntü alındı':'Snapshot erstellt',
+    'Anlık görüntü etiketi (opsiyonel):':'Snapshot-Bezeichnung (optional):',
     'Anomali + kapasite → öncelikli aksiyon önerileri':'Anomalien + Kapazität → priorisierte Handlungsvorschläge',
     'Anomali Dedektörü':'Anomalie-Detektor',
     'Anomali dedektörü yüksek güvenle olay yakaladığında, eşleşen onaylı runbook\'lar otomatik çalışır. Her runbook için cooldown ve saatlik kota uygulanır.':'Anomali dedektörü yüksek güvenle olay yakaladığında, eşleşen onaylı runbook\'lar otomatik çalışır. Her runbook için cooldown ve saatlik kota uygulanır.',
@@ -16245,6 +16297,7 @@ const PAGE_STRINGS = {
     'Chargeback Motor':'Chargeback Engine',
     'Chargeback Raporu':'Chargeback-Bericht',
     'Chat ID':'Chat ID',
+    'ChatOps — Telegram\'dan Yönet':'ChatOps — Über Telegram verwalten',
     'Checkpoint tabanlı VM koruması. Host çöktüğünde ikincil VM devreye girer, kesinti olmaz.':'Checkpoint tabanlı VM koruması. Host çöktüğünde ikincil VM devreye girer, kesinti olmaz.',
     'Cihaz seçin':'Gerät auswählen',
     'Client ID':'Client-ID',
@@ -16308,6 +16361,7 @@ const PAGE_STRINGS = {
     'DVS oluşturuldu: ':'DVS oluşturuldu: ',
     'DVS silinecek.':'DVS wird gelöscht.',
     'Daralt':'Collapse',
+    'Datacenter\'ı Telegram\'dan AI ile yönet — "vm-3 neden yavaş?", "yeni ubuntu VM aç", "cluster durumu". Rakipler sadece tek-yön uyarı yollar; OXware iki-yön + AI. Telegram bot token\'ı Bildirimler\'den alınır.':'Verwalte das Rechenzentrum von Telegram aus mit KI — „warum ist vm-3 langsam?", „neue Ubuntu-VM erstellen", „Cluster-Status". Konkurrenten senden nur Einweg-Warnungen; OXware ist bidirektional + KI. Der Telegram-Bot-Token stammt aus den Benachrichtigungen.',
     'Dağıtık izleme — API isteklerinin span\'lerini OpenTelemetry uyumlu kaydeder, OTLP export.':'Dağıtık izleme — API isteklerinin span\'lerini OpenTelemetry uyumlu kaydeder, OTLP export.',
     'Dağıtık İzleme':'Verteiltes Tracing',
     'Dağıtım':'Dağıtım',
@@ -16329,6 +16383,7 @@ const PAGE_STRINGS = {
     'Devre dışı':'Deaktiviert',
     'Devre dışı bırak':'Deaktivieren',
     'Değer':'Wert',
+    'Değişiklik işlemlerine izin ver (VM oluştur/durdur/sil) — dikkatli':'Ändernde Operationen erlauben (VM erstellen/stoppen/löschen) — Vorsicht',
     'Değişiklikler iptal edildi':'Changes cancelled',
     'Değişiklikler kaydedildi':'Changes saved',
     'Değiştirilme':'Değiştirilme',
@@ -16482,6 +16537,7 @@ const PAGE_STRINGS = {
     'FT Çifti Oluştur':'FT-Paar erstellen',
     'FT Çiftleri':'FT-Paare',
     'FT çifti oluşturuldu':'FT çifti oluşturuldu',
+    'Farkı Göster':'Unterschied anzeigen',
     'Federasyon API token:':'Federasyon API token:',
     'Federasyon Üyeleri':'Federasyon Üyeleri',
     'Federation node\'ları arası karşılıklı TLS. Özel CA + node sertifikaları. Paylaşılan token yerine kriptografik kimlik.':'Gegenseitiges TLS zwischen Föderationsknoten. Private CA + Knotenzertifikate. Kryptografische Identität statt eines gemeinsamen Tokens.',
@@ -16804,6 +16860,7 @@ const PAGE_STRINGS = {
     'Kaldırılamadı:':'Kaldırılamadı:',
     'Kaldırılamadı: ':'Kaldırılamadı: ',
     'Kaldırıldı':'Entfernt',
+    'Kapalıyken AI yalnızca okuma/sorgu yapar (operatör yetkisi). İzinli chat ID girilmezse herkes (token\'ı bilen) erişebilir — mutlaka ID girin.':'Wenn aus, liest/abfragt die KI nur (Operator-Berechtigung). Ohne erlaubte Chat-IDs kann jeder mit dem Token zugreifen — immer IDs setzen.',
     'Kapasite':'Kapazität',
     'Kapasite Tahmini':'Kapazitätsprognose',
     'Kapasite Özeti':'Kapasite Özeti',
@@ -16811,6 +16868,7 @@ const PAGE_STRINGS = {
     'Kapsam':'Scope',
     'Kara kutu kaydı için "Kaydı Getir" tıkla.':'Für die Black-Box-Aufzeichnung auf „Aufzeichnung abrufen" klicken.',
     'Karbon / Enerji Ayak İzi':'CO₂-/Energie-Fußabdruck',
+    'Karşılaştır':'Vergleichen',
     'Kata Container\'ları':'Kata Container\'ları',
     'Kata Containers':'Kata Containers',
     'Kata Containers — container güvenliği + VM izolasyonu.':'Kata Containers — container güvenliği + VM izolasyonu.',
@@ -17571,6 +17629,7 @@ const PAGE_STRINGS = {
     'Tüm alanlar gerekli':'Tüm alanlar gerekli',
     'Tüm alanlar zorunlu':'Alle Felder sind erforderlich',
     'Tüm alanları doldurun':'Alle Felder ausfüllen',
+    'Tüm cluster yapılandırmasının (VM/ağ/DVS/vApp) zaman damgalı anlık görüntüsü + iki nokta arası git-tarzı fark. Ne, ne zaman değişti gör. Geri yükleme bilgilendiricidir (farkı gösterir).':'Ein zeitgestempelter Snapshot der gesamten Cluster-Konfiguration (VM/Netzwerk/DVS/vApp) + ein Git-artiger Diff zwischen zwei Punkten. Sieh, was sich wann geändert hat. Wiederherstellung ist beratend (zeigt das Delta).',
     'Tüm event\'leri Splunk, Elastic, Wazuh gibi SIEM araçlarına CEF veya syslog formatında akıtır. Güvenlik operasyon merkezi entegrasyonu.':'Tüm event\'leri Splunk, Elastic, Wazuh gibi SIEM araçlarına CEF veya syslog formatında akıtır. Güvenlik operasyon merkezi entegrasyonu.',
     'Tüm kurallar silindi':'Alle Regeln gelöscht',
     'Tüm kurtarma kodları iptal edilecek. Emin misiniz?':'Tüm kurtarma kodları iptal edilecek. Emin misiniz?',
@@ -18144,6 +18203,7 @@ const PAGE_STRINGS = {
     'örn: lan-pool':'örn: lan-pool',
     'örn: sshd':'örn: sshd',
     'üretilir; onaylayıp etkinleştirirsin.':'wird erzeugt; du prüfst und aktivierst es.',
+    'İki anlık görüntü seç':'Zwei Snapshots wählen',
     'İkincil Depolama Havuzu':'Sekundärer Speicherpool',
     'İkincil VM':'Sekundäre VM',
     'İleri →':'İleri →',
@@ -18181,6 +18241,7 @@ const PAGE_STRINGS = {
     'İzin kaydedildi':'Berechtigung gespeichert',
     'İzin verilmiyor':'Not permitted',
     'İzinler':'İzinler',
+    'İzinli Chat ID\'ler (virgül)':'Erlaubte Chat-IDs (Komma)',
     'İzleme':'Überwachung',
     'İzleme & Depolama':'Monitoring & Storage',
     'İzleme Sekmesine Git':'Go to Monitoring Tab',
@@ -18610,6 +18671,10 @@ const PAGE_STRINGS = {
     'Analiz alınamadı':'Could not load analysis',
     'Analiz ediliyor...':'分析中...',
     'Analiz için Dry Run çalıştırın':'运行Dry Run进行分析',
+    'Anlık Görüntü Al':'创建快照',
+    'Anlık Görüntüler':'快照',
+    'Anlık görüntü alındı':'快照已创建',
+    'Anlık görüntü etiketi (opsiyonel):':'快照标签（可选）：',
     'Anomali + kapasite → öncelikli aksiyon önerileri':'异常 + 容量 → 优先操作建议',
     'Anomali Dedektörü':'异常检测器',
     'Anomali dedektörü yüksek güvenle olay yakaladığında, eşleşen onaylı runbook\'lar otomatik çalışır. Her runbook için cooldown ve saatlik kota uygulanır.':'Anomali dedektörü yüksek güvenle olay yakaladığında, eşleşen onaylı runbook\'lar otomatik çalışır. Her runbook için cooldown ve saatlik kota uygulanır.',
@@ -18915,6 +18980,7 @@ const PAGE_STRINGS = {
     'Chargeback Motor':'Chargeback Engine',
     'Chargeback Raporu':'费用回冲报告',
     'Chat ID':'Chat ID',
+    'ChatOps — Telegram\'dan Yönet':'ChatOps — 从 Telegram 管理',
     'Checkpoint tabanlı VM koruması. Host çöktüğünde ikincil VM devreye girer, kesinti olmaz.':'Checkpoint tabanlı VM koruması. Host çöktüğünde ikincil VM devreye girer, kesinti olmaz.',
     'Cihaz seçin':'选择设备',
     'Client ID':'客户端ID',
@@ -18978,6 +19044,7 @@ const PAGE_STRINGS = {
     'DVS oluşturuldu: ':'DVS oluşturuldu: ',
     'DVS silinecek.':'DVS将被删除。',
     'Daralt':'Collapse',
+    'Datacenter\'ı Telegram\'dan AI ile yönet — "vm-3 neden yavaş?", "yeni ubuntu VM aç", "cluster durumu". Rakipler sadece tek-yön uyarı yollar; OXware iki-yön + AI. Telegram bot token\'ı Bildirimler\'den alınır.':'通过 AI 从 Telegram 管理数据中心——"vm-3 为什么慢？""新建一台 ubuntu 虚拟机""集群状态"。竞品只单向推送告警；OXware 是双向 + AI。Telegram 机器人令牌来自通知设置。',
     'Dağıtık izleme — API isteklerinin span\'lerini OpenTelemetry uyumlu kaydeder, OTLP export.':'Dağıtık izleme — API isteklerinin span\'lerini OpenTelemetry uyumlu kaydeder, OTLP export.',
     'Dağıtık İzleme':'分布式追踪',
     'Dağıtım':'Dağıtım',
@@ -18999,6 +19066,7 @@ const PAGE_STRINGS = {
     'Devre dışı':'已禁用',
     'Devre dışı bırak':'禁用',
     'Değer':'值',
+    'Değişiklik işlemlerine izin ver (VM oluştur/durdur/sil) — dikkatli':'允许变更操作（创建/停止/删除虚拟机）——谨慎',
     'Değişiklikler iptal edildi':'Changes cancelled',
     'Değişiklikler kaydedildi':'Changes saved',
     'Değiştirilme':'Değiştirilme',
@@ -19152,6 +19220,7 @@ const PAGE_STRINGS = {
     'FT Çifti Oluştur':'创建FT对',
     'FT Çiftleri':'FT对',
     'FT çifti oluşturuldu':'FT çifti oluşturuldu',
+    'Farkı Göster':'显示差异',
     'Federasyon API token:':'Federasyon API token:',
     'Federasyon Üyeleri':'Federasyon Üyeleri',
     'Federation node\'ları arası karşılıklı TLS. Özel CA + node sertifikaları. Paylaşılan token yerine kriptografik kimlik.':'联邦节点之间的双向 TLS。私有 CA + 节点证书。用加密身份取代共享令牌。',
@@ -19474,6 +19543,7 @@ const PAGE_STRINGS = {
     'Kaldırılamadı:':'Kaldırılamadı:',
     'Kaldırılamadı: ':'Kaldırılamadı: ',
     'Kaldırıldı':'已移除',
+    'Kapalıyken AI yalnızca okuma/sorgu yapar (operatör yetkisi). İzinli chat ID girilmezse herkes (token\'ı bilen) erişebilir — mutlaka ID girin.':'关闭时，AI 仅读取/查询（操作员权限）。若不设置允许的 chat ID，任何知道令牌的人都可访问——务必设置 ID。',
     'Kapasite':'容量',
     'Kapasite Tahmini':'容量预测',
     'Kapasite Özeti':'Kapasite Özeti',
@@ -19481,6 +19551,7 @@ const PAGE_STRINGS = {
     'Kapsam':'Scope',
     'Kara kutu kaydı için "Kaydı Getir" tıkla.':'点击"获取记录"查看黑匣子记录。',
     'Karbon / Enerji Ayak İzi':'碳 / 能源足迹',
+    'Karşılaştır':'比较',
     'Kata Container\'ları':'Kata Container\'ları',
     'Kata Containers':'Kata Containers',
     'Kata Containers — container güvenliği + VM izolasyonu.':'Kata Containers — container güvenliği + VM izolasyonu.',
@@ -20241,6 +20312,7 @@ const PAGE_STRINGS = {
     'Tüm alanlar gerekli':'Tüm alanlar gerekli',
     'Tüm alanlar zorunlu':'所有字段为必填项',
     'Tüm alanları doldurun':'请填写所有字段',
+    'Tüm cluster yapılandırmasının (VM/ağ/DVS/vApp) zaman damgalı anlık görüntüsü + iki nokta arası git-tarzı fark. Ne, ne zaman değişti gör. Geri yükleme bilgilendiricidir (farkı gösterir).':'整个集群配置（VM/网络/DVS/vApp）的带时间戳快照 + 任意两点间的 git 式差异。查看何时发生了什么变化。恢复为建议性（显示增量）。',
     'Tüm event\'leri Splunk, Elastic, Wazuh gibi SIEM araçlarına CEF veya syslog formatında akıtır. Güvenlik operasyon merkezi entegrasyonu.':'Tüm event\'leri Splunk, Elastic, Wazuh gibi SIEM araçlarına CEF veya syslog formatında akıtır. Güvenlik operasyon merkezi entegrasyonu.',
     'Tüm kurallar silindi':'所有规则已删除',
     'Tüm kurtarma kodları iptal edilecek. Emin misiniz?':'Tüm kurtarma kodları iptal edilecek. Emin misiniz?',
@@ -20814,6 +20886,7 @@ const PAGE_STRINGS = {
     'örn: lan-pool':'örn: lan-pool',
     'örn: sshd':'örn: sshd',
     'üretilir; onaylayıp etkinleştirirsin.':'生成后由你审核并启用。',
+    'İki anlık görüntü seç':'选择两个快照',
     'İkincil Depolama Havuzu':'辅助存储池',
     'İkincil VM':'辅VM',
     'İleri →':'İleri →',
@@ -20851,6 +20924,7 @@ const PAGE_STRINGS = {
     'İzin kaydedildi':'权限已保存',
     'İzin verilmiyor':'Not permitted',
     'İzinler':'İzinler',
+    'İzinli Chat ID\'ler (virgül)':'允许的 Chat ID（逗号）',
     'İzleme':'监控',
     'İzleme & Depolama':'Monitoring & Storage',
     'İzleme Sekmesine Git':'Go to Monitoring Tab',
@@ -21279,6 +21353,10 @@ const PAGE_STRINGS = {
     'Analiz alınamadı':'Could not load analysis',
     'Analiz ediliyor...':'Analysing...',
     'Analiz için Dry Run çalıştırın':'Run Dry Run for analysis',
+    'Anlık Görüntü Al':'Prendre un instantané',
+    'Anlık Görüntüler':'Instantanés',
+    'Anlık görüntü alındı':'Instantané pris',
+    'Anlık görüntü etiketi (opsiyonel):':'Étiquette de l\'instantané (optionnel) :',
     'Anomali + kapasite → öncelikli aksiyon önerileri':'Anomalies + capacité → suggestions d\'actions prioritaires',
     'Anomali Dedektörü':'Anomaly Detector',
     'Anomali dedektörü yüksek güvenle olay yakaladığında, eşleşen onaylı runbook\'lar otomatik çalışır. Her runbook için cooldown ve saatlik kota uygulanır.':'Anomali dedektörü yüksek güvenle olay yakaladığında, eşleşen onaylı runbook\'lar otomatik çalışır. Her runbook için cooldown ve saatlik kota uygulanır.',
@@ -21577,6 +21655,7 @@ const PAGE_STRINGS = {
     'Chargeback Motor':'Chargeback Engine',
     'Chargeback Raporu':'Chargeback Report',
     'Chat ID':'Chat ID',
+    'ChatOps — Telegram\'dan Yönet':'ChatOps — Gérer depuis Telegram',
     'Checkpoint tabanlı VM koruması. Host çöktüğünde ikincil VM devreye girer, kesinti olmaz.':'Checkpoint tabanlı VM koruması. Host çöktüğünde ikincil VM devreye girer, kesinti olmaz.',
     'Cihaz seçin':'Select device',
     'Client ID':'Client ID',
@@ -21640,6 +21719,7 @@ const PAGE_STRINGS = {
     'DVS oluşturuldu: ':'DVS oluşturuldu: ',
     'DVS silinecek.':'DVS will be deleted.',
     'Daralt':'Collapse',
+    'Datacenter\'ı Telegram\'dan AI ile yönet — "vm-3 neden yavaş?", "yeni ubuntu VM aç", "cluster durumu". Rakipler sadece tek-yön uyarı yollar; OXware iki-yön + AI. Telegram bot token\'ı Bildirimler\'den alınır.':'Gérez le datacenter depuis Telegram avec l\'IA — « pourquoi vm-3 est lente ? », « créer une VM ubuntu », « état du cluster ». Les concurrents n\'envoient que des alertes unidirectionnelles ; OXware est bidirectionnel + IA. Le token du bot Telegram provient des Notifications.',
     'Dağıtık izleme — API isteklerinin span\'lerini OpenTelemetry uyumlu kaydeder, OTLP export.':'Dağıtık izleme — API isteklerinin span\'lerini OpenTelemetry uyumlu kaydeder, OTLP export.',
     'Dağıtık İzleme':'Distributed Tracing',
     'Dağıtım':'Dağıtım',
@@ -21661,6 +21741,7 @@ const PAGE_STRINGS = {
     'Devre dışı':'Désactivé',
     'Devre dışı bırak':'Désactiver',
     'Değer':'Valeur',
+    'Değişiklik işlemlerine izin ver (VM oluştur/durdur/sil) — dikkatli':'Autoriser les opérations de modification (créer/arrêter/supprimer une VM) — prudence',
     'Değişiklikler iptal edildi':'Changes cancelled',
     'Değişiklikler kaydedildi':'Changes saved',
     'Değiştirilme':'Değiştirilme',
@@ -21811,6 +21892,7 @@ const PAGE_STRINGS = {
     'FT Çifti Oluştur':'Create FT Pair',
     'FT Çiftleri':'FT Pairs',
     'FT çifti oluşturuldu':'FT çifti oluşturuldu',
+    'Farkı Göster':'Afficher la différence',
     'Federasyon API token:':'Federasyon API token:',
     'Federasyon Üyeleri':'Federasyon Üyeleri',
     'Federation node\'ları arası karşılıklı TLS. Özel CA + node sertifikaları. Paylaşılan token yerine kriptografik kimlik.':'TLS mutuel entre nœuds de fédération. CA privée + certificats de nœud. Identité cryptographique au lieu d\'un jeton partagé.',
@@ -22131,6 +22213,7 @@ const PAGE_STRINGS = {
     'Kaldırılamadı:':'Kaldırılamadı:',
     'Kaldırılamadı: ':'Kaldırılamadı: ',
     'Kaldırıldı':'Retiré',
+    'Kapalıyken AI yalnızca okuma/sorgu yapar (operatör yetkisi). İzinli chat ID girilmezse herkes (token\'ı bilen) erişebilir — mutlaka ID girin.':'Désactivé, l\'IA ne fait que lire/interroger (autorité opérateur). Sans IDs de chat autorisés, quiconque connaît le token peut accéder — définissez toujours des IDs.',
     'Kapasite':'Capacité',
     'Kapasite Tahmini':'Capacity Forecast',
     'Kapasite Özeti':'Kapasite Özeti',
@@ -22138,6 +22221,7 @@ const PAGE_STRINGS = {
     'Kapsam':'Scope',
     'Kara kutu kaydı için "Kaydı Getir" tıkla.':'Cliquez sur « Récupérer l\'enregistrement » pour l\'enregistrement de la boîte noire.',
     'Karbon / Enerji Ayak İzi':'Empreinte carbone / énergie',
+    'Karşılaştır':'Comparer',
     'Kata Container\'ları':'Kata Container\'ları',
     'Kata Containers':'Kata Containers',
     'Kata Containers — container güvenliği + VM izolasyonu.':'Kata Containers — container güvenliği + VM izolasyonu.',
@@ -22887,6 +22971,7 @@ const PAGE_STRINGS = {
     'Tüm alanlar gerekli':'Tüm alanlar gerekli',
     'Tüm alanlar zorunlu':'All fields are required',
     'Tüm alanları doldurun':'Fill in all fields',
+    'Tüm cluster yapılandırmasının (VM/ağ/DVS/vApp) zaman damgalı anlık görüntüsü + iki nokta arası git-tarzı fark. Ne, ne zaman değişti gör. Geri yükleme bilgilendiricidir (farkı gösterir).':'Un instantané horodaté de toute la configuration du cluster (VM/réseau/DVS/vApp) + une différence façon git entre deux points. Voyez ce qui a changé et quand. La restauration est indicative (affiche le delta).',
     'Tüm event\'leri Splunk, Elastic, Wazuh gibi SIEM araçlarına CEF veya syslog formatında akıtır. Güvenlik operasyon merkezi entegrasyonu.':'Tüm event\'leri Splunk, Elastic, Wazuh gibi SIEM araçlarına CEF veya syslog formatında akıtır. Güvenlik operasyon merkezi entegrasyonu.',
     'Tüm kurallar silindi':'All rules deleted',
     'Tüm kurtarma kodları iptal edilecek. Emin misiniz?':'Tüm kurtarma kodları iptal edilecek. Emin misiniz?',
@@ -23456,6 +23541,7 @@ const PAGE_STRINGS = {
     'örn: lan-pool':'örn: lan-pool',
     'örn: sshd':'örn: sshd',
     'üretilir; onaylayıp etkinleştirirsin.':'est généré ; vous le vérifiez et l\'activez.',
+    'İki anlık görüntü seç':'Sélectionnez deux instantanés',
     'İkincil Depolama Havuzu':'Secondary Storage Pool',
     'İkincil VM':'Secondary VM',
     'İleri →':'İleri →',
@@ -23493,6 +23579,7 @@ const PAGE_STRINGS = {
     'İzin kaydedildi':'Permission saved',
     'İzin verilmiyor':'Not permitted',
     'İzinler':'İzinler',
+    'İzinli Chat ID\'ler (virgül)':'IDs de chat autorisés (virgule)',
     'İzleme':'Surveillance',
     'İzleme & Depolama':'Monitoring & Storage',
     'İzleme Sekmesine Git':'Go to Monitoring Tab',
@@ -35394,6 +35481,8 @@ const ENT_LOADERS = {
   // handled by the original entries above — do not re-add to avoid dup keys)
   csi:            () => { try { loadCsiPage(); } catch(e) { console.warn(e); } },
   goldenimages:   () => { try { loadGoldenImages(); } catch(e) { console.warn(e); } },
+  timemachine:    () => { try { loadTimeMachine(); } catch(e) { console.warn(e); } },
+  chatops:        () => { try { loadChatOps(); } catch(e) { console.warn(e); } },
   vapp:           () => { try { loadVappPage(); } catch(e) { console.warn(e); } },
   whatif:         () => { try { loadWhatIfPage(); } catch(e) { console.warn(e); } },
   heatmap:        () => { try { loadHeatmapPage(); } catch(e) { console.warn(e); } },
@@ -39263,6 +39352,70 @@ async function vappPower(id, action) {
   if (d) toast(d.note || (action + ' başladı'), 'info');
 }
 
+/* ──── Cluster Zaman Makinesi (v2.8.1) ──── */
+async function loadTimeMachine() {
+  const d = await _api('/api/v2/timemachine');
+  const snaps = (d && d.snapshots) || [];
+  const tb = document.getElementById('tm-tbody');
+  if (tb) tb.innerHTML = snaps.length ? snaps.map(s => {
+    const c = s.counts || {};
+    return `<tr><td><b>${_esc(s.label||'')}</b></td><td style="font-size:11px">${new Date((s.ts||0)*1000).toLocaleString()}</td><td>${c.vms||0}</td><td>${c.networks||0}</td><td>${c.dvs||0}</td><td>${c.vapps||0}</td><td><button class="btn sm danger" onclick="tmDelete('${_esc(s.id)}')"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+  }).join('') : '<tr><td colspan="7" class="text-center text-muted" style="padding:14px">Anlık görüntü yok</td></tr>';
+  const opts = snaps.map(s => `<option value="${_esc(s.id)}">${_esc(s.label)} (${new Date((s.ts||0)*1000).toLocaleString()})</option>`).join('');
+  const a = document.getElementById('tm-a'), b = document.getElementById('tm-b');
+  if (a) a.innerHTML = opts; if (b) b.innerHTML = opts;
+  if (b && snaps.length > 1) b.selectedIndex = 0; if (a && snaps.length > 1) a.selectedIndex = 1;
+}
+async function tmSnapshot() {
+  const label = prompt('Anlık görüntü etiketi (opsiyonel):', '');
+  if (label === null) return;
+  const d = await _api('/api/v2/timemachine', 'POST', { label });
+  if (d) { toast('Anlık görüntü alındı', 'success'); loadTimeMachine(); }
+}
+async function tmDelete(id) {
+  if (!await showConfirm('Anlık görüntü silinecek.', 'Sil', true)) return;
+  const d = await _api(`/api/v2/timemachine/${id}`, 'DELETE');
+  if (d) { toast('Silindi', 'success'); loadTimeMachine(); }
+}
+async function tmDiff() {
+  const a = document.getElementById('tm-a').value, b = document.getElementById('tm-b').value;
+  if (!a || !b) return toast('İki anlık görüntü seç', 'error');
+  const box = document.getElementById('tm-diff');
+  box.innerHTML = '<span class="text-muted" style="font-size:12px"><i class="fa-solid fa-spinner fa-spin"></i> Karşılaştırılıyor...</span>';
+  const d = await _api(`/api/v2/timemachine/diff?a=${a}&b=${b}`);
+  if (!d || !d.diff) { box.innerHTML = '<span style="color:var(--red)">Fark alınamadı</span>'; return; }
+  let html = '';
+  for (const sec of ['vms','networks','dvs','vapps']) {
+    const x = d.diff[sec]; if (!x) continue;
+    const parts = [];
+    if (x.added.length) parts.push(`<span style="color:var(--success)">+${x.added.length} eklendi: ${x.added.map(_esc).join(', ')}</span>`);
+    if (x.removed.length) parts.push(`<span style="color:var(--red)">−${x.removed.length} silindi: ${x.removed.map(_esc).join(', ')}</span>`);
+    if (x.changed.length) parts.push(`<span style="color:#f59e0b">~${x.changed.length} değişti: ${x.changed.map(c=>_esc(c.name)).join(', ')}</span>`);
+    if (parts.length) html += `<div style="margin-top:6px;font-size:12px"><b>${sec}</b>: ${parts.join(' · ')}</div>`;
+  }
+  box.innerHTML = html || '<div style="font-size:12px;color:var(--success);margin-top:6px">Fark yok — iki nokta aynı.</div>';
+}
+
+/* ──── ChatOps (v2.8.1) ──── */
+async function loadChatOps() {
+  const d = await _api('/api/v2/chatops');
+  if (!d) return;
+  const st = document.getElementById('chatops-status');
+  if (st) st.innerHTML = (d.telegram_ready ? '<span class="mat-badge ready">Telegram token var</span>' : '<span class="mat-badge notready">Telegram token yok — Bildirimler\'den ekle</span>') + (d.enabled ? ' <span class="mat-badge ready">aktif</span>' : '');
+  const cb = document.getElementById('chatops-enabled'); if (cb) cb.checked = !!d.enabled;
+  const ids = document.getElementById('chatops-ids'); if (ids) ids.value = (d.allowed_chat_ids||[]).join(', ');
+  const mut = document.getElementById('chatops-mut'); if (mut) mut.checked = !!d.allow_mutations;
+}
+async function chatOpsSave() {
+  const body = {
+    enabled: document.getElementById('chatops-enabled').checked,
+    allowed_chat_ids: document.getElementById('chatops-ids').value.split(',').map(x=>x.trim()).filter(Boolean),
+    allow_mutations: document.getElementById('chatops-mut').checked,
+  };
+  const d = await _api('/api/v2/chatops', 'POST', body);
+  if (d) { toast('ChatOps kaydedildi', 'success'); loadChatOps(); }
+}
+
 /* ──── What-If Simülatör (v2.8.1) ──── */
 function loadWhatIfPage() { /* form hazır, sonuç simüle edilince gelir */ }
 async function runWhatIf() {
@@ -40155,6 +40308,8 @@ const _PAGE_TABS = {
     {key:'list', label:'Genel', src:'native', g:'Sistem'},
     {key:'tab-ai', label:'AI', src:'page-tab-ai', g:'Sistem'},
     {key:'updates', label:'Güncelleme', src:'page-updates', g:'Sistem'},
+    {key:'timemachine', label:'Zaman Makinesi', src:'ent-pane-timemachine', g:'Sistem'},
+    {key:'chatops', label:'ChatOps', src:'ent-pane-chatops', g:'Entegrasyon'},
     {key:'tab-integrations', label:'Entegrasyon', src:'page-tab-integrations', g:'Entegrasyon'},
     {key:'tab-hosting', label:'Hosting API', src:'page-tab-hosting', g:'Entegrasyon'},
     {key:'tab-plugins', label:'Eklentiler', src:'page-tab-plugins', g:'Entegrasyon'},

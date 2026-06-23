@@ -792,6 +792,52 @@ def _register_routes():
                          float(d.get("overcommit_cpu", 3.0)))
         return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
 
+    # ── Cluster Time-Machine ─────────────────────────────────────────────
+    tm = _safe_import("cluster_timemachine")
+
+    @bp_v272.route("/api/v2/timemachine", methods=["GET", "POST"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_timemachine():
+        if not tm:
+            return _err("module unavailable", 503)
+        if request.method == "GET":
+            return _ok(snapshots=tm.list_snapshots())
+        d = request.get_json(silent=True) or {}
+        return _ok(**tm.snapshot(d.get("label", "")))
+
+    @bp_v272.route("/api/v2/timemachine/diff", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_tm_diff():
+        if not tm:
+            return _err("module unavailable", 503)
+        r = tm.diff(request.args.get("a", ""), request.args.get("b", ""))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    @bp_v272.route("/api/v2/timemachine/<snap_id>", methods=["DELETE"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_tm_delete(snap_id):
+        if not tm:
+            return _err("module unavailable", 503)
+        return _ok(**tm.delete_snapshot(snap_id))
+
+    # ── ChatOps (Telegram two-way) ───────────────────────────────────────
+    cops = _safe_import("chatops")
+
+    @bp_v272.route("/api/v2/chatops", methods=["GET", "POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_chatops():
+        if not cops:
+            return _err("module unavailable", 503)
+        if request.method == "GET":
+            return _ok(**cops.status())
+        d = request.get_json(silent=True) or {}
+        return _ok(**cops.set_config(d.get("enabled"), d.get("allowed_chat_ids"),
+                                     d.get("allow_mutations"), d.get("agent_id")))
+
     # ── Brand integrity / provenance ─────────────────────────────────────
     brand = _safe_import("brand_integrity")
 
