@@ -368,6 +368,16 @@
     <a href="#v272-security" class="sidebar-sub"><i class="fas fa-lock"></i> SEC-029..033</a>
     <a href="#v272-i18n" class="sidebar-sub"><i class="fas fa-language"></i> 6-Language i18n</a>
 
+    <div class="sidebar-section">v2.8.1 — AI &amp; Advanced</div>
+    <a href="#v281"><i class="fas fa-star"></i> v2.8.1 Overview</a>
+    <a href="#v281-flightrec" class="sidebar-sub"><i class="fas fa-box-archive"></i> Flight Recorder + AI Post-Mortem</a>
+    <a href="#v281-chatops" class="sidebar-sub"><i class="fab fa-telegram"></i> Telegram ChatOps</a>
+    <a href="#v281-whatif" class="sidebar-sub"><i class="fas fa-flask"></i> What-If Simulator</a>
+    <a href="#v281-heatmap" class="sidebar-sub"><i class="fas fa-fire"></i> Live Heat Map</a>
+    <a href="#v281-timemachine" class="sidebar-sub"><i class="fas fa-clock-rotate-left"></i> Cluster Time-Machine</a>
+    <a href="#v281-dvs" class="sidebar-sub"><i class="fas fa-diagram-project"></i> Distributed vSwitch (vDS)</a>
+    <a href="#v281-more" class="sidebar-sub"><i class="fas fa-layer-group"></i> Golden Images · OVA · vApp · QoS</a>
+
     <div class="sidebar-section">Extensibility</div>
     <a href="#plugins"><i class="fas fa-puzzle-piece"></i> Plugin SDK</a>
     <a href="/marketplace/"><i class="fas fa-store"></i> Marketplace</a>
@@ -835,6 +845,33 @@ ethernets:
 
       <h3 id="v272-i18n">Six-Language Panel + CI Gate</h3>
       <p>French (FR) joins TR, EN, ES, DE, ZH for a total of six interface languages with full parity. Each lang dict carries 2200+ entries covering every UI string. A CI workflow (<code>.github/workflows/i18n-and-sbom.yml</code>) fails the build if any untranslated TR string appears in HTML body or JS literals. A pre-commit hook auto-runs the i18n pipeline whenever <code>index.html</code> is staged.</p>
+    </section>
+
+    <section id="v281">
+      <h2>v2.8.1 — AI &amp; Advanced</h2>
+      <p><span class="ver-badge"><span class="ver-dot"></span> v2.8.1</span> <span class="tag tag-green">Latest GA</span> &mdash; Six innovations not found in vSphere/Proxmox/Nutanix, plus a vDS-class network panel and quality-of-life additions. Every new string is translated across all five languages.</p>
+
+      <h3 id="v281-flightrec">VM Flight Recorder + AI Post-Mortem</h3>
+      <p>An aircraft-style black box for every VM. It assembles the last N minutes of a VM's metric history (from the existing <code>perf_history</code> collector — no extra sampling load) and its events into a single timeline. On demand, the configured AI agent generates a root-cause post-mortem (e.g. "CPU spike → memory pressure → OOM → kernel panic") with prevention advice. Open it from the VM detail page → <strong>Kara Kutu</strong>. API: <code>GET /api/v2/vms/&lt;id&gt;/flightrec</code>, <code>POST /api/v2/vms/&lt;id&gt;/post-mortem</code>.</p>
+
+      <h3 id="v281-chatops">Telegram ChatOps (two-way + AI)</h3>
+      <p>Manage the datacenter from Telegram: ask "why is vm-3 slow?", "create a new ubuntu VM", "cluster status" and the AI answers and acts through the same tool layer the panel uses. Competitors only push one-way alerts. Disabled by default; whitelisted chat IDs only; mutating operations are opt-in (otherwise read-mostly operator authority). Uses the Telegram bot token from Notifications. Configure under Settings → <strong>ChatOps</strong>.</p>
+
+      <h3 id="v281-whatif">What-If Capacity Simulator</h3>
+      <p>"What happens if I add 10 VMs with 2 vCPU / 4 GB each?" — projects the impact on CPU, RAM, power, cost and CO₂ <em>before</em> you act, from live usage + host capacity + the Green Mode power profile. A pre-flight sandbox, not just a recommendation. VMs → <strong>What-If</strong>.</p>
+
+      <h3 id="v281-heatmap">Live Heat Map</h3>
+      <p>Every VM's load at a glance as a colour grid (green→red by CPU). Spot busy VMs instantly and click through to detail. VMs → <strong>Isı Haritası</strong>.</p>
+
+      <h3 id="v281-timemachine">Cluster Time-Machine</h3>
+      <p>Point-in-time snapshots of the whole cluster configuration (VMs, networks, DVS, vApps) plus a git-style diff between any two points — see exactly what changed and when. Restore is advisory (shows the delta to re-apply). Settings → <strong>Zaman Makinesi</strong>.</p>
+
+      <h3 id="v281-dvs">Distributed vSwitch (vDS-class)</h3>
+      <p>A VMware vDS-style panel: a cluster-wide virtual switch with VLAN-tagged port groups, uplink/NIC-teaming (active-backup / balance-slb / balance-tcp / LACP), VXLAN spanning across nodes, and a one-screen visual topology (Control plane → DVS → port groups → uplinks → physical trunk). Networks → DVS.</p>
+      <p>Also new on the network side: <strong>SDN VXLAN overlays</strong>, a built-in <strong>L4 load balancer</strong> (isolated HAProxy instance), <strong>federation mTLS identity</strong>, and a <strong>Network Mode &amp; IP</strong> tab that detects NAT/bridge/routed networks and surfaces each VM's real guest-agent IP (fixing the bridge/DHCP "wrong IP" problem).</p>
+
+      <h3 id="v281-more">Golden Images · OVA · vApp · QoS · more</h3>
+      <p>Golden-image marketplace (one-click cloud-init Ubuntu/Debian/Rocky/Alma), OVA/OVF export, vApp boot orchestration (ordered start/stop with delays), per-VM disk I/O QoS, snapshot-chain analysis, Vault→VM secret injection, measured-boot attestation, AI runbook generator (natural language → automation rule), AI Ops Insights, carbon/energy report, live VM thumbnails, firmware boot splash, an onboarding tour, 14 selectable themes, and AI tool gating (sensitive queries restricted to the primary administrator).</p>
     </section>
 
     <section id="plugins">
