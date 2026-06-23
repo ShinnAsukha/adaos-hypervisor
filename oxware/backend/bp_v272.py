@@ -733,6 +733,65 @@ def _register_routes():
         r = netd.vm_ip_audit()
         return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
 
+    # ── VM Flight Recorder + AI post-mortem ──────────────────────────────
+    fr = _safe_import("flight_recorder")
+
+    @bp_v272.route("/api/v2/vms/<vm_id>/flightrec", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_flightrec(vm_id):
+        if not fr:
+            return _err("module unavailable", 503)
+        return _ok(**fr.timeline(vm_id, request.args.get("period", "1h")))
+
+    @bp_v272.route("/api/v2/vms/<vm_id>/post-mortem", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_post_mortem(vm_id):
+        if not fr:
+            return _err("module unavailable", 503)
+        d = request.get_json(silent=True) or {}
+        r = fr.post_mortem(vm_id, d.get("agent_id", ""), d.get("period", "1h"))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    # ── AI runbook generator ─────────────────────────────────────────────
+    rbg = _safe_import("ai_runbook_gen")
+
+    @bp_v272.route("/api/v2/runbooks/generate", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_runbook_gen():
+        if not rbg:
+            return _err("module unavailable", 503)
+        d = request.get_json(silent=True) or {}
+        r = rbg.generate(d.get("description", ""), d.get("agent_id", ""))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    @bp_v272.route("/api/v2/runbooks/save-generated", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_runbook_save():
+        if not rbg:
+            return _err("module unavailable", 503)
+        d = request.get_json(silent=True) or {}
+        r = rbg.save(d.get("runbook") or {})
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    # ── What-If capacity simulator ───────────────────────────────────────
+    wif = _safe_import("whatif_sim")
+
+    @bp_v272.route("/api/v2/whatif", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator", "operator")
+    def api_whatif():
+        if not wif:
+            return _err("module unavailable", 503)
+        d = request.get_json(silent=True) or {}
+        r = wif.simulate(int(d.get("add_vms", 0)), int(d.get("vcpus_each", 1)),
+                         int(d.get("ram_mb_each", 512)),
+                         float(d.get("overcommit_cpu", 3.0)))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
     # ── Brand integrity / provenance ─────────────────────────────────────
     brand = _safe_import("brand_integrity")
 
