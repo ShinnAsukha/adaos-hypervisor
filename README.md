@@ -65,9 +65,33 @@
 | Runbook auto-remediation | ✅ | partial | ❌ |
 | GitOps (ArgoCD/Flux) | ✅ | ❌ | ❌ |
 | Kubernetes CSI driver | ✅ | ✅ | community |
-| KubeVirt bridge | ✅ | ❌ | ❌ |
+| KubeVirt bridge | 🟠 partial | ❌ | ❌ |
 | Built-in compliance scanner | ✅ | partial | ❌ |
 | **3-year cost (32 cores, 50 VMs)** | **~$2,250** | ~$200,000 | ~$5,000 |
+
+---
+
+## ✅ Is it real? — build maturity, no marketing
+
+We hate "✅" tables that lie. Here is exactly what is production-grade, what
+is usable-but-young, and what is honestly not finished yet. CI runs the real
+test suite on every push (badge above is live).
+
+| Area | Status | What that means |
+|---|:---:|---|
+| VM lifecycle (create/start/stop/snapshot/clone/migrate) | 🟢 Stable | Core path, covered by the test suite + daily use |
+| Networking (bridges, NAT, IPAM, nftables, port-forward) | 🟢 Stable | Real libvirt + nftables, SSRF-guarded outbound |
+| Storage (qcow2, LVM, NFS, snapshots, 3-2-1 backup) | 🟢 Stable | Backup verified with mount + boot check |
+| Auth / RBAC / JWT (HS256-locked, CSRF, audit log) | 🟢 Stable | Algorithm allowlist enforced + tested |
+| Confidential VMs (SEV/TDX), vTPM 2.0 | 🟡 Beta | Works on supported hardware; needs host firmware |
+| Ceph storage backend | 🟡 Community | Functional, community-tested, not first-class yet |
+| AI planner / NL commands | 🟡 Optional | With AI key = AI; **without a key it tells you so** and falls back to transparent heuristics (`source: "heuristic"`) — no fake "AI" output |
+| KubeVirt bridge | 🟠 Partial | Cluster registration + VMI→OXware spec translation are real; **no live watch/reconcile loop yet** (applied out-of-band) |
+| Bare-metal autoinstall | 🟢 Stable | Per-install random password hash, SSH-key-only login |
+| Desktop (Electron) app | 🟠 Early | Wraps the web UI; some links still placeholder |
+
+Legend: 🟢 stable · 🟡 beta/optional · 🟠 partial/early. If something here drifts
+from reality, [open an issue](https://github.com/ShinnAsukha/oxware-hypervisor/issues) — honesty in this table is a feature.
 
 ---
 
