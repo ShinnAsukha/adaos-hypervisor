@@ -57,6 +57,24 @@ html[data-theme="light"] .btn-outline:hover { color: var(--accent-deep); border-
 html[data-theme="light"] code            { background: var(--code-bg); border-color: var(--code-bd); color: var(--accent-deep); }
 html[data-theme="light"] h1, html[data-theme="light"] h2, html[data-theme="light"] h3 { color: var(--text); }
 html[data-theme="light"] .hero h1        { color: var(--text); }
+/* Page styles hardcode white text (authored for dark) but light is the
+   default theme → force dark on text-on-light elements. !important beats the
+   per-page <style> blocks. Colored-background elements (buttons, badges,
+   step-num, avatars, CTA blocks) keep their white text and are excluded. */
+html[data-theme="light"] .page-hero h1,
+html[data-theme="light"] .vc-hero h1,
+html[data-theme="light"] .section-head h2,
+html[data-theme="light"] .benefit h3,
+html[data-theme="light"] .col-box h3,
+html[data-theme="light"] .domain h3,
+html[data-theme="light"] .fw h3,
+html[data-theme="light"] .incident h3,
+html[data-theme="light"] .step h3,
+html[data-theme="light"] .plan-price .amount,
+html[data-theme="light"] .reward-amt,
+html[data-theme="light"] .price,
+html[data-theme="light"] .tier-pct,
+html[data-theme="light"] .hof-name { color: var(--text) !important; }
 html[data-theme="light"] .hero h1 .accent { background: var(--gradient-1); -webkit-background-clip: text; background-clip: text; color: transparent; }
 html[data-theme="light"] .nav-dropdown   { background: #fff; border-color: var(--border); box-shadow: 0 24px 60px rgba(120,60,0,.18); }
 html[data-theme="light"] .nav-dropdown a:hover { background: var(--bg-2); }
