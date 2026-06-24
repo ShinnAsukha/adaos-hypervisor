@@ -220,6 +220,18 @@ def create_profile(name: str, hostname: str, disk_layout: str,
     if disk not in ("lvm", "direct", "zfs"):
         disk = "lvm"
 
+    # Real per-install password hash (never a fixed placeholder). Password
+    # login is disabled (allow-pw: false) — access is SSH-key only — so this
+    # is a random, unknown, valid hash that effectively locks the account.
+    try:
+        import crypt as _crypt
+        import secrets as _secrets
+        _pw_hash = _crypt.crypt(_secrets.token_urlsafe(24),
+                               _crypt.mksalt(_crypt.METHOD_SHA512))
+    except Exception:
+        # Fallback: '!' = locked account (valid /etc/shadow convention).
+        _pw_hash = "!"
+
     post_cmd = post_script or "echo 'OXware bare-metal install complete'"
 
     yaml_doc = f"""#cloud-config
@@ -231,7 +243,7 @@ autoinstall:
   identity:
     hostname: {hostname}
     username: oxware
-    password: "$6$rounds=4096$oxware$placeholderhashreplaceme."
+    password: "{_pw_hash}"
   ssh:
     install-server: true
     allow-pw: false

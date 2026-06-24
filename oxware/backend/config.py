@@ -113,3 +113,17 @@ _BUILD_PROVENANCE = (
 
 for d in [DATA_DIR, ISO_DIR, DISK_DIR, BACKUP_DIR, TEMPLATE_DIR, LOG_DIR]:
     os.makedirs(d, exist_ok=True)
+
+
+def load() -> dict:
+    """Etkin config'in dict anlık görüntüsü. Sırlar (SECRET_KEY) hariç —
+    log/teşhis ve test için güvenli. Modül seviyesindeki UPPER_CASE
+    sabitlerden türetilir."""
+    _SECRET = {"SECRET_KEY", "CONFIG_FILE"}
+    snap = {}
+    for _name, _val in list(globals().items()):
+        if not _name.isupper() or _name.startswith("_") or _name in _SECRET:
+            continue
+        if isinstance(_val, (str, int, float, bool, list, type(None))):
+            snap[_name] = _val
+    return snap

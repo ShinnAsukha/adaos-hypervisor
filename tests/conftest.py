@@ -18,7 +18,10 @@ import pytest
 
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-BACKEND_DIR = REPO_ROOT / "backend"
+# Backend lives at <repo>/oxware/backend (not <repo>/backend).
+BACKEND_DIR = REPO_ROOT / "oxware" / "backend"
+if not BACKEND_DIR.is_dir():
+    BACKEND_DIR = REPO_ROOT / "backend"  # legacy fallback
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 if str(REPO_ROOT) not in sys.path:
@@ -58,8 +61,36 @@ def mock_libvirt(monkeypatch):
     stub.open = _open
     stub.openReadOnly = _open
     stub.libvirtError = type("libvirtError", (Exception,), {})
-    stub.VIR_DOMAIN_RUNNING = 1
-    stub.VIR_DOMAIN_SHUTOFF = 5
+    # Domain state + flag constants the backend reads at import time. Values
+    # mirror libvirt's real enum where it matters (NOSTATE=0 … PMSUSPENDED=7);
+    # flag bitmasks are given distinct nonzero values — exact values are not
+    # asserted, presence is what lets the modules import under the stub.
+    _consts = {
+        "VIR_DOMAIN_NOSTATE": 0,
+        "VIR_DOMAIN_RUNNING": 1,
+        "VIR_DOMAIN_BLOCKED": 2,
+        "VIR_DOMAIN_PAUSED": 3,
+        "VIR_DOMAIN_SHUTDOWN": 4,
+        "VIR_DOMAIN_SHUTOFF": 5,
+        "VIR_DOMAIN_CRASHED": 6,
+        "VIR_DOMAIN_PMSUSPENDED": 7,
+        "VIR_DOMAIN_XML_INACTIVE": 2,
+        "VIR_DOMAIN_AFFECT_CONFIG": 2,
+        "VIR_DOMAIN_AFFECT_LIVE": 1,
+        "VIR_DOMAIN_MEM_CONFIG": 2,
+        "VIR_DOMAIN_MEM_LIVE": 1,
+        "VIR_DOMAIN_VCPU_CONFIG": 2,
+        "VIR_DOMAIN_VCPU_LIVE": 1,
+        "VIR_DOMAIN_UNDEFINE_MANAGED_SAVE": 1,
+        "VIR_DOMAIN_UNDEFINE_SNAPSHOTS_METADATA": 2,
+        "VIR_DOMAIN_CHECKPOINT_CREATE_REDEFINE": 1,
+        "VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE": 0,
+        "VIR_MIGRATE_LIVE": 1,
+        "VIR_MIGRATE_PEER2PEER": 2,
+        "VIR_MIGRATE_TUNNELLED": 4,
+    }
+    for _k, _v in _consts.items():
+        setattr(stub, _k, _v)
     monkeypatch.setitem(sys.modules, "libvirt", stub)
     return stub
 

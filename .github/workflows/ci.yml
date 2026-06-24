@@ -104,14 +104,17 @@ jobs:
 
       # ── HARD GATE when tests/ exists. Skips gracefully on a repo with no tests yet,
       # but as soon as a single tests/test_*.py lands, a failing test blocks merge.
+      # Tests live at <repo>/tests; conftest puts oxware/backend on sys.path.
+      # OXWARE_TEST_MODE=1 keeps app.py import side-effect-free (no threads).
       - name: Pytest — unit tests
-        working-directory: oxware/backend
+        env:
+          OXWARE_TEST_MODE: "1"
+          OXWARE_DISABLE_SOCKETIO: "1"
         run: |
-          if [ -d tests ] && [ -n "$(find tests -name 'test_*.py' -print -quit)" ]; then
-            pytest tests/ -v --tb=short --cov=. --cov-report=term-missing \
-              --ignore=tests/integration
+          if [ -n "$(find tests -name 'test_*.py' -print -quit 2>/dev/null)" ]; then
+            pytest tests/ -v --tb=short
           else
-            echo "::warning::No tests found under oxware/backend/tests/ — coverage not measured. Add tests/test_*.py to enable the gate."
+            echo "::warning::No tests found under <repo>/tests/."
           fi
 
   security-audit:

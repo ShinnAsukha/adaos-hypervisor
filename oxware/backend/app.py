@@ -62,7 +62,7 @@ import updater
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
-    level=getattr(logging, config.LOG_LEVEL, logging.INFO),
+    level=getattr(logging, (config.LOG_LEVEL or "INFO"), logging.INFO),
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     handlers=[
         logging.StreamHandler(),
@@ -259,9 +259,15 @@ app.config["MAX_CONTENT_LENGTH"]       = 64 * 1024 * 1024 * 1024
 # CVE-2023-25577 / Werkzeug multipart resource exhaustion mitigation
 app.config["MAX_FORM_MEMORY_SIZE"]     = 16 * 1024 * 1024   # 16 MB form fields max
 app.config["MAX_FORM_PARTS"]           = 256                 # max multipart parts
-# Security: restrict JWT to HS256 only — blocks alg:none / RSA confusion attacks
-app.config["JWT_ALGORITHM"]            = "HS256"
-app.config["JWT_DECODE_ALGORITHMS"]    = ["HS256"]
+# Security: restrict JWT to HS256 only — blocks alg:none / RSA confusion attacks.
+# Allowlist'in tek kanonik kaynağı auth.JWT_ALGORITHMS (drift'i önler).
+try:
+    import auth as _auth_mod
+    _JWT_ALGS = list(_auth_mod.JWT_ALGORITHMS)
+except Exception:
+    _JWT_ALGS = ["HS256"]
+app.config["JWT_ALGORITHM"]            = _JWT_ALGS[0]
+app.config["JWT_DECODE_ALGORITHMS"]    = _JWT_ALGS
 # OXW-2026-001 fix: JWT cookie security attributes (SameSite=Strict blocks CSRF)
 app.config["JWT_COOKIE_SECURE"]        = True
 app.config["JWT_COOKIE_SAMESITE"]      = "Strict"
@@ -284,7 +290,11 @@ if config.CORS_ORIGINS:
 jwt     = JWTManager(app)
 # OXW-2026-002 fix: SocketIO CORS da config'den gelsin
 _sock_origins = config.CORS_ORIGINS if config.CORS_ORIGINS else []
-sock    = SocketIO(app, cors_allowed_origins=_sock_origins, async_mode="eventlet", logger=False)
+# Test/CI'da eventlet kurulu olmayabilir; async_mode="eventlet" import'u
+# "Invalid async_mode specified" ile patlatır. OXWARE_DISABLE_SOCKETIO=1 ise
+# threading moduna düş (gerçek WS proxy çalışmaz ama import temiz olur).
+_sock_async = "threading" if os.environ.get("OXWARE_DISABLE_SOCKETIO") == "1" else "eventlet"
+sock    = SocketIO(app, cors_allowed_origins=_sock_origins, async_mode=_sock_async, logger=False)
 
 # ── VNC WebSocket proxy — manual RFC 6455 + eventlet trampoline ───────────────
 # @_evws.WebSocketWSGI fails in eventlet 0.35.x (returns 400, handler not called).
@@ -665,24 +675,30 @@ security.register_security(app)
 # Başlangıçta şifre sıfırlaması uygula
 cred_mgr.apply_reset_if_exists()
 
+# Test/CI modunda arka plan thread'lerini başlatma (import temiz + hızlı kalsın)
+_TEST_MODE = os.environ.get("OXWARE_TEST_MODE") == "1"
+
 # AI agentları başlat
-ai_agent.start_all_agents()
+if not _TEST_MODE:
+    ai_agent.start_all_agents()
 
 # Zamanlanmış rapor gönderici (haftalık) — opsiyonel, hata olursa atla
-try:
-    _rep_sched = _safe_import("report_scheduler")
-    if _rep_sched:
-        _rep_sched.start_background()
-except Exception as _rs_e:
-    log.debug("report scheduler başlatılamadı: %s", _rs_e)
+if not _TEST_MODE:
+    try:
+        _rep_sched = _safe_import("report_scheduler")
+        if _rep_sched:
+            _rep_sched.start_background()
+    except Exception as _rs_e:
+        log.debug("report scheduler başlatılamadı: %s", _rs_e)
 
 # ChatOps (Telegram iki-yön) — yalnızca panelden etkinleştirilmişse başlar
-try:
-    _cops = _safe_import("chatops")
-    if _cops:
-        _cops.start_background()
-except Exception as _co_e:
-    log.debug("chatops başlatılamadı: %s", _co_e)
+if not _TEST_MODE:
+    try:
+        _cops = _safe_import("chatops")
+        if _cops:
+            _cops.start_background()
+    except Exception as _co_e:
+        log.debug("chatops başlatılamadı: %s", _co_e)
 
 # Marka bütünlüğü / provenance kontrolü — varsayılan "warn" (engellemez,
 # sadece loglar + panelde uyarı). OXWARE_BRAND_MODE=strict ile fork+rebrand
@@ -898,7 +914,8 @@ if _v28 is not None:
                 deps_factory=_telemetry_deps_factory,
             )
             app.register_blueprint(_v28.telemetry_bp.bp)
-            _telemetry.start_background_sender(_telemetry_deps_factory)
+            if os.environ.get("OXWARE_TEST_MODE") != "1":
+                _telemetry.start_background_sender(_telemetry_deps_factory)
             log.info("v2.8 telemetry blueprint registered (opt-in, default OFF)")
         except Exception as _bpe4:
             log.warning("telemetry blueprint failed: %s", _bpe4)
@@ -9206,7 +9223,8 @@ def _start_background_services():
             except Exception as e:
                 log.warning("✗ %s.%s başlatılamadı: %s", mod.__name__, fn, e)
 
-_start_background_services()
+if not os.environ.get("OXWARE_TEST_MODE") == "1":
+    _start_background_services()
 
 # ── Hassas dosya/dizin bloğu ──────────────────────────────────────────────────
 _BLOCKED_PATHS = {
@@ -15608,6 +15626,37 @@ def api_nioc_vm(vm_id):
     return ok(**nioc_mgr.set_vm_bandwidth(
         vm_id, d.get("in_kbps", 0), d.get("out_kbps", 0), d.get("burst_kbps", 1024)
     ))
+
+
+# ── OpenAPI spec ────────────────────────────────────────────────────────────
+# Kayıtlı route'lardan minimal OpenAPI 3.0 üretir. Sadece yol + metot bilgisi
+# (gövde şeması yok); gizli bilgi içermez. Otomasyon/keşif için public.
+@app.route("/api/openapi")
+def api_openapi():
+    import re as _re
+    paths = {}
+    for rule in app.url_map.iter_rules():
+        if rule.endpoint == "static":
+            continue
+        # Flask <var> → OpenAPI {var}
+        path = _re.sub(r"<(?:[^:>]+:)?([^>]+)>", r"{\1}", str(rule.rule))
+        methods = sorted(m for m in (rule.methods or set())
+                         if m not in ("HEAD", "OPTIONS"))
+        if not methods:
+            continue
+        ops = paths.setdefault(path, {})
+        for m in methods:
+            ops[m.lower()] = {
+                "operationId": rule.endpoint,
+                "responses": {"200": {"description": "OK"}},
+            }
+    spec = {
+        "openapi": "3.0.3",
+        "info": {"title": "OXware API", "version": "2.8.1"},
+        "paths": paths,
+    }
+    from flask import jsonify as _jsonify
+    return _jsonify(spec)
 
 
 # ── Predictive Failure ─────────────────────────────────────────────────────

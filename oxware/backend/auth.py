@@ -13,6 +13,11 @@ from flask_jwt_extended import (
 )
 import config
 
+# JWT imza algoritması allowlist — yalnız HS256. alg:none ve RSA/HS karışıklığı
+# (algorithm confusion) saldırılarını engeller. app.py JWT_DECODE_ALGORITHMS
+# config'i bununla aynı olmalı; burası kanonik kaynak.
+JWT_ALGORITHMS = ["HS256"]
+
 ROLES = {
     "administrator": ["*"],
     "operator": ["vm.*", "storage.read", "network.read", "system.read"],

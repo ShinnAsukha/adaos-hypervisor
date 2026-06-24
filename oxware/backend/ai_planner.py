@@ -25,7 +25,8 @@ try:
     log.info("ai_agent modülü yüklendi.")
 except Exception:
     AI_AVAILABLE = False
-    log.warning("ai_agent modülü bulunamadı. Mock kural motoru kullanılacak.")
+    log.warning("ai_agent modülü yok. AI analizi devre dışı; basit kural/eşik motoru "
+                "kullanılacak (sonuçlar 'source: heuristic' olarak işaretlenir).")
 
 try:
     import system_monitor as _sysmon
@@ -144,8 +145,12 @@ def analyze_resources() -> dict:
             recs = _parse_json_response(raw) or []
             if not isinstance(recs, list):
                 recs = []
+            source = "ai"
         else:
-            # Mock kural motoru
+            # AI yok — gerçek metrik eşiklerine dayalı basit kural motoru.
+            # Bu sahte "AI analizi" DEĞİL; ölçülen CPU/RAM değerlerinden
+            # deterministik üretilir ve source=heuristic ile işaretlenir.
+            source = "heuristic"
             recs = []
             try:
                 data = json.loads(ctx)
@@ -167,9 +172,14 @@ def analyze_resources() -> dict:
                         "action": "Gereksiz VM'leri durdurun veya bellek balon sürücüsü kullanın.",
                     })
             except Exception as e:
-                log.debug("Mock analiz hatası: %s", e)
+                log.debug("Heuristic analiz hatası: %s", e)
 
-        result = {"recommendations": recs, "analyzed_at": ts}
+        result = {
+            "recommendations": recs,
+            "analyzed_at": ts,
+            "ai_available": AI_AVAILABLE,
+            "source": source,
+        }
 
         _ensure_dir(RECS_FILE)
         with _lock:
@@ -225,11 +235,16 @@ def suggest_vm_sizing(vm_id: str) -> dict:
             )
             raw = _ai_query(prompt)
             suggestion = _parse_json_response(raw) or {}
+            source = "ai"
         else:
+            # AI yok — öneri üretemeyiz. Mevcut değerleri aynen döneriz,
+            # sahte "optimal boyut" tahmini üretmeyiz.
+            source = "heuristic"
             suggestion = {
                 "suggested_vcpus": current.get("vcpus", 2),
                 "suggested_memory_mb": (current.get("memory_kb", 2097152) // 1024),
-                "reason": "AI mevcut değil. Mevcut değerler korundu.",
+                "reason": "AI yok — boyutlandırma önerisi üretilemedi; mevcut "
+                          "değerler korundu.",
             }
 
         return {
@@ -238,6 +253,8 @@ def suggest_vm_sizing(vm_id: str) -> dict:
             "suggested_vcpus": suggestion.get("suggested_vcpus"),
             "suggested_memory_mb": suggestion.get("suggested_memory_mb"),
             "reason": suggestion.get("reason", ""),
+            "ai_available": AI_AVAILABLE,
+            "source": source,
         }
     except Exception as e:
         log.error("suggest_vm_sizing hatası: %s", e)
@@ -263,8 +280,11 @@ def predict_capacity(days: int = 30) -> dict:
             )
             raw = _ai_query(prompt)
             prediction = _parse_json_response(raw) or {}
+            source = "ai"
         else:
-            # Basit lineer tahmin
+            # AI yok — gerçek trend verisinden basit lineer ekstrapolasyon.
+            # Sahte AI tahmini değil; source=heuristic ile işaretlenir.
+            source = "heuristic"
             try:
                 cpu_vals = trend_data.get("cpu", [])
                 mem_vals = trend_data.get("mem", [])
@@ -282,7 +302,7 @@ def predict_capacity(days: int = 30) -> dict:
                 "predicted_cpu_pct": pred_cpu,
                 "predicted_mem_pct": pred_mem,
                 "days_until_full": days_until,
-                "recommendation": "AI mevcut değil. Basit tahmin kullanıldı.",
+                "recommendation": "AI yok — basit lineer tahmin kullanıldı.",
             }
 
         return {
@@ -291,6 +311,8 @@ def predict_capacity(days: int = 30) -> dict:
             "predicted_mem_pct": prediction.get("predicted_mem_pct"),
             "days_until_full": prediction.get("days_until_full"),
             "recommendation": prediction.get("recommendation", ""),
+            "ai_available": AI_AVAILABLE,
+            "source": "ai" if (AI_AVAILABLE and trend_data) else "heuristic",
         }
     except Exception as e:
         log.error("predict_capacity hatası: %s", e)
@@ -311,8 +333,9 @@ def process_natural_language(command: str, username: str = "admin") -> dict:
             )
             raw = _ai_query(prompt)
             parsed = _parse_json_response(raw) or {}
+            parsed.setdefault("source", "ai")
         else:
-            # Basit anahtar kelime eşleme
+            # AI yok — basit anahtar kelime eşleme (sınırlı; AI değil).
             cmd_lower = command.lower()
             if any(w in cmd_lower for w in ["başlat", "start", "aç"]):
                 parsed = {
@@ -340,9 +363,12 @@ def process_natural_language(command: str, username: str = "admin") -> dict:
                     "action": "unknown",
                     "params": {},
                     "confirmation_required": True,
-                    "human_response": "Komut anlaşılamadı. Lütfen daha açık bir ifade kullanın.",
+                    "human_response": "AI yok — komut anahtar kelimeyle eşleşmedi. "
+                                      "Lütfen daha açık bir ifade kullanın.",
                 }
+            parsed["source"] = "heuristic"
 
+        parsed["ai_available"] = AI_AVAILABLE
         result = {}
         if not parsed.get("confirmation_required", True):
             result = execute_nl_action(parsed.get("action", "unknown"), parsed.get("params", {}))

@@ -1,10 +1,12 @@
 """OXware ↔ KubeVirt Bridge (v2.9).
 
-Translates KubeVirt VirtualMachine CRs into native OXware VM definitions
-so a single OXware cluster can serve as the hypervisor backing for a
-KubeVirt-managed Kubernetes cluster. Watches a kubeconfig-supplied
-cluster for VirtualMachine and VirtualMachineInstance objects and
-reconciles them against `vm_manager`.
+Registers KubeVirt clusters (by kubeconfig) and translates KubeVirt
+VirtualMachineInstance specs into native OXware VM definitions.
+
+SCOPE (honest): registration + VMI→OXware spec translation are implemented.
+A live in-cluster watch/reconcile loop is NOT yet implemented — applying the
+translated spec is driven externally (operator/CI calls vm_manager). A
+continuous reconciler is on the roadmap.
 
 State: /var/lib/oxware/kubevirt_links.json
 """

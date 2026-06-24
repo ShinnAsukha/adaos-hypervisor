@@ -39,18 +39,31 @@ def _capture_via_virsh(vm_name: str, out_path: Path) -> bool:
         if r.returncode != 0 or not tmp_ppm.exists():
             log.debug("virsh screenshot başarısız (%s): %s", vm_name, r.stderr.strip())
             return False
-        # PPM → PNG (küçült)
-        png_out = subprocess.run(
-            ["convert", str(tmp_ppm), "-resize", "320x180", "-quality", "70", str(out_path)],
-            capture_output=True, timeout=10
-        )
+        # PPM → PNG (küçült) — Pillow ile, ImageMagick `convert` sistem
+        # paketine bağımlılık yok. virsh bazen PPM yerine başka format da
+        # dökebilir; PIL formatı kendi tespit eder.
         try:
-            tmp_ppm.unlink()
-        except Exception:
-            pass
+            from PIL import Image
+        except Exception as e:
+            log.warning("Pillow yok — thumbnail küçültülemez (pip install Pillow): %s", e)
+            try:
+                tmp_ppm.unlink()
+            except Exception:
+                pass
+            return False
+        try:
+            with Image.open(tmp_ppm) as im:
+                im = im.convert("RGB")
+                im.thumbnail((320, 180))
+                im.save(out_path, format="PNG", optimize=True)
+        finally:
+            try:
+                tmp_ppm.unlink()
+            except Exception:
+                pass
         return out_path.exists()
     except FileNotFoundError as e:
-        log.warning("Gerekli komut bulunamadı (virsh veya convert): %s", e)
+        log.warning("virsh bulunamadı: %s", e)
         return False
     except Exception as e:
         log.warning("Thumbnail capture hatası %s: %s", vm_name, e)
