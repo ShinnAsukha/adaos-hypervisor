@@ -1455,6 +1455,84 @@ def set_watchdog(vm_id, action="reset"):
         conn.close()
 
 
+# ── virtiofs shared folders (host dir → guest) ────────────────────────────────
+import re as _re_vfs
+_VFS_TAG_RE = _re_vfs.compile(r"^[a-zA-Z0-9_-]{1,36}$")
+
+
+def list_virtiofs(vm_id):
+    import xml.etree.ElementTree as _ET
+    conn = _connect()
+    try:
+        dom = _lookup(conn, vm_id)
+        root = _ET.fromstring(dom.XMLDesc())
+        out = []
+        for fs in root.findall(".//devices/filesystem"):
+            drv = fs.find("driver")
+            if drv is None or drv.get("type") != "virtiofs":
+                continue
+            src = fs.find("source")
+            tgt = fs.find("target")
+            out.append({"source": (src.get("dir") if src is not None else ""),
+                        "tag": (tgt.get("dir") if tgt is not None else "")})
+        return {"ok": True, "shares": out}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:200]}
+    finally:
+        conn.close()
+
+
+def add_virtiofs(vm_id, host_path, tag):
+    """Attach a virtiofs share (config scope). The guest mounts it with
+    `mount -t virtiofs <tag> /mnt`. Requires shared-memory backing on the VM;
+    if absent libvirt errors and we surface the guidance."""
+    if not _VFS_TAG_RE.match(tag or ""):
+        return {"ok": False, "error": "geçersiz etiket (a-z0-9_-, ≤36)"}
+    if not host_path or not str(host_path).startswith("/"):
+        return {"ok": False, "error": "host yolu mutlak olmalı (/...)"}
+    import html as _html
+    sp = _html.escape(str(host_path), quote=True)
+    xml = (f"<filesystem type='mount' accessmode='passthrough'>"
+           f"<driver type='virtiofs'/><source dir='{sp}'/>"
+           f"<target dir='{_html.escape(tag, quote=True)}'/></filesystem>")
+    conn = _connect()
+    try:
+        dom = _lookup(conn, vm_id)
+        try:
+            dom.attachDeviceFlags(xml, libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+        except libvirt.libvirtError as e:
+            return {"ok": False, "error": f"{str(e)[:200]} — VM paylaşımlı bellek "
+                    "(memfd/shared) ile oluşturulmuş olmalı."}
+        return {"ok": True, "tag": tag, "source": str(host_path),
+                "note": "Eklendi (yeniden başlatınca aktif). Guest'te: "
+                        f"mount -t virtiofs {tag} /mnt"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:300]}
+    finally:
+        conn.close()
+
+
+def remove_virtiofs(vm_id, tag):
+    if not _VFS_TAG_RE.match(tag or ""):
+        return {"ok": False, "error": "geçersiz etiket"}
+    import xml.etree.ElementTree as _ET
+    conn = _connect()
+    try:
+        dom = _lookup(conn, vm_id)
+        root = _ET.fromstring(dom.XMLDesc())
+        for fs in root.findall(".//devices/filesystem"):
+            tgt = fs.find("target")
+            if tgt is not None and tgt.get("dir") == tag:
+                dom.detachDeviceFlags(_ET.tostring(fs, encoding="unicode"),
+                                      libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+                return {"ok": True, "tag": tag}
+        return {"ok": False, "error": "paylaşım bulunamadı"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:200]}
+    finally:
+        conn.close()
+
+
 def stop_vm(vm_id, force=False):
     conn = _connect()
     try:

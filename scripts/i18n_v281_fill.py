@@ -205,6 +205,19 @@ ROWS = [
  # v2.8.1 — hibernate / watchdog
  ('Durum kaydediliyor...', 'Saving state...', 'Guardando estado...', 'Status wird gespeichert...', '正在保存状态……', 'Enregistrement de l\'état...'),
  ('Durum kaydedildi (hibernate). Başlatınca devam eder.', 'State saved (hibernate). It resumes on start.', 'Estado guardado (hibernación). Se reanuda al iniciar.', 'Status gespeichert (Hibernate). Setzt beim Start fort.', '状态已保存（休眠）。启动时恢复。', 'État enregistré (hibernation). Reprend au démarrage.'),
+ # v2.8.1 — resize wizard / guest files / virtiofs
+ ('Canlı Boyutlandır:', 'Live Resize:', 'Redimensionar en vivo:', 'Live-Größenänderung:', '实时调整大小：', 'Redimensionnement à chaud :'),
+ ("Host klasörünü VM'e virtiofs ile paylaş. VM paylaşımlı bellek (memfd/shared) ile oluşturulmuş olmalı. Guest'te:", 'Share a host folder into the VM via virtiofs. The VM must be created with shared memory (memfd/shared). In the guest:', 'Comparte una carpeta del host en la VM mediante virtiofs. La VM debe crearse con memoria compartida (memfd/shared). En el guest:', 'Teile einen Host-Ordner per virtiofs in die VM. Die VM muss mit Shared Memory (memfd/shared) erstellt sein. Im Gast:', '通过 virtiofs 将主机文件夹共享到虚拟机。虚拟机必须以共享内存（memfd/shared）创建。在客户机中：', 'Partagez un dossier hôte dans la VM via virtiofs. La VM doit être créée avec mémoire partagée (memfd/shared). Dans l\'invité :'),
+ ('Paylaşılan Klasörler:', 'Shared Folders:', 'Carpetas compartidas:', 'Geteilte Ordner:', '共享文件夹：', 'Dossiers partagés :'),
+ ('RAM MB (yeni toplam)', 'RAM MB (new total)', 'RAM MB (nuevo total)', 'RAM MB (neuer Gesamtwert)', '内存 MB（新总量）', 'RAM Mo (nouveau total)'),
+ ('Yeni boyut GB', 'New size GB', 'Nuevo tamaño GB', 'Neue Größe GB', '新大小 GB', 'Nouvelle taille Go'),
+ ('vCPU (yeni toplam)', 'vCPU (new total)', 'vCPU (nuevo total)', 'vCPU (neuer Gesamtwert)', 'vCPU（新总量）', 'vCPU (nouveau total)'),
+ ('Çalışan VM\'e canlı vCPU/RAM ekle, diski büyüt. Küçültme desteklenmez. Guest tarafında hot-plug desteği gerekir.', 'Live-add vCPU/RAM and grow the disk on a running VM. Shrinking is not supported. Requires guest-side hot-plug support.', 'Añade vCPU/RAM en vivo y amplía el disco en una VM en ejecución. No se admite reducir. Requiere soporte de hot-plug en el guest.', 'vCPU/RAM live hinzufügen und Datenträger einer laufenden VM vergrößern. Verkleinern wird nicht unterstützt. Erfordert Hot-Plug-Unterstützung im Gast.', '为运行中的虚拟机实时添加 vCPU/RAM 并扩展磁盘。不支持缩小。需要客户机端 hot-plug 支持。', 'Ajoutez vCPU/RAM à chaud et agrandissez le disque d\'une VM en marche. La réduction n\'est pas prise en charge. Nécessite la prise en charge du hot-plug côté invité.'),
+ ('Üst klasör', 'Parent folder', 'Carpeta superior', 'Übergeordneter Ordner', '上级文件夹', 'Dossier parent'),
+ ('Boyutlandırma uygulandı', 'Resize applied', 'Redimensionamiento aplicado', 'Größenänderung angewendet', '调整大小已应用', 'Redimensionnement appliqué'),
+ ('Konsolidasyon başladı (sürebilir)...', 'Consolidation started (may take a while)...', 'Consolidación iniciada (puede tardar)...', 'Konsolidierung gestartet (kann dauern)...', '合并已开始（可能需要一段时间）……', 'Consolidation démarrée (peut prendre du temps)...'),
+ ('Okunamadı', 'Could not read', 'No se pudo leer', 'Konnte nicht gelesen werden', '无法读取', 'Lecture impossible'),
+ ('Paylaşım silindi', 'Share removed', 'Recurso compartido eliminado', 'Freigabe entfernt', '共享已删除', 'Partage supprimé'),
 ]
 
 LANG_IDX = {"en": 1, "es": 2, "de": 3, "zh": 4, "fr": 5}

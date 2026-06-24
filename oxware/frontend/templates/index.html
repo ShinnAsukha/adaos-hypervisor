@@ -9395,6 +9395,55 @@ function clearAppInstall() {
   </div>
 </div>
 
+<!-- ══════════════════════ RESIZE WIZARD MODAL ══════════════════════ -->
+<div class="modal-overlay" id="modal-resize-wiz">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header"><h2><i class="fa-solid fa-up-right-and-down-left-from-center" style="margin-right:6px;color:#06b6d4"></i> Canlı Boyutlandır: <span id="rw-title"></span></h2><button class="modal-close" onclick="closeModal('modal-resize-wiz')"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="rw-vmid"><input type="hidden" id="rw-vmname">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Çalışan VM'e canlı vCPU/RAM ekle, diski büyüt. Küçültme desteklenmez. Guest tarafında hot-plug desteği gerekir.</div>
+      <div class="form-row"><label>vCPU (yeni toplam)</label><input id="rw-vcpu" type="number" min="1"></div>
+      <div class="form-row"><label>RAM MB (yeni toplam)</label><input id="rw-ram" type="number" min="256"></div>
+      <div style="display:flex;gap:8px"><div class="form-row" style="flex:1"><label>Disk hedef</label><input id="rw-disk" value="vda"></div><div class="form-row" style="flex:1"><label>Yeni boyut GB</label><input id="rw-disksize" type="number" min="1"></div></div>
+      <div id="rw-result" style="font-size:12px;margin-top:6px"></div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-resize-wiz')">İptal</button><button class="btn primary" onclick="resizeWizApply()"><i class="fa-solid fa-check"></i> Uygula</button></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ GUEST FILES MODAL ══════════════════════ -->
+<div class="modal-overlay" id="modal-guest-files">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-header"><h2><i class="fa-solid fa-folder-tree" style="margin-right:6px;color:#10b981"></i> Dosyalar: <span id="gf-title"></span></h2><button class="modal-close" onclick="closeModal('modal-guest-files')"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="gf-vmid">
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+        <button class="btn sm" onclick="gfUp()" title="Üst klasör"><i class="fa-solid fa-arrow-up"></i></button>
+        <input id="gf-path" class="form-control" style="flex:1" value="/" onkeydown="if(event.key==='Enter')gfGo()">
+        <button class="btn sm" onclick="gfGo()">Git</button>
+      </div>
+      <div id="gf-body" style="max-height:55vh;overflow:auto"><div class="text-muted" style="font-size:12px">Yükleniyor...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ VIRTIOFS MODAL ══════════════════════ -->
+<div class="modal-overlay" id="modal-virtiofs">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header"><h2><i class="fa-solid fa-folder-open" style="margin-right:6px;color:#a78bfa"></i> Paylaşılan Klasörler: <span id="vf-title"></span></h2><button class="modal-close" onclick="closeModal('modal-virtiofs')"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="vf-vmid">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Host klasörünü VM'e virtiofs ile paylaş. VM paylaşımlı bellek (memfd/shared) ile oluşturulmuş olmalı. Guest'te: <code>mount -t virtiofs &lt;etiket&gt; /mnt</code></div>
+      <div style="display:flex;gap:6px;align-items:flex-end;margin-bottom:8px">
+        <div class="form-row" style="flex:1;margin:0"><label>Host yolu</label><input id="vf-path" placeholder="/srv/share"></div>
+        <div class="form-row" style="margin:0"><label>Etiket</label><input id="vf-tag" placeholder="share1" style="width:110px"></div>
+        <button class="btn-primary" onclick="virtiofsAdd()" style="font-size:12px">+ Ekle</button>
+      </div>
+      <div id="vf-list"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════ FLIGHT RECORDER MODAL ══════════════════════ -->
 <div class="modal-overlay" id="modal-flightrec">
   <div class="modal" style="max-width:720px">
@@ -10842,6 +10891,7 @@ const PAGE_STRINGS = {
     'Boylam':'Longitude',
     'Boyut':'Size',
     'Boyutlandırma':'Sizing',
+    'Boyutlandırma uygulandı':'Resize applied',
     'Boş':'Free',
     'Boş bırakırsan SSH key ile giriş':'Boş bırakırsan SSH key ile giriş',
     'Boş disk ile başlamak için seçme':'Boş disk ile başlamak için seçme',
@@ -10941,6 +10991,7 @@ const PAGE_STRINGS = {
     'CSV İndir':'Download CSV',
     'Cache Sürümü Arttır':'Cache Sürümü Arttır',
     'Canlı':'Live',
+    'Canlı Boyutlandır:':'Live Resize:',
     'Canlı Disk Taşıma':'Live Disk Migration',
     'Canlı Geçiş (Live Migration)':'Canlı Geçiş (Live Migration)',
     'Canlı Isı Haritası':'Live Heat Map',
@@ -11393,6 +11444,7 @@ const PAGE_STRINGS = {
     'Host başlayınca VM otomatik başlasın':'Host başlayınca VM otomatik başlasın',
     'Host cihazını doğrudan VM\'e aktar. VM kapalıyken daha güvenlidir.':'Pass host device directly to VM. Safer when VM is off.',
     'Host eklendi':'Host added',
+    'Host klasörünü VM\'e virtiofs ile paylaş. VM paylaşımlı bellek (memfd/shared) ile oluşturulmuş olmalı. Guest\'te:':'Share a host folder into the VM via virtiofs. The VM must be created with shared memory (memfd/shared). In the guest:',
     'Host seçin':'Select Host',
     'Host ve kullanıcı gerekli':'Host and user are required',
     'Host yapılandırmasını CIS Ubuntu, NIST 800-53, PCI-DSS, HIPAA, ISO 27001 standartlarına göre otomatik denetler. Pass/Fail raporu + düzeltme önerisi.':'Host yapılandırmasını CIS Ubuntu, NIST 800-53, PCI-DSS, HIPAA, ISO 27001 standartlarına göre otomatik denetler. Pass/Fail raporu + düzeltme önerisi.',
@@ -11598,6 +11650,7 @@ const PAGE_STRINGS = {
     'Konsol hatası:':'Konsol hatası:',
     'Konsol hatası: ':'Konsol hatası: ',
     'Konsol türünü seçin ve bağlanın.':'Konsol türünü seçin ve bağlanın.',
+    'Konsolidasyon başladı (sürebilir)...':'Consolidation started (may take a while)...',
     'Kontrol Aralığı (dk)':'Check Interval (min)',
     'Kontrol Et':'Check',
     'Konum':'Location',
@@ -11828,6 +11881,7 @@ const PAGE_STRINGS = {
     'OXware vCenter geliştirme aşamasındadır':'OXware vCenter geliştirme aşamasındadır',
     'OXware İzleyici':'OXware İzleyici',
     'Okta, Azure AD, Google Workspace, Keycloak gibi IdP\'lerle tek oturum açma. Kullanıcılar şirket hesabıyla giriş yapar — OXware\'de ayrı hesap gerekmez.':'Okta, Azure AD, Google Workspace, Keycloak gibi IdP\'lerle tek oturum açma. Kullanıcılar şirket hesabıyla giriş yapar — OXware\'de ayrı hesap gerekmez.',
+    'Okunamadı':'Could not read',
     'Olay':'Event',
     'Olay Takibi':'Olay Takibi',
     'Olay Tipleri':'Olay Tipleri',
@@ -11904,6 +11958,8 @@ const PAGE_STRINGS = {
     'Pasif':'Inactive',
     'Passthrough (Fiziksel Interface)':'Passthrough (Fiziksel Interface)',
     'Passthrough modunda libvirt DHCP çalışmaz — VM\'lere statik IP veya sağlayıcı DHCP\'si kullanılır. Sağlayıcın ek MAC adresi izin vermesi gerekir.':'Passthrough modunda libvirt DHCP çalışmaz — VM\'lere statik IP veya sağlayıcı DHCP\'si kullanılır. Sağlayıcın ek MAC adresi izin vermesi gerekir.',
+    'Paylaşılan Klasörler:':'Shared Folders:',
+    'Paylaşım silindi':'Share removed',
     'Paylaşımlı CPU':'Paylaşımlı CPU',
     'Peer (İstemci) Ekleme':'Peer (İstemci) Ekleme',
     'Peer Adı':'Peer Name',
@@ -11981,6 +12037,7 @@ const PAGE_STRINGS = {
     'RAM %':'RAM %',
     'RAM Aralığı':'RAM Range',
     'RAM Grafiği':'RAM Graph',
+    'RAM MB (yeni toplam)':'RAM MB (new total)',
     'RAM MB kotası:':'RAM MB kotası:',
     'RAM değiştirilemedi:':'RAM değiştirilemedi:',
     'RAM değiştirilemedi: ':'RAM değiştirilemedi: ',
@@ -12595,6 +12652,7 @@ const PAGE_STRINGS = {
     'Yeni Yedekleme Diski Oluştur':'Create New Backup Disk',
     'Yeni Zamanlama':'New Schedule',
     'Yeni Zincir':'Yeni Zincir',
+    'Yeni boyut GB':'New size GB',
     'Yeni boyut girin':'Enter new size',
     'Yeni pencerede açılır':'Yeni pencerede açılır',
     'Yeni İçerik Ekle':'Yeni İçerik Ekle',
@@ -12759,6 +12817,7 @@ const PAGE_STRINGS = {
     'vApp Adı':'vApp Name',
     'vApp adı gerekli':'vApp name required',
     'vApp — VM Grupları':'vApp — VM Groups',
+    'vCPU (yeni toplam)':'vCPU (new total)',
     'vCPU Aralığı':'vCPU Range',
     'vCPU Sayısı':'vCPU Count',
     'vCPU değiştirilemedi:':'vCPU değiştirilemedi:',
@@ -12789,6 +12848,7 @@ const PAGE_STRINGS = {
     '· Dışarıdan erişim için sunucu portunu VM portuna yönlendir.':'· Dışarıdan erişim için sunucu portunu VM portuna yönlendir.',
     'ÇALIŞIYOR':'ÇALIŞIYOR',
     'Çalışan VM':'Running VM',
+    'Çalışan VM\'e canlı vCPU/RAM ekle, diski büyüt. Küçültme desteklenmez. Guest tarafında hot-plug desteği gerekir.':'Live-add vCPU/RAM and grow the disk on a running VM. Shrinking is not supported. Requires guest-side hot-plug support.',
     'Çalışan VM\'in RAM\'ini tek tıkla dump alır + ağ trafiğini pcap olarak kaydeder. Güvenlik olayı sonrası forensic analiz için.':'Çalışan VM\'in RAM\'ini tek tıkla dump alır + ağ trafiğini pcap olarak kaydeder. Güvenlik olayı sonrası forensic analiz için.',
     'Çalıştır':'Run',
     'Çalıştırma Geçmişi (son 100)':'Çalıştırma Geçmişi (son 100)',
@@ -12837,6 +12897,7 @@ const PAGE_STRINGS = {
     'Üret':'Üret',
     'Üretim VM\'leri':'Üretim VM\'leri',
     'Ürününüzü bu sunucuya bağlayın; CPU/RAM/Disk seçeneklerini girin.':'Connect your product to this server; enter CPU/RAM/Disk options.',
+    'Üst klasör':'Parent folder',
     'Üye':'Member',
     'Üye Ekle':'Add Member',
     'Üye URL (örn: https://node2.example.com):':'Üye URL (örn: https://node2.example.com):',
@@ -13515,6 +13576,7 @@ const PAGE_STRINGS = {
     'Boylam':'Longitud',
     'Boyut':'Tamaño',
     'Boyutlandırma':'Dimensionamiento',
+    'Boyutlandırma uygulandı':'Redimensionamiento aplicado',
     'Boş':'Libre',
     'Boş bırakırsan SSH key ile giriş':'Boş bırakırsan SSH key ile giriş',
     'Boş disk ile başlamak için seçme':'Boş disk ile başlamak için seçme',
@@ -13614,6 +13676,7 @@ const PAGE_STRINGS = {
     'CSV İndir':'Download CSV',
     'Cache Sürümü Arttır':'Cache Sürümü Arttır',
     'Canlı':'En Vivo',
+    'Canlı Boyutlandır:':'Redimensionar en vivo:',
     'Canlı Disk Taşıma':'Live Disk Migration',
     'Canlı Geçiş (Live Migration)':'Canlı Geçiş (Live Migration)',
     'Canlı Isı Haritası':'Mapa de calor en vivo',
@@ -14071,6 +14134,7 @@ const PAGE_STRINGS = {
     'Host başlayınca VM otomatik başlasın':'Host başlayınca VM otomatik başlasın',
     'Host cihazını doğrudan VM\'e aktar. VM kapalıyken daha güvenlidir.':'Pass host device directly to VM. Safer when VM is off.',
     'Host eklendi':'Host añadido',
+    'Host klasörünü VM\'e virtiofs ile paylaş. VM paylaşımlı bellek (memfd/shared) ile oluşturulmuş olmalı. Guest\'te:':'Comparte una carpeta del host en la VM mediante virtiofs. La VM debe crearse con memoria compartida (memfd/shared). En el guest:',
     'Host seçin':'Select Host',
     'Host ve kullanıcı gerekli':'Host y usuario son obligatorios',
     'Host yapılandırmasını CIS Ubuntu, NIST 800-53, PCI-DSS, HIPAA, ISO 27001 standartlarına göre otomatik denetler. Pass/Fail raporu + düzeltme önerisi.':'Host yapılandırmasını CIS Ubuntu, NIST 800-53, PCI-DSS, HIPAA, ISO 27001 standartlarına göre otomatik denetler. Pass/Fail raporu + düzeltme önerisi.',
@@ -14277,6 +14341,7 @@ const PAGE_STRINGS = {
     'Konsol hatası:':'Konsol hatası:',
     'Konsol hatası: ':'Konsol hatası: ',
     'Konsol türünü seçin ve bağlanın.':'Konsol türünü seçin ve bağlanın.',
+    'Konsolidasyon başladı (sürebilir)...':'Consolidación iniciada (puede tardar)...',
     'Kontrol Aralığı (dk)':'Check Interval (min)',
     'Kontrol Et':'Verificar',
     'Konum':'Ubicación',
@@ -14509,6 +14574,7 @@ const PAGE_STRINGS = {
     'OXware vCenter geliştirme aşamasındadır':'OXware vCenter geliştirme aşamasındadır',
     'OXware İzleyici':'OXware İzleyici',
     'Okta, Azure AD, Google Workspace, Keycloak gibi IdP\'lerle tek oturum açma. Kullanıcılar şirket hesabıyla giriş yapar — OXware\'de ayrı hesap gerekmez.':'Okta, Azure AD, Google Workspace, Keycloak gibi IdP\'lerle tek oturum açma. Kullanıcılar şirket hesabıyla giriş yapar — OXware\'de ayrı hesap gerekmez.',
+    'Okunamadı':'No se pudo leer',
     'Olay':'Event',
     'Olay Takibi':'Olay Takibi',
     'Olay Tipleri':'Olay Tipleri',
@@ -14586,6 +14652,8 @@ const PAGE_STRINGS = {
     'Pasif':'Inactivo',
     'Passthrough (Fiziksel Interface)':'Passthrough (Fiziksel Interface)',
     'Passthrough modunda libvirt DHCP çalışmaz — VM\'lere statik IP veya sağlayıcı DHCP\'si kullanılır. Sağlayıcın ek MAC adresi izin vermesi gerekir.':'Passthrough modunda libvirt DHCP çalışmaz — VM\'lere statik IP veya sağlayıcı DHCP\'si kullanılır. Sağlayıcın ek MAC adresi izin vermesi gerekir.',
+    'Paylaşılan Klasörler:':'Carpetas compartidas:',
+    'Paylaşım silindi':'Recurso compartido eliminado',
     'Paylaşımlı CPU':'Paylaşımlı CPU',
     'Peer (İstemci) Ekleme':'Peer (İstemci) Ekleme',
     'Peer Adı':'Nombre Peer',
@@ -14663,6 +14731,7 @@ const PAGE_STRINGS = {
     'RAM %':'RAM %',
     'RAM Aralığı':'RAM Range',
     'RAM Grafiği':'RAM Graph',
+    'RAM MB (yeni toplam)':'RAM MB (nuevo total)',
     'RAM MB kotası:':'RAM MB kotası:',
     'RAM değiştirilemedi:':'RAM değiştirilemedi:',
     'RAM değiştirilemedi: ':'RAM değiştirilemedi: ',
@@ -15286,6 +15355,7 @@ const PAGE_STRINGS = {
     'Yeni Yedekleme Diski Oluştur':'Create New Backup Disk',
     'Yeni Zamanlama':'New Schedule',
     'Yeni Zincir':'Yeni Zincir',
+    'Yeni boyut GB':'Nuevo tamaño GB',
     'Yeni boyut girin':'Ingrese nuevo tamaño',
     'Yeni pencerede açılır':'Yeni pencerede açılır',
     'Yeni İçerik Ekle':'Yeni İçerik Ekle',
@@ -15451,6 +15521,7 @@ const PAGE_STRINGS = {
     'vApp Adı':'Nombre de vApp',
     'vApp adı gerekli':'Se requiere nombre de vApp',
     'vApp — VM Grupları':'vApp — Grupos de VM',
+    'vCPU (yeni toplam)':'vCPU (nuevo total)',
     'vCPU Aralığı':'vCPU Range',
     'vCPU Sayısı':'vCPU Count',
     'vCPU değiştirilemedi:':'vCPU değiştirilemedi:',
@@ -15482,6 +15553,7 @@ const PAGE_STRINGS = {
     '· Dışarıdan erişim için sunucu portunu VM portuna yönlendir.':'· Dışarıdan erişim için sunucu portunu VM portuna yönlendir.',
     'ÇALIŞIYOR':'ÇALIŞIYOR',
     'Çalışan VM':'VMs en Ejecución',
+    'Çalışan VM\'e canlı vCPU/RAM ekle, diski büyüt. Küçültme desteklenmez. Guest tarafında hot-plug desteği gerekir.':'Añade vCPU/RAM en vivo y amplía el disco en una VM en ejecución. No se admite reducir. Requiere soporte de hot-plug en el guest.',
     'Çalışan VM\'in RAM\'ini tek tıkla dump alır + ağ trafiğini pcap olarak kaydeder. Güvenlik olayı sonrası forensic analiz için.':'Çalışan VM\'in RAM\'ini tek tıkla dump alır + ağ trafiğini pcap olarak kaydeder. Güvenlik olayı sonrası forensic analiz için.',
     'Çalıştır':'Run',
     'Çalıştırma Geçmişi (son 100)':'Çalıştırma Geçmişi (son 100)',
@@ -15531,6 +15603,7 @@ const PAGE_STRINGS = {
     'Üret':'Üret',
     'Üretim VM\'leri':'Üretim VM\'leri',
     'Ürününüzü bu sunucuya bağlayın; CPU/RAM/Disk seçeneklerini girin.':'Connect your product to this server; enter CPU/RAM/Disk options.',
+    'Üst klasör':'Carpeta superior',
     'Üye':'Member',
     'Üye Ekle':'Agregar miembro',
     'Üye URL (örn: https://node2.example.com):':'Üye URL (örn: https://node2.example.com):',
@@ -16206,6 +16279,7 @@ const PAGE_STRINGS = {
     'Boylam':'Längengrad',
     'Boyut':'Größe',
     'Boyutlandırma':'Dimensionierung',
+    'Boyutlandırma uygulandı':'Größenänderung angewendet',
     'Boş':'Frei',
     'Boş bırakırsan SSH key ile giriş':'Boş bırakırsan SSH key ile giriş',
     'Boş disk ile başlamak için seçme':'Boş disk ile başlamak için seçme',
@@ -16305,6 +16379,7 @@ const PAGE_STRINGS = {
     'CSV İndir':'Download CSV',
     'Cache Sürümü Arttır':'Cache Sürümü Arttır',
     'Canlı':'Live',
+    'Canlı Boyutlandır:':'Live-Größenänderung:',
     'Canlı Disk Taşıma':'Live Disk Migration',
     'Canlı Geçiş (Live Migration)':'Canlı Geçiş (Live Migration)',
     'Canlı Isı Haritası':'Live-Heatmap',
@@ -16762,6 +16837,7 @@ const PAGE_STRINGS = {
     'Host başlayınca VM otomatik başlasın':'Host başlayınca VM otomatik başlasın',
     'Host cihazını doğrudan VM\'e aktar. VM kapalıyken daha güvenlidir.':'Pass host device directly to VM. Safer when VM is off.',
     'Host eklendi':'Host hinzugefügt',
+    'Host klasörünü VM\'e virtiofs ile paylaş. VM paylaşımlı bellek (memfd/shared) ile oluşturulmuş olmalı. Guest\'te:':'Teile einen Host-Ordner per virtiofs in die VM. Die VM muss mit Shared Memory (memfd/shared) erstellt sein. Im Gast:',
     'Host seçin':'Select Host',
     'Host ve kullanıcı gerekli':'Host und Benutzer sind erforderlich',
     'Host yapılandırmasını CIS Ubuntu, NIST 800-53, PCI-DSS, HIPAA, ISO 27001 standartlarına göre otomatik denetler. Pass/Fail raporu + düzeltme önerisi.':'Host yapılandırmasını CIS Ubuntu, NIST 800-53, PCI-DSS, HIPAA, ISO 27001 standartlarına göre otomatik denetler. Pass/Fail raporu + düzeltme önerisi.',
@@ -16968,6 +17044,7 @@ const PAGE_STRINGS = {
     'Konsol hatası:':'Konsol hatası:',
     'Konsol hatası: ':'Konsol hatası: ',
     'Konsol türünü seçin ve bağlanın.':'Konsol türünü seçin ve bağlanın.',
+    'Konsolidasyon başladı (sürebilir)...':'Konsolidierung gestartet (kann dauern)...',
     'Kontrol Aralığı (dk)':'Check Interval (min)',
     'Kontrol Et':'Überprüfen',
     'Konum':'Standort',
@@ -17200,6 +17277,7 @@ const PAGE_STRINGS = {
     'OXware vCenter geliştirme aşamasındadır':'OXware vCenter geliştirme aşamasındadır',
     'OXware İzleyici':'OXware İzleyici',
     'Okta, Azure AD, Google Workspace, Keycloak gibi IdP\'lerle tek oturum açma. Kullanıcılar şirket hesabıyla giriş yapar — OXware\'de ayrı hesap gerekmez.':'Okta, Azure AD, Google Workspace, Keycloak gibi IdP\'lerle tek oturum açma. Kullanıcılar şirket hesabıyla giriş yapar — OXware\'de ayrı hesap gerekmez.',
+    'Okunamadı':'Konnte nicht gelesen werden',
     'Olay':'Event',
     'Olay Takibi':'Olay Takibi',
     'Olay Tipleri':'Olay Tipleri',
@@ -17277,6 +17355,8 @@ const PAGE_STRINGS = {
     'Pasif':'Inaktiv',
     'Passthrough (Fiziksel Interface)':'Passthrough (Fiziksel Interface)',
     'Passthrough modunda libvirt DHCP çalışmaz — VM\'lere statik IP veya sağlayıcı DHCP\'si kullanılır. Sağlayıcın ek MAC adresi izin vermesi gerekir.':'Passthrough modunda libvirt DHCP çalışmaz — VM\'lere statik IP veya sağlayıcı DHCP\'si kullanılır. Sağlayıcın ek MAC adresi izin vermesi gerekir.',
+    'Paylaşılan Klasörler:':'Geteilte Ordner:',
+    'Paylaşım silindi':'Freigabe entfernt',
     'Paylaşımlı CPU':'Paylaşımlı CPU',
     'Peer (İstemci) Ekleme':'Peer (İstemci) Ekleme',
     'Peer Adı':'Peer-Name',
@@ -17354,6 +17434,7 @@ const PAGE_STRINGS = {
     'RAM %':'RAM %',
     'RAM Aralığı':'RAM Range',
     'RAM Grafiği':'RAM Graph',
+    'RAM MB (yeni toplam)':'RAM MB (neuer Gesamtwert)',
     'RAM MB kotası:':'RAM MB kotası:',
     'RAM değiştirilemedi:':'RAM değiştirilemedi:',
     'RAM değiştirilemedi: ':'RAM değiştirilemedi: ',
@@ -17977,6 +18058,7 @@ const PAGE_STRINGS = {
     'Yeni Yedekleme Diski Oluştur':'Create New Backup Disk',
     'Yeni Zamanlama':'New Schedule',
     'Yeni Zincir':'Yeni Zincir',
+    'Yeni boyut GB':'Neue Größe GB',
     'Yeni boyut girin':'Neue Größe eingeben',
     'Yeni pencerede açılır':'Yeni pencerede açılır',
     'Yeni İçerik Ekle':'Yeni İçerik Ekle',
@@ -18142,6 +18224,7 @@ const PAGE_STRINGS = {
     'vApp Adı':'vApp-Name',
     'vApp adı gerekli':'vApp-Name erforderlich',
     'vApp — VM Grupları':'vApp — VM-Gruppen',
+    'vCPU (yeni toplam)':'vCPU (neuer Gesamtwert)',
     'vCPU Aralığı':'vCPU Range',
     'vCPU Sayısı':'vCPU Count',
     'vCPU değiştirilemedi:':'vCPU değiştirilemedi:',
@@ -18173,6 +18256,7 @@ const PAGE_STRINGS = {
     '· Dışarıdan erişim için sunucu portunu VM portuna yönlendir.':'· Dışarıdan erişim için sunucu portunu VM portuna yönlendir.',
     'ÇALIŞIYOR':'ÇALIŞIYOR',
     'Çalışan VM':'Laufende VMs',
+    'Çalışan VM\'e canlı vCPU/RAM ekle, diski büyüt. Küçültme desteklenmez. Guest tarafında hot-plug desteği gerekir.':'vCPU/RAM live hinzufügen und Datenträger einer laufenden VM vergrößern. Verkleinern wird nicht unterstützt. Erfordert Hot-Plug-Unterstützung im Gast.',
     'Çalışan VM\'in RAM\'ini tek tıkla dump alır + ağ trafiğini pcap olarak kaydeder. Güvenlik olayı sonrası forensic analiz için.':'Çalışan VM\'in RAM\'ini tek tıkla dump alır + ağ trafiğini pcap olarak kaydeder. Güvenlik olayı sonrası forensic analiz için.',
     'Çalıştır':'Run',
     'Çalıştırma Geçmişi (son 100)':'Çalıştırma Geçmişi (son 100)',
@@ -18221,6 +18305,7 @@ const PAGE_STRINGS = {
     'Üret':'Üret',
     'Üretim VM\'leri':'Üretim VM\'leri',
     'Ürününüzü bu sunucuya bağlayın; CPU/RAM/Disk seçeneklerini girin.':'Connect your product to this server; enter CPU/RAM/Disk options.',
+    'Üst klasör':'Übergeordneter Ordner',
     'Üye':'Member',
     'Üye Ekle':'Mitglied hinzufügen',
     'Üye URL (örn: https://node2.example.com):':'Üye URL (örn: https://node2.example.com):',
@@ -18895,6 +18980,7 @@ const PAGE_STRINGS = {
     'Boylam':'经度',
     'Boyut':'大小',
     'Boyutlandırma':'规格调整',
+    'Boyutlandırma uygulandı':'调整大小已应用',
     'Boş':'空闲',
     'Boş bırakırsan SSH key ile giriş':'Boş bırakırsan SSH key ile giriş',
     'Boş disk ile başlamak için seçme':'Boş disk ile başlamak için seçme',
@@ -18994,6 +19080,7 @@ const PAGE_STRINGS = {
     'CSV İndir':'Download CSV',
     'Cache Sürümü Arttır':'Cache Sürümü Arttır',
     'Canlı':'实时',
+    'Canlı Boyutlandır:':'实时调整大小：',
     'Canlı Disk Taşıma':'Live Disk Migration',
     'Canlı Geçiş (Live Migration)':'Canlı Geçiş (Live Migration)',
     'Canlı Isı Haritası':'实时热力图',
@@ -19451,6 +19538,7 @@ const PAGE_STRINGS = {
     'Host başlayınca VM otomatik başlasın':'Host başlayınca VM otomatik başlasın',
     'Host cihazını doğrudan VM\'e aktar. VM kapalıyken daha güvenlidir.':'Pass host device directly to VM. Safer when VM is off.',
     'Host eklendi':'主机已添加',
+    'Host klasörünü VM\'e virtiofs ile paylaş. VM paylaşımlı bellek (memfd/shared) ile oluşturulmuş olmalı. Guest\'te:':'通过 virtiofs 将主机文件夹共享到虚拟机。虚拟机必须以共享内存（memfd/shared）创建。在客户机中：',
     'Host seçin':'Select Host',
     'Host ve kullanıcı gerekli':'主机和用户为必填项',
     'Host yapılandırmasını CIS Ubuntu, NIST 800-53, PCI-DSS, HIPAA, ISO 27001 standartlarına göre otomatik denetler. Pass/Fail raporu + düzeltme önerisi.':'Host yapılandırmasını CIS Ubuntu, NIST 800-53, PCI-DSS, HIPAA, ISO 27001 standartlarına göre otomatik denetler. Pass/Fail raporu + düzeltme önerisi.',
@@ -19657,6 +19745,7 @@ const PAGE_STRINGS = {
     'Konsol hatası:':'Konsol hatası:',
     'Konsol hatası: ':'Konsol hatası: ',
     'Konsol türünü seçin ve bağlanın.':'Konsol türünü seçin ve bağlanın.',
+    'Konsolidasyon başladı (sürebilir)...':'合并已开始（可能需要一段时间）……',
     'Kontrol Aralığı (dk)':'Check Interval (min)',
     'Kontrol Et':'检查',
     'Konum':'位置',
@@ -19889,6 +19978,7 @@ const PAGE_STRINGS = {
     'OXware vCenter geliştirme aşamasındadır':'OXware vCenter geliştirme aşamasındadır',
     'OXware İzleyici':'OXware İzleyici',
     'Okta, Azure AD, Google Workspace, Keycloak gibi IdP\'lerle tek oturum açma. Kullanıcılar şirket hesabıyla giriş yapar — OXware\'de ayrı hesap gerekmez.':'Okta, Azure AD, Google Workspace, Keycloak gibi IdP\'lerle tek oturum açma. Kullanıcılar şirket hesabıyla giriş yapar — OXware\'de ayrı hesap gerekmez.',
+    'Okunamadı':'无法读取',
     'Olay':'Event',
     'Olay Takibi':'Olay Takibi',
     'Olay Tipleri':'Olay Tipleri',
@@ -19966,6 +20056,8 @@ const PAGE_STRINGS = {
     'Pasif':'非活跃',
     'Passthrough (Fiziksel Interface)':'Passthrough (Fiziksel Interface)',
     'Passthrough modunda libvirt DHCP çalışmaz — VM\'lere statik IP veya sağlayıcı DHCP\'si kullanılır. Sağlayıcın ek MAC adresi izin vermesi gerekir.':'Passthrough modunda libvirt DHCP çalışmaz — VM\'lere statik IP veya sağlayıcı DHCP\'si kullanılır. Sağlayıcın ek MAC adresi izin vermesi gerekir.',
+    'Paylaşılan Klasörler:':'共享文件夹：',
+    'Paylaşım silindi':'共享已删除',
     'Paylaşımlı CPU':'Paylaşımlı CPU',
     'Peer (İstemci) Ekleme':'Peer (İstemci) Ekleme',
     'Peer Adı':'对等体名称',
@@ -20043,6 +20135,7 @@ const PAGE_STRINGS = {
     'RAM %':'RAM %',
     'RAM Aralığı':'RAM Range',
     'RAM Grafiği':'RAM Graph',
+    'RAM MB (yeni toplam)':'内存 MB（新总量）',
     'RAM MB kotası:':'RAM MB kotası:',
     'RAM değiştirilemedi:':'RAM değiştirilemedi:',
     'RAM değiştirilemedi: ':'RAM değiştirilemedi: ',
@@ -20666,6 +20759,7 @@ const PAGE_STRINGS = {
     'Yeni Yedekleme Diski Oluştur':'Create New Backup Disk',
     'Yeni Zamanlama':'New Schedule',
     'Yeni Zincir':'Yeni Zincir',
+    'Yeni boyut GB':'新大小 GB',
     'Yeni boyut girin':'输入新大小',
     'Yeni pencerede açılır':'Yeni pencerede açılır',
     'Yeni İçerik Ekle':'Yeni İçerik Ekle',
@@ -20831,6 +20925,7 @@ const PAGE_STRINGS = {
     'vApp Adı':'vApp 名称',
     'vApp adı gerekli':'需要 vApp 名称',
     'vApp — VM Grupları':'vApp — 虚拟机组',
+    'vCPU (yeni toplam)':'vCPU（新总量）',
     'vCPU Aralığı':'vCPU Range',
     'vCPU Sayısı':'vCPU Count',
     'vCPU değiştirilemedi:':'vCPU değiştirilemedi:',
@@ -20862,6 +20957,7 @@ const PAGE_STRINGS = {
     '· Dışarıdan erişim için sunucu portunu VM portuna yönlendir.':'· Dışarıdan erişim için sunucu portunu VM portuna yönlendir.',
     'ÇALIŞIYOR':'ÇALIŞIYOR',
     'Çalışan VM':'运行中的虚拟机',
+    'Çalışan VM\'e canlı vCPU/RAM ekle, diski büyüt. Küçültme desteklenmez. Guest tarafında hot-plug desteği gerekir.':'为运行中的虚拟机实时添加 vCPU/RAM 并扩展磁盘。不支持缩小。需要客户机端 hot-plug 支持。',
     'Çalışan VM\'in RAM\'ini tek tıkla dump alır + ağ trafiğini pcap olarak kaydeder. Güvenlik olayı sonrası forensic analiz için.':'Çalışan VM\'in RAM\'ini tek tıkla dump alır + ağ trafiğini pcap olarak kaydeder. Güvenlik olayı sonrası forensic analiz için.',
     'Çalıştır':'Run',
     'Çalıştırma Geçmişi (son 100)':'Çalıştırma Geçmişi (son 100)',
@@ -20910,6 +21006,7 @@ const PAGE_STRINGS = {
     'Üret':'Üret',
     'Üretim VM\'leri':'Üretim VM\'leri',
     'Ürününüzü bu sunucuya bağlayın; CPU/RAM/Disk seçeneklerini girin.':'Connect your product to this server; enter CPU/RAM/Disk options.',
+    'Üst klasör':'上级文件夹',
     'Üye':'Member',
     'Üye Ekle':'添加成员',
     'Üye URL (örn: https://node2.example.com):':'Üye URL (örn: https://node2.example.com):',
@@ -21576,6 +21673,7 @@ const PAGE_STRINGS = {
     'Boylam':'Longitude',
     'Boyut':'Taille',
     'Boyutlandırma':'Sizing',
+    'Boyutlandırma uygulandı':'Redimensionnement appliqué',
     'Boş':'Libre',
     'Boş bırakırsan SSH key ile giriş':'Boş bırakırsan SSH key ile giriş',
     'Boş disk ile başlamak için seçme':'Boş disk ile başlamak için seçme',
@@ -21675,6 +21773,7 @@ const PAGE_STRINGS = {
     'CSV İndir':'Download CSV',
     'Cache Sürümü Arttır':'Cache Sürümü Arttır',
     'Canlı':'Live',
+    'Canlı Boyutlandır:':'Redimensionnement à chaud :',
     'Canlı Disk Taşıma':'Live Disk Migration',
     'Canlı Geçiş (Live Migration)':'Canlı Geçiş (Live Migration)',
     'Canlı Isı Haritası':'Carte thermique en direct',
@@ -22127,6 +22226,7 @@ const PAGE_STRINGS = {
     'Host başlayınca VM otomatik başlasın':'Host başlayınca VM otomatik başlasın',
     'Host cihazını doğrudan VM\'e aktar. VM kapalıyken daha güvenlidir.':'Pass host device directly to VM. Safer when VM is off.',
     'Host eklendi':'Host added',
+    'Host klasörünü VM\'e virtiofs ile paylaş. VM paylaşımlı bellek (memfd/shared) ile oluşturulmuş olmalı. Guest\'te:':'Partagez un dossier hôte dans la VM via virtiofs. La VM doit être créée avec mémoire partagée (memfd/shared). Dans l\'invité :',
     'Host seçin':'Select Host',
     'Host ve kullanıcı gerekli':'Host and user are required',
     'Host yapılandırmasını CIS Ubuntu, NIST 800-53, PCI-DSS, HIPAA, ISO 27001 standartlarına göre otomatik denetler. Pass/Fail raporu + düzeltme önerisi.':'Host yapılandırmasını CIS Ubuntu, NIST 800-53, PCI-DSS, HIPAA, ISO 27001 standartlarına göre otomatik denetler. Pass/Fail raporu + düzeltme önerisi.',
@@ -22332,6 +22432,7 @@ const PAGE_STRINGS = {
     'Konsol hatası:':'Konsol hatası:',
     'Konsol hatası: ':'Konsol hatası: ',
     'Konsol türünü seçin ve bağlanın.':'Konsol türünü seçin ve bağlanın.',
+    'Konsolidasyon başladı (sürebilir)...':'Consolidation démarrée (peut prendre du temps)...',
     'Kontrol Aralığı (dk)':'Check Interval (min)',
     'Kontrol Et':'Vérifier',
     'Konum':'Location',
@@ -22562,6 +22663,7 @@ const PAGE_STRINGS = {
     'OXware vCenter geliştirme aşamasındadır':'OXware vCenter geliştirme aşamasındadır',
     'OXware İzleyici':'OXware İzleyici',
     'Okta, Azure AD, Google Workspace, Keycloak gibi IdP\'lerle tek oturum açma. Kullanıcılar şirket hesabıyla giriş yapar — OXware\'de ayrı hesap gerekmez.':'Okta, Azure AD, Google Workspace, Keycloak gibi IdP\'lerle tek oturum açma. Kullanıcılar şirket hesabıyla giriş yapar — OXware\'de ayrı hesap gerekmez.',
+    'Okunamadı':'Lecture impossible',
     'Olay':'Event',
     'Olay Takibi':'Olay Takibi',
     'Olay Tipleri':'Olay Tipleri',
@@ -22638,6 +22740,8 @@ const PAGE_STRINGS = {
     'Pasif':'Inactif',
     'Passthrough (Fiziksel Interface)':'Passthrough (Fiziksel Interface)',
     'Passthrough modunda libvirt DHCP çalışmaz — VM\'lere statik IP veya sağlayıcı DHCP\'si kullanılır. Sağlayıcın ek MAC adresi izin vermesi gerekir.':'Passthrough modunda libvirt DHCP çalışmaz — VM\'lere statik IP veya sağlayıcı DHCP\'si kullanılır. Sağlayıcın ek MAC adresi izin vermesi gerekir.',
+    'Paylaşılan Klasörler:':'Dossiers partagés :',
+    'Paylaşım silindi':'Partage supprimé',
     'Paylaşımlı CPU':'Paylaşımlı CPU',
     'Peer (İstemci) Ekleme':'Peer (İstemci) Ekleme',
     'Peer Adı':'Peer Name',
@@ -22715,6 +22819,7 @@ const PAGE_STRINGS = {
     'RAM %':'RAM %',
     'RAM Aralığı':'RAM Range',
     'RAM Grafiği':'RAM Graph',
+    'RAM MB (yeni toplam)':'RAM Mo (nouveau total)',
     'RAM MB kotası:':'RAM MB kotası:',
     'RAM değiştirilemedi:':'RAM değiştirilemedi:',
     'RAM değiştirilemedi: ':'RAM değiştirilemedi: ',
@@ -23329,6 +23434,7 @@ const PAGE_STRINGS = {
     'Yeni Yedekleme Diski Oluştur':'Create New Backup Disk',
     'Yeni Zamanlama':'New Schedule',
     'Yeni Zincir':'Yeni Zincir',
+    'Yeni boyut GB':'Nouvelle taille Go',
     'Yeni boyut girin':'Enter new size',
     'Yeni pencerede açılır':'Yeni pencerede açılır',
     'Yeni İçerik Ekle':'Yeni İçerik Ekle',
@@ -23493,6 +23599,7 @@ const PAGE_STRINGS = {
     'vApp Adı':'Nom de la vApp',
     'vApp adı gerekli':'Nom de vApp requis',
     'vApp — VM Grupları':'vApp — Groupes de VM',
+    'vCPU (yeni toplam)':'vCPU (nouveau total)',
     'vCPU Aralığı':'vCPU Range',
     'vCPU Sayısı':'vCPU Count',
     'vCPU değiştirilemedi:':'vCPU değiştirilemedi:',
@@ -23523,6 +23630,7 @@ const PAGE_STRINGS = {
     '· Dışarıdan erişim için sunucu portunu VM portuna yönlendir.':'· Dışarıdan erişim için sunucu portunu VM portuna yönlendir.',
     'ÇALIŞIYOR':'ÇALIŞIYOR',
     'Çalışan VM':'Running VM',
+    'Çalışan VM\'e canlı vCPU/RAM ekle, diski büyüt. Küçültme desteklenmez. Guest tarafında hot-plug desteği gerekir.':'Ajoutez vCPU/RAM à chaud et agrandissez le disque d\'une VM en marche. La réduction n\'est pas prise en charge. Nécessite la prise en charge du hot-plug côté invité.',
     'Çalışan VM\'in RAM\'ini tek tıkla dump alır + ağ trafiğini pcap olarak kaydeder. Güvenlik olayı sonrası forensic analiz için.':'Çalışan VM\'in RAM\'ini tek tıkla dump alır + ağ trafiğini pcap olarak kaydeder. Güvenlik olayı sonrası forensic analiz için.',
     'Çalıştır':'Run',
     'Çalıştırma Geçmişi (son 100)':'Çalıştırma Geçmişi (son 100)',
@@ -23571,6 +23679,7 @@ const PAGE_STRINGS = {
     'Üret':'Üret',
     'Üretim VM\'leri':'Üretim VM\'leri',
     'Ürününüzü bu sunucuya bağlayın; CPU/RAM/Disk seçeneklerini girin.':'Connect your product to this server; enter CPU/RAM/Disk options.',
+    'Üst klasör':'Dossier parent',
     'Üye':'Member',
     'Üye Ekle':'Ajouter un membre',
     'Üye URL (örn: https://node2.example.com):':'Üye URL (örn: https://node2.example.com):',
@@ -25744,6 +25853,9 @@ async function loadVMDetail(vmId) {
       secondaryHtml += `<button class="vd-btn-icon" onclick="flightRecOpen('${_vid}','${_vnm}')" title="Kara kutu + AI otopsi" style="color:#f43f5e"><i class="fa-solid fa-box-archive"></i> Kara Kutu</button>`;
       secondaryHtml += `<button class="vd-btn-icon" onclick="vmSaveState('${_vid}','${_vnm}')" title="Durumu diske kaydet (hibernate) — başlatınca kaldığı yerden devam" style="color:#8b5cf6"><i class="fa-solid fa-bed"></i> Hibernate</button>`;
       secondaryHtml += `<button class="vd-btn-icon" onclick="vmWatchdog('${_vid}','${_vnm}')" title="Guest donarsa otomatik aksiyon (i6300esb watchdog)" style="color:#f59e0b"><i class="fa-solid fa-heart-pulse"></i> Watchdog</button>`;
+      secondaryHtml += `<button class="vd-btn-icon" onclick="resizeWizOpen('${_vid}','${_vnm}')" title="vCPU / RAM / Disk canlı boyutlandır" style="color:#06b6d4"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> Boyutlandır</button>`;
+      secondaryHtml += `<button class="vd-btn-icon" onclick="guestFilesOpen('${_vid}','${_vnm}')" title="VM içi dosyaları gez (guest-agent)" style="color:#10b981"><i class="fa-solid fa-folder-tree"></i> Dosyalar</button>`;
+      secondaryHtml += `<button class="vd-btn-icon" onclick="virtiofsOpen('${_vid}','${_vnm}')" title="Host klasörünü VM'e paylaş (virtiofs)" style="color:#a78bfa"><i class="fa-solid fa-folder-open"></i> Paylaşım</button>`;
       secondaryHtml += `</div>`;
       secondaryHtml += `<div class="vd-actions-divider"></div>`;
       secondaryHtml += `<div class="vd-actions-group">`;
@@ -39557,6 +39669,102 @@ async function loadHeatmapPage() {
   if (typeof loadAllVmMetadata === 'function') { try { await loadAllVmMetadata(); } catch(e){} }
 }
 
+/* ──── Resize Wizard (v2.8.1) ──── */
+async function resizeWizOpen(vmId, vmName) {
+  document.getElementById('rw-vmid').value = vmId;
+  document.getElementById('rw-vmname').value = vmName;
+  document.getElementById('rw-title').textContent = vmName;
+  document.getElementById('rw-result').innerHTML = '';
+  const v = (_gsCacheVMs || []).find(x => x.id === vmId) || {};
+  document.getElementById('rw-vcpu').value = v.vcpus || '';
+  document.getElementById('rw-ram').value = v.memory_mb || '';
+  document.getElementById('rw-disk').value = 'vda';
+  document.getElementById('rw-disksize').value = '';
+  openModal('modal-resize-wiz');
+}
+async function resizeWizApply() {
+  const id = document.getElementById('rw-vmid').value, nm = document.getElementById('rw-vmname').value;
+  const res = document.getElementById('rw-result'); const done = [];
+  const vcpu = parseInt(document.getElementById('rw-vcpu').value||'0',10);
+  const ram = parseInt(document.getElementById('rw-ram').value||'0',10);
+  const ds = parseInt(document.getElementById('rw-disksize').value||'0',10);
+  res.innerHTML = '<span class="text-muted"><i class="fa-solid fa-spinner fa-spin"></i> Uygulanıyor...</span>';
+  try {
+    if (vcpu) { await _api(`/api/vms/${nm}/hotplug/vcpu`,'POST',{count:vcpu}); done.push('vCPU→'+vcpu); }
+    if (ram) { await _api(`/api/vms/${nm}/hotplug/memory`,'POST',{ram_mb:ram}); done.push('RAM→'+ram+'MB'); }
+    if (ds) { await _api(`/api/vms/${id}/disks/extend`,'POST',{disk_target:document.getElementById('rw-disk').value,new_size_gb:ds}); done.push('Disk→'+ds+'GB'); }
+  } catch(e) {}
+  res.innerHTML = done.length ? `<span style="color:var(--success)"><i class="fa-solid fa-check"></i> ${done.join(' · ')}</span>` : '<span style="color:#f59e0b">Değişiklik yok</span>';
+  toast('Boyutlandırma uygulandı', 'success'); loadVMs(); if (currentVmId===id) loadVMDetail(id);
+}
+
+/* ──── Guest File Browser (v2.8.1) ──── */
+async function guestFilesOpen(vmId, vmName) {
+  document.getElementById('gf-vmid').value = vmId;
+  document.getElementById('gf-title').textContent = vmName;
+  document.getElementById('gf-path').value = '/';
+  openModal('modal-guest-files');
+  gfGo();
+}
+async function gfGo() {
+  const id = document.getElementById('gf-vmid').value;
+  const path = document.getElementById('gf-path').value || '/';
+  const box = document.getElementById('gf-body');
+  box.innerHTML = '<div class="text-muted" style="font-size:12px"><i class="fa-solid fa-spinner fa-spin"></i> Yükleniyor...</div>';
+  const d = await _api(`/api/v2/vms/${id}/files?path=${encodeURIComponent(path)}`);
+  if (!d || !d.entries) { box.innerHTML = '<div style="color:var(--red);font-size:12px">'+(d&&d.error?_esc(d.error):'Listelenemedi')+'</div>'; return; }
+  box.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse">${d.entries.map(e=>`<tr style="cursor:pointer" onclick="${e.dir?`gfEnter('${_esc(e.name)}')`:`gfRead('${_esc(e.name)}')`}">
+    <td style="padding:3px 8px;border-bottom:1px solid var(--border)"><i class="fa-solid ${e.dir?'fa-folder':(e.link?'fa-link':'fa-file')}" style="color:${e.dir?'#f59e0b':'var(--text-muted)'};margin-right:6px"></i>${_esc(e.name)}</td>
+    <td style="padding:3px 8px;border-bottom:1px solid var(--border);font-family:monospace;font-size:10px;color:var(--text-muted)">${_esc(e.perm)}</td>
+    <td style="padding:3px 8px;border-bottom:1px solid var(--border);text-align:right">${e.dir?'':e.size}</td>
+    <td style="padding:3px 8px;border-bottom:1px solid var(--border);font-size:10px;color:var(--text-muted)">${_esc(e.modified)}</td></tr>`).join('')}</table>`;
+}
+function gfEnter(name) {
+  const p = document.getElementById('gf-path').value.replace(/\/+$/,'');
+  document.getElementById('gf-path').value = (p || '') + '/' + name;
+  gfGo();
+}
+function gfUp() {
+  let p = document.getElementById('gf-path').value.replace(/\/+$/,'');
+  p = p.substring(0, p.lastIndexOf('/')) || '/';
+  document.getElementById('gf-path').value = p; gfGo();
+}
+async function gfRead(name) {
+  const id = document.getElementById('gf-vmid').value;
+  const p = document.getElementById('gf-path').value.replace(/\/+$/,'') + '/' + name;
+  const d = await _api(`/api/v2/vms/${id}/files/read?path=${encodeURIComponent(p)}`);
+  if (!d || d.content == null) { toast('Okunamadı', 'error'); return; }
+  document.getElementById('gf-body').innerHTML = `<div style="margin-bottom:6px"><button class="btn sm" onclick="gfGo()"><i class="fa-solid fa-arrow-left"></i> Geri</button> <code>${_esc(p)}</code>${d.truncated?' <span style="color:#f59e0b;font-size:10px">(kırpıldı)</span>':''}</div><pre style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;max-height:50vh;overflow:auto;font-size:11px;white-space:pre-wrap">${_esc(d.content)}</pre>`;
+}
+
+/* ──── virtiofs Shares (v2.8.1) ──── */
+async function virtiofsOpen(vmId, vmName) {
+  document.getElementById('vf-vmid').value = vmId;
+  document.getElementById('vf-title').textContent = vmName;
+  document.getElementById('vf-path').value = ''; document.getElementById('vf-tag').value = '';
+  openModal('modal-virtiofs');
+  virtiofsList();
+}
+async function virtiofsList() {
+  const id = document.getElementById('vf-vmid').value;
+  const box = document.getElementById('vf-list');
+  const d = await _api(`/api/v2/vms/${id}/virtiofs`);
+  const arr = (d && d.shares) || [];
+  box.innerHTML = arr.length ? '<table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr><th style="text-align:left">Etiket</th><th style="text-align:left">Host yolu</th><th></th></tr></thead><tbody>'+arr.map(s=>`<tr><td style="padding:4px 8px"><code>${_esc(s.tag)}</code></td><td style="padding:4px 8px;font-size:11px">${_esc(s.source)}</td><td style="padding:4px 8px"><button class="btn sm danger" onclick="virtiofsDel('${_esc(s.tag)}')"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('')+'</tbody></table>' : '<div class="text-muted" style="font-size:12px">Paylaşım yok</div>';
+}
+async function virtiofsAdd() {
+  const id = document.getElementById('vf-vmid').value;
+  const body = { host_path: document.getElementById('vf-path').value.trim(), tag: document.getElementById('vf-tag').value.trim() };
+  if (!body.host_path || !body.tag) return toast('Host yolu ve etiket gerekli', 'error');
+  const d = await _api(`/api/v2/vms/${id}/virtiofs`, 'POST', body);
+  if (d) { toast(d.note || 'Paylaşım eklendi', 'success'); virtiofsList(); }
+}
+async function virtiofsDel(tag) {
+  const id = document.getElementById('vf-vmid').value;
+  const d = await _api(`/api/v2/vms/${id}/virtiofs/${tag}`, 'DELETE');
+  if (d) { toast('Paylaşım silindi', 'success'); virtiofsList(); }
+}
+
 /* ──── Hibernate (save-state) + Watchdog (v2.8.1) ──── */
 async function vmSaveState(vmId, vmName) {
   if (!await showConfirm(`"${vmName}" durumu diske kaydedilecek (hibernate). RAM boyutuna göre sürebilir. Başlatınca kaldığı yerden devam eder.`, 'Hibernate', false)) return;
@@ -39651,13 +39859,20 @@ async function snapChainOpen(vmId, vmName) {
   const big = d.healthy
     ? '<span style="color:var(--success);font-weight:700"><i class="fa-solid fa-circle-check"></i> SAĞLIKLI</span>'
     : '<span style="color:#f59e0b;font-weight:700"><i class="fa-solid fa-triangle-exclamation"></i> DİKKAT</span>';
-  let disks = (d.disks||[]).map(x => `<tr><td style="padding:4px 8px;border-bottom:1px solid var(--border)"><code>${_esc(x.target)}</code></td><td style="padding:4px 8px;border-bottom:1px solid var(--border)">derinlik: ${x.chain_depth==null?'?':x.chain_depth}</td></tr>`).join('');
+  let disks = (d.disks||[]).map(x => `<tr><td style="padding:4px 8px;border-bottom:1px solid var(--border)"><code>${_esc(x.target)}</code></td><td style="padding:4px 8px;border-bottom:1px solid var(--border)">derinlik: ${x.chain_depth==null?'?':x.chain_depth}</td><td style="padding:4px 8px;border-bottom:1px solid var(--border)">${(x.chain_depth||0)>1?`<button class="btn sm" onclick="snapConsolidate('${_esc(vmId)}','${_esc(x.target)}')"><i class="fa-solid fa-compress"></i> Konsolide</button>`:''}</td></tr>`).join('');
   let warns = (d.warnings||[]).map(w => `<li style="color:#f59e0b">${_esc(w)}</li>`).join('');
   document.getElementById('sc-body').innerHTML = `
     <div style="font-size:15px;margin-bottom:8px">${big} <span style="font-size:12px;color:var(--text-muted)">· ${d.snapshot_count} snapshot · max zincir ${d.max_chain_depth}</span></div>
     <table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:8px">${disks||'<tr><td class="text-muted">disk bilgisi yok</td></tr>'}</table>
     ${warns?`<ul style="margin:0 0 8px 18px;font-size:12px">${warns}</ul>`:''}
     <div style="font-size:11px;color:var(--text-muted)"><i class="fa-solid fa-circle-info"></i> ${_esc(d.recommendation||'')}</div>`;
+}
+
+async function snapConsolidate(vmId, dev) {
+  if (!await showConfirm(`${dev} backing-chain'i canlı blockcommit ile düzleştirilecek (aktif disk yeniden yazılır). Devam?`, 'Konsolide Et', false)) return;
+  toast('Konsolidasyon başladı (sürebilir)...', 'info');
+  const d = await _api(`/api/v2/vms/${vmId}/snapshot-chain/consolidate`, 'POST', { dev });
+  if (d) { toast(d.message || 'Konsolide edildi', 'success'); snapChainOpen(vmId, dev); }
 }
 
 /* ──── Vault Secret Injection (v2.8) ──── */

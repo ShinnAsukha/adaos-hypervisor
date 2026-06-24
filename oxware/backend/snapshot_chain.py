@@ -113,6 +113,33 @@ def analyze(vm_id: str) -> dict:
         "warnings": warnings, "healthy": healthy,
         "thresholds": {"chain": _CHAIN_WARN, "snapshots": _SNAP_WARN},
         "recommendation": ("Zincir/snapshot sağlıklı." if healthy else
-                           "Performans için: çevrimdışı `qemu-img convert` ile "
-                           "düzleştirin veya eski snapshot'ları silin."),
+                           "Performans için canlı blockcommit ile düzleştirin "
+                           "(aşağıdaki Konsolide butonu) ya da eski snapshot'ları silin."),
     }
+
+
+def consolidate(vm_id: str, dev: str) -> dict:
+    """Flatten a disk's backing chain into its base via live blockcommit
+    (virsh blockcommit --active --pivot). Reduces read overhead from long
+    external-snapshot chains. Guarded on virsh; the caller gates with a
+    confirm since this rewrites the active disk image."""
+    vm = _vm()
+    if not vm:
+        return {"ok": False, "error": "vm_manager yok"}
+    if not _NAME_RE.match(dev or ""):
+        return {"ok": False, "error": "geçersiz disk hedefi"}
+    try:
+        name = vm.get_vm(vm_id)["name"]
+    except Exception as e:
+        return {"ok": False, "error": f"VM bulunamadı: {str(e)[:120]}"}
+    if not _NAME_RE.match(name):
+        return {"ok": False, "error": "geçersiz VM adı"}
+    r = _run(["virsh", "blockcommit", name, dev,
+              "--active", "--pivot", "--wait", "--verbose"], timeout=3600)
+    if r is None:
+        return {"ok": False, "error": "virsh bulunamadı"}
+    if r.returncode != 0:
+        return {"ok": False, "error": (r.stderr or "blockcommit hata").strip()[:300]}
+    log.info("blockcommit consolidate: %s/%s", name, dev)
+    return {"ok": True, "vm": name, "dev": dev,
+            "message": "Backing-chain düzleştirildi (blockcommit --pivot)."}

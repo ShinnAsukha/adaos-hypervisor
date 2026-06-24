@@ -886,6 +886,64 @@ def _register_routes():
         r = _vmm.set_watchdog(vm_id, d.get("action", "reset"))
         return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
 
+    # ── Guest file browser ───────────────────────────────────────────────
+    gf = _safe_import("guest_files")
+
+    @bp_v272.route("/api/v2/vms/<vm_id>/files", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_guest_files(vm_id):
+        if not gf:
+            return _err("module unavailable", 503)
+        r = gf.list_dir(vm_id, request.args.get("path", "/"))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    @bp_v272.route("/api/v2/vms/<vm_id>/files/read", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_guest_file_read(vm_id):
+        if not gf:
+            return _err("module unavailable", 503)
+        r = gf.read_file(vm_id, request.args.get("path", ""))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    # ── Snapshot consolidation (blockcommit) ─────────────────────────────
+    @bp_v272.route("/api/v2/vms/<vm_id>/snapshot-chain/consolidate", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_snap_consolidate(vm_id):
+        snc2 = _safe_import("snapshot_chain")
+        if not snc2:
+            return _err("module unavailable", 503)
+        d = request.get_json(silent=True) or {}
+        r = snc2.consolidate(vm_id, d.get("dev", ""))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    # ── virtiofs shared folders ──────────────────────────────────────────
+    @bp_v272.route("/api/v2/vms/<vm_id>/virtiofs", methods=["GET", "POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_virtiofs(vm_id):
+        vmm2 = _safe_import("vm_manager")
+        if not vmm2:
+            return _err("module unavailable", 503)
+        if request.method == "GET":
+            r = vmm2.list_virtiofs(vm_id)
+        else:
+            d = request.get_json(silent=True) or {}
+            r = vmm2.add_virtiofs(vm_id, d.get("host_path", ""), d.get("tag", ""))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    @bp_v272.route("/api/v2/vms/<vm_id>/virtiofs/<tag>", methods=["DELETE"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_virtiofs_del(vm_id, tag):
+        vmm2 = _safe_import("vm_manager")
+        if not vmm2:
+            return _err("module unavailable", 503)
+        r = vmm2.remove_virtiofs(vm_id, tag)
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
     # ── Brand integrity / provenance ─────────────────────────────────────
     brand = _safe_import("brand_integrity")
 
