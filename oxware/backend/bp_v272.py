@@ -858,6 +858,34 @@ def _register_routes():
         r = hvd.set_baseline()
         return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
 
+    # ── VM Save State / Hibernate + Watchdog ─────────────────────────────
+    _vmm = _safe_import("vm_manager")
+
+    @bp_v272.route("/api/v2/vms/<vm_id>/save-state",
+                   methods=["GET", "POST", "DELETE"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_vm_save_state(vm_id):
+        if not _vmm:
+            return _err("module unavailable", 503)
+        if request.method == "GET":
+            r = _vmm.has_saved_state(vm_id)
+        elif request.method == "DELETE":
+            r = _vmm.remove_saved_state(vm_id)
+        else:
+            r = _vmm.save_state(vm_id)
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
+    @bp_v272.route("/api/v2/vms/<vm_id>/watchdog", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_vm_watchdog(vm_id):
+        if not _vmm:
+            return _err("module unavailable", 503)
+        d = request.get_json(silent=True) or {}
+        r = _vmm.set_watchdog(vm_id, d.get("action", "reset"))
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
     # ── Brand integrity / provenance ─────────────────────────────────────
     brand = _safe_import("brand_integrity")
 

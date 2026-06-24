@@ -1366,15 +1366,91 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso_path=None,
         conn.close()
 
 
+def _lookup(conn, vm_id):
+    try:
+        return conn.lookupByUUIDString(vm_id)
+    except libvirt.libvirtError:
+        return conn.lookupByName(vm_id)
+
+
 def start_vm(vm_id):
     conn = _connect()
     try:
         dom = conn.lookupByUUIDString(vm_id)
         if dom.isActive():
             return {"status": "already_running"}
+        # If a managed-save (hibernated) image exists, dom.create() auto-resumes it.
         dom.create()
         _invalidate_list_cache()
         return {"status": "started"}
+    finally:
+        conn.close()
+
+
+# ── Save State / Hibernate (managedsave) ──────────────────────────────────────
+def save_state(vm_id):
+    """Freeze a running VM's full RAM+CPU state to disk (virsh managedsave).
+    Survives host reboot; next start_vm() resumes exactly where it left off."""
+    conn = _connect()
+    try:
+        dom = _lookup(conn, vm_id)
+        if not dom.isActive():
+            return {"ok": False, "error": "VM çalışmıyor"}
+        dom.managedSave(0)  # blocks until RAM is flushed to disk
+        _invalidate_list_cache()
+        return {"ok": True, "state": "saved"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:300]}
+    finally:
+        conn.close()
+
+
+def has_saved_state(vm_id):
+    conn = _connect()
+    try:
+        return {"ok": True, "saved": bool(_lookup(conn, vm_id).hasManagedSaveImage(0))}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:200]}
+    finally:
+        conn.close()
+
+
+def remove_saved_state(vm_id):
+    conn = _connect()
+    try:
+        dom = _lookup(conn, vm_id)
+        if dom.hasManagedSaveImage(0):
+            dom.managedSaveRemove(0)
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:200]}
+    finally:
+        conn.close()
+
+
+# ── Watchdog (i6300esb) — auto reset/poweroff if the guest OS hangs ───────────
+_WATCHDOG_ACTIONS = ("reset", "poweroff", "pause", "none", "inject-nmi", "shutdown")
+
+
+def set_watchdog(vm_id, action="reset"):
+    """Attach/update an i6300esb watchdog. The guest needs a watchdog daemon
+    feeding /dev/watchdog, else it would reset a healthy VM."""
+    if action not in _WATCHDOG_ACTIONS:
+        action = "reset"
+    xml = f"<watchdog model='i6300esb' action='{action}'/>"
+    conn = _connect()
+    try:
+        dom = _lookup(conn, vm_id)
+        flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
+        if dom.isActive():
+            flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
+        try:
+            dom.updateDeviceFlags(xml, flags)
+        except libvirt.libvirtError:
+            dom.attachDeviceFlags(xml, flags)
+        return {"ok": True, "action": action}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:300]}
     finally:
         conn.close()
 

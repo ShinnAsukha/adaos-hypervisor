@@ -11120,6 +11120,8 @@ const PAGE_STRINGS = {
     'Durduruldu':'Stopped',
     'Durum':'Status',
     'Durum bilinmiyor':'Status unknown',
+    'Durum kaydedildi (hibernate). Başlatınca devam eder.':'State saved (hibernate). It resumes on start.',
+    'Durum kaydediliyor...':'Saving state...',
     'Durum:':'Durum:',
     'DÜŞÜK':'LOW',
     'Dönem:':'Period:',
@@ -13792,6 +13794,8 @@ const PAGE_STRINGS = {
     'Durdurulmuş VM':'VMs Detenidas',
     'Durum':'Estado',
     'Durum bilinmiyor':'Estado desconocido',
+    'Durum kaydedildi (hibernate). Başlatınca devam eder.':'Estado guardado (hibernación). Se reanuda al iniciar.',
+    'Durum kaydediliyor...':'Guardando estado...',
     'Durum:':'Durum:',
     'DÜŞÜK':'Bajo',
     'Dönem:':'Period:',
@@ -16481,6 +16485,8 @@ const PAGE_STRINGS = {
     'Durdurulmuş VM':'Gestoppte VMs',
     'Durum':'Status',
     'Durum bilinmiyor':'Status unbekannt',
+    'Durum kaydedildi (hibernate). Başlatınca devam eder.':'Status gespeichert (Hibernate). Setzt beim Start fort.',
+    'Durum kaydediliyor...':'Status wird gespeichert...',
     'Durum:':'Durum:',
     'DÜŞÜK':'Niedrig',
     'Dönem:':'Period:',
@@ -19168,6 +19174,8 @@ const PAGE_STRINGS = {
     'Durdurulmuş VM':'已停止的虚拟机',
     'Durum':'状态',
     'Durum bilinmiyor':'状态未知',
+    'Durum kaydedildi (hibernate). Başlatınca devam eder.':'状态已保存（休眠）。启动时恢复。',
+    'Durum kaydediliyor...':'正在保存状态……',
     'Durum:':'Durum:',
     'DÜŞÜK':'低',
     'Dönem:':'Period:',
@@ -21846,6 +21854,8 @@ const PAGE_STRINGS = {
     'Durduruldu':'Arrêté',
     'Durum':'État',
     'Durum bilinmiyor':'État inconnu',
+    'Durum kaydedildi (hibernate). Başlatınca devam eder.':'État enregistré (hibernation). Reprend au démarrage.',
+    'Durum kaydediliyor...':'Enregistrement de l\'état...',
     'Durum:':'Durum:',
     'DÜŞÜK':'Faible',
     'Dönem:':'Period:',
@@ -25732,6 +25742,8 @@ async function loadVMDetail(vmId) {
       secondaryHtml += `<button class="vd-btn-icon" onclick="attestOpen('${_vid}','${_vnm}')" title="Measured-boot attestation" style="color:#34d399"><i class="fa-solid fa-shield-halved"></i> Attestation</button>`;
       secondaryHtml += `<button class="vd-btn-icon" onclick="ovaExport('${_vid}','${_vnm}')" title="OVA olarak dışa aktar (taşınabilir)" style="color:#38bdf8"><i class="fa-solid fa-file-export"></i> OVA Export</button>`;
       secondaryHtml += `<button class="vd-btn-icon" onclick="flightRecOpen('${_vid}','${_vnm}')" title="Kara kutu + AI otopsi" style="color:#f43f5e"><i class="fa-solid fa-box-archive"></i> Kara Kutu</button>`;
+      secondaryHtml += `<button class="vd-btn-icon" onclick="vmSaveState('${_vid}','${_vnm}')" title="Durumu diske kaydet (hibernate) — başlatınca kaldığı yerden devam" style="color:#8b5cf6"><i class="fa-solid fa-bed"></i> Hibernate</button>`;
+      secondaryHtml += `<button class="vd-btn-icon" onclick="vmWatchdog('${_vid}','${_vnm}')" title="Guest donarsa otomatik aksiyon (i6300esb watchdog)" style="color:#f59e0b"><i class="fa-solid fa-heart-pulse"></i> Watchdog</button>`;
       secondaryHtml += `</div>`;
       secondaryHtml += `<div class="vd-actions-divider"></div>`;
       secondaryHtml += `<div class="vd-actions-group">`;
@@ -39543,6 +39555,20 @@ async function loadHeatmapPage() {
   };
   grid.innerHTML = vms.map(tile).join('');
   if (typeof loadAllVmMetadata === 'function') { try { await loadAllVmMetadata(); } catch(e){} }
+}
+
+/* ──── Hibernate (save-state) + Watchdog (v2.8.1) ──── */
+async function vmSaveState(vmId, vmName) {
+  if (!await showConfirm(`"${vmName}" durumu diske kaydedilecek (hibernate). RAM boyutuna göre sürebilir. Başlatınca kaldığı yerden devam eder.`, 'Hibernate', false)) return;
+  toast('Durum kaydediliyor...', 'info');
+  const d = await _api(`/api/v2/vms/${vmId}/save-state`, 'POST');
+  if (d) { toast('Durum kaydedildi (hibernate). Başlatınca devam eder.', 'success'); loadVMs(); if (currentVmId===vmId) loadVMDetail(vmId); }
+}
+async function vmWatchdog(vmId, vmName) {
+  const action = prompt(`"${vmName}" için watchdog aksiyonu (guest donarsa):\nreset / poweroff / pause / inject-nmi / none`, 'reset');
+  if (action === null) return;
+  const d = await _api(`/api/v2/vms/${vmId}/watchdog`, 'POST', { action: action.trim() });
+  if (d) toast(`Watchdog ayarlandı: ${d.action} — NOT: guest'te watchdog daemon gerekir`, 'success');
 }
 
 /* ──── Flight Recorder + AI Otopsi (v2.8.1) ──── */
