@@ -111,8 +111,13 @@ _BUILD_PROVENANCE = (
     "m1VEqRg7R7UPZ-NpOPd7bTKiUxoUPTsUA4="
 )
 
+# State dizinlerini oluştur. Import sırasında izin yoksa (CI/test, non-root)
+# patlama — dizin gerçekten gerektiğinde ilgili modül zaten hata verir.
 for d in [DATA_DIR, ISO_DIR, DISK_DIR, BACKUP_DIR, TEMPLATE_DIR, LOG_DIR]:
-    os.makedirs(d, exist_ok=True)
+    try:
+        os.makedirs(d, exist_ok=True)
+    except (PermissionError, OSError):
+        pass
 
 
 def load() -> dict:
