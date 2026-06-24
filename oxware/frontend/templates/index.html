@@ -7574,6 +7574,13 @@
           <div class="card"><div class="card-title">Anlık Görüntüler</div><div class="table-wrap"><table><thead><tr><th>Etiket</th><th>Tarih</th><th>VM</th><th>Ağ</th><th>DVS</th><th>vApp</th><th>Sil</th></tr></thead><tbody id="tm-tbody"><tr><td colspan="7" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody></table></div></div>
         </div>
 
+        <!-- ══ v2.8.1 — Gizli Hypervisor Tespiti ══ -->
+        <div id="ent-pane-hvdetect" style="display:none">
+          <div class="section-header"><h2><i class="fa-solid fa-user-secret fa-fw" style="color:#ef4444"></i> Gizli Hypervisor Tespiti</h2><div class="spacer"></div><button class="btn" onclick="hvBaseline()" style="font-size:12px"><i class="fa-solid fa-fingerprint"></i> Baseline Kaydet</button><button class="btn-primary" onclick="loadHvDetect()" style="font-size:12px;margin-left:6px"><i class="fa-solid fa-magnifying-glass"></i> Tara</button></div>
+          <div class="card" style="margin-bottom:12px;border-left:4px solid #ef4444;background:rgba(239,68,68,.04);padding:14px"><div style="font-size:12px;line-height:1.6"><b style="color:#ef4444">Bu Nedir?</b> İşletim sisteminin ALTINDA çalışan gizli bir hypervisor (blue-pill / nested rootkit) belirtilerini tarar. Bağımsız vektörler: CPUID hypervisor biti, detect-virt, Secure Boot, <b>TPM measured-boot drift</b> (en güçlü), kaba zamanlama. Önce "Baseline Kaydet" ile güvenilir referans al; sonraki taramalar bundan sapmayı yakalar.</div></div>
+          <div id="hv-result"><div class="text-muted" style="font-size:12px;padding:10px">Taramak için "Tara" tıkla.</div></div>
+        </div>
+
         <!-- ══ v2.8.1 — ChatOps ══ -->
         <div id="ent-pane-chatops" style="display:none">
           <div class="section-header"><h2><i class="fa-brands fa-telegram fa-fw" style="color:#229ED9"></i> ChatOps — Telegram'dan Yönet</h2><div class="spacer"></div><button class="btn" onclick="loadChatOps()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
@@ -10481,6 +10488,7 @@ const PAGE_STRINGS = {
     '(anlık, paylaşımlı temel disk)':'(live, shared base disk)',
     '(bağımsız kopya)':'(independent copy)',
     '(devre dışı). Varsayılan: admin = required.':'(disabled). Default: admin = required.',
+    '(en güçlü), kaba zamanlama. Önce "Baseline Kaydet" ile güvenilir referans al; sonraki taramalar bundan sapmayı yakalar.':'(strongest), coarse timing. First capture a trusted reference with "Save Baseline"; later scans catch drift from it.',
     '(ip a ile öğren)':'(learn with ip a)',
     '(isteğe bağlı)':'(optional)',
     '(isteğe bağlı),':'(optional),',
@@ -10760,6 +10768,7 @@ const PAGE_STRINGS = {
     'Balloon driver gerekli (çalışırken)':'Balloon driver gerekli (çalışırken)',
     'Bare-Metal Provisioning':'Bare-Metal Provisioning',
     'Base DN':'Base DN',
+    'Baseline Kaydet':'Save Baseline',
     'Baseline adı':'Baseline adı',
     'Baseline adı gerekli':'Baseline name is required',
     'Baseline kaydedildi':'Baseline saved',
@@ -12198,6 +12207,7 @@ const PAGE_STRINGS = {
     'Tanımlı Runbook\'lar':'Tanımlı Runbook\'lar',
     'Tanıtım Turu':'Product Tour',
     'Tarama Başlat':'Start Scan',
+    'Taramak için "Tara" tıkla.':'Click "Scan" to scan.',
     'Tarayıcı içinde çalışır':'Tarayıcı içinde çalışır',
     'Tarayıcında':'In your browser',
     'Tarih':'Date',
@@ -12899,6 +12909,7 @@ const PAGE_STRINGS = {
     'İşlem tamamlandı':'Operation completed',
     'İşlemler':'Actions',
     'İşletim Sistemi':'OS Type',
+    'İşletim sisteminin ALTINDA çalışan gizli bir hypervisor (blue-pill / nested rootkit) belirtilerini tarar. Bağımsız vektörler: CPUID hypervisor biti, detect-virt, Secure Boot,':'Scans for signs of a hidden hypervisor running BENEATH the OS (blue-pill / nested rootkit). Independent vectors: CPUID hypervisor bit, detect-virt, Secure Boot,',
     'Şablon Adı':'Template Name',
     'Şablon Kaydet':'Save Template',
     'Şablon Oluştur':'Create Template',
@@ -13136,6 +13147,7 @@ const PAGE_STRINGS = {
     '(anlık, paylaşımlı temel disk)':'(live, shared base disk)',
     '(bağımsız kopya)':'(independent copy)',
     '(devre dışı). Varsayılan: admin = required.':'(disabled). Default: admin = required.',
+    '(en güçlü), kaba zamanlama. Önce "Baseline Kaydet" ile güvenilir referans al; sonraki taramalar bundan sapmayı yakalar.':'(el más fuerte), tiempo aproximado. Primero captura una referencia fiable con "Guardar línea base"; los análisis posteriores detectan la desviación.',
     '(ip a ile öğren)':'(learn with ip a)',
     '(isteğe bağlı)':'(opcional)',
     '(isteğe bağlı),':'(optional),',
@@ -13421,6 +13433,7 @@ const PAGE_STRINGS = {
     'Balloon driver gerekli (çalışırken)':'Balloon driver gerekli (çalışırken)',
     'Bare-Metal Provisioning':'Aprovisionamiento Bare-Metal',
     'Base DN':'Base DN',
+    'Baseline Kaydet':'Guardar línea base',
     'Baseline adı':'Baseline adı',
     'Baseline adı gerekli':'Nombre de baseline es obligatorio',
     'Baseline kaydedildi':'Baseline guardado',
@@ -14877,6 +14890,7 @@ const PAGE_STRINGS = {
     'Tanımlı Runbook\'lar':'Tanımlı Runbook\'lar',
     'Tanıtım Turu':'Tour del producto',
     'Tarama Başlat':'Start Scan',
+    'Taramak için "Tara" tıkla.':'Haz clic en "Escanear" para escanear.',
     'Taranıyor…':'Escaneando…',
     'Tarayıcı içinde çalışır':'Tarayıcı içinde çalışır',
     'Tarayıcında':'In your browser',
@@ -15588,6 +15602,7 @@ const PAGE_STRINGS = {
     'İşlem tamamlandı':'Operation completed',
     'İşlemler':'Acciones',
     'İşletim Sistemi':'Sistema Operativo',
+    'İşletim sisteminin ALTINDA çalışan gizli bir hypervisor (blue-pill / nested rootkit) belirtilerini tarar. Bağımsız vektörler: CPUID hypervisor biti, detect-virt, Secure Boot,':'Busca indicios de un hypervisor oculto ejecutándose POR DEBAJO del SO (blue-pill / rootkit anidado). Vectores independientes: bit hypervisor de CPUID, detect-virt, Secure Boot,',
     'Şablon Adı':'Nombre de Plantilla',
     'Şablon Kaydet':'Guardar plantilla',
     'Şablon Oluştur':'Create Template',
@@ -15824,6 +15839,7 @@ const PAGE_STRINGS = {
     '(anlık, paylaşımlı temel disk)':'(live, shared base disk)',
     '(bağımsız kopya)':'(independent copy)',
     '(devre dışı). Varsayılan: admin = required.':'(disabled). Default: admin = required.',
+    '(en güçlü), kaba zamanlama. Önce "Baseline Kaydet" ile güvenilir referans al; sonraki taramalar bundan sapmayı yakalar.':'(am stärksten), grobe Zeitmessung. Erfasse zuerst mit „Baseline speichern" eine vertrauenswürdige Referenz; spätere Scans erkennen Abweichungen.',
     '(ip a ile öğren)':'(learn with ip a)',
     '(isteğe bağlı)':'(optional)',
     '(isteğe bağlı),':'(optional),',
@@ -16107,6 +16123,7 @@ const PAGE_STRINGS = {
     'Balloon driver gerekli (çalışırken)':'Balloon driver gerekli (çalışırken)',
     'Bare-Metal Provisioning':'Bare-Metal-Bereitstellung',
     'Base DN':'Base DN',
+    'Baseline Kaydet':'Baseline speichern',
     'Baseline adı':'Baseline adı',
     'Baseline adı gerekli':'Baseline-Name ist erforderlich',
     'Baseline kaydedildi':'Baseline gespeichert',
@@ -17562,6 +17579,7 @@ const PAGE_STRINGS = {
     'Tanımlı Runbook\'lar':'Tanımlı Runbook\'lar',
     'Tanıtım Turu':'Produkttour',
     'Tarama Başlat':'Start Scan',
+    'Taramak için "Tara" tıkla.':'Zum Scannen auf „Scannen" klicken.',
     'Taranıyor…':'Scanne…',
     'Tarayıcı içinde çalışır':'Tarayıcı içinde çalışır',
     'Tarayıcında':'In your browser',
@@ -18271,6 +18289,7 @@ const PAGE_STRINGS = {
     'İşlem tamamlandı':'Operation completed',
     'İşlemler':'Aktionen',
     'İşletim Sistemi':'Betriebssystem',
+    'İşletim sisteminin ALTINDA çalışan gizli bir hypervisor (blue-pill / nested rootkit) belirtilerini tarar. Bağımsız vektörler: CPUID hypervisor biti, detect-virt, Secure Boot,':'Sucht nach Anzeichen eines versteckten Hypervisors UNTER dem Betriebssystem (Blue-Pill / verschachteltes Rootkit). Unabhängige Vektoren: CPUID-Hypervisor-Bit, detect-virt, Secure Boot,',
     'Şablon Adı':'Vorlagenname',
     'Şablon Kaydet':'Vorlage speichern',
     'Şablon Oluştur':'Create Template',
@@ -18507,6 +18526,7 @@ const PAGE_STRINGS = {
     '(anlık, paylaşımlı temel disk)':'(live, shared base disk)',
     '(bağımsız kopya)':'(independent copy)',
     '(devre dışı). Varsayılan: admin = required.':'(disabled). Default: admin = required.',
+    '(en güçlü), kaba zamanlama. Önce "Baseline Kaydet" ile güvenilir referans al; sonraki taramalar bundan sapmayı yakalar.':'（最强）、粗略计时。先用"保存基线"获取可信参考；后续扫描据此检测偏移。',
     '(ip a ile öğren)':'(learn with ip a)',
     '(isteğe bağlı)':'（可选）',
     '(isteğe bağlı),':'(optional),',
@@ -18790,6 +18810,7 @@ const PAGE_STRINGS = {
     'Balloon driver gerekli (çalışırken)':'Balloon driver gerekli (çalışırken)',
     'Bare-Metal Provisioning':'裸机部署',
     'Base DN':'Base DN',
+    'Baseline Kaydet':'保存基线',
     'Baseline adı':'Baseline adı',
     'Baseline adı gerekli':'基线名称为必填项',
     'Baseline kaydedildi':'基线已保存',
@@ -20245,6 +20266,7 @@ const PAGE_STRINGS = {
     'Tanımlı Runbook\'lar':'Tanımlı Runbook\'lar',
     'Tanıtım Turu':'产品导览',
     'Tarama Başlat':'Start Scan',
+    'Taramak için "Tara" tıkla.':'点击"扫描"开始扫描。',
     'Taranıyor…':'扫描中…',
     'Tarayıcı içinde çalışır':'Tarayıcı içinde çalışır',
     'Tarayıcında':'In your browser',
@@ -20954,6 +20976,7 @@ const PAGE_STRINGS = {
     'İşlem tamamlandı':'Operation completed',
     'İşlemler':'操作',
     'İşletim Sistemi':'操作系统',
+    'İşletim sisteminin ALTINDA çalışan gizli bir hypervisor (blue-pill / nested rootkit) belirtilerini tarar. Bağımsız vektörler: CPUID hypervisor biti, detect-virt, Secure Boot,':'扫描运行在操作系统之下的隐藏 hypervisor（blue-pill / 嵌套 rootkit）迹象。独立向量：CPUID hypervisor 位、detect-virt、Secure Boot、',
     'Şablon Adı':'模板名称',
     'Şablon Kaydet':'保存模板',
     'Şablon Oluştur':'Create Template',
@@ -21191,6 +21214,7 @@ const PAGE_STRINGS = {
     '(anlık, paylaşımlı temel disk)':'(live, shared base disk)',
     '(bağımsız kopya)':'(independent copy)',
     '(devre dışı). Varsayılan: admin = required.':'(disabled). Default: admin = required.',
+    '(en güçlü), kaba zamanlama. Önce "Baseline Kaydet" ile güvenilir referans al; sonraki taramalar bundan sapmayı yakalar.':'(le plus fort), timing approximatif. Capturez d\'abord une référence fiable avec « Enregistrer la référence » ; les analyses ultérieures détectent la dérive.',
     '(ip a ile öğren)':'(learn with ip a)',
     '(isteğe bağlı)':'(optionnel)',
     '(isteğe bağlı),':'(optional),',
@@ -21470,6 +21494,7 @@ const PAGE_STRINGS = {
     'Balloon driver gerekli (çalışırken)':'Balloon driver gerekli (çalışırken)',
     'Bare-Metal Provisioning':'Bare-Metal Provisioning',
     'Base DN':'Base DN',
+    'Baseline Kaydet':'Enregistrer la référence',
     'Baseline adı':'Baseline adı',
     'Baseline adı gerekli':'Baseline name is required',
     'Baseline kaydedildi':'Baseline saved',
@@ -22908,6 +22933,7 @@ const PAGE_STRINGS = {
     'Tanımlı Runbook\'lar':'Tanımlı Runbook\'lar',
     'Tanıtım Turu':'Visite guidée',
     'Tarama Başlat':'Start Scan',
+    'Taramak için "Tara" tıkla.':'Cliquez sur « Analyser » pour lancer l\'analyse.',
     'Tarayıcı içinde çalışır':'Tarayıcı içinde çalışır',
     'Tarayıcında':'In your browser',
     'Tarih':'Date',
@@ -23609,6 +23635,7 @@ const PAGE_STRINGS = {
     'İşlem tamamlandı':'Operation completed',
     'İşlemler':'Actions',
     'İşletim Sistemi':'OS Type',
+    'İşletim sisteminin ALTINDA çalışan gizli bir hypervisor (blue-pill / nested rootkit) belirtilerini tarar. Bağımsız vektörler: CPUID hypervisor biti, detect-virt, Secure Boot,':'Recherche des signes d\'un hyperviseur caché s\'exécutant SOUS le système d\'exploitation (blue-pill / rootkit imbriqué). Vecteurs indépendants : bit hyperviseur CPUID, detect-virt, Secure Boot,',
     'Şablon Adı':'Template Name',
     'Şablon Kaydet':'Enregistrer le modèle',
     'Şablon Oluştur':'Create Template',
@@ -35496,6 +35523,7 @@ const ENT_LOADERS = {
   csi:            () => { try { loadCsiPage(); } catch(e) { console.warn(e); } },
   goldenimages:   () => { try { loadGoldenImages(); } catch(e) { console.warn(e); } },
   timemachine:    () => { try { loadTimeMachine(); } catch(e) { console.warn(e); } },
+  hvdetect:       () => { try { loadHvDetect(); } catch(e) { console.warn(e); } },
   chatops:        () => { try { loadChatOps(); } catch(e) { console.warn(e); } },
   vapp:           () => { try { loadVappPage(); } catch(e) { console.warn(e); } },
   whatif:         () => { try { loadWhatIfPage(); } catch(e) { console.warn(e); } },
@@ -39410,6 +39438,37 @@ async function tmDiff() {
   box.innerHTML = html || '<div style="font-size:12px;color:var(--success);margin-top:6px">Fark yok — iki nokta aynı.</div>';
 }
 
+/* ──── Gizli Hypervisor Tespiti (v2.8.1) ──── */
+async function loadHvDetect() {
+  const box = document.getElementById('hv-result');
+  box.innerHTML = '<div class="card"><div style="padding:14px" class="text-muted"><i class="fa-solid fa-spinner fa-spin"></i> Taranıyor...</div></div>';
+  const d = await _api('/api/v2/security/hv-detect');
+  if (!d) { box.innerHTML = '<div class="card"><div style="padding:14px;color:var(--red)">Tarama başarısız</div></div>'; return; }
+  const yn = (v, good) => `<span style="color:${(v===good)?'var(--success)':'#f59e0b'}">${v}</span>`;
+  const rows = [
+    ['CPUID hypervisor biti', d.hypervisor_flag ? 'AÇIK (altında hypervisor var)' : 'kapalı', !d.hypervisor_flag],
+    ['Virtualizasyon vendor', d.virt_vendor, d.virt_vendor==='none'],
+    ['Secure Boot', d.secure_boot, d.secure_boot==='enabled'],
+    ['TPM ölçüm (PCR)', d.tpm_available ? (d.pcr_count+' PCR okundu') : 'TPM yok', d.tpm_available],
+    ['Baseline', d.baseline_set ? 'kayıtlı' : 'yok — kaydet', d.baseline_set],
+    ['PCR drift', (d.pcr_drift && d.pcr_drift.length) ? ('DEĞİŞTİ: '+d.pcr_drift.join(',')) : 'yok', !(d.pcr_drift && d.pcr_drift.length)],
+    ['Zamanlama (ns/op)', (d.timing&&d.timing.ns_per_op)||'—', true],
+  ];
+  const big = d.clean
+    ? '<span style="color:var(--success);font-weight:700"><i class="fa-solid fa-shield-halved"></i> '+_esc(d.verdict)+'</span>'
+    : '<span style="color:#ef4444;font-weight:700"><i class="fa-solid fa-triangle-exclamation"></i> '+_esc(d.verdict)+'</span>';
+  box.innerHTML = `<div class="card"><div class="card-title">${big}</div><div style="padding:0 14px 14px">
+    <table style="width:100%;font-size:12px;border-collapse:collapse">${rows.map(r=>`<tr><td style="padding:4px 8px;border-bottom:1px solid var(--border);color:var(--text-muted)">${_esc(r[0])}</td><td style="padding:4px 8px;border-bottom:1px solid var(--border)">${yn(_esc(String(r[1])),_esc(String(r[1])))}</td></tr>`).join('')}</table>
+    ${(d.warnings||[]).map(w=>`<div style="font-size:11px;color:#f59e0b;margin-top:6px"><i class="fa-solid fa-triangle-exclamation"></i> ${_esc(w)}</div>`).join('')}
+    <div style="font-size:10px;color:var(--text-muted);margin-top:8px"><i class="fa-solid fa-circle-info"></i> ${_esc(d.note)}</div>
+  </div></div>`;
+}
+async function hvBaseline() {
+  if (!await showConfirm('Mevcut TPM/boot durumu güvenilir referans olarak kaydedilecek. Sistem temizken yap.', 'Baseline Kaydet', false)) return;
+  const d = await _api('/api/v2/security/hv-detect/baseline', 'POST');
+  if (d) { toast(d.note || 'Baseline kaydedildi', 'success'); loadHvDetect(); }
+}
+
 /* ──── ChatOps (v2.8.1) ──── */
 async function loadChatOps() {
   const d = await _api('/api/v2/chatops');
@@ -40351,6 +40410,7 @@ const _PAGE_TABS = {
     {key:'pwa', label:'PWA Offline', src:'ent-pane-pwa', g:'Güvenlik & Uyum'},
     {key:'knownhosts', label:'SSH Known-Hosts', src:'ent-pane-knownhosts', g:'Güvenlik & Uyum'},
     {key:'telemetry', label:'Anonim Telemetri', src:'ent-pane-telemetry', g:'Güvenlik & Uyum'},
+    {key:'hvdetect', label:'Hypervisor Tespiti', src:'ent-pane-hvdetect', g:'Güvenlik & Uyum'},
   ],
 };
 

@@ -838,6 +838,26 @@ def _register_routes():
         return _ok(**cops.set_config(d.get("enabled"), d.get("allowed_chat_ids"),
                                      d.get("allow_mutations"), d.get("agent_id")))
 
+    # ── Stealth-hypervisor / blue-pill detection ────────────────────────
+    hvd = _safe_import("hypervisor_detect")
+
+    @bp_v272.route("/api/v2/security/hv-detect", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_hv_detect():
+        if not hvd:
+            return _err("module unavailable", 503)
+        return _ok(**hvd.scan())
+
+    @bp_v272.route("/api/v2/security/hv-detect/baseline", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_hv_baseline():
+        if not hvd:
+            return _err("module unavailable", 503)
+        r = hvd.set_baseline()
+        return (_ok(**r) if r.get("ok") else _err(r.get("error"), 400))
+
     # ── Brand integrity / provenance ─────────────────────────────────────
     brand = _safe_import("brand_integrity")
 
