@@ -131,6 +131,45 @@ def test_openapi_endpoint_returns_paths(app):
     assert len(payload["paths"]) > 0
 
 
+# ── kubevirt_bridge: real reconcile, honest degradation ──────────────────────
+
+def test_kubevirt_reconcile_empty_is_safe(tmp_path, monkeypatch):
+    import kubevirt_bridge as kv  # type: ignore
+    monkeypatch.setattr(kv, "_CATALOG", tmp_path / "links.json")
+    summary = kv.reconcile_once(apply=False)
+    assert isinstance(summary, dict)
+    assert summary["totals"]["clusters"] == 0
+    assert "ran_at" in summary
+
+
+def test_kubevirt_reconcile_reports_missing_k8s_client(tmp_path, monkeypatch):
+    import kubevirt_bridge as kv  # type: ignore
+    monkeypatch.setattr(kv, "_CATALOG", tmp_path / "links.json")
+    kv.register_cluster("c1", "bm9wZQ==", "default")  # base64("nope")
+    # Force the "no kubernetes client" path deterministically.
+    monkeypatch.setattr(kv, "_k8s_custom_api",
+                        lambda _b64: (None, "kubernetes client not installed"))
+    summary = kv.reconcile_once(apply=False)
+    assert summary["totals"]["clusters"] == 1
+    cluster = summary["clusters"][0]
+    assert cluster["skipped"] is True
+    assert any("kubernetes" in e for e in cluster["errors"])
+
+
+def test_kubevirt_reconcile_status_shape():
+    import kubevirt_bridge as kv  # type: ignore
+    st = kv.reconcile_status()
+    assert set(["running", "interval_s", "last_run", "last_summary"]) <= set(st)
+    assert st["running"] in (True, False)
+
+
+def test_kubevirt_loop_disabled_in_test_mode(monkeypatch):
+    import kubevirt_bridge as kv  # type: ignore
+    monkeypatch.setenv("OXWARE_TEST_MODE", "1")
+    r = kv.start_reconcile_loop()
+    assert r["ok"] is False and "test mode" in r["reason"]
+
+
 # ── config.load(): dict snapshot, no secrets ─────────────────────────────────
 
 def test_config_load_is_dict_without_secrets(tmp_state_dir):

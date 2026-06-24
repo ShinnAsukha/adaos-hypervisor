@@ -131,6 +131,41 @@ def _register_routes():
         r = kv.unregister(name)
         return (_ok(**r) if r.get("ok") else _err(r.get("error"), 404))
 
+    @bp_v272.route("/api/v2/kubevirt/reconcile", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_kv_reconcile():
+        if not kv:
+            return _err("module unavailable", 503)
+        d = request.get_json(silent=True) or {}
+        summary = kv.reconcile_once(
+            apply=bool(d.get("apply", True)),
+            delete_orphans=bool(d.get("delete_orphans", False)),
+        )
+        return _ok(**summary)
+
+    @bp_v272.route("/api/v2/kubevirt/reconcile/status", methods=["GET"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_kv_reconcile_status():
+        if not kv:
+            return _err("module unavailable", 503)
+        return _ok(**kv.reconcile_status())
+
+    @bp_v272.route("/api/v2/kubevirt/reconcile/loop", methods=["POST"])
+    @_require_auth
+    @_require_role("admin", "administrator")
+    def api_kv_reconcile_loop():
+        if not kv:
+            return _err("module unavailable", 503)
+        d = request.get_json(silent=True) or {}
+        if d.get("action") == "stop":
+            return _ok(**kv.stop_reconcile_loop())
+        return _ok(**kv.start_reconcile_loop(
+            interval=int(d.get("interval", 60)),
+            apply=bool(d.get("apply", True)),
+        ))
+
     # ── GitOps ───────────────────────────────────────────────────────────
     go = _safe_import("gitops_manager")
 

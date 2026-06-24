@@ -65,7 +65,7 @@
 | Runbook auto-remediation | ✅ | partial | ❌ |
 | GitOps (ArgoCD/Flux) | ✅ | ❌ | ❌ |
 | Kubernetes CSI driver | ✅ | ✅ | community |
-| KubeVirt bridge | 🟠 partial | ❌ | ❌ |
+| KubeVirt bridge | 🟡 beta | ❌ | ❌ |
 | Built-in compliance scanner | ✅ | partial | ❌ |
 | **3-year cost (32 cores, 50 VMs)** | **~$2,250** | ~$200,000 | ~$5,000 |
 
@@ -86,7 +86,7 @@ test suite on every push (badge above is live).
 | Confidential VMs (SEV/TDX), vTPM 2.0 | 🟡 Beta | Works on supported hardware; needs host firmware |
 | Ceph storage backend | 🟡 Community | Functional, community-tested, not first-class yet |
 | AI planner / NL commands | 🟡 Optional | With AI key = AI; **without a key it tells you so** and falls back to transparent heuristics (`source: "heuristic"`) — no fake "AI" output |
-| KubeVirt bridge | 🟠 Partial | Cluster registration + VMI→OXware spec translation are real; **no live watch/reconcile loop yet** (applied out-of-band) |
+| KubeVirt bridge | 🟡 Beta | Cluster registration, VMI→OXware translation, **and a polling reconcile loop** that creates missing VMs. Needs `pip install kubernetes pyyaml`; degrades honestly (reports the reason) if absent or a cluster is unreachable. Streaming Watch + orphan auto-delete are opt-in/roadmap |
 | Bare-metal autoinstall | 🟢 Stable | Per-install random password hash, SSH-key-only login |
 | Desktop (Electron) app | 🟠 Early | Wraps the web UI; some links still placeholder |
 
