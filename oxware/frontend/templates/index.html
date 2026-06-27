@@ -5817,6 +5817,7 @@
             <button class="sub-tab" onclick="entCat('automation')"> Otomasyon</button>
             <button class="sub-tab" onclick="entCat('clients')">️ İstemciler</button>
             <button class="sub-tab" onclick="entCat('docs')"> API Docs</button>
+            <button class="sub-tab" onclick="entCat('kernel')"><i class="fa-solid fa-microchip fa-fw"></i> Kernel</button>
           </div>
           <!-- Feature sub-tab bar (populated by entCat()) -->
           <div class="sub-tabs" id="ent-feat-tabs" style="margin-bottom:14px;overflow-x:auto;white-space:nowrap"></div>
@@ -7765,6 +7766,113 @@
             <div class="card-title">Gönderim Geçmişi (lokal)</div>
             <div class="table-wrap"><table><thead><tr><th>Zaman</th><th>OK</th><th>Sürüm</th><th>VM</th><th>Node</th></tr></thead><tbody id="tele-history-tbody"><tr><td colspan="5" class="text-center text-muted" style="padding:14px">Yükleniyor...</td></tr></tbody></table></div>
           </div>
+        </div>
+
+        <!-- ══════════ v2.9 Kernel-level pack ══════════ -->
+        <div id="ent-pane-ioperf" style="display:none">
+          <div class="section-header"><h2><i class="fa-solid fa-gauge-high fa-fw" style="color:var(--accent-lt)"></i> VM I/O Performans</h2></div>
+          <div class="card" style="margin-bottom:12px;border-left:4px solid var(--accent-lt);background:rgba(88,166,255,.04);padding:14px">
+            <div style="font-size:12px;line-height:1.6"><b style="color:var(--accent-lt)">ℹ Bu Nedir?</b> VM'in kernel-yolu I/O ayarları (Proxmox paritesi): dedike <b>iothread</b>'ler, disk <b>aio</b> modu (io_uring/native/threads), sanal-disk <b>multiqueue</b> ve <b>vhost</b> ağ backend'i. Çoğu değişiklik VM yeniden başlatması gerektirir.</div>
+          </div>
+          <div class="card" style="margin-bottom:12px">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+              <input id="iop-vm" type="text" class="form-control" placeholder="VM adı veya UUID" style="flex:1;min-width:220px">
+              <button class="btn-primary" onclick="loadIoPerfPage()" style="font-size:12px"><i class="fa-solid fa-magnifying-glass"></i> Yükle</button>
+              <button class="btn" onclick="iopRecommend()" style="font-size:12px"><i class="fa-solid fa-wand-magic-sparkles"></i> Öner</button>
+            </div>
+            <div id="iop-body" class="text-muted" style="font-size:12px">VM adı girip "Yükle"ye bas.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Ayarla</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;font-size:12px">
+              <label>iothreads<input id="iop-iothreads" type="number" min="0" class="form-control" placeholder="0"></label>
+              <label>disk hedef<input id="iop-disk-target" type="text" class="form-control" placeholder="vda"></label>
+              <label>aio<select id="iop-disk-aio" class="form-control"><option value="">(değiştirme)</option><option value="io_uring">io_uring</option><option value="native">native</option><option value="threads">threads</option></select></label>
+              <label>disk queues<input id="iop-disk-queues" type="number" min="1" class="form-control" placeholder="1"></label>
+              <label>NIC MAC<input id="iop-net-mac" type="text" class="form-control" placeholder="52:54:..."></label>
+              <label>net queues<input id="iop-net-queues" type="number" min="1" class="form-control" placeholder="1"></label>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+              <button class="btn" onclick="iopApplyIothreads()" style="font-size:12px">iothreads uygula</button>
+              <button class="btn" onclick="iopApplyDisk()" style="font-size:12px">disk uygula</button>
+              <button class="btn" onclick="iopApplyNet()" style="font-size:12px">NIC multiqueue uygula</button>
+            </div>
+            <div id="iop-action-body" style="margin-top:10px;font-size:12px"></div>
+          </div>
+        </div>
+
+        <div id="ent-pane-ebpf" style="display:none">
+          <div class="section-header"><h2><i class="fa-solid fa-eye fa-fw" style="color:#a371f7"></i> eBPF Kernel Gözlem</h2><div class="spacer"></div><button class="btn" onclick="loadEbpfPage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
+          <div class="card" style="margin-bottom:12px;border-left:4px solid #a371f7;background:rgba(163,113,247,.04);padding:14px">
+            <div style="font-size:12px;line-height:1.6"><b style="color:#a371f7">ℹ Bu Nedir?</b> Kerneli doğrudan izleyerek per-VM <b>syscall</b> dağılımı, blok <b>I/O gecikme</b> histogramı ve <b>XDP</b> paket filtresi. <code>bpftrace</code> + root gerektirir; yoksa "devre dışı" der, sahte metrik üretmez (rakiplerde native yok).</div>
+          </div>
+          <div class="card" style="margin-bottom:12px"><div class="card-title">Durum</div><div id="ebpf-status" class="text-muted" style="font-size:12px">Yükleniyor...</div></div>
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-title">VM Syscall Profili</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+              <input id="ebpf-vm" type="text" class="form-control" placeholder="VM adı/UUID" style="flex:1;min-width:200px">
+              <input id="ebpf-secs" type="number" min="1" max="60" value="5" class="form-control" style="width:90px">
+              <button class="btn-primary" onclick="ebpfSyscalls()" style="font-size:12px">Profil çıkar</button>
+            </div>
+            <div id="ebpf-syscalls" class="text-muted" style="font-size:12px"></div>
+          </div>
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-title">Blok I/O Gecikme (host)</div>
+            <button class="btn" onclick="ebpfBlat()" style="font-size:12px;margin-bottom:8px">Histogram (5s)</button>
+            <pre id="ebpf-blat" style="font-size:11px;color:var(--text-muted);background:var(--surface2);padding:10px;border-radius:6px;overflow-x:auto;max-height:260px"></pre>
+          </div>
+          <div class="card">
+            <div class="card-title">XDP Paket Filtresi</div>
+            <div id="ebpf-xdp" class="text-muted" style="font-size:12px">Yükleniyor...</div>
+          </div>
+        </div>
+
+        <div id="ent-pane-kernelops" style="display:none">
+          <div class="section-header"><h2><i class="fa-solid fa-sliders fa-fw" style="color:#22c55e"></i> Host Kernel Ops</h2><div class="spacer"></div><button class="btn" onclick="loadKernelOpsPage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
+          <div class="card" style="margin-bottom:12px;border-left:4px solid #22c55e;background:rgba(34,197,94,.04);padding:14px">
+            <div style="font-size:12px;line-height:1.6"><b style="color:#22c55e">ℹ Bu Nedir?</b> Host kernel verimlilik + uptime: <b>zram</b> (sıkıştırılmış RAM swap), <b>zswap</b>, CPU <b>governor</b>/turbo (perf-güç dengesi) ve reboot'suz <b>kernel livepatch</b> durumu.</div>
+          </div>
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-title">zram (Sıkıştırılmış Swap)</div>
+            <div id="ko-zram" class="text-muted" style="font-size:12px;margin-bottom:8px">Yükleniyor...</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input id="ko-zram-mb" type="number" min="0" class="form-control" placeholder="MB (0=kapat)" style="width:140px">
+              <select id="ko-zram-algo" class="form-control" style="width:120px"><option value="zstd">zstd</option><option value="lz4">lz4</option><option value="lzo-rle">lzo-rle</option></select>
+              <button class="btn" onclick="koZram()" style="font-size:12px">Uygula</button>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-title">zswap</div>
+            <div id="ko-zswap" class="text-muted" style="font-size:12px;margin-bottom:8px">Yükleniyor...</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn" onclick="koZswap(true)" style="font-size:12px">Aç (zstd, %20)</button>
+              <button class="btn" onclick="koZswap(false)" style="font-size:12px;color:#ef4444;border-color:rgba(239,68,68,.4)">Kapat</button>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-title">CPU Güç (Governor / Turbo)</div>
+            <div id="ko-cpu" class="text-muted" style="font-size:12px;margin-bottom:8px">Yükleniyor...</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <select id="ko-gov" class="form-control" style="width:160px"></select>
+              <button class="btn" onclick="koGovernor()" style="font-size:12px">Governor uygula</button>
+              <button class="btn" onclick="koTurbo(true)" style="font-size:12px">Turbo aç</button>
+              <button class="btn" onclick="koTurbo(false)" style="font-size:12px">Turbo kapat</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Kernel Livepatch (reboot'suz yama)</div>
+            <div id="ko-livepatch" class="text-muted" style="font-size:12px">Yükleniyor...</div>
+          </div>
+        </div>
+
+        <div id="ent-pane-lkm" style="display:none">
+          <div class="section-header"><h2><i class="fa-solid fa-shield-halved fa-fw" style="color:#f0883e"></i> OXware Kernel Modülleri</h2><div class="spacer"></div><button class="btn" onclick="loadLkmPage()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button></div>
+          <div class="card" style="margin-bottom:12px;border-left:4px solid #f0883e;background:rgba(240,136,62,.04);padding:14px">
+            <div style="font-size:12px;line-height:1.6"><b style="color:#f0883e">ℹ Bu Nedir?</b> OXware'in kendi yüklenebilir kernel modülleri (kprobe tabanlı): <b>oxware_audit</b> (KVM/QEMU yaşam döngüsü audit) ve <b>oxware_guard</b> (ptrace/mmap anti-tamper). Buradan derle / yükle / kaldır ve kernel-içi çıktılarını oku.</div>
+          </div>
+          <div class="card" style="margin-bottom:12px"><div class="card-title">Modüller</div><div id="lkm-body" class="text-muted" style="font-size:12px">Yükleniyor...</div></div>
+          <div class="card" style="margin-bottom:12px"><div class="card-title">oxware_audit olayları (/dev/oxware_audit)</div><button class="btn" onclick="lkmAudit()" style="font-size:12px;margin-bottom:8px">Oku</button><pre id="lkm-audit" style="font-size:11px;color:var(--text-muted);background:var(--surface2);padding:10px;border-radius:6px;overflow-x:auto;max-height:220px"></pre></div>
+          <div class="card"><div class="card-title">oxware_guard alarmları (/dev/oxware_guard)</div><button class="btn" onclick="lkmGuard()" style="font-size:12px;margin-bottom:8px">Oku</button><pre id="lkm-guard" style="font-size:11px;color:var(--text-muted);background:var(--surface2);padding:10px;border-radius:6px;overflow-x:auto;max-height:220px"></pre></div>
         </div>
 
         </div><!-- /page-tab-enterprise -->
@@ -35579,7 +35687,7 @@ async function deleteRbacPerm(key, username) {
 /* ══════════════════════════════════════════════════════════════════════════════
    Enterprise Sub-Tab System (v2.5.6+)
 ══════════════════════════════════════════════════════════════════════════════ */
-const ENT_SUB_TABS = ['drs','affinity','maint','evc','nioc','dr','lifecycle','stor-adv','net-adv','siem','sessrec','numa','bkup-enc','rightsize','alertcorr','cvm','disk-enc','compliance','dlp','forensics','mfa-policy','sso','tenants','chargeback','svc-cat','rate-limit','otel','grafana','topoviz','forecast','driftcap','backupadv','microseg','bfd','svcchain','mesh','pulumi','k8scsi','k8sop','kubevirt','gitops','federation','firecracker','kata','wasm','edge','workflow','opa','cloudevents','runbook','desktop','cloudexport','faultol','storedrs','consolerec','greenmode','multiregion','cloudburst','baremetal','oauth2','apidocs'];
+const ENT_SUB_TABS = ['drs','affinity','maint','evc','nioc','dr','lifecycle','stor-adv','net-adv','siem','sessrec','numa','bkup-enc','rightsize','alertcorr','cvm','disk-enc','compliance','dlp','forensics','mfa-policy','sso','tenants','chargeback','svc-cat','rate-limit','otel','grafana','topoviz','forecast','driftcap','backupadv','microseg','bfd','svcchain','mesh','pulumi','k8scsi','k8sop','kubevirt','gitops','federation','firecracker','kata','wasm','edge','workflow','opa','cloudevents','runbook','desktop','cloudexport','faultol','storedrs','consolerec','greenmode','multiregion','cloudburst','baremetal','oauth2','apidocs','ioperf','ebpf','kernelops','lkm'];
 const ENT_LOADERS = {
   drs: () => { try { loadDrsPage(); } catch(e) { console.warn(e); } },
   affinity: () => { try { loadAffinityPage(); } catch(e) { console.warn(e); } },
@@ -35661,7 +35769,12 @@ const ENT_LOADERS = {
   sbom:           () => { try { loadSbomPage(); } catch(e) { console.warn(e); } },
   pwa:            () => { try { loadPwaPage(); } catch(e) { console.warn(e); } },
   knownhosts:     () => { try { loadKnownHostsPage(); } catch(e) { console.warn(e); } },
-  telemetry:      () => { try { loadTelemetryPage(); } catch(e) { console.warn(e); } }
+  telemetry:      () => { try { loadTelemetryPage(); } catch(e) { console.warn(e); } },
+  // v2.9 Kernel-level pack
+  ioperf:         () => { try { loadIoPerfPage(); } catch(e) { console.warn(e); } },
+  ebpf:           () => { try { loadEbpfPage(); } catch(e) { console.warn(e); } },
+  kernelops:      () => { try { loadKernelOpsPage(); } catch(e) { console.warn(e); } },
+  lkm:            () => { try { loadLkmPage(); } catch(e) { console.warn(e); } }
 };
 
 function entSubTab(tab) {
@@ -35688,7 +35801,8 @@ const ENT_CATEGORIES = {
   modern:['firecracker','kata','wasm','edge'],
   automation:['workflow','opa','cloudevents','runbook','greenmode','multiregion','cloudburst','baremetal'],
   clients:['desktop','cloudexport'],
-  docs:['apidocs']
+  docs:['apidocs'],
+  kernel:['ioperf','ebpf','kernelops','lkm']
 };
 let _entCurrentCat = 'compute';
 function entCat(cat) {
@@ -35701,7 +35815,7 @@ function entCat(cat) {
   if (bs[ci]) bs[ci].classList.add('active');
   // Build feature sub-tab bar for this category
   const feats = ENT_CATEGORIES[cat] || [];
-  const labels = {drs:'DRS',affinity:'Yakınlık',maint:'Bakım',evc:'EVC CPU',nioc:'Ağ QoS',dr:'Felaket Kurtarma',lifecycle:'Yaşam Döngüsü','stor-adv':'Depolama+','net-adv':'Ağ+',siem:'SIEM',sessrec:'Oturum Kaydı',numa:'NUMA','bkup-enc':'Yedek Şifreleme',rightsize:'Boyutlandırma',alertcorr:'Uyarı Korelasyon',cvm:'Gizli VM','disk-enc':'Disk Şifreleme',compliance:'Uyumluluk',dlp:'DLP',forensics:'Adli Analiz','mfa-policy':'2FA Politikası',sso:'SSO',oauth2:'OAuth2',tenants:'Tenants',chargeback:'Chargeback','svc-cat':'Servis Kataloğu','rate-limit':'Rate Limit',otel:'Tracing',grafana:'Grafana',topoviz:'Topoloji',forecast:'Tahmin/ML',driftcap:'Drift/Kapasite',backupadv:'Backup+',microseg:'Mikrosegment',bfd:'BFD',svcchain:'Servis Zinciri',mesh:'Service Mesh',pulumi:'Pulumi',k8scsi:'K8s CSI',k8sop:'K8s Operator',kubevirt:'KubeVirt',gitops:'GitOps',federation:'Federation',firecracker:'microVM',kata:'Kata',wasm:'WASM',edge:'Edge',workflow:'Workflow',opa:'Policy (OPA)',cloudevents:'CloudEvents',runbook:'Auto-Remediation',greenmode:'Green Mode',multiregion:'Multi-Region',cloudburst:'Cloud Burst',baremetal:'Bare Metal',desktop:'Desktop Client',cloudexport:'Cloud Export',faultol:'Fault Tolerance',storedrs:'Storage DRS',consolerec:'Konsol Kaydı',apidocs:'API Referans'};
+  const labels = {drs:'DRS',affinity:'Yakınlık',maint:'Bakım',evc:'EVC CPU',nioc:'Ağ QoS',dr:'Felaket Kurtarma',lifecycle:'Yaşam Döngüsü','stor-adv':'Depolama+','net-adv':'Ağ+',siem:'SIEM',sessrec:'Oturum Kaydı',numa:'NUMA','bkup-enc':'Yedek Şifreleme',rightsize:'Boyutlandırma',alertcorr:'Uyarı Korelasyon',cvm:'Gizli VM','disk-enc':'Disk Şifreleme',compliance:'Uyumluluk',dlp:'DLP',forensics:'Adli Analiz','mfa-policy':'2FA Politikası',sso:'SSO',oauth2:'OAuth2',tenants:'Tenants',chargeback:'Chargeback','svc-cat':'Servis Kataloğu','rate-limit':'Rate Limit',otel:'Tracing',grafana:'Grafana',topoviz:'Topoloji',forecast:'Tahmin/ML',driftcap:'Drift/Kapasite',backupadv:'Backup+',microseg:'Mikrosegment',bfd:'BFD',svcchain:'Servis Zinciri',mesh:'Service Mesh',pulumi:'Pulumi',k8scsi:'K8s CSI',k8sop:'K8s Operator',kubevirt:'KubeVirt',gitops:'GitOps',federation:'Federation',firecracker:'microVM',kata:'Kata',wasm:'WASM',edge:'Edge',workflow:'Workflow',opa:'Policy (OPA)',cloudevents:'CloudEvents',runbook:'Auto-Remediation',greenmode:'Green Mode',multiregion:'Multi-Region',cloudburst:'Cloud Burst',baremetal:'Bare Metal',desktop:'Desktop Client',cloudexport:'Cloud Export',faultol:'Fault Tolerance',storedrs:'Storage DRS',consolerec:'Konsol Kaydı',apidocs:'API Referans',ioperf:'VM I/O Perf',ebpf:'eBPF Gözlem',kernelops:'Kernel Ops',lkm:'Kernel Modülleri'};
   const bar = document.getElementById('ent-feat-tabs');
   bar.innerHTML = feats.map((f, i) => `<button class="sub-tab${i === 0 ? ' active' : ''}" onclick="entSubTab('${f}')">${labels[f] || f}</button>`).join('');
   // Hide all panes, show first feature of this category
@@ -37840,6 +37954,173 @@ async function hpConfigure() {
   const d = await _api('/api/compute/hugepages', 'POST', { count });
   if (_entOk(d)) { toast('HugePages uygulandı', 'success'); loadNumaPage(); }
   else _entErr(d, 'HugePages');
+}
+
+/* ═════════ v2.9 Kernel-level pack ═════════ */
+function _iopVm() { return (document.getElementById('iop-vm').value || '').trim(); }
+async function loadIoPerfPage() {
+  const vm = _iopVm();
+  const b = document.getElementById('iop-body');
+  if (!vm) { b.innerHTML = '<div class="text-muted">VM adı girip "Yükle"ye bas.</div>'; return; }
+  b.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
+  const d = await _api('/api/io-perf/' + encodeURIComponent(vm));
+  if (!_entOk(d) || d.ok === false) { b.innerHTML = `<div style="color:#f85149">Hata: ${_esc(d?.error || 'yüklenemedi')}</div>`; return; }
+  const disks = (d.disks || []).map(dk => `<tr><td><b>${_esc(dk.target)}</b></td><td>${_esc(dk.bus||'-')}</td><td>${_esc(dk.aio||'-')}</td><td>${_esc(dk.cache||'-')}</td><td>${_esc(dk.iothread||'-')}</td><td>${_esc(dk.queues||'-')}</td></tr>`).join('');
+  const nets = (d.interfaces || []).map(n => `<tr><td><b>${_esc(n.mac)}</b></td><td>${_esc(n.model||'-')}</td><td>${_esc(n.backend||'-')}</td><td>${_esc(n.queues||'-')}</td></tr>`).join('');
+  b.innerHTML = `<div>iothreads: <b>${_esc(d.iothreads)}</b></div>
+    <div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>Disk</th><th>Bus</th><th>aio</th><th>cache</th><th>iothread</th><th>queues</th></tr></thead><tbody>${disks || '<tr><td colspan="6" class="text-muted">disk yok</td></tr>'}</tbody></table></div>
+    <div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>NIC MAC</th><th>model</th><th>backend</th><th>queues</th></tr></thead><tbody>${nets || '<tr><td colspan="4" class="text-muted">NIC yok</td></tr>'}</tbody></table></div>`;
+}
+async function iopRecommend() {
+  const vm = _iopVm(); if (!vm) { toast('VM adı gir', 'error'); return; }
+  const d = await _api('/api/io-perf/' + encodeURIComponent(vm) + '/recommend');
+  const out = document.getElementById('iop-action-body');
+  if (_entOk(d) && d.ok !== false) { out.innerHTML = _entKV(d.recommendations || d); }
+  else { out.innerHTML = `<div style="color:#f85149">${_esc(d?.error || 'hata')}</div>`; }
+}
+async function iopApplyIothreads() {
+  const vm = _iopVm(); if (!vm) { toast('VM adı gir', 'error'); return; }
+  const count = parseInt(document.getElementById('iop-iothreads').value || '0');
+  const d = await _api('/api/io-perf/' + encodeURIComponent(vm) + '/iothreads', 'POST', { count });
+  _iopResult(d, 'iothreads');
+}
+async function iopApplyDisk() {
+  const vm = _iopVm(); if (!vm) { toast('VM adı gir', 'error'); return; }
+  const target = (document.getElementById('iop-disk-target').value || '').trim();
+  if (!target) { toast('disk hedef gir (vda)', 'error'); return; }
+  const body = { target };
+  const aio = document.getElementById('iop-disk-aio').value; if (aio) body.aio = aio;
+  const q = document.getElementById('iop-disk-queues').value; if (q) body.queues = parseInt(q);
+  const d = await _api('/api/io-perf/' + encodeURIComponent(vm) + '/disk', 'POST', body);
+  _iopResult(d, 'disk');
+}
+async function iopApplyNet() {
+  const vm = _iopVm(); if (!vm) { toast('VM adı gir', 'error'); return; }
+  const mac = (document.getElementById('iop-net-mac').value || '').trim();
+  if (!mac) { toast('NIC MAC gir', 'error'); return; }
+  const queues = parseInt(document.getElementById('iop-net-queues').value || '1');
+  const d = await _api('/api/io-perf/' + encodeURIComponent(vm) + '/net', 'POST', { mac, queues, vhost: true });
+  _iopResult(d, 'NIC');
+}
+function _iopResult(d, label) {
+  const out = document.getElementById('iop-action-body');
+  if (_entOk(d) && d.ok !== false) {
+    out.innerHTML = `<div style="color:#22c55e">✓ ${_esc(label)} uygulandı${d.restart_required ? ' (VM yeniden başlatma gerekir)' : ''}</div>`;
+    toast(label + ' uygulandı', 'success'); loadIoPerfPage();
+  } else { out.innerHTML = `<div style="color:#f85149">Hata: ${_esc(d?.error || '')}</div>`; }
+}
+
+async function loadEbpfPage() {
+  const s = document.getElementById('ebpf-status');
+  const d = await _api('/api/ebpf/status');
+  if (_entOk(d)) {
+    s.innerHTML = d.available
+      ? `<div style="color:#22c55e">✓ eBPF aktif</div><div>bpftrace: ${d.bpftrace ? '✓' : '✗'} · bcc: ${d.bcc ? '✓' : '✗'} · root: ${d.is_root ? '✓' : '✗'} · kernel: ${_esc(d.kernel||'?')}</div>`
+      : `<div style="color:#d29922">⚠ ${_esc(d.reason || 'eBPF devre dışı')}</div><div>kernel: ${_esc(d.kernel||'?')}</div>`;
+  } else { s.innerHTML = '<div class="text-muted">Yüklenemedi</div>'; }
+  const xb = document.getElementById('ebpf-xdp');
+  const x = await _api('/api/ebpf/xdp');
+  if (_entOk(x) && x.ok !== false) {
+    const ifs = x.interfaces || [];
+    xb.innerHTML = ifs.length ? ifs.map(i => `<div style="display:flex;gap:8px;align-items:center;margin:4px 0"><span style="flex:1">${_esc(i.iface || i.name || i)} ${i.attached ? '<b style="color:#22c55e">attached</b>' : ''}</span><button class="btn" style="font-size:11px" onclick="ebpfXdp('${_esc(i.iface||i.name||i)}','attach')">attach</button><button class="btn" style="font-size:11px" onclick="ebpfXdp('${_esc(i.iface||i.name||i)}','detach')">detach</button></div>`).join('') : '<div class="text-muted">Arayüz yok</div>';
+  } else { xb.innerHTML = `<div class="text-muted">${_esc(x?.error || 'XDP yüklenemedi')}</div>`; }
+}
+async function ebpfXdp(iface, action) {
+  const d = await _api('/api/ebpf/xdp', 'POST', { iface, action });
+  if (_entOk(d) && d.ok !== false) { toast('XDP ' + action, 'success'); loadEbpfPage(); }
+  else toast(d?.error || 'XDP hata', 'error');
+}
+async function ebpfSyscalls() {
+  const vm = (document.getElementById('ebpf-vm').value || '').trim();
+  if (!vm) { toast('VM adı gir', 'error'); return; }
+  const secs = parseInt(document.getElementById('ebpf-secs').value || '5');
+  const out = document.getElementById('ebpf-syscalls');
+  out.innerHTML = '<div class="text-muted">İzleniyor...</div>';
+  const d = await _api('/api/ebpf/vm/' + encodeURIComponent(vm) + '/syscalls?seconds=' + secs);
+  if (_entOk(d) && d.ok !== false) {
+    const rows = (d.syscalls || []).map(x => `<tr><td>${_esc(x.name)}</td><td style="text-align:right"><b>${_esc(x.count)}</b></td></tr>`).join('');
+    out.innerHTML = `<div>PID ${_esc(d.pid)} · ${_esc(d.seconds)}s</div><div class="table-wrap" style="margin-top:6px"><table><thead><tr><th>Syscall</th><th style="text-align:right">Sayı</th></tr></thead><tbody>${rows || '<tr><td colspan=2 class="text-muted">veri yok</td></tr>'}</tbody></table></div>`;
+  } else { out.innerHTML = `<div style="color:#f85149">${_esc(d?.error || 'hata')}</div>`; }
+}
+async function ebpfBlat() {
+  const out = document.getElementById('ebpf-blat');
+  out.textContent = 'İzleniyor (5s)...';
+  const d = await _api('/api/ebpf/block-latency?seconds=5');
+  out.textContent = (_entOk(d) && d.ok !== false) ? (d.histogram || '(boş)') : ('Hata: ' + (d?.error || ''));
+}
+
+async function loadKernelOpsPage() {
+  const [zr, zs, cpu, lp] = await Promise.all([
+    _api('/api/kernel/zram'), _api('/api/kernel/zswap'),
+    _api('/api/kernel/cpu-power'), _api('/api/kernel/livepatch')]);
+  const zb = document.getElementById('ko-zram');
+  zb.innerHTML = (_entOk(zr) && zr.available !== false)
+    ? `disksize: <b>${_esc(zr.disksize_mb)}</b> MB · algo: <b>${_esc(zr.comp_algorithm||'-')}</b> · orig: ${_esc(zr.orig_data_mb)}MB → compr: ${_esc(zr.compr_data_mb)}MB`
+    : `<span style="color:#d29922">${_esc(zr?.reason || 'zram yok')}</span>`;
+  const zsb = document.getElementById('ko-zswap');
+  zsb.innerHTML = (_entOk(zs) && zs.available !== false)
+    ? `enabled: <b>${zs.enabled ? '✓' : '✗'}</b> · compressor: ${_esc(zs.compressor||'-')} · max pool: ${_esc(zs.max_pool_percent||'-')}%`
+    : `<span style="color:#d29922">${_esc(zs?.reason || 'zswap yok')}</span>`;
+  const cb = document.getElementById('ko-cpu');
+  if (_entOk(cpu) && cpu.available !== false) {
+    cb.innerHTML = `governor: <b>${_esc(cpu.current||'-')}</b>${cpu.uniform ? '' : ' <span style="color:#d29922">(karışık)</span>'} · turbo: ${cpu.turbo_enabled == null ? '-' : (cpu.turbo_enabled ? 'açık' : 'kapalı')}`;
+    const sel = document.getElementById('ko-gov');
+    sel.innerHTML = (cpu.available_governors || []).map(g => `<option value="${_esc(g)}"${g===cpu.current?' selected':''}>${_esc(g)}</option>`).join('') || '<option value="">(yok)</option>';
+  } else { cb.innerHTML = `<span style="color:#d29922">${_esc(cpu?.reason || 'cpufreq yok')}</span>`; }
+  const lb = document.getElementById('ko-livepatch');
+  lb.innerHTML = (_entOk(lp) && lp.available !== false)
+    ? `<div>sağlayıcı: <b>${_esc(lp.provider)}</b></div><pre style="font-size:11px;white-space:pre-wrap;margin-top:6px">${_esc(lp.status||'')}</pre>`
+    : `<span style="color:#d29922">${_esc(lp?.reason || lp?.error || 'livepatch yok')}</span>`;
+}
+async function koZram() {
+  const size_mb = parseInt(document.getElementById('ko-zram-mb').value || '0');
+  const algorithm = document.getElementById('ko-zram-algo').value;
+  const d = await _api('/api/kernel/zram', 'POST', { size_mb, algorithm });
+  if (_entOk(d) && d.ok !== false) { toast('zram uygulandı', 'success'); loadKernelOpsPage(); } else _entErr(d, 'zram');
+}
+async function koZswap(enabled) {
+  const d = await _api('/api/kernel/zswap', 'POST', { enabled });
+  if (_entOk(d) && d.ok !== false) { toast('zswap ' + (enabled?'açıldı':'kapandı'), 'success'); loadKernelOpsPage(); } else _entErr(d, 'zswap');
+}
+async function koGovernor() {
+  const governor = document.getElementById('ko-gov').value;
+  if (!governor) { toast('governor seç', 'error'); return; }
+  const d = await _api('/api/kernel/cpu-power', 'POST', { governor });
+  if (_entOk(d) && d.ok !== false) { toast('governor uygulandı', 'success'); loadKernelOpsPage(); } else _entErr(d, 'governor');
+}
+async function koTurbo(turbo) {
+  const d = await _api('/api/kernel/cpu-power', 'POST', { turbo });
+  if (_entOk(d) && d.ok !== false) { toast('turbo ' + (turbo?'açıldı':'kapandı'), 'success'); loadKernelOpsPage(); } else _entErr(d, 'turbo');
+}
+
+async function loadLkmPage() {
+  const b = document.getElementById('lkm-body');
+  const d = await _api('/api/kernel/modules');
+  if (!_entOk(d) || d.ok === false) { b.innerHTML = `<div style="color:#f85149">${_esc(d?.error||'yüklenemedi')}</div>`; return; }
+  const rows = (d.modules || []).map(m => `<tr><td><b>${_esc(m.name)}</b></td>
+    <td>${m.loaded ? '<span style="color:#22c55e">yüklü</span>' : '<span class="text-muted">değil</span>'}</td>
+    <td>${m.built ? '✓' : '✗'}</td><td><code style="font-size:11px">${_esc(m.device)}</code> ${m.device_present?'✓':'✗'}</td>
+    <td><button class="btn" style="font-size:11px" onclick="lkmAct('${_esc(m.name)}','build')">build</button>
+        <button class="btn" style="font-size:11px" onclick="lkmAct('${_esc(m.name)}','load')">load</button>
+        <button class="btn" style="font-size:11px;color:#ef4444" onclick="lkmAct('${_esc(m.name)}','unload')">unload</button></td></tr>`).join('');
+  b.innerHTML = `<div style="font-size:11px;margin-bottom:6px">kaynak: <code>${_esc(d.src_dir||'-')}</code> · root: ${d.is_root?'✓':'✗'}</div>
+    <div class="table-wrap"><table><thead><tr><th>Modül</th><th>Durum</th><th>Derli</th><th>Cihaz</th><th>Aksiyon</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+async function lkmAct(name, action) {
+  if (action === 'unload' && !confirm(name + ' kaldırılsın mı?')) return;
+  const d = await _api('/api/kernel/modules/' + encodeURIComponent(name) + '/' + action, 'POST', {});
+  if (_entOk(d) && d.ok !== false) { toast(name + ' ' + action + ' OK', 'success'); loadLkmPage(); }
+  else _entErr(d, name + ' ' + action);
+}
+async function lkmAudit() {
+  const out = document.getElementById('lkm-audit');
+  const d = await _api('/api/kernel/modules/audit');
+  out.textContent = (_entOk(d) && d.ok !== false) ? (d.loaded ? (d.events || '(boş)') : (d.reason || '')) : ('Hata: ' + (d?.error || ''));
+}
+async function lkmGuard() {
+  const out = document.getElementById('lkm-guard');
+  const d = await _api('/api/kernel/modules/guard');
+  out.textContent = (_entOk(d) && d.ok !== false) ? (d.loaded ? (d.raw || '(boş)') : (d.reason || '')) : ('Hata: ' + (d?.error || ''));
 }
 
 /* ───────── Backup Encryption ───────── */

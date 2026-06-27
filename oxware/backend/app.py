@@ -152,6 +152,11 @@ compute_tune    = _safe_import("compute_tuning")
 storage_adv     = _safe_import("storage_advanced")
 network_adv     = _safe_import("network_advanced")
 automation_eng  = _safe_import("automation_engine")
+# ── v2.9 Kernel-level pack ───────────────────────────────────────────────────
+io_perf         = _safe_import("io_perf_manager")
+ebpf_obs        = _safe_import("ebpf_observability")
+kernel_ops      = _safe_import("kernel_ops")
+kernel_mods     = _safe_import("kernel_modules")
 
 # ── v2.5.4 Enterprise modules ────────────────────────────────────────────────
 secboot_mgr     = _safe_import("secureboot_manager")
@@ -15861,6 +15866,163 @@ def api_compute_pcie():
     if not compute_tune: return ok(devices=[])
     return ok(devices=compute_tune.list_pcie_devices(),
               iommu=compute_tune.list_iommu_groups())
+
+
+# ── v2.9 Kernel pack: VM I/O performance ─────────────────────────────────────
+@app.route("/api/io-perf/<vm_id>", methods=["GET"])
+@require_auth
+def api_io_perf_get(vm_id):
+    if not io_perf: return err("Modül yok")
+    return ok(**io_perf.get_io_config(vm_id))
+
+@app.route("/api/io-perf/<vm_id>/recommend", methods=["GET"])
+@require_auth
+def api_io_perf_recommend(vm_id):
+    if not io_perf: return err("Modül yok")
+    return ok(**io_perf.recommend(vm_id))
+
+@app.route("/api/io-perf/<vm_id>/iothreads", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_io_perf_iothreads(vm_id):
+    if not io_perf: return err("Modül yok")
+    d = request.get_json(silent=True) or {}
+    return ok(**io_perf.set_iothreads(vm_id, int(d.get("count", 0))))
+
+@app.route("/api/io-perf/<vm_id>/disk", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_io_perf_disk(vm_id):
+    if not io_perf: return err("Modül yok")
+    d = request.get_json(silent=True) or {}
+    return ok(**io_perf.set_disk_perf(
+        vm_id, d.get("target", ""), aio=d.get("aio"), cache=d.get("cache"),
+        iothread=d.get("iothread"), queues=d.get("queues")))
+
+@app.route("/api/io-perf/<vm_id>/net", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_io_perf_net(vm_id):
+    if not io_perf: return err("Modül yok")
+    d = request.get_json(silent=True) or {}
+    return ok(**io_perf.set_net_multiqueue(
+        vm_id, d.get("mac", ""), int(d.get("queues", 1)),
+        vhost=bool(d.get("vhost", True))))
+
+
+# ── v2.9 Kernel pack: eBPF observability ─────────────────────────────────────
+@app.route("/api/ebpf/status", methods=["GET"])
+@require_auth
+def api_ebpf_status():
+    if not ebpf_obs: return err("Modül yok")
+    return ok(**ebpf_obs.status())
+
+@app.route("/api/ebpf/vm/<vm_id>/syscalls", methods=["GET"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_ebpf_syscalls(vm_id):
+    if not ebpf_obs: return err("Modül yok")
+    return ok(**ebpf_obs.vm_syscalls(vm_id, int(request.args.get("seconds", 5))))
+
+@app.route("/api/ebpf/block-latency", methods=["GET"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_ebpf_blat():
+    if not ebpf_obs: return err("Modül yok")
+    return ok(**ebpf_obs.block_latency(int(request.args.get("seconds", 5))))
+
+@app.route("/api/ebpf/xdp", methods=["GET", "POST"])
+@require_auth
+@require_role("admin", "administrator")
+def api_ebpf_xdp():
+    if not ebpf_obs: return err("Modül yok")
+    if request.method == "GET":
+        return ok(**ebpf_obs.xdp_list())
+    d = request.get_json(silent=True) or {}
+    iface, action = d.get("iface", ""), d.get("action", "attach")
+    fn = ebpf_obs.xdp_attach if action == "attach" else ebpf_obs.xdp_detach
+    return ok(**fn(iface))
+
+
+# ── v2.9 Kernel pack: host kernel ops ────────────────────────────────────────
+@app.route("/api/kernel/zram", methods=["GET", "POST"])
+@require_auth
+@require_role("admin", "administrator")
+def api_kernel_zram():
+    if not kernel_ops: return err("Modül yok")
+    if request.method == "GET":
+        return ok(**kernel_ops.zram_status())
+    d = request.get_json(silent=True) or {}
+    return ok(**kernel_ops.zram_configure(
+        int(d.get("size_mb", 0)), d.get("algorithm", "zstd")))
+
+@app.route("/api/kernel/zswap", methods=["GET", "POST"])
+@require_auth
+@require_role("admin", "administrator")
+def api_kernel_zswap():
+    if not kernel_ops: return err("Modül yok")
+    if request.method == "GET":
+        return ok(**kernel_ops.zswap_status())
+    d = request.get_json(silent=True) or {}
+    return ok(**kernel_ops.zswap_configure(
+        bool(d.get("enabled", True)), d.get("compressor", "zstd"),
+        int(d.get("max_pool_percent", 20))))
+
+@app.route("/api/kernel/cpu-power", methods=["GET", "POST"])
+@require_auth
+@require_role("admin", "administrator")
+def api_kernel_cpu_power():
+    if not kernel_ops: return err("Modül yok")
+    if request.method == "GET":
+        return ok(**kernel_ops.cpu_power_status())
+    d = request.get_json(silent=True) or {}
+    if "turbo" in d:
+        return ok(**kernel_ops.cpu_set_turbo(bool(d["turbo"])))
+    return ok(**kernel_ops.cpu_set_governor(d.get("governor", "")))
+
+@app.route("/api/kernel/livepatch", methods=["GET", "POST"])
+@require_auth
+@require_role("admin", "administrator")
+def api_kernel_livepatch():
+    if not kernel_ops: return err("Modül yok")
+    if request.method == "GET":
+        return ok(**kernel_ops.livepatch_status())
+    d = request.get_json(silent=True) or {}
+    return ok(**kernel_ops.livepatch_apply(d.get("patch_path", "")))
+
+
+# ── v2.9 Kernel pack: OXware LKM manager ─────────────────────────────────────
+@app.route("/api/kernel/modules", methods=["GET"])
+@require_auth
+@require_role("admin", "administrator")
+def api_kernel_modules():
+    if not kernel_mods: return err("Modül yok")
+    return ok(**kernel_mods.status())
+
+@app.route("/api/kernel/modules/<name>/<action>", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator")
+def api_kernel_modules_action(name, action):
+    if not kernel_mods: return err("Modül yok")
+    fn = {"build": kernel_mods.build, "load": kernel_mods.load,
+          "unload": kernel_mods.unload}.get(action)
+    if not fn:
+        return err("geçersiz aksiyon")
+    return ok(**fn(name))
+
+@app.route("/api/kernel/modules/audit", methods=["GET"])
+@require_auth
+@require_role("admin", "administrator")
+def api_kernel_modules_audit():
+    if not kernel_mods: return err("Modül yok")
+    return ok(**kernel_mods.audit_events())
+
+@app.route("/api/kernel/modules/guard", methods=["GET"])
+@require_auth
+@require_role("admin", "administrator")
+def api_kernel_modules_guard():
+    if not kernel_mods: return err("Modül yok")
+    return ok(**kernel_mods.guard_alerts())
 
 
 # ── Storage Advanced ───────────────────────────────────────────────────────
