@@ -152,7 +152,7 @@ compute_tune    = _safe_import("compute_tuning")
 storage_adv     = _safe_import("storage_advanced")
 network_adv     = _safe_import("network_advanced")
 automation_eng  = _safe_import("automation_engine")
-# ── v2.9 Kernel-level pack ───────────────────────────────────────────────────
+# ── v2.8.2 Kernel-level pack ───────────────────────────────────────────────────
 io_perf         = _safe_import("io_perf_manager")
 ebpf_obs        = _safe_import("ebpf_observability")
 kernel_ops      = _safe_import("kernel_ops")
@@ -15868,7 +15868,7 @@ def api_compute_pcie():
               iommu=compute_tune.list_iommu_groups())
 
 
-# ── v2.9 Kernel pack: VM I/O performance ─────────────────────────────────────
+# ── v2.8.2 Kernel pack: VM I/O performance ─────────────────────────────────────
 @app.route("/api/io-perf/<vm_id>", methods=["GET"])
 @require_auth
 def api_io_perf_get(vm_id):
@@ -15910,7 +15910,7 @@ def api_io_perf_net(vm_id):
         vhost=bool(d.get("vhost", True))))
 
 
-# ── v2.9 Kernel pack: eBPF observability ─────────────────────────────────────
+# ── v2.8.2 Kernel pack: eBPF observability ─────────────────────────────────────
 @app.route("/api/ebpf/status", methods=["GET"])
 @require_auth
 def api_ebpf_status():
@@ -15944,7 +15944,7 @@ def api_ebpf_xdp():
     return ok(**fn(iface))
 
 
-# ── v2.9 Kernel pack: host kernel ops ────────────────────────────────────────
+# ── v2.8.2 Kernel pack: host kernel ops ────────────────────────────────────────
 @app.route("/api/kernel/zram", methods=["GET", "POST"])
 @require_auth
 @require_role("admin", "administrator")
@@ -15991,7 +15991,7 @@ def api_kernel_livepatch():
     return ok(**kernel_ops.livepatch_apply(d.get("patch_path", "")))
 
 
-# ── v2.9 Kernel pack: OXware LKM manager ─────────────────────────────────────
+# ── v2.8.2 Kernel pack: OXware LKM manager ─────────────────────────────────────
 @app.route("/api/kernel/modules", methods=["GET"])
 @require_auth
 @require_role("admin", "administrator")

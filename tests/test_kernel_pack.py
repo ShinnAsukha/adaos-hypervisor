@@ -1,4 +1,4 @@
-"""Tests for the v2.9 kernel-level pack (I/O perf, eBPF, host kernel ops, LKMs).
+"""Tests for the v2.8.2 kernel-level pack (I/O perf, eBPF, host kernel ops, LKMs).
 
 These run cross-platform. On a dev box without libvirt/bpftrace/sysfs the
 modules must degrade gracefully (available=False + reason) and never crash —

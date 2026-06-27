@@ -187,7 +187,7 @@ sudo bash install.sh
 - **PWA offline mode** (read-only fallback)
 - **CycloneDX SBOM** per release
 
-### ⚙️ Kernel-level pack (v2.9)
+### ⚙️ Kernel-level pack (v2.8.2)
 - **VM I/O perf**: iothreads, disk `io_uring`/native, virtio multiqueue, vhost
 - **eBPF observability**: per-VM syscall profile + block-latency (bpftrace), XDP
 - **Host kernel ops**: zram/zswap, CPU governor + turbo, **kernel livepatch**

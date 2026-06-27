@@ -1,4 +1,4 @@
-"""OXware ↔ KubeVirt Bridge (v2.9).
+"""OXware ↔ KubeVirt Bridge (v2.8.2).
 
 Registers KubeVirt clusters (by kubeconfig), translates KubeVirt
 VirtualMachineInstance specs into native OXware VM definitions, and runs a

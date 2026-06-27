@@ -7768,7 +7768,7 @@
           </div>
         </div>
 
-        <!-- ══════════ v2.9 Kernel-level pack ══════════ -->
+        <!-- ══════════ v2.8.2 Kernel-level pack ══════════ -->
         <div id="ent-pane-ioperf" style="display:none">
           <div class="section-header"><h2><i class="fa-solid fa-gauge-high fa-fw" style="color:var(--accent-lt)"></i> VM I/O Performans</h2></div>
           <div class="card" style="margin-bottom:12px;border-left:4px solid var(--accent-lt);background:rgba(88,166,255,.04);padding:14px">
@@ -35770,7 +35770,7 @@ const ENT_LOADERS = {
   pwa:            () => { try { loadPwaPage(); } catch(e) { console.warn(e); } },
   knownhosts:     () => { try { loadKnownHostsPage(); } catch(e) { console.warn(e); } },
   telemetry:      () => { try { loadTelemetryPage(); } catch(e) { console.warn(e); } },
-  // v2.9 Kernel-level pack
+  // v2.8.2 Kernel-level pack
   ioperf:         () => { try { loadIoPerfPage(); } catch(e) { console.warn(e); } },
   ebpf:           () => { try { loadEbpfPage(); } catch(e) { console.warn(e); } },
   kernelops:      () => { try { loadKernelOpsPage(); } catch(e) { console.warn(e); } },
@@ -37956,7 +37956,7 @@ async function hpConfigure() {
   else _entErr(d, 'HugePages');
 }
 
-/* ═════════ v2.9 Kernel-level pack ═════════ */
+/* ═════════ v2.8.2 Kernel-level pack ═════════ */
 function _iopVm() { return (document.getElementById('iop-vm').value || '').trim(); }
 async function loadIoPerfPage() {
   const vm = _iopVm();
