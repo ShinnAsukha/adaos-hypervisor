@@ -88,6 +88,11 @@ test suite on every push (badge above is live).
 | AI planner / NL commands | 🟡 Optional | With AI key = AI; **without a key it tells you so** and falls back to transparent heuristics (`source: "heuristic"`) — no fake "AI" output |
 | KubeVirt bridge | 🟡 Beta | Cluster registration, VMI→OXware translation, **and a polling reconcile loop** that creates missing VMs. Needs `pip install kubernetes pyyaml`; degrades honestly (reports the reason) if absent or a cluster is unreachable. Streaming Watch + orphan auto-delete are opt-in/roadmap |
 | Bare-metal autoinstall | 🟢 Stable | Per-install random password hash, SSH-key-only login |
+| VM I/O perf (iothreads/io_uring/multiqueue/vhost) | 🟢 Stable | libvirt XML, Proxmox-parity; most changes need VM restart |
+| Host kernel ops (zram/zswap/governor/turbo) | 🟢 Stable | sysfs-backed, root-gated |
+| eBPF observability (syscall/latency/XDP) | 🟡 Beta | Real bpftrace/XDP; needs the toolchain + root, else reports disabled |
+| Kernel livepatch | 🟡 Optional | Wraps canonical-livepatch / kpatch when installed |
+| OXware LKMs (oxware_audit / oxware_guard) | 🟡 Beta | Real kprobe modules; build + load on the host to activate |
 | Desktop (Electron) app | 🟠 Early | Wraps the web UI; some links still placeholder |
 
 Legend: 🟢 stable · 🟡 beta/optional · 🟠 partial/early. If something here drifts
@@ -181,6 +186,12 @@ sudo bash install.sh
 - **Firecracker** microVM runtime (<125 ms boot)
 - **PWA offline mode** (read-only fallback)
 - **CycloneDX SBOM** per release
+
+### ⚙️ Kernel-level pack (v2.9)
+- **VM I/O perf**: iothreads, disk `io_uring`/native, virtio multiqueue, vhost
+- **eBPF observability**: per-VM syscall profile + block-latency (bpftrace), XDP
+- **Host kernel ops**: zram/zswap, CPU governor + turbo, **kernel livepatch**
+- **OXware LKMs**: `oxware_audit` (kprobe KVM audit) + `oxware_guard` (anti-tamper)
 
 </td>
 </tr>
