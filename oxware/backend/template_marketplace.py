@@ -183,6 +183,13 @@ def prefetch(os_variant: str) -> dict:
     cp = _cache_path(vm, os_variant)
     if os.path.exists(cp):
         return {"ok": True, "os_variant": os_variant, "state": "cached"}
+    # Dark Site Mode: önbellekte yoksa uzak indirmeyi reddet (cache'ten çalışır).
+    try:
+        import dark_site
+        if dark_site.is_enabled():
+            return dark_site.block_remote("Cloud image: %s" % os_variant)
+    except Exception:
+        pass
     dl = _downloader()
     if not dl:
         return {"ok": False, "error": "no download tool (wget/curl) on host"}

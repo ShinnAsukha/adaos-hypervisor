@@ -145,6 +145,15 @@ def install_app(app_id: str, target_dir=None) -> dict:
     downloaded = False
     actual_sha = ""
 
+    # Dark Site Mode: uzak (http/https) app indirmeyi reddet; yerel dosya/mirror OK.
+    if url.startswith(("http://", "https://")):
+        try:
+            import dark_site
+            if dark_site.is_enabled():
+                return dark_site.block_remote("App Marketplace: %s" % app_id)
+        except Exception:
+            pass
+
     if url:
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "OXware/2.7.0"})
@@ -200,6 +209,16 @@ def uninstall_app(app_id: str) -> dict:
 
 def refresh_index() -> dict:
     _ensure_dirs()
+    # Dark Site Mode: uzak index çekme; bundled listeye düş (offline).
+    try:
+        import dark_site
+        if dark_site.is_enabled():
+            _save_index(list(BUNDLED_APPS))
+            _audit("refresh_index", {"source": "bundled", "darksite": True})
+            return {"source": "bundled", "count": len(BUNDLED_APPS),
+                    "ok": True, "offline": True, "darksite": True}
+    except Exception:
+        pass
     try:
         req = urllib.request.Request(REMOTE_INDEX_URL,
                                      headers={"User-Agent": "OXware/2.7.0"})

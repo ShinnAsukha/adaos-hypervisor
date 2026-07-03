@@ -152,6 +152,10 @@ FEATURE_MANIFEST = [
     {"id": "attestation",   "name": "Confidential Attestation","category":"security",     "module": "confidential_vm",     "status": "beta",   "version": "2.7.0"},
     {"id": "runbook_exec",  "name": "Auto-Remediation Runbooks","category":"automation",  "module": "runbook_executor",    "status": "beta",   "version": "2.7.0"},
     {"id": "federation",    "name": "Managed Cluster Federation","category":"automation", "module": "cluster_federation",  "status": "beta",   "version": "2.7.0"},
+
+    # ── v2.8.3 — Egress lockdown + Dark Site (offline / air-gap) ──────────────────
+    {"id": "egress_guard",  "name": "Egress Lockdown",        "category": "security",     "module": "egress_guard",        "status": "stable", "version": "2.8.3"},
+    {"id": "dark_site",     "name": "Dark Site Mode",         "category": "security",     "module": "dark_site",           "status": "stable", "version": "2.8.3"},
 ]
 
 

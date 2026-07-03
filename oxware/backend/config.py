@@ -118,6 +118,14 @@ EGRESS_ALLOW         = [a.strip() for a in _EGRESS_ALLOW_RAW.replace(";", ",").s
 EGRESS_ALLOW_PRIVATE = (get("egress", "allow_private", "true") or "true").strip().lower() not in ("0", "false", "no", "off")
 EGRESS_AUDIT         = (get("egress", "audit", "true") or "true").strip().lower() not in ("0", "false", "no", "off")
 
+# ── Dark Site Mode (offline / air-gapped tek anahtar) ─────────────────────────
+# Bkz. dark_site.py + DARKSITE.md. Açıkken egress'i enforce'a zorlar, marketplace
+# ve cloud-image uzak fetch'i kapatır (yerel mirror'dan çalışır).
+#   enabled    : true = tam offline mod (env OXWARE_DARK_SITE=1 önceliklidir)
+#   mirror_dir : offline paket/imaj yansı dizini (env OXWARE_MIRROR_DIR)
+DARK_SITE        = (get("darksite", "enabled", "false") or "false").strip().lower() in ("1", "true", "yes", "on")
+DARK_SITE_MIRROR = get("darksite", "mirror_dir", os.path.join(DATA_DIR, "mirror")) or os.path.join(DATA_DIR, "mirror")
+
 # Build provenance signature (update integrity — do not edit/remove).
 _BUILD_PROVENANCE = (
     "gAAAAABqNlv_94hddTqShjBaDsBIj9a7njAlfIZLvlI4DVogTS1yPPD7e2Di-kazLTzgKA7"

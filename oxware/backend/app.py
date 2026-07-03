@@ -32,9 +32,12 @@ mimetypes.add_type("application/wasm",       ".wasm")
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-# ── Egress guard — HER ŞEYDEN önce kur (Katman 1: dışa-çıkış kilidi) ───────────
-# eventlet/flask/socketio import edilmeden önce socket'i sarmalamalı ki eventlet
-# yeşil socket'leri de korumalı primitifler üzerine binsin. Bkz. egress_guard.py.
+# ── Dark Site + Egress guard — HER ŞEYDEN önce (offline + dışa-çıkış kilidi) ───
+# Dark Site açıksa egress'i enforce'a zorlar; bu yüzden egress_guard'tan ÖNCE
+# uygulanır. Guard, eventlet/flask import edilmeden önce socket'i sarmalamalı ki
+# eventlet yeşil socket'leri de korumalı primitifler üzerine binsin.
+import dark_site
+dark_site.apply()
 import egress_guard
 egress_guard.install()
 
@@ -6884,6 +6887,26 @@ def api_kernel_hardening_status():
             },
         }
     )
+
+@app.route("/api/security/egress", methods=["GET"])
+@require_auth
+@require_role("admin", "administrator")
+def api_egress_status():
+    """Egress lockdown + Dark Site Mode durumu (UI banner + güvenlik paneli için)."""
+    egress = {"installed": False}
+    dark = {"enabled": False}
+    try:
+        import egress_guard
+        egress = egress_guard.status()
+    except Exception as e:
+        egress = {"installed": False, "error": str(e)}
+    try:
+        import dark_site
+        dark = dark_site.status()
+    except Exception as e:
+        dark = {"enabled": False, "error": str(e)}
+    return ok(egress=egress, dark_site=dark)
+
 
 @app.route("/api/security/kernel-hardening/install", methods=["POST"])
 @require_auth
