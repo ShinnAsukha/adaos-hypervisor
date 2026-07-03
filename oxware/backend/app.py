@@ -174,6 +174,7 @@ audit_chain_mgr = _safe_import("audit_chain")
 hugepages_mgr   = _safe_import("hugepages_manager")
 sriov_mgr       = _safe_import("sriov_manager")
 vgpu_mgr        = _safe_import("vgpu_manager")
+gpu_pt          = _safe_import("gpu_passthrough")
 cdp_mgr         = _safe_import("cdp_manager")
 boot_order_mgr  = _safe_import("boot_order_manager")
 geo_dns_mgr     = _safe_import("geo_dns_manager")
@@ -16549,6 +16550,71 @@ def api_v254_vgpu_assign():
     try:
         d = request.get_json() or {}
         return ok(**vgpu_mgr.assign_mdev_to_vm(d["vm_id"], d["mdev_uuid"]))
+    except Exception as e:
+        return err(e, 400)
+
+# ── GPU Passthrough Wizard (tam-GPU VFIO) ────────────────────────────────────
+@app.route("/api/gpu/wizard/overview", methods=["GET"])
+@require_role("admin", "administrator")
+def api_gpu_wizard_overview():
+    """IOMMU durumu + passthrough'a uygun GPU listesi (wizard açılışı)."""
+    if not gpu_pt: return ok({"iommu": {"enabled": False}, "gpus": []})
+    try:
+        return ok(**gpu_pt.wizard_overview())
+    except Exception as e:
+        return ok({"iommu": {"enabled": False}, "gpus": [], "error": str(e)})
+
+@app.route("/api/gpu/wizard/preflight/<path:pci>", methods=["GET"])
+@require_role("admin", "administrator")
+def api_gpu_wizard_preflight(pci):
+    """Seçilen GPU için hazırlık kontrolleri (IOMMU/vfio/grup temizliği)."""
+    if not gpu_pt: return err("module unavailable")
+    try:
+        return ok(**gpu_pt.preflight(pci))
+    except Exception as e:
+        return err(e, 400)
+
+@app.route("/api/gpu/wizard/plan/<path:pci>", methods=["GET"])
+@require_role("admin", "administrator")
+def api_gpu_wizard_plan(pci):
+    """Otomatik remediation planı (kernel cmdline, modprobe, reboot)."""
+    if not gpu_pt: return err("module unavailable")
+    try:
+        return ok(**gpu_pt.generate_plan(pci))
+    except Exception as e:
+        return err(e, 400)
+
+@app.route("/api/gpu/wizard/bind/<path:pci>", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator")
+def api_gpu_wizard_bind(pci):
+    """GPU'yu canlı olarak vfio-pci'ye bağla (reboot'suz, mümkünse)."""
+    if not gpu_pt: return err("module unavailable")
+    try:
+        return ok(**gpu_pt.bind_vfio(pci))
+    except Exception as e:
+        return err(e, 400)
+
+@app.route("/api/vms/<vm_id>/gpu/attach", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator")
+def api_gpu_attach_vm(vm_id):
+    """GPU'yu (+ses fonksiyonu) VM'e hostdev PCI olarak ekle."""
+    if not gpu_pt: return err("module unavailable")
+    try:
+        d = request.get_json() or {}
+        return ok(**gpu_pt.attach_to_vm(vm_id, d["pci"], d.get("with_audio", True)))
+    except Exception as e:
+        return err(e, 400)
+
+@app.route("/api/vms/<vm_id>/gpu/detach", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator")
+def api_gpu_detach_vm(vm_id):
+    if not gpu_pt: return err("module unavailable")
+    try:
+        d = request.get_json() or {}
+        return ok(**gpu_pt.detach_from_vm(vm_id, d["pci"]))
     except Exception as e:
         return err(e, 400)
 

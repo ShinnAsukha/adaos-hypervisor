@@ -156,6 +156,9 @@ FEATURE_MANIFEST = [
     # ── v2.8.3 — Egress lockdown + Dark Site (offline / air-gap) ──────────────────
     {"id": "egress_guard",  "name": "Egress Lockdown",        "category": "security",     "module": "egress_guard",        "status": "stable", "version": "2.8.3"},
     {"id": "dark_site",     "name": "Dark Site Mode",         "category": "security",     "module": "dark_site",           "status": "stable", "version": "2.8.3"},
+
+    # ── v2.8.4 — GPU passthrough wizard (guided VFIO/IOMMU) ───────────────────────
+    {"id": "gpu_pt_wizard", "name": "GPU Passthrough Wizard",  "category": "compute",     "module": "gpu_passthrough",     "status": "beta",   "version": "2.8.4"},
 ]
 
 
