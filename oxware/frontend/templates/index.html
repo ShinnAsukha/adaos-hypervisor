@@ -2921,7 +2921,22 @@
               <button class="btn-secondary" onclick="openIsoFetchModal()" style="margin-left:6px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 12px;border-radius:5px;cursor:pointer;font-size:12px">
                 <i class="fa-solid fa-cloud-arrow-down"></i> Otomatik İndir
               </button>
+              <button class="btn-secondary" onclick="toggleIsoLibrary()" style="margin-left:6px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 12px;border-radius:5px;cursor:pointer;font-size:12px">
+                <i class="fa-solid fa-book"></i> ISO Kataloğu
+              </button>
             </div>
+
+            <!-- ═══ ISO Library (küratörlü katalog + checksum + mirror) ═══ -->
+            <div id="iso-library-panel" class="card" style="display:none;margin-top:12px">
+              <div class="card-title" style="display:flex;align-items:center;gap:8px">
+                <i class="fa-solid fa-book" style="color:var(--accent-lt)"></i> ISO Kataloğu
+                <span style="font-size:11px;color:var(--text-muted);font-weight:400">— resmi kaynaktan indir, SHA256 doğrula, mirror fallback</span>
+              </div>
+              <div id="iso-library-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:12px">
+                <div class="empty-state" style="grid-column:1/-1"><p>Yükleniyor...</p></div>
+              </div>
+            </div>
+
             <div id="iso-upload-progress" style="display:none;margin-top:12px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
                 <span id="iso-upload-filename" style="font-size:12px;color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
@@ -5047,6 +5062,44 @@
               </button>
             </div>
 
+            <!-- HostBill -->
+            <div class="card">
+              <div class="card-title" style="display:flex;align-items:center;gap:8px">
+                <i class="fa-solid fa-box" style="color:#34d399"></i> HostBill Modülü
+                <span class="badge" style="background:#334155;color:#93c5fd;font-size:9px;padding:1px 6px;border-radius:4px">BETA</span>
+              </div>
+              <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">
+                HostBill'de <strong>Settings → Modules → Hosting Modules → OXware → Activate</strong>.<br>
+                Server: Host = OXware URL, Hash = API anahtarı.
+              </p>
+              <div style="font-size:11px;margin-bottom:12px">
+                <div style="margin-bottom:4px;color:var(--text-dim)">Kurulum yolu:</div>
+                <code style="font-size:11px;background:#0d1117;padding:4px 8px;border-radius:4px;display:block">includes/modules/Server/oxware/class.oxware.php</code>
+              </div>
+              <button class="btn-primary" onclick="downloadModule('hostbill')" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:6px;font-size:12px;border:none;cursor:pointer">
+                <i class="fa-solid fa-download"></i> HostBill Modülünü İndir
+              </button>
+            </div>
+
+            <!-- Blesta -->
+            <div class="card">
+              <div class="card-title" style="display:flex;align-items:center;gap:8px">
+                <i class="fa-solid fa-box" style="color:#f59e0b"></i> Blesta Modülü
+                <span class="badge" style="background:#334155;color:#93c5fd;font-size:9px;padding:1px 6px;border-radius:4px">BETA</span>
+              </div>
+              <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">
+                Blesta'da <strong>Settings → Company → Modules → OXware → Install</strong>.<br>
+                Module Row: API URL + API Key. ZIP olarak iner (çok dosyalı).
+              </p>
+              <div style="font-size:11px;margin-bottom:12px">
+                <div style="margin-bottom:4px;color:var(--text-dim)">Kurulum yolu:</div>
+                <code style="font-size:11px;background:#0d1117;padding:4px 8px;border-radius:4px;display:block">components/modules/oxware/</code>
+              </div>
+              <button class="btn-primary" onclick="downloadModule('blesta')" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:6px;font-size:12px;border:none;cursor:pointer">
+                <i class="fa-solid fa-download"></i> Blesta Modülünü İndir (ZIP)
+              </button>
+            </div>
+
           </div>
 
           <!-- Kurulum kılavuzu -->
@@ -5060,6 +5113,38 @@
               <li>Billing panelinde <strong>Bağlantı Test</strong> butonu ile kontrol edin.</li>
               <li>Ürününüzü bu sunucuya bağlayın; CPU/RAM/Disk seçeneklerini girin.</li>
             </ol>
+          </div>
+
+          <!-- ═══ Dark Site Mode & Egress Lockdown ═══ -->
+          <div class="section-header" style="margin-top:22px">
+            <h2><i class="fa-solid fa-shield-halved"></i> Dark Site & Egress Kilidi</h2>
+            <div class="spacer"></div>
+            <button class="btn" onclick="loadEgressStatus()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Yenile</button>
+          </div>
+          <div class="card">
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+              Host'tan izinsiz veri çıkışını engelleyen güvenlik katmanı. Dark Site = tam offline mod.
+              Yapılandırma <code>/etc/oxware/oxware.conf</code> (<code>[egress]</code> / <code>[darksite]</code>) veya
+              <code>OXWARE_EGRESS_MODE</code>, <code>OXWARE_DARK_SITE</code> ortam değişkenleri ile yapılır.
+            </p>
+            <div id="egress-status" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+              <div class="empty-state" style="grid-column:1/-1"><p>Yükleniyor... (Yenile'ye basın)</p></div>
+            </div>
+          </div>
+
+          <!-- ═══ GPU Passthrough Wizard ═══ -->
+          <div class="section-header" style="margin-top:22px">
+            <h2><i class="fa-solid fa-microchip"></i> GPU Passthrough Sihirbazı</h2>
+            <div class="spacer"></div>
+            <button class="btn" onclick="loadGpuWizard()" style="font-size:12px"><i class="fa-solid fa-rotate"></i> Tara</button>
+          </div>
+          <div class="card">
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+              Tam-GPU VFIO passthrough — IOMMU/VFIO/ACS otomatik tespit + hazırlık kontrolü + plan.
+            </p>
+            <div id="gpu-wizard-iommu" style="font-size:12px;margin-bottom:10px"></div>
+            <div id="gpu-wizard-list"><div class="empty-state"><p>Tara'ya basın.</p></div></div>
+            <div id="gpu-wizard-detail" style="margin-top:12px"></div>
           </div>
         </div>
 
@@ -29871,16 +29956,155 @@ async function downloadModule(name) {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     if (!res.ok) { toast('İndirme başarısız: ' + res.status, 'error'); return; }
+    // Sunucunun verdiği dosya adını kullan (blesta = .zip, diğerleri = .php)
+    let fname = `oxware_${name}.php`;
+    const cd = res.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+    if (m) fname = decodeURIComponent(m[1]);
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `oxware_${name}.php`;
+    a.download = fname;
     a.click();
     URL.revokeObjectURL(url);
   } catch(e) {
     toast('İndirme hatası: ' + e, 'error');
   }
+}
+
+// ═══ Egress / Dark Site durumu ═══
+async function loadEgressStatus() {
+  const el = document.getElementById('egress-status');
+  if (!el) return;
+  el.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p>Yükleniyor...</p></div>';
+  try {
+    const d = await api('/security/egress');
+    const eg = d.egress || {}, ds = d.dark_site || {};
+    const mode = eg.mode || '—';
+    const modeColor = mode === 'enforce' ? '#10b981' : (mode === 'monitor' ? '#f59e0b' : '#64748b');
+    el.innerHTML = `
+      <div class="card" style="border-left:3px solid ${modeColor}">
+        <div style="font-size:11px;color:var(--text-muted)">Egress Guard</div>
+        <div style="font-size:18px;font-weight:700;color:${modeColor}">${escHtml(mode)}</div>
+        <div style="font-size:11px;margin-top:4px">Kurulu: ${eg.installed ? 'evet' : 'hayır'} · Özel ağ: ${eg.allow_private ? 'izinli' : '—'}</div>
+        <div style="font-size:11px;color:var(--text-muted)">Allowlist: ${(eg.allow_hosts||[]).length} host, ${(eg.allow_nets||[]).length} ağ</div>
+      </div>
+      <div class="card" style="border-left:3px solid ${ds.enabled ? '#10b981' : '#64748b'}">
+        <div style="font-size:11px;color:var(--text-muted)">Dark Site Mode</div>
+        <div style="font-size:18px;font-weight:700;color:${ds.enabled ? '#10b981' : '#64748b'}">${ds.enabled ? 'AKTİF (offline)' : 'kapalı'}</div>
+        <div style="font-size:11px;margin-top:4px">Mirror: <code>${escHtml(ds.mirror_dir || '—')}</code></div>
+      </div>
+      <div class="card" style="grid-column:1/-1">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Etkiler</div>
+        <div style="font-size:11px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px">
+          ${Object.entries(ds.effects || {}).map(([k, v]) => `<div>${escHtml(k)}: <b>${escHtml(String(v))}</b></div>`).join('')}
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px">Denetim logu: <code>/var/log/oxware/egress.jsonl</code></div>
+      </div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Hata: ${escHtml(e.message || String(e))}</p></div>`;
+  }
+}
+
+// ═══ GPU Passthrough Wizard ═══
+async function loadGpuWizard() {
+  const iommuEl = document.getElementById('gpu-wizard-iommu');
+  const listEl = document.getElementById('gpu-wizard-list');
+  document.getElementById('gpu-wizard-detail').innerHTML = '';
+  listEl.innerHTML = '<div class="empty-state"><p>Taranıyor...</p></div>';
+  try {
+    const d = await api('/gpu/wizard/overview');
+    const io = d.iommu || {}, gpus = d.gpus || [];
+    iommuEl.innerHTML = `IOMMU: <b style="color:${io.enabled ? '#10b981' : '#ef4444'}">${io.enabled ? 'etkin' : 'KAPALI'}</b> · CPU: ${escHtml(io.cpu_vendor || '?')} · cmdline IOMMU: ${io.kernel_cmdline_has_iommu ? 'var' : 'yok'}`;
+    if (!gpus.length) { listEl.innerHTML = '<div class="empty-state"><p>Passthrough uygun GPU bulunamadı (Linux+root gerekir).</p></div>'; return; }
+    listEl.innerHTML = `<div class="table-wrap"><table><thead><tr><th>GPU</th><th>PCI</th><th>IOMMU Grup</th><th>Sürücü</th><th>Grup</th><th></th></tr></thead><tbody>${gpus.map(g => `
+      <tr>
+        <td style="font-size:11px">${escHtml(g.name || 'GPU')}</td>
+        <td><code>${escHtml(g.pci)}</code></td>
+        <td>${escHtml(g.iommu_group || '—')}</td>
+        <td>${g.bound_to_vfio ? '<span class="badge active">vfio-pci</span>' : escHtml(g.current_driver || '—')}</td>
+        <td>${g.group_clean ? '<span class="badge active">temiz</span>' : '<span class="badge inactive">kirli</span>'}</td>
+        <td><button class="btn sm" onclick="gpuPreflight('${escHtml(g.pci)}')">Kontrol</button></td>
+      </tr>`).join('')}</tbody></table></div>`;
+  } catch(e) {
+    listEl.innerHTML = `<div class="empty-state"><p>Hata: ${escHtml(e.message || String(e))}</p></div>`;
+  }
+}
+
+async function gpuPreflight(pci) {
+  const el = document.getElementById('gpu-wizard-detail');
+  el.innerHTML = '<div class="empty-state"><p>Kontrol ediliyor...</p></div>';
+  try {
+    const d = await api('/gpu/wizard/preflight/' + encodeURIComponent(pci));
+    const checks = d.checks || [];
+    el.innerHTML = `<div class="card">
+      <div class="card-title">Preflight: <code>${escHtml(pci)}</code> — ${d.ready ? '<span style="color:#10b981">HAZIR</span>' : '<span style="color:#ef4444">HAZIR DEĞİL</span>'}</div>
+      <div style="margin-top:8px">${checks.map(c => `<div style="font-size:12px;margin-bottom:4px">${c.ok ? '✅' : (c.severity === 'critical' ? '❌' : '⚠️')} <b>${escHtml(c.msg)}</b>${c.fix ? `<div style="font-size:11px;color:var(--text-muted);margin-left:20px">→ ${escHtml(c.fix)}</div>` : ''}</div>`).join('')}</div>
+      <button class="btn sm primary" style="margin-top:10px" onclick="gpuPlan('${escHtml(pci)}')">Remediation Planı Göster</button>
+    </div>`;
+  } catch(e) { el.innerHTML = `<div class="empty-state"><p>Hata: ${escHtml(e.message || String(e))}</p></div>`; }
+}
+
+async function gpuPlan(pci) {
+  try {
+    const d = await api('/gpu/wizard/plan/' + encodeURIComponent(pci));
+    const steps = d.steps || [], warns = d.warnings || [];
+    document.getElementById('gpu-wizard-detail').innerHTML = `<div class="card"><div class="card-title">Remediation Planı — reboot: ${d.reboot_required ? 'gerekli' : 'hayır'}</div>
+      ${warns.map(w => `<div style="font-size:11px;color:#f59e0b;margin:6px 0">⚠️ ${escHtml(w)}</div>`).join('')}
+      ${steps.map(s => `<div style="margin-top:8px;font-size:12px"><b>${escHtml(s.desc)}</b>${s.file ? `<div style="font-size:11px;color:var(--text-muted)">${escHtml(s.file)}</div>` : ''}${s.content ? `<pre style="font-size:11px;background:#0d1117;padding:8px;border-radius:4px;overflow:auto">${escHtml(s.content)}</pre>` : ''}${s.add ? `<pre style="font-size:11px;background:#0d1117;padding:8px;border-radius:4px">${escHtml(s.add)}</pre>` : ''}${s.apply ? `<div style="font-size:11px;color:var(--text-dim)">$ ${escHtml(s.apply)}</div>` : ''}</div>`).join('')}
+    </div>`;
+  } catch(e) { toast('Plan hatası: ' + (e.message || e), 'error'); }
+}
+
+// ═══ ISO Library ═══
+function toggleIsoLibrary() {
+  const p = document.getElementById('iso-library-panel');
+  if (!p) return;
+  const show = p.style.display === 'none';
+  p.style.display = show ? '' : 'none';
+  if (show) loadIsoLibrary();
+}
+
+async function loadIsoLibrary() {
+  const grid = document.getElementById('iso-library-grid');
+  if (!grid) return;
+  grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p>Yükleniyor...</p></div>';
+  try {
+    const d = await api('/storage/iso-library');
+    const cat = d.catalog || [];
+    if (!cat.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p>Katalog boş.</p></div>'; return; }
+    grid.innerHTML = cat.map(e => {
+      const st = e.present ? '<span class="badge active">indirildi</span>' : (e.state === 'downloading' ? '<span class="badge">indiriliyor…</span>' : (e.state === 'error' ? '<span class="badge inactive">hata</span>' : ''));
+      return `<div class="card">
+        <div style="font-weight:600;font-size:13px">${escHtml(e.name)} ${st}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin:4px 0">${escHtml(e.category)} · ${escHtml(e.arch)} · ~${e.size_gb} GB · ${e.mirrors} mirror ${e.verifiable ? '· SHA256' : ''}</div>
+        ${e.present
+          ? `<button class="btn sm" onclick="isoVerify('${escHtml(e.filename)}')">Doğrula</button>`
+          : `<button class="btn sm primary" onclick="isoLibDownload('${escHtml(e.id)}')">İndir</button>`}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Hata: ${escHtml(e.message || String(e))}</p></div>`;
+  }
+}
+
+async function isoLibDownload(id) {
+  try {
+    const d = await api('/storage/iso-library/download', { method: 'POST', body: { id } });
+    if (d.darksite) { toast('Dark Site aktif — uzak indirme kapalı', 'warn'); return; }
+    toast('İndirme başladı: ' + (d.filename || id), 'success');
+    setTimeout(loadIsoLibrary, 1500);
+  } catch(e) { toast('İndirme hatası: ' + (e.message || e), 'error'); }
+}
+
+async function isoVerify(name) {
+  try {
+    const d = await api('/storage/isos/' + encodeURIComponent(name) + '/verify', { method: 'POST', body: {} });
+    if (d.verified) toast('SHA256 doğrulandı ✅', 'success');
+    else if (d.sha256 && !d.expected) toast('Hesaplanan SHA256: ' + d.sha256.slice(0, 16) + '… (beklenen bilinmiyor)', 'info');
+    else toast('SHA256 UYUŞMUYOR ❌', 'error');
+  } catch(e) { toast('Doğrulama hatası: ' + (e.message || e), 'error'); }
 }
 
 
@@ -31191,7 +31415,7 @@ async function loadTabData(tabId) {
     case 'tab-security': _applyAdminGates(); load2faStatus(); rcLoadStatus(); loadAuditLog(); loadApiKeys(); loadLdapConfig(); checkLicenseStatus(); loadAutoSnapConfig(); loadSessions(); loadSecurityLockouts(); loadIpAllowlist(); loadVault(); loadKernelHardening(); break;
     case 'tab-plugins': loadPluginSdkPage(); break;
     case 'tab-settings': loadSdnStatus(); loadSslStatus(); _initSmigVmSel(); break;
-    case 'tab-integrations': loadWebhooks(); loadS3Config(); loadEmailConfig(); loadVlans(); loadHooks(); break;
+    case 'tab-integrations': loadWebhooks(); loadS3Config(); loadEmailConfig(); loadVlans(); loadHooks(); loadEgressStatus(); break;
     case 'tab-syslog': activateSyslogTab('journald'); break;
     case 'tab-content-library': navigate('storage'); switchStorageTab('content-lib'); loadContentLibrary(); break;
     case 'tab-datastore': loadDatastore(); break;

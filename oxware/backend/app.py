@@ -11768,15 +11768,33 @@ def api_revoke_api_key(key_id):
 @require_role("admin", "administrator")
 def api_hosting_download(module_name):
     import pathlib
+    from flask import send_file
     base = pathlib.Path(__file__).parent.parent.parent / "modules"
+
+    # Blesta = çok-dosyalı modül → dizini zip'le.
+    if module_name == "blesta":
+        import io, zipfile
+        src = base / "blesta" / "oxware"
+        if not src.exists():
+            return err("Modül bulunamadı veya henüz hazır değil", 404)
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for f in src.rglob("*"):
+                if f.is_file():
+                    z.write(f, pathlib.Path("oxware") / f.relative_to(src))
+        buf.seek(0)
+        return send_file(buf, as_attachment=True,
+                         download_name="oxware_blesta.zip",
+                         mimetype="application/zip")
+
     paths = {
-        "whmcs":  base / "whmcs" / "servers" / "oxware" / "oxware.php",
-        "wisecp": base / "wisecp" / "oxware" / "oxware.php",
+        "whmcs":    base / "whmcs" / "servers" / "oxware" / "oxware.php",
+        "wisecp":   base / "wisecp" / "oxware" / "oxware.php",
+        "hostbill": base / "hostbill" / "oxware" / "class.oxware.php",
     }
     path = paths.get(module_name)
     if not path or not path.exists():
         return err("Modül bulunamadı veya henüz hazır değil", 404)
-    from flask import send_file
     return send_file(str(path), as_attachment=True,
                      download_name=f"oxware_{module_name}.php",
                      mimetype="text/plain")
