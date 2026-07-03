@@ -159,6 +159,9 @@ FEATURE_MANIFEST = [
 
     # ── v2.8.4 — GPU passthrough wizard (guided VFIO/IOMMU) ───────────────────────
     {"id": "gpu_pt_wizard", "name": "GPU Passthrough Wizard",  "category": "compute",     "module": "gpu_passthrough",     "status": "beta",   "version": "2.8.4"},
+
+    # ── v2.8.5 — ISO library (curated catalog + checksum + mirror) ────────────────
+    {"id": "iso_library",   "name": "ISO Library",            "category": "storage",      "module": "iso_library",         "status": "beta",   "version": "2.8.5"},
 ]
 
 

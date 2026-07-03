@@ -175,6 +175,7 @@ hugepages_mgr   = _safe_import("hugepages_manager")
 sriov_mgr       = _safe_import("sriov_manager")
 vgpu_mgr        = _safe_import("vgpu_manager")
 gpu_pt          = _safe_import("gpu_passthrough")
+iso_lib         = _safe_import("iso_library")
 cdp_mgr         = _safe_import("cdp_manager")
 boot_order_mgr  = _safe_import("boot_order_manager")
 geo_dns_mgr     = _safe_import("geo_dns_manager")
@@ -3697,6 +3698,42 @@ def api_delete_volume(pool_uuid, vol_name):
 @require_auth
 def api_list_isos():
     return ok(isos=storage_manager.list_isos())
+
+@app.route("/api/storage/iso-library", methods=["GET"])
+@require_auth
+def api_iso_library():
+    """Küratörlü ISO kataloğu (indir + checksum + mirror)."""
+    if not iso_lib: return ok(catalog=[])
+    try:
+        return ok(catalog=iso_lib.catalog(), jobs=iso_lib.jobs())
+    except Exception as e:
+        return ok(catalog=[], error=str(e))
+
+@app.route("/api/storage/iso-library/download", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_iso_library_download():
+    """Katalogdan ISO indir (arka planda, SHA256 doğrulamalı, mirror fallback)."""
+    if not iso_lib: return err("module unavailable")
+    try:
+        d = request.get_json() or {}
+        return ok(**iso_lib.download(d["id"], int(d.get("mirror", 0))))
+    except Exception as e:
+        return err(e, 400)
+
+@app.route("/api/storage/isos/<name>/verify", methods=["POST"])
+@require_auth
+def api_iso_verify(name):
+    """Yereldeki ISO'nun SHA256'sını doğrula (katalog/yayıncı veya verilen hash)."""
+    if not iso_lib: return err("module unavailable")
+    try:
+        name = security.validate_filename(name)
+        d = request.get_json(silent=True) or {}
+        return ok(**iso_lib.verify_local(name, d.get("sha256", "")))
+    except ValueError as e:
+        return err(str(e), 400)
+    except Exception as e:
+        return err(e, 400)
 
 @app.route("/api/storage/isos", methods=["POST"])
 @require_auth
