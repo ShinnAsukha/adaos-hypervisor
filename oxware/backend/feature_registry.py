@@ -162,6 +162,10 @@ FEATURE_MANIFEST = [
 
     # ── v2.8.5 — ISO library (curated catalog + checksum + mirror) ────────────────
     {"id": "iso_library",   "name": "ISO Library",            "category": "storage",      "module": "iso_library",         "status": "beta",   "version": "2.8.5"},
+
+    # ── v2.8.6 — Billing modules: HostBill + Blesta (WHMCS/WISECP zaten var) ───────
+    {"id": "billing_hostbill", "name": "HostBill Module",     "category": "automation",   "module": "_billing",            "status": "beta",   "version": "2.8.6"},
+    {"id": "billing_blesta",   "name": "Blesta Module",       "category": "automation",   "module": "_billing",            "status": "beta",   "version": "2.8.6"},
 ]
 
 

@@ -1,0 +1,8 @@
+{
+    "name": "OXware Hypervisor",
+    "version": "1.0.0",
+    "authors": [
+        { "name": "Ada Gürsoy", "url": "https://github.com/ShinnAsukha/oxware-hypervisor" }
+    ],
+    "type": "module"
+}
