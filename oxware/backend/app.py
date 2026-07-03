@@ -32,6 +32,12 @@ mimetypes.add_type("application/wasm",       ".wasm")
 
 sys.path.insert(0, os.path.dirname(__file__))
 
+# ── Egress guard — HER ŞEYDEN önce kur (Katman 1: dışa-çıkış kilidi) ───────────
+# eventlet/flask/socketio import edilmeden önce socket'i sarmalamalı ki eventlet
+# yeşil socket'leri de korumalı primitifler üzerine binsin. Bkz. egress_guard.py.
+import egress_guard
+egress_guard.install()
+
 from flask import Flask, request, jsonify, send_from_directory, render_template, make_response, send_file
 from flask_socketio import SocketIO, emit
 from flask_jwt_extended import (

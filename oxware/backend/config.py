@@ -103,6 +103,21 @@ UPDATE_ALLOWED_REPOS_RAW = get("server", "update_allowed_repos",
     "https://github.com/ShinnAsukha/oxware-hypervisor") or ""
 UPDATE_ALLOWED_REPOS = [r.strip() for r in UPDATE_ALLOWED_REPOS_RAW.split(",") if r.strip()]
 
+# ── Egress guard (dışa-çıkış kilidi) ──────────────────────────────────────────
+# Bkz. egress_guard.py + EGRESS.md. Host'tan izinsiz veri çıkışını engeller.
+#   mode          : enforce (varsayılan, gerçek kilit) | monitor (dry-run) | off
+#   allow_private : loopback + özel ağlara her zaman izin (SSH/LDAP/libvirt/node
+#                   trafiği kırılmasın diye) — varsayılan true
+#   allow         : virgülle ayrılmış dış allowlist — hostname son-eki veya CIDR
+#                   Örn: allow = github.com, api.anthropic.com, 203.0.113.0/24
+#   audit         : reddedilen/izinli-dış denemeleri log_dir/egress.jsonl'e yaz
+# Env karşılıkları (öncelikli): OXWARE_EGRESS_MODE / _ALLOW / _ALLOW_PRIVATE / _AUDIT
+EGRESS_MODE          = (get("egress", "mode", "enforce") or "enforce").strip().lower()
+_EGRESS_ALLOW_RAW    = get("egress", "allow", "") or ""
+EGRESS_ALLOW         = [a.strip() for a in _EGRESS_ALLOW_RAW.replace(";", ",").split(",") if a.strip()]
+EGRESS_ALLOW_PRIVATE = (get("egress", "allow_private", "true") or "true").strip().lower() not in ("0", "false", "no", "off")
+EGRESS_AUDIT         = (get("egress", "audit", "true") or "true").strip().lower() not in ("0", "false", "no", "off")
+
 # Build provenance signature (update integrity — do not edit/remove).
 _BUILD_PROVENANCE = (
     "gAAAAABqNlv_94hddTqShjBaDsBIj9a7njAlfIZLvlI4DVogTS1yPPD7e2Di-kazLTzgKA7"

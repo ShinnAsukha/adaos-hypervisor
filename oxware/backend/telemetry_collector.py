@@ -287,6 +287,13 @@ def send_once(deps: dict | None = None) -> dict:
     cfg = _load_cfg()
     if not cfg.get("enabled"):
         return {"ok": False, "skipped": "disabled"}
+    # Katman 2: egress guard enforce modundaysa dışarı hiç deneme yapma.
+    try:
+        import egress_guard
+        if egress_guard.is_offline():
+            return {"ok": False, "skipped": "egress-offline"}
+    except Exception:
+        pass
     payload = build_payload(deps or {})
     endpoint = cfg.get("endpoint", DEFAULT_ENDPOINT)
     body = json.dumps(payload).encode("utf-8")

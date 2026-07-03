@@ -212,6 +212,15 @@ def check_updates() -> dict:
     if not repo_url:
         return {"error": "Repo URL ayarlanmamış. Ayarlar → Güncellemeler bölümünden girin."}
 
+    # Katman 2: egress guard enforce modundaysa uzak kontrolü atla (offline).
+    try:
+        import egress_guard
+        if egress_guard.is_offline():
+            return {"error": "Egress kilidi aktif (offline mod) — uzak güncelleme kontrolü devre dışı. "
+                             "İzin vermek için [egress] allow listesine github.com ekleyin."}
+    except Exception:
+        pass
+
     # Yerel commit
     local_sha = ""
     if _is_git_repo(proj_dir):
