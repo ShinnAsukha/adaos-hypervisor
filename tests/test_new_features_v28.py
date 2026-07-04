@@ -89,6 +89,10 @@ def test_updater_guard_keys_off_dark_site_not_enforce(monkeypatch):
     update error."""
     up = _imp("updater")
     ds = _imp("dark_site")
+    # Isolate from the filesystem (no /etc/oxware write on CI/non-root).
+    monkeypatch.setattr(up, "_load_config", lambda: {
+        "repo_url": "https://github.com/example/repo", "branch": "main",
+        "project_dir": "/tmp"}, raising=False)
     # Dark Site ON -> early offline return.
     monkeypatch.setattr(ds, "is_enabled", lambda: True)
     r = up.check_updates()

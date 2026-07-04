@@ -59,7 +59,8 @@ def _load_config() -> dict:
 
 
 def _write_config(repo_url: str, branch: str, auto_check: bool):
-    os.makedirs(os.path.dirname(UPDATE_CONFIG_FILE), exist_ok=True)
+    # /etc/oxware yazılamıyorsa (non-root / konteyner / CI) çökme — defaults ile
+    # devam edilir. config.py ile aynı dayanıklılık kalıbı.
     lines = [
         "# OXware Güncelleme Yapılandırması",
         f"REPO_URL    = {repo_url}",
@@ -67,9 +68,13 @@ def _write_config(repo_url: str, branch: str, auto_check: bool):
         f"AUTO_CHECK  = {'true' if auto_check else 'false'}",
         f"PROJECT_DIR = {_detect_project_dir()}",
     ]
-    with open(UPDATE_CONFIG_FILE, "w") as f:
-        f.write("\n".join(lines) + "\n")
-    os.chmod(UPDATE_CONFIG_FILE, 0o600)
+    try:
+        os.makedirs(os.path.dirname(UPDATE_CONFIG_FILE), exist_ok=True)
+        with open(UPDATE_CONFIG_FILE, "w") as f:
+            f.write("\n".join(lines) + "\n")
+        os.chmod(UPDATE_CONFIG_FILE, 0o600)
+    except OSError as e:
+        log.warning("update.conf yazılamadı (%s) — varsayılanlarla devam", e)
 
 
 def save_config(repo_url: str = DEFAULT_REPO_URL, branch: str = DEFAULT_BRANCH,
