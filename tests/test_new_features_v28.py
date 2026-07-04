@@ -164,6 +164,23 @@ def test_instant_clone_requires_tools(monkeypatch):
     assert r["ok"] is False and "virsh" in r["error"]
 
 
+# ── Setup token (remote first-install) ──────────────────────────────────────
+def test_setup_token_lifecycle(tmp_path, monkeypatch):
+    cred = _imp("credentials")
+    monkeypatch.setattr(cred, "SETUP_TOKEN_FILE", str(tmp_path / "setup-token"), raising=False)
+    monkeypatch.setattr(cred, "is_setup_done", lambda: False)
+    tok = cred.ensure_setup_token()
+    assert tok and len(tok) >= 16
+    assert cred.ensure_setup_token() == tok          # idempotent
+    assert cred.verify_setup_token(tok) is True
+    assert cred.verify_setup_token("wrong") is False
+    assert cred.verify_setup_token("") is False
+    cred.clear_setup_token()
+    assert cred.verify_setup_token(tok) is False      # one-time: gone after clear
+    monkeypatch.setattr(cred, "is_setup_done", lambda: True)
+    assert cred.ensure_setup_token() is None          # no token once setup done
+
+
 # ── Feature registry integrity ──────────────────────────────────────────────
 def test_feature_registry_new_ids_and_valid_status():
     fr = _imp("feature_registry")

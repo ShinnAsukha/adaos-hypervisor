@@ -1187,7 +1187,12 @@ def serve_novnc(filename="vnc.html"):
 # ── İlk Kurulum ───────────────────────────────────────────────────────────────
 @app.route("/api/setup/status")
 def api_setup_status():
-    return ok(done=cred_mgr.is_setup_done())
+    done = cred_mgr.is_setup_done()
+    local = _is_local_request()
+    if not done:
+        cred_mgr.ensure_setup_token()   # token dosyasını hazırla (root ise)
+    # needs_token: uzaktan kurulum için token gerekli mi (frontend token alanını gösterir)
+    return ok(done=done, local=local, needs_token=(not done and not local))
 
 def _attach_session_cookies(resp, token: str):
     """SEC-014: emit JWT in HttpOnly + Secure + SameSite=Strict cookie alongside
@@ -1217,17 +1222,24 @@ def _is_local_request() -> bool:
 def api_setup_init():
     if cred_mgr.is_setup_done():
         return err("Kurulum zaten tamamlandı", 409)
-    if not _is_local_request():
-        log.warning("Setup attempted from non-local address: %s", request.remote_addr)
-        return err("Setup endpoint sadece localhost'tan erişilebilir. "
-                   "Sunucuda 'curl -X POST http://127.0.0.1:8006/api/setup/init ...' kullanın.", 403)
     data = request.get_json() or {}
+    # Erişim: localhost her zaman izinli (sunucudan SSH/curl). Uzaktan (public IP)
+    # yalnızca tek-kullanımlık kurulum token'ı ile — fresh install'da admin
+    # hesabının internetten kapılmasını (hijack) önler.
+    if not _is_local_request():
+        token = data.get("setup_token", "") or request.headers.get("X-Setup-Token", "")
+        if not cred_mgr.verify_setup_token(token):
+            log.warning("Setup uzak deneme, token geçersiz/eksik: %s", request.remote_addr)
+            return err("Uzaktan kurulum için kurulum token'ı gerekli. Sunucuda "
+                       "`sudo cat /etc/oxware/setup-token` çalıştırıp token'ı forma girin "
+                       "(veya kurulumu sunucudan/localhost'tan yapın).", 403)
     username = data.get("username", "").strip()
     password = data.get("password", "")
     if not username or len(password) < 8:
         return err("Kullanıcı adı ve en az 8 karakterli şifre gerekli")
     try:
         cred_mgr.first_setup(username, password)
+        cred_mgr.clear_setup_token()   # tek kullanımlık — kurulum bitti
         ev.info(f"İlk kurulum tamamlandı. Kullanıcı: {username}", category="auth")
         token = create_access_token(identity=username)
         return _attach_session_cookies(ok(token=token, username=username, message="Kurulum tamamlandı"), token)
@@ -20199,6 +20211,13 @@ if plugin_sdk_mgr:
 
 if __name__ == "__main__":
     log.info("OXware Hypervisor v2.7.0 başlatılıyor")
+    # Fresh install: uzaktan ilk kurulum için tek-kullanımlık token üret + logla.
+    if not cred_mgr.is_setup_done():
+        _stok = cred_mgr.ensure_setup_token()
+        if _stok:
+            log.warning("═══ KURULUM TOKEN: %s ═══", _stok)
+            log.warning("Uzaktan (public IP) ilk kurulum için web formuna bu token'ı "
+                        "girin. Sunucuda: sudo cat %s", cred_mgr.SETUP_TOKEN_FILE)
     if ssh_watchdog:
         ssh_watchdog.start()
         log.info("SSH watchdog başlatıldı.")

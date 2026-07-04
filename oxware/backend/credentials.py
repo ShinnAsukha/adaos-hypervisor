@@ -26,6 +26,9 @@ RESET_FILE       = os.environ.get("OXWARE_RESET_FILE", os.environ.get("ADAOS_RES
 SETUP_FLAG_FILE  = "/etc/oxware/.setup_done"
 # Username plaintext yedek dosyası — machine-id değişse bile username okunabilir kalır
 USERNAME_FILE    = "/etc/oxware/.username"
+# Tek-kullanımlık kurulum token'ı — uzaktan (localhost dışı) ilk kurulum için.
+# İlk boot'ta üretilir (root-only), başarılı kurulumda silinir.
+SETUP_TOKEN_FILE = os.environ.get("OXWARE_SETUP_TOKEN_FILE", "/etc/oxware/setup-token")
 
 try:
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -150,6 +153,45 @@ def is_setup_done() -> bool:
     if os.path.exists(USERNAME_FILE) and os.path.exists(AUTH_FILE):
         return True
     return False
+
+
+def ensure_setup_token() -> str | None:
+    """Fresh install (setup bitmemiş): yoksa tek-kullanımlık setup token üret.
+    Token'ı döndür (setup bitmişse veya yazılamıyorsa None). root-only 0600."""
+    if is_setup_done():
+        return None
+    try:
+        if os.path.exists(SETUP_TOKEN_FILE):
+            return Path(SETUP_TOKEN_FILE).read_text().strip()
+        tok = secrets.token_urlsafe(24)
+        os.makedirs(os.path.dirname(SETUP_TOKEN_FILE), exist_ok=True)
+        Path(SETUP_TOKEN_FILE).write_text(tok)
+        os.chmod(SETUP_TOKEN_FILE, 0o600)
+        return tok
+    except OSError:
+        return None   # /etc yazılamıyor (non-root/dev) — token yok, localhost setup çalışır
+
+
+def verify_setup_token(token: str) -> bool:
+    """Verilen token dosyadakiyle sabit-zaman eşleşiyor mu."""
+    if not token:
+        return False
+    try:
+        if not os.path.exists(SETUP_TOKEN_FILE):
+            return False
+        stored = Path(SETUP_TOKEN_FILE).read_text().strip()
+        return bool(stored) and secrets.compare_digest(token.strip(), stored)
+    except OSError:
+        return False
+
+
+def clear_setup_token() -> None:
+    """Kurulum bitince token'ı sil (tek kullanımlık)."""
+    try:
+        if os.path.exists(SETUP_TOKEN_FILE):
+            os.remove(SETUP_TOKEN_FILE)
+    except OSError:
+        pass
 
 
 def first_setup(username: str, password: str):

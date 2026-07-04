@@ -115,6 +115,12 @@
     <label for="su-password2">Şifre Tekrar</label>
     <input id="su-password2" type="password" placeholder="Şifreyi tekrar girin" autocomplete="new-password" oninput="validateForm()">
 
+    <div id="token-row" style="display:none">
+      <label for="su-token">Kurulum Token'ı</label>
+      <input id="su-token" type="text" placeholder="setup-token" autocomplete="off" spellcheck="false" oninput="validateForm()">
+      <div class="hint" style="margin-top:-8px">Uzaktan (public IP) kurulum güvenlik için token ister. Sunucuda çalıştırın:<br><code>sudo cat /etc/oxware/setup-token</code> — çıkan değeri buraya yapıştırın.</div>
+    </div>
+
     <button class="btn" id="setupBtn" onclick="doSetup()" disabled>Kurulumu Tamamla</button>
     <div class="err" id="setupErr"></div>
   </div>
@@ -151,13 +157,17 @@ function validateForm() {
   const p1 = document.getElementById("su-password").value;
   const p2 = document.getElementById("su-password2").value;
   const btn = document.getElementById("setupBtn");
-  btn.disabled = !(u.length >= 3 && p1.length >= 8 && p1 === p2);
+  const tokenRow = document.getElementById("token-row");
+  const tokenNeeded = tokenRow && tokenRow.style.display !== "none";
+  const tokOk = !tokenNeeded || document.getElementById("su-token").value.trim().length > 0;
+  btn.disabled = !(u.length >= 3 && p1.length >= 8 && p1 === p2 && tokOk);
 }
 
 async function doSetup() {
   const username = document.getElementById("su-username").value.trim();
   const password = document.getElementById("su-password").value;
   const password2 = document.getElementById("su-password2").value;
+  const setup_token = (document.getElementById("su-token") || {}).value || "";
   const btn = document.getElementById("setupBtn");
   const errEl = document.getElementById("setupErr");
 
@@ -175,7 +185,7 @@ async function doSetup() {
     const res = await fetch("/api/setup/init", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({username, password}),
+      body: JSON.stringify({username, password, setup_token}),
     });
     const data = await res.json();
     if (res.ok && data.token) {
@@ -200,7 +210,11 @@ async function doSetup() {
 
 // Zaten kuruluysa yönlendir
 fetch("/api/setup/status").then(r => r.json()).then(d => {
-  if (d.done) window.location.href = "/login";
+  if (d.done) { window.location.href = "/login"; return; }
+  if (d.needs_token) {
+    document.getElementById("token-row").style.display = "block";
+    validateForm();
+  }
 });
 </script>
 </body>
