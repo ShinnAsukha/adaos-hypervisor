@@ -94,6 +94,12 @@ test suite on every push (badge above is live).
 | Kernel livepatch | 🟡 Optional | Wraps canonical-livepatch / kpatch when installed |
 | OXware LKMs (oxware_audit / oxware_guard) | 🟡 Beta | Real kprobe modules; build + load on the host to activate |
 | Desktop (Electron) app | 🟠 Early | Wraps the web UI; some links still placeholder |
+| Egress lockdown + Dark Site (offline) | 🟢 Stable | Socket-level deny-by-default guard + audit; one-switch air-gap mode. Unit-tested (policy, allowlist, dark-site override) |
+| ISO Library (catalog + SHA256 + mirror) | 🟡 Beta | Curated catalog, streamed download with % + mirror fallback; honest checksums (no fabricated hashes). Needs network + disk |
+| GPU passthrough wizard (VFIO/IOMMU/ACS) | 🟡 Beta | Auto-detect + preflight + generated remediation plan + live bind/attach. Needs a KVM host with root; safe/empty elsewhere |
+| Ansible collection (`oxware.kvm`) | 🟡 Beta | 7 modules (vm/network/disk/snapshot/template/firewall/user), idempotent, matched to real REST paths; validate against staging before prod |
+| Billing modules (WHMCS/WiseCP/HostBill/Blesta) | 🟡 Beta | WHMCS/WiseCP proven; HostBill/Blesta ports lint-clean but need e2e on a real panel |
+| Instant Clone (memory-fork) | 🟠 Experimental | virsh save-image fork — clones resume from RAM in seconds; source pauses briefly. Needs real KVM host; not vmfork-live |
 
 Legend: 🟢 stable · 🟡 beta/optional · 🟠 partial/early. If something here drifts
 from reality, [open an issue](https://github.com/ShinnAsukha/oxware-hypervisor/issues) — honesty in this table is a feature.
