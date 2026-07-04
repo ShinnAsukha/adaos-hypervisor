@@ -175,6 +175,7 @@ hugepages_mgr   = _safe_import("hugepages_manager")
 sriov_mgr       = _safe_import("sriov_manager")
 vgpu_mgr        = _safe_import("vgpu_manager")
 gpu_pt          = _safe_import("gpu_passthrough")
+instant_clone   = _safe_import("instant_clone")
 iso_lib         = _safe_import("iso_library")
 cdp_mgr         = _safe_import("cdp_manager")
 boot_order_mgr  = _safe_import("boot_order_manager")
@@ -16672,6 +16673,31 @@ def api_gpu_detach_vm(vm_id):
         return ok(**gpu_pt.detach_from_vm(vm_id, d["pci"]))
     except Exception as e:
         return err(e, 400)
+
+# ── Instant Clone (memory-fork) ──────────────────────────────────────────────
+@app.route("/api/vms/<vm_id>/instant-clone", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator", "operator")
+def api_instant_clone(vm_id):
+    """Kaynak VM'den memory-fork ile instant clone(lar) üret."""
+    if not instant_clone: return err("module unavailable")
+    try:
+        d = request.get_json() or {}
+        prefix = (d.get("prefix") or "").strip()
+        if not prefix:
+            return err("prefix zorunlu")
+        return ok(**instant_clone.instant_clone(vm_id, prefix, int(d.get("count", 1))))
+    except Exception as e:
+        return err(e, 400)
+
+@app.route("/api/instant-clone/status", methods=["GET"])
+@require_role("admin", "administrator", "operator")
+def api_instant_clone_status():
+    if not instant_clone: return ok({"available": False})
+    try:
+        return ok(**instant_clone.status())
+    except Exception as e:
+        return ok({"available": False, "error": str(e)})
 
 # ── CDP ──────────────────────────────────────────────────────────────────────
 @app.route("/api/cdp/<vm_id>/enable", methods=["POST"])

@@ -166,6 +166,9 @@ FEATURE_MANIFEST = [
     # ── v2.8.6 — Billing modules: HostBill + Blesta (WHMCS/WISECP zaten var) ───────
     {"id": "billing_hostbill", "name": "HostBill Module",     "category": "automation",   "module": "_billing",            "status": "beta",   "version": "2.8.6"},
     {"id": "billing_blesta",   "name": "Blesta Module",       "category": "automation",   "module": "_billing",            "status": "beta",   "version": "2.8.6"},
+
+    # ── v2.8.7 — Instant Clone (memory-fork) ──────────────────────────────────────
+    {"id": "instant_clone", "name": "Instant Clone (memory-fork)","category": "compute",  "module": "instant_clone",       "status": "experimental", "version": "2.8.7"},
 ]
 
 
