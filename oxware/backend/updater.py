@@ -212,12 +212,13 @@ def check_updates() -> dict:
     if not repo_url:
         return {"error": "Repo URL ayarlanmamış. Ayarlar → Güncellemeler bölümünden girin."}
 
-    # Katman 2: egress guard enforce modundaysa uzak kontrolü atla (offline).
+    # Katman 2: yalnızca Dark Site (tam offline) modunda uzak kontrolü atla.
+    # Düz egress 'enforce' güncellemeyi engellemez — socket guard, repo host'u
+    # allowlist'teyse geçirir; değilse aşağıdaki çağrı normal ağ hatası döndürür.
     try:
-        import egress_guard
-        if egress_guard.is_offline():
-            return {"error": "Egress kilidi aktif (offline mod) — uzak güncelleme kontrolü devre dışı. "
-                             "İzin vermek için [egress] allow listesine github.com ekleyin."}
+        import dark_site
+        if dark_site.is_enabled():
+            return {"error": "Dark Site (offline) modu aktif — uzak güncelleme kontrolü devre dışı."}
     except Exception:
         pass
 

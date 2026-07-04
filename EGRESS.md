@@ -35,7 +35,7 @@ iken hiç deneme yapmaz, gürültü/log kirliliği olmaz):
 `/etc/oxware/oxware.conf`:
 ```ini
 [egress]
-mode          = enforce        ; enforce (varsayılan) | monitor | off
+mode          = monitor        ; monitor (VARSAYILAN, loglar/bloklamaz) | enforce | off
 allow_private = true           ; loopback+özel ağlara her zaman izin
 allow         =                ; virgülle: hostname son-eki VEYA CIDR
 audit         = true           ; reddedilen/izinli-dış -> log_dir/egress.jsonl
@@ -55,9 +55,14 @@ allow = github.com, api.github.com, 203.0.113.0/24
 ### Modlar
 | Mod | Davranış | Ne zaman |
 |-----|----------|----------|
-| `enforce` | Dışarıyı **blokla** + logla | Üretim varsayılanı — gerçek kilit |
-| `monitor` | Bloklama, **sadece logla** | Açmadan önce dry-run; neyin dışarı gittiğini gör |
+| `monitor` | Bloklama, **sadece logla** | **VARSAYILAN** — güncelleme/marketplace/SSO gibi giden çağrıları kırmaz; neyin dışarı gittiğini gör |
+| `enforce` | Dışarıyı **blokla** + logla | Bilinçli kilit; giden çağrılar için `allow` gerekir. Dark Site açıkken otomatik |
 | `off` | Guard devre dışı | Sadece geliştirme |
+
+> **Neden default enforce değil?** enforce out-of-box tüm giden çağrıları (güncelleme
+> kontrolü, marketplace, SSO, bildirim) allowlist olmadan bloklar — mevcut kurulumlarda
+> güncelleme sistemi dâhil özellikleri sessizce kırar. Bu yüzden default `monitor`;
+> tam kilit için bilinçli `enforce` veya Dark Site.
 
 **Önerilen açış:** önce `monitor` ile birkaç gün çalıştır → `egress.jsonl`'i incele →
 gereken host'ları `allow`'a ekle → `enforce`'a al.

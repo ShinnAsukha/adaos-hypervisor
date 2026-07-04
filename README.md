@@ -94,7 +94,7 @@ test suite on every push (badge above is live).
 | Kernel livepatch | 🟡 Optional | Wraps canonical-livepatch / kpatch when installed |
 | OXware LKMs (oxware_audit / oxware_guard) | 🟡 Beta | Real kprobe modules; build + load on the host to activate |
 | Desktop (Electron) app | 🟠 Early | Wraps the web UI; some links still placeholder |
-| Egress lockdown + Dark Site (offline) | 🟢 Stable | Socket-level deny-by-default guard + audit; one-switch air-gap mode. Unit-tested (policy, allowlist, dark-site override) |
+| Egress lockdown + Dark Site (offline) | 🟢 Stable | Socket-level egress guard + audit. Default `monitor` (observe, non-breaking); opt-in `enforce` or Dark Site for full deny-by-default air-gap. Unit-tested (policy, allowlist, dark-site override) |
 | ISO Library (catalog + SHA256 + mirror) | 🟡 Beta | Curated catalog, streamed download with % + mirror fallback; honest checksums (no fabricated hashes). Needs network + disk |
 | GPU passthrough wizard (VFIO/IOMMU/ACS) | 🟡 Beta | Auto-detect + preflight + generated remediation plan + live bind/attach. Needs a KVM host with root; safe/empty elsewhere |
 | Ansible collection (`oxware.kvm`) | 🟡 Beta | 7 modules (vm/network/disk/snapshot/template/firewall/user), idempotent, matched to real REST paths; validate against staging before prod |

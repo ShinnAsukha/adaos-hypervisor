@@ -287,11 +287,12 @@ def send_once(deps: dict | None = None) -> dict:
     cfg = _load_cfg()
     if not cfg.get("enabled"):
         return {"ok": False, "skipped": "disabled"}
-    # Katman 2: egress guard enforce modundaysa dışarı hiç deneme yapma.
+    # Katman 2: Dark Site (tam offline) modunda dışarı hiç deneme yapma.
+    # (Düz egress enforce zaten socket seviyesinde bloklar; telemetri opt-in.)
     try:
-        import egress_guard
-        if egress_guard.is_offline():
-            return {"ok": False, "skipped": "egress-offline"}
+        import dark_site
+        if dark_site.is_enabled():
+            return {"ok": False, "skipped": "darksite-offline"}
     except Exception:
         pass
     payload = build_payload(deps or {})

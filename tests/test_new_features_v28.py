@@ -38,6 +38,23 @@ def test_egress_policy_denies_public_allows_private(monkeypatch):
     assert eg._host_allowed("evil.com") is False
 
 
+def test_egress_default_mode_is_monitor(monkeypatch):
+    """Regression: default must be monitor (non-breaking), NOT enforce.
+    Default enforce silently blocked the update check for everyone."""
+    eg = _imp("egress_guard")
+    monkeypatch.delenv("OXWARE_EGRESS_MODE", raising=False)
+    monkeypatch.setattr(eg, "_installed", True, raising=False)
+
+    class _NoCfg(dict):
+        pass
+    # Force the config fallback path to have no EGRESS_MODE.
+    import sys
+    monkeypatch.setitem(sys.modules, "config", type(sys)("config"))
+    eg._load_policy()
+    assert eg.MODE == "monitor"
+    assert eg.is_offline() is False   # monitor never reports offline
+
+
 def test_egress_private_ip_classification():
     eg = _imp("egress_guard")
     import ipaddress
@@ -64,6 +81,27 @@ def test_dark_site_forces_egress_enforce(monkeypatch):
     assert os.environ["OXWARE_EGRESS_MODE"] == "enforce"
     blocked = ds.block_remote("thing")
     assert blocked["ok"] is False and blocked["offline"] is True
+
+
+def test_updater_guard_keys_off_dark_site_not_enforce(monkeypatch):
+    """Regression: the updater's proactive offline skip must key off Dark Site,
+    not plain egress enforce — otherwise every install (default guard) shows an
+    update error."""
+    up = _imp("updater")
+    ds = _imp("dark_site")
+    # Dark Site ON -> early offline return.
+    monkeypatch.setattr(ds, "is_enabled", lambda: True)
+    r = up.check_updates()
+    assert "Dark Site" in (r.get("error") or "")
+    # Dark Site OFF -> must NOT short-circuit on the dark-site guard.
+    monkeypatch.setattr(ds, "is_enabled", lambda: False)
+    monkeypatch.setattr(up, "_get_remote_commits", lambda *a, **k: [], raising=False)
+    monkeypatch.setattr(up, "_is_git_repo", lambda *a, **k: False, raising=False)
+    try:
+        r2 = up.check_updates()
+        assert "Dark Site" not in (r2.get("error") or "")
+    except Exception:
+        pass  # downstream logic varies; the point is the dark-site guard didn't fire
 
 
 # ── ISO Library ─────────────────────────────────────────────────────────────

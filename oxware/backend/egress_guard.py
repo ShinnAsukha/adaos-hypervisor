@@ -15,9 +15,11 @@ Politika (deny-by-default):
   - AF_UNIX (libvirt qemu:///system) → dokunulmaz.
 
 Modlar (OXWARE_EGRESS_MODE / config [egress] mode):
-  - enforce  : dışarıyı blokla + logla   (VARSAYILAN — gerçek kilit)
-  - monitor  : bloklama, sadece logla    (üretimde açmadan önce dry-run)
+  - monitor  : bloklama, sadece logla    (VARSAYILAN — güncelleme/marketplace
+               gibi giden çağrıları kırmaz; neyin çıktığını görürsün)
+  - enforce  : dışarıyı blokla + logla   (bilinçli kilit; allowlist gerekir)
   - off      : guard devre dışı
+Dark Site açıkken egress otomatik enforce'a çekilir (dark_site.apply()).
 
 eventlet NOTU: bu modül eventlet import edilmeden ÖNCE install() edilmeli.
 Böylece eventlet.green.socket, zaten sarmalanmış primitifleri "original"
@@ -221,7 +223,7 @@ def _load_policy() -> None:
     except Exception:
         pass
 
-    MODE = mode if mode in ("enforce", "monitor", "off") else "enforce"
+    MODE = mode if mode in ("enforce", "monitor", "off") else "monitor"
     ALLOW_PRIVATE = str(allow_priv).strip().lower() not in ("0", "false", "no", "off")
     AUDIT = str(audit_env).strip().lower() not in ("0", "false", "no", "off")
     if log_dir:
