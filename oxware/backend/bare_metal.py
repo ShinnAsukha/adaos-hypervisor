@@ -212,7 +212,10 @@ def create_profile(name: str, hostname: str, disk_layout: str,
           dhcp4: false
           addresses:
 {addrs_yaml}
-          gateway4: {gateway}
+          routes:
+            - to: default
+              via: {gateway}
+              on-link: true
           nameservers:
             addresses: [{ns_yaml}]"""
 

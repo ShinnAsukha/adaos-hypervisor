@@ -1008,13 +1008,21 @@ def _build_cloud_init_iso(vm_name: str, ci: dict) -> str | None:
             if not prefix:
                 prefix = "24"
             dns_yaml = "\n".join(f"      - {d}" for d in dns_list)
+            # on-link: true → gateway VM'in kendi subnet'i DIŞINDA olsa bile kabul
+            # edilir. Hetzner/OVH gibi routed sağlayıcılar tek IP'yi (ör. /32) farklı
+            # bir /24 gateway ile verir; klasik 'gateway4' bunu "unreachable" diye
+            # reddeder. 'routes: on-link' hem bunu çözer hem deprecated gateway4'ü kaldırır.
+            # Aynı-subnet gateway'lerde de güvenli (no-op).
             network_config_str = f"""version: 2
 ethernets:
   {iface}:
     dhcp4: false
     addresses:
       - {static_ip}/{prefix}
-    gateway4: {gateway}
+    routes:
+      - to: default
+        via: {gateway}
+        on-link: true
     nameservers:
       addresses:
 {dns_yaml}
