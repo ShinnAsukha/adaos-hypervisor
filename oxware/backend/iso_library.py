@@ -204,23 +204,46 @@ def verify_local(filename: str, sha256: str = "") -> dict:
             "error": None if match else "SHA256 uyuşmuyor"}
 
 
+def _stream_download(url: str, tmp: str, fn: str) -> None:
+    """urllib ile stream indir + % ilerlemeyi _JOBS'a yaz (progress bar için)."""
+    import urllib.request
+    req = urllib.request.Request(url, headers={"User-Agent": "OXware-ISO/1.0"})
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        total = int(resp.headers.get("Content-Length") or 0)
+        done, last = 0, -1
+        with open(tmp, "wb") as f:
+            while True:
+                chunk = resp.read(1 << 20)
+                if not chunk:
+                    break
+                f.write(chunk)
+                done += len(chunk)
+                pct = int(done * 100 / total) if total else 0
+                if pct != last:
+                    last = pct
+                    with _LOCK:
+                        j = _JOBS.get(fn)
+                        if j:
+                            j["pct"] = pct
+                            j["downloaded_mb"] = round(done / 1048576, 1)
+
+
 def _do_download(e: dict, mirror_index: int) -> None:
     d = _iso_dir()
     os.makedirs(d, exist_ok=True)
     dest = os.path.join(d, e["filename"])
-    dl = _downloader()
     urls = e["mirrors"]
     fn = e["filename"]
     tried = list(range(mirror_index, len(urls))) + list(range(0, mirror_index))
     for idx in tried:
         url = urls[idx]
         with _LOCK:
-            _JOBS[fn] = {"state": "downloading", "pct": None,
+            _JOBS[fn] = {"state": "downloading", "pct": 0,
                          "started": time.time(), "mirror": idx, "error": None}
         try:
             tmp = dest + ".part"
-            r = subprocess.run(dl + [tmp, url], timeout=7200)
-            if r.returncode != 0 or not os.path.exists(tmp):
+            _stream_download(url, tmp, fn)
+            if not os.path.exists(tmp):
                 raise RuntimeError("indirme başarısız (mirror %d)" % idx)
             # verify
             with _LOCK:
@@ -262,8 +285,6 @@ def download(iso_id: str, mirror_index: int = 0) -> dict:
             return dark_site.block_remote("ISO: %s" % e["name"])
     except Exception:
         pass
-    if not _downloader():
-        return {"ok": False, "error": "host'ta indirme aracı yok (wget/curl)"}
     dest = os.path.join(_iso_dir(), e["filename"])
     if os.path.exists(dest):
         return {"ok": True, "state": "present", "filename": e["filename"]}

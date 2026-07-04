@@ -30041,9 +30041,55 @@ async function gpuPreflight(pci) {
     el.innerHTML = `<div class="card">
       <div class="card-title">Preflight: <code>${escHtml(pci)}</code> — ${d.ready ? '<span style="color:#10b981">HAZIR</span>' : '<span style="color:#ef4444">HAZIR DEĞİL</span>'}</div>
       <div style="margin-top:8px">${checks.map(c => `<div style="font-size:12px;margin-bottom:4px">${c.ok ? '✅' : (c.severity === 'critical' ? '❌' : '⚠️')} <b>${escHtml(c.msg)}</b>${c.fix ? `<div style="font-size:11px;color:var(--text-muted);margin-left:20px">→ ${escHtml(c.fix)}</div>` : ''}</div>`).join('')}</div>
-      <button class="btn sm primary" style="margin-top:10px" onclick="gpuPlan('${escHtml(pci)}')">Remediation Planı Göster</button>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+        <button class="btn sm" onclick="gpuPlan('${escHtml(pci)}')"><i class="fa-solid fa-list-check"></i> Plan</button>
+        <button class="btn sm warning" onclick="gpuBind('${escHtml(pci)}')" title="GPU'yu host sürücüsünden alıp vfio-pci'ye bağla (root gerekir)"><i class="fa-solid fa-link"></i> vfio-pci'ye Bağla</button>
+        <span style="width:1px;height:20px;background:var(--border)"></span>
+        <select id="gpu-attach-vm" class="form-control" style="width:auto;font-size:12px;padding:4px 8px"><option value="">VM seç…</option></select>
+        <label style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><input type="checkbox" id="gpu-attach-audio" checked> ses fonksiyonu</label>
+        <button class="btn sm primary" onclick="gpuAttach('${escHtml(pci)}')"><i class="fa-solid fa-plug"></i> VM'e Ata</button>
+      </div>
     </div>`;
+    _gpuLoadVms();
   } catch(e) { el.innerHTML = `<div class="empty-state"><p>Hata: ${escHtml(e.message || String(e))}</p></div>`; }
+}
+
+async function _gpuLoadVms() {
+  const sel = document.getElementById('gpu-attach-vm');
+  if (!sel) return;
+  try {
+    const d = await api('/vms');
+    const vms = d.vms || d || [];
+    vms.forEach(v => {
+      const id = v.id || v.uuid || v.name;
+      const nm = v.name || id;
+      if (!id) return;
+      const o = document.createElement('option');
+      o.value = id; o.textContent = nm;
+      sel.appendChild(o);
+    });
+  } catch(e) { /* VM listesi alınamadı — seçici boş kalır */ }
+}
+
+async function gpuBind(pci) {
+  if (!confirm(`GPU ${pci} vfio-pci'ye bağlanacak. Host bu GPU'yu kullanıyorsa ekran kaybı olabilir. Devam?`)) return;
+  try {
+    const d = await api('/gpu/wizard/bind/' + encodeURIComponent(pci), { method: 'POST' });
+    if (d.ok) toast('vfio-pci bağlandı: ' + (d.driver || 'ok'), 'success');
+    else toast('Bind başarısız: ' + (d.note || d.error || '—'), 'warn');
+    gpuPreflight(pci);
+  } catch(e) { toast('Bind hatası: ' + (e.message || e), 'error'); }
+}
+
+async function gpuAttach(pci) {
+  const vm = (document.getElementById('gpu-attach-vm') || {}).value || '';
+  if (!vm) { toast('Önce VM seçin', 'warn'); return; }
+  const withAudio = (document.getElementById('gpu-attach-audio') || {}).checked !== false;
+  try {
+    const d = await api(`/vms/${encodeURIComponent(vm)}/gpu/attach`, { method: 'POST', body: { pci, with_audio: withAudio } });
+    if (d.ok) toast('GPU eklendi: ' + (d.attached || [pci]).join(', ') + ' — VM yeniden başlatın', 'success');
+    else toast('Attach başarısız: ' + (d.error || '—'), 'error');
+  } catch(e) { toast('Attach hatası: ' + (e.message || e), 'error'); }
 }
 
 async function gpuPlan(pci) {
@@ -30066,24 +30112,43 @@ function toggleIsoLibrary() {
   if (show) loadIsoLibrary();
 }
 
+let _isoPollTimer = null;
 async function loadIsoLibrary() {
   const grid = document.getElementById('iso-library-grid');
   if (!grid) return;
-  grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p>Yükleniyor...</p></div>';
+  if (!grid.dataset.loaded) grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p>Yükleniyor...</p></div>';
   try {
     const d = await api('/storage/iso-library');
     const cat = d.catalog || [];
+    grid.dataset.loaded = '1';
     if (!cat.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p>Katalog boş.</p></div>'; return; }
+    let anyActive = false;
     grid.innerHTML = cat.map(e => {
-      const st = e.present ? '<span class="badge active">indirildi</span>' : (e.state === 'downloading' ? '<span class="badge">indiriliyor…</span>' : (e.state === 'error' ? '<span class="badge inactive">hata</span>' : ''));
+      const downloading = e.state === 'downloading' || e.state === 'verifying';
+      if (downloading) anyActive = true;
+      const st = e.present ? '<span class="badge active">indirildi</span>'
+        : (e.state === 'error' ? '<span class="badge inactive">hata</span>' : '');
+      const pct = (e.progress == null) ? 0 : e.progress;
+      const bar = downloading ? `
+        <div style="margin-top:8px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)">
+            <span>${e.state === 'verifying' ? 'SHA256 doğrulanıyor…' : 'indiriliyor…'}</span><span>${pct}%</span>
+          </div>
+          <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;margin-top:3px">
+            <div style="background:var(--accent);height:100%;width:${pct}%;transition:width .4s;border-radius:4px"></div>
+          </div>
+        </div>` : '';
       return `<div class="card">
         <div style="font-weight:600;font-size:13px">${escHtml(e.name)} ${st}</div>
         <div style="font-size:11px;color:var(--text-muted);margin:4px 0">${escHtml(e.category)} · ${escHtml(e.arch)} · ~${e.size_gb} GB · ${e.mirrors} mirror ${e.verifiable ? '· SHA256' : ''}</div>
         ${e.present
           ? `<button class="btn sm" onclick="isoVerify('${escHtml(e.filename)}')">Doğrula</button>`
-          : `<button class="btn sm primary" onclick="isoLibDownload('${escHtml(e.id)}')">İndir</button>`}
+          : (downloading ? bar : `<button class="btn sm primary" onclick="isoLibDownload('${escHtml(e.id)}')">İndir</button>`)}
       </div>`;
     }).join('');
+    // Aktif indirme varsa 2 sn'de bir yenile; yoksa durdur.
+    if (anyActive && !_isoPollTimer) _isoPollTimer = setInterval(loadIsoLibrary, 2000);
+    if (!anyActive && _isoPollTimer) { clearInterval(_isoPollTimer); _isoPollTimer = null; }
   } catch(e) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Hata: ${escHtml(e.message || String(e))}</p></div>`;
   }
@@ -30094,7 +30159,7 @@ async function isoLibDownload(id) {
     const d = await api('/storage/iso-library/download', { method: 'POST', body: { id } });
     if (d.darksite) { toast('Dark Site aktif — uzak indirme kapalı', 'warn'); return; }
     toast('İndirme başladı: ' + (d.filename || id), 'success');
-    setTimeout(loadIsoLibrary, 1500);
+    setTimeout(loadIsoLibrary, 800);
   } catch(e) { toast('İndirme hatası: ' + (e.message || e), 'error'); }
 }
 
