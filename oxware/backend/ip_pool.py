@@ -64,12 +64,19 @@ def create_pool(
 
     pool_data = {
         "name": name,
-        "network": network,
+        # Kanonik ağ adresi sakla. Kullanıcı "176.9.163.33/27" (host IP'si)
+        # yazarsa bile havuz "176.9.163.32/27" olarak kaydedilir; aksi halde
+        # liste, uyarı metni ve her IP atama kaydı yanlış ağı gösteriyordu.
+        "network": str(net),
         "gateway": gateway,
         "dns": dns or ["8.8.8.8", "1.1.1.1"],
         "start_ip": str(start),
         "end_ip": str(end),
-        "reserved": reserved or [gateway],
+        # BUG: `reserved or [gateway]` — çağıran reserved listesi verdiğinde
+        # (ör. app.py host IP'sini enjekte ediyor) `or` kısa devre yapıyor ve
+        # GATEWAY hiç rezerve edilmiyordu → allocate_ip gateway'i bir VM'e
+        # verebiliyor, ağ geçidi çakışıp tüm havuz internetini kesiyordu.
+        "reserved": sorted({*(reserved or []), gateway}),
         "libvirt_network": libvirt_network or "default",
         "created_at": time.time(),
     }
@@ -110,7 +117,16 @@ def _pool_capacity(pool: dict) -> int:
     try:
         start = int(ipaddress.IPv4Address(pool["start_ip"]))
         end   = int(ipaddress.IPv4Address(pool["end_ip"]))
-        reserved = len(pool.get("reserved", []))
+        # Yalnızca [start, end] ARALIĞINDAKİ rezerveler kapasiteden düşülür.
+        # Aralık dışındakiler (ör. otomatik rezerve edilen host/gateway IP'si
+        # başlangıçtan önce kalıyor) kapasiteyi olduğundan az gösteriyordu.
+        reserved = 0
+        for r in pool.get("reserved", []):
+            try:
+                if start <= int(ipaddress.IPv4Address(r)) <= end:
+                    reserved += 1
+            except ValueError:
+                continue
         return max(0, end - start + 1 - reserved)
     except Exception:
         return 0

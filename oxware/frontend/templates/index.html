@@ -30059,7 +30059,9 @@ async function _gpuLoadVms() {
   if (!sel) return;
   try {
     const d = await api('/vms');
-    const vms = d.vms || d || [];
+    // d her zaman truthy bir obje ({status:"ok",...}) olduğu için `d.vms || d`
+    // beklenmedik şekilde objeye düşüp forEach'te patlıyordu (sessiz boş liste).
+    const vms = Array.isArray(d?.vms) ? d.vms : (Array.isArray(d) ? d : []);
     vms.forEach(v => {
       const id = v.id || v.uuid || v.name;
       const nm = v.name || id;
@@ -30109,7 +30111,8 @@ function toggleIsoLibrary() {
   if (!p) return;
   const show = p.style.display === 'none';
   p.style.display = show ? '' : 'none';
-  if (show) loadIsoLibrary();
+  if (show) { loadIsoLibrary(); }
+  else if (_isoPollTimer) { clearInterval(_isoPollTimer); _isoPollTimer = null; }  // panel kapalıyken poll etme
 }
 
 let _isoPollTimer = null;

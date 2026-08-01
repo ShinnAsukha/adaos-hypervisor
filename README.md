@@ -123,6 +123,32 @@ cd /opt/oxware-src
 sudo bash install.sh
 ```
 
+### 🔑 First login — the setup token
+
+The first-run wizard creates the admin account. On a box with a **public IP** that
+window is a hijack risk: whoever reaches port 8006 first would own the panel. So
+remote first-install is gated by a **one-time setup token**.
+
+| Where you open the wizard | What you need |
+|---|---|
+| From the server itself (`localhost`) | Nothing — just fill in the form |
+| From your laptop/phone (public IP) | The setup token |
+
+```bash
+sudo cat /etc/oxware/setup-token       # or: journalctl -u oxware | grep "KURULUM TOKEN"
+```
+
+Paste it into the **Setup token** field that appears on the wizard, then create your
+admin user. The token is single-use — it is deleted the moment setup succeeds.
+
+Prefer the shell? This works with no token because it comes from loopback:
+
+```bash
+curl -k -X POST https://127.0.0.1:8006/api/setup/init \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"<min-8-chars>"}'
+```
+
 ---
 
 ## 📦 What's in the box
