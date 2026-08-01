@@ -3688,6 +3688,7 @@ def api_list_pools():
 
 @app.route("/api/storage/pools", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_create_pool():
     data = request.get_json() or {}
     if "name" not in data or "path" not in data:
@@ -3699,6 +3700,7 @@ def api_create_pool():
 
 @app.route("/api/storage/pools/<pool_uuid>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_delete_pool(pool_uuid):
     delete_files = request.args.get("delete_files", "false").lower() == "true"
     try:
@@ -3708,6 +3710,7 @@ def api_delete_pool(pool_uuid):
 
 @app.route("/api/storage/pools/<pool_uuid>/start", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_start_pool(pool_uuid):
     try:
         return ok(**storage_manager.start_pool(pool_uuid))
@@ -3716,6 +3719,7 @@ def api_start_pool(pool_uuid):
 
 @app.route("/api/storage/pools/<pool_uuid>/stop", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_stop_pool(pool_uuid):
     try:
         return ok(**storage_manager.stop_pool(pool_uuid))
@@ -3724,6 +3728,7 @@ def api_stop_pool(pool_uuid):
 
 @app.route("/api/storage/pools/<pool_uuid>/autostart", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_pool_autostart(pool_uuid):
     data = request.get_json() or {}
     enabled = bool(data.get("enabled", False))
@@ -3734,6 +3739,7 @@ def api_pool_autostart(pool_uuid):
 
 @app.route("/api/storage/pools/<pool_uuid>/refresh", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_refresh_pool(pool_uuid):
     try:
         return ok(**storage_manager.refresh_pool(pool_uuid))
@@ -3750,6 +3756,7 @@ def api_list_volumes(pool_uuid):
 
 @app.route("/api/storage/pools/<pool_uuid>/volumes", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_create_volume(pool_uuid):
     data = request.get_json() or {}
     if "name" not in data or "size_gb" not in data:
@@ -3761,6 +3768,7 @@ def api_create_volume(pool_uuid):
 
 @app.route("/api/storage/pools/<pool_uuid>/volumes/<vol_name>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_delete_volume(pool_uuid, vol_name):
     try:
         return ok(**storage_manager.delete_volume(pool_uuid, vol_name))
@@ -3796,6 +3804,7 @@ def api_iso_library_download():
 
 @app.route("/api/storage/isos/<name>/verify", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_iso_verify(name):
     """Yereldeki ISO'nun SHA256'sını doğrula (katalog/yayıncı veya verilen hash)."""
     if not iso_lib: return err("module unavailable")
@@ -3844,6 +3853,7 @@ def api_upload_iso():
 
 @app.route("/api/storage/isos/<name>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_delete_iso(name):
     # rapor #43 fix: validate name to prevent path traversal
     try:
@@ -3857,6 +3867,7 @@ def api_delete_iso(name):
 
 @app.route("/api/storage/isos/<name>/rename", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_rename_iso(name):
     """ISO dosyasını yeniden adlandır."""
     # rapor #43 fix: validate both old and new names
@@ -3905,6 +3916,7 @@ def api_list_ip_pools():
 
 @app.route("/api/ippool", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_create_ip_pool():
     data = request.get_json() or {}
     required = ["name", "network", "gateway"]
@@ -3921,6 +3933,7 @@ def api_create_ip_pool():
 
 @app.route("/api/ippool/<name>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_delete_ip_pool(name):
     try:
         ip_pool_mgr.delete_pool(name)
@@ -3943,6 +3956,7 @@ def api_ip_pool_stats(name):
 
 @app.route("/api/ippool/allocate", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_allocate_ip():
     data = request.get_json() or {}
     required = ["pool_name", "vm_id", "vm_name"]
@@ -3957,6 +3971,7 @@ def api_allocate_ip():
 
 @app.route("/api/ippool/release/<vm_id>", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_release_ip(vm_id):
     released = ip_pool_mgr.release_ip(vm_id)
     return ok(released=released)
@@ -4073,6 +4088,7 @@ def api_ipam_host_ips():
 
 @app.route("/api/ipam/pools", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ipam_create_pool():
     data = request.get_json() or {}
     required = ["name", "network", "gateway"]
@@ -4117,6 +4133,7 @@ def api_ipam_create_pool():
 
 @app.route("/api/ipam/pools/<name>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ipam_delete_pool(name):
     try:
         ip_pool_mgr.delete_pool(name)
@@ -4128,6 +4145,7 @@ def api_ipam_delete_pool(name):
 
 @app.route("/api/ipam/leases/<path:mac>/lock", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ipam_lock(mac):
     try:
         # MAC'e göre IP bul
@@ -4144,6 +4162,7 @@ def api_ipam_lock(mac):
 
 @app.route("/api/ipam/leases/<path:mac>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ipam_delete_lease(mac):
     try:
         released = ip_pool_mgr.release_by_mac(mac)
@@ -4156,6 +4175,7 @@ def api_ipam_delete_lease(mac):
 
 @app.route("/api/ipam/leases/<path:mac>/reassign", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ipam_reassign(mac):
     data = request.get_json() or {}
     new_ip = data.get("ip")
@@ -4170,6 +4190,7 @@ def api_ipam_reassign(mac):
 
 @app.route("/api/ipam/pools/<name>", methods=["PATCH"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ipam_update_pool(name):
     """IP havuzu güncelle (gateway, start_ip, end_ip)."""
     data = request.get_json(force=True, silent=True) or {}
@@ -4182,6 +4203,7 @@ def api_ipam_update_pool(name):
 
 @app.route("/api/ipam/leases", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ipam_add_lease():
     """Manuel IP ataması ekle."""
     data = request.get_json(force=True, silent=True) or {}
@@ -4398,6 +4420,7 @@ def _pool_in_libvirt_subnet(pool_network: str, libvirt_network: str) -> bool:
 
 @app.route("/api/ipam/assign", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ipam_assign_vm():
     """VM'e havuzdan IP ata + libvirt DHCP static entry ekle."""
     data         = request.get_json(force=True, silent=True) or {}
@@ -4541,6 +4564,7 @@ def api_ipam_assign_vm():
 # ── Otomatik Kurulum ──────────────────────────────────────────────────────────
 @app.route("/api/provision", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_provision():
     data = request.get_json() or {}
     if "name" not in data:
@@ -4553,6 +4577,7 @@ def api_provision():
 
 @app.route("/api/provision/bulk", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_bulk_provision():
     data = request.get_json() or {}
     specs = data.get("specs", [])
@@ -4680,6 +4705,7 @@ def api_notif_config():
 
 @app.route("/api/notifications/config", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_save_notif_config():
     data = request.get_json() or {}
     notifications.save_notif_config(**data)
@@ -4688,6 +4714,7 @@ def api_save_notif_config():
 
 @app.route("/api/notifications/test", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_test_notification():
     channel = (request.json or {}).get("channel")  # "telegram", "discord", None=hepsi
     result = notifications.test_notification(channel=channel)
@@ -6298,6 +6325,7 @@ def api_backup_list():
 
 @app.route("/api/backup/schedules", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_backup_create():
     if not backup_sched: return err("Backup modülü yüklenemedi")
     d = request.json or {}
@@ -6308,12 +6336,14 @@ def api_backup_create():
 
 @app.route("/api/backup/schedules/<sid>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_backup_delete(sid):
     if not backup_sched: return err("Backup modülü yüklenemedi")
     return ok({"deleted": backup_sched.delete_schedule(sid)})
 
 @app.route("/api/backup/schedules/<sid>/run", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_backup_trigger(sid):
     if not backup_sched: return err("Backup modülü yüklenemedi")
     return ok(backup_sched.trigger_now(sid))
@@ -6362,6 +6392,7 @@ def api_backup_disk_list():
 
 @app.route("/api/backup/disks", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_backup_disk_create():
     """Yeni yedekleme diski oluştur ve VM'e bağla."""
     import time as _time
@@ -6526,6 +6557,7 @@ def api_backup_disk_restore(disk_id):
 
 @app.route("/api/backup/disks/<disk_id>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_backup_disk_delete(disk_id):
     """Yedekleme diskini kayıttan ve dosya sisteminden sil."""
     registry = _load_backup_disk_registry()
@@ -6889,6 +6921,7 @@ def api_autosnap_config_get():
 
 @app.route("/api/auto-snapshot/config", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_autosnap_config_set():
     if not auto_snap: return err("Auto-snapshot modülü yüklenemedi")
     d = request.get_json() or {}
@@ -6898,6 +6931,7 @@ def api_autosnap_config_set():
 
 @app.route("/api/auto-snapshot/run", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_autosnap_run():
     if not auto_snap: return err("Auto-snapshot modülü yüklenemedi")
     import threading as _th
@@ -6916,6 +6950,7 @@ def api_security_audit():
 
 @app.route("/api/security/audit/fix/<check_id>", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_security_fix(check_id):
     if not sec_hard:
         return err("security_hardening modülü yüklenemedi")
@@ -6932,6 +6967,7 @@ def api_security_lockouts():
 
 @app.route("/api/security/lockouts/<username>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_security_unlock(username):
     if not sec_hard:
         return err("security_hardening modülü yüklenemedi")
@@ -7091,6 +7127,7 @@ def api_fw_rules():
 
 @app.route("/api/firewall/rules", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_fw_add_rule():
     if not firewall_mgr: return err("Firewall modülü yüklenemedi")
     d = request.json or {}
@@ -7100,6 +7137,7 @@ def api_fw_add_rule():
 
 @app.route("/api/firewall/rules/<handle>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_fw_del_rule(handle):
     if not firewall_mgr: return err("Firewall modülü yüklenemedi")
     d = request.json or {}
@@ -7107,6 +7145,7 @@ def api_fw_del_rule(handle):
 
 @app.route("/api/firewall/save", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_fw_save():
     if not firewall_mgr: return err("Firewall modülü yüklenemedi")
     return ok(firewall_mgr.save_ruleset())
@@ -7120,6 +7159,7 @@ def api_vpn_status():
 
 @app.route("/api/vpn/init", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_vpn_init():
     if not wireguard_mgr: return err("WireGuard modülü yüklenemedi")
     d = request.json or {}
@@ -7133,6 +7173,7 @@ def api_vpn_peers():
 
 @app.route("/api/vpn/peers", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_vpn_add_peer():
     if not wireguard_mgr: return err("WireGuard modülü yüklenemedi")
     d = request.json or {}
@@ -7140,6 +7181,7 @@ def api_vpn_add_peer():
 
 @app.route("/api/vpn/peers/<peer_name>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_vpn_del_peer(peer_name):
     if not wireguard_mgr: return err("WireGuard modülü yüklenemedi")
     return ok(wireguard_mgr.remove_peer(peer_name))
@@ -7155,12 +7197,14 @@ def api_vpn_peer_config(peer_name):
 
 @app.route("/api/vpn/start", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_vpn_start():
     if not wireguard_mgr: return err("WireGuard modülü yüklenemedi")
     return ok(wireguard_mgr.start())
 
 @app.route("/api/vpn/stop", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_vpn_stop():
     if not wireguard_mgr: return err("WireGuard modülü yüklenemedi")
     return ok(wireguard_mgr.stop())
@@ -7249,6 +7293,7 @@ def api_dns_hosts():
 
 @app.route("/api/dns/hosts", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_dns_add_host():
     if not dns_mgr: return err("DNS modülü yüklenemedi")
     d = request.json or {}
@@ -7256,6 +7301,7 @@ def api_dns_add_host():
 
 @app.route("/api/dns/hosts/<hostname>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_dns_del_host(hostname):
     if not dns_mgr: return err("DNS modülü yüklenemedi")
     return ok(dns_mgr.delete_host(hostname))
@@ -7584,6 +7630,7 @@ sh <(curl https://autoinstall.plesk.com/one-click-installer || wget -O - https:/
 
 @app.route("/api/dns/config", methods=["GET", "PUT"])
 @require_auth
+@require_role("admin", "administrator")
 def api_dns_config():
     if not dns_mgr: return ok({})
     if request.method == "GET":
@@ -7600,6 +7647,7 @@ def api_vlan_list():
 
 @app.route("/api/vlan", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_vlan_create():
     if not vlan_mgr: return err("VLAN modülü yüklenemedi")
     d = request.json or {}
@@ -7608,6 +7656,7 @@ def api_vlan_create():
 
 @app.route("/api/vlan/<int:vlan_id>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_vlan_delete(vlan_id):
     if not vlan_mgr: return err("VLAN modülü yüklenemedi")
     return ok(vlan_mgr.delete_vlan(vlan_id))
@@ -7621,6 +7670,7 @@ def api_quota_list():
 
 @app.route("/api/quotas/<vm_id>", methods=["GET", "PUT", "DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_quota_vm(vm_id):
     if not resource_quota: return ok({})
     if request.method == "GET":
@@ -7633,6 +7683,7 @@ def api_quota_vm(vm_id):
 
 @app.route("/api/quotas/global", methods=["GET", "PUT"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_quota_global():
     if not resource_quota: return ok({})
     if request.method == "GET":
@@ -7648,6 +7699,7 @@ def api_templates_list():
 
 @app.route("/api/templates", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_template_create():
     if not template_mgr: return err("Template modülü yüklenemedi — sunucu loglarını kontrol edin")
     d = request.json or {}
@@ -7675,6 +7727,7 @@ def api_template_create():
 
 @app.route("/api/templates/<tid>", methods=["GET", "DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_template(tid):
     if not template_mgr: return ok({})
     if request.method == "DELETE":
@@ -7683,6 +7736,7 @@ def api_template(tid):
 
 @app.route("/api/templates/<tid>/deploy", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_template_deploy(tid):
     if not template_mgr: return err("Template modülü yüklenemedi")
     d = request.json or {}
@@ -7781,6 +7835,7 @@ def api_ssl_status():
 
 @app.route("/api/ssl/letsencrypt", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ssl_letsencrypt():
     if not ssl_mgr: return err("SSL modülü yüklenemedi")
     d = request.json or {}
@@ -7788,12 +7843,14 @@ def api_ssl_letsencrypt():
 
 @app.route("/api/ssl/renew", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ssl_renew():
     if not ssl_mgr: return err("SSL modülü yüklenemedi")
     return ok(ssl_mgr.renew_cert())
 
 @app.route("/api/ssl/upload", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ssl_upload():
     if not ssl_mgr: return err("SSL modülü yüklenemedi")
     d = request.json or {}
@@ -7951,6 +8008,7 @@ def api_speedtest_servers():
 
 @app.route("/api/speedtest/run", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_speedtest_run():
     """
     Run ping + optional download test against a server.
@@ -8015,6 +8073,7 @@ def api_nginx_sites():
 
 @app.route("/api/nginx/sites", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_nginx_create_site():
     if not nginx_mgr: return err("Nginx modülü yüklenemedi")
     d = request.json or {}
@@ -8024,24 +8083,28 @@ def api_nginx_create_site():
 
 @app.route("/api/nginx/sites/<name>/enable", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_nginx_enable(name):
     if not nginx_mgr: return err("Nginx modülü yüklenemedi")
     return ok(nginx_mgr.enable_site(name))
 
 @app.route("/api/nginx/sites/<name>/disable", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_nginx_disable(name):
     if not nginx_mgr: return err("Nginx modülü yüklenemedi")
     return ok(nginx_mgr.disable_site(name))
 
 @app.route("/api/nginx/sites/<name>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_nginx_delete_site(name):
     if not nginx_mgr: return err("Nginx modülü yüklenemedi")
     return ok(nginx_mgr.delete_site(name))
 
 @app.route("/api/nginx/reload", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_nginx_reload():
     if not nginx_mgr: return err("Nginx modülü yüklenemedi")
     return ok(nginx_mgr.reload())
@@ -8061,6 +8124,7 @@ def api_haproxy_stats():
 
 @app.route("/api/haproxy/frontends", methods=["GET", "POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_haproxy_frontends():
     if not haproxy_mgr: return ok({"frontends": []})
     if request.method == "GET":
@@ -8071,6 +8135,7 @@ def api_haproxy_frontends():
 
 @app.route("/api/haproxy/backends", methods=["GET", "POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_haproxy_backends():
     if not haproxy_mgr: return ok({"backends": []})
     if request.method == "GET":
@@ -8080,6 +8145,7 @@ def api_haproxy_backends():
 
 @app.route("/api/haproxy/backends/<bname>/servers", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_haproxy_add_server(bname):
     if not haproxy_mgr: return err("HAProxy modülü yüklenemedi")
     d = request.json or {}
@@ -8087,12 +8153,14 @@ def api_haproxy_add_server(bname):
 
 @app.route("/api/haproxy/backends/<bname>/servers/<sname>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_haproxy_del_server(bname, sname):
     if not haproxy_mgr: return err("HAProxy modülü yüklenemedi")
     return ok(haproxy_mgr.remove_server(bname, sname))
 
 @app.route("/api/haproxy/reload", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_haproxy_reload():
     if not haproxy_mgr: return err("HAProxy modülü yüklenemedi")
     return ok(haproxy_mgr.reload())
@@ -8106,6 +8174,7 @@ def api_webhooks_list():
 
 @app.route("/api/webhooks", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_webhook_create():
     if not webhook_mgr: return err("Webhook modülü yüklenemedi")
     d = request.json or {}
@@ -8113,6 +8182,7 @@ def api_webhook_create():
 
 @app.route("/api/webhooks/<wid>", methods=["PUT", "DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_webhook(wid):
     if not webhook_mgr: return err("Webhook modülü yüklenemedi")
     if request.method == "DELETE":
@@ -8121,6 +8191,7 @@ def api_webhook(wid):
 
 @app.route("/api/webhooks/<wid>/test", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_webhook_test(wid):
     if not webhook_mgr: return err("Webhook modülü yüklenemedi")
     return ok(webhook_mgr.test_webhook(wid))
@@ -8182,6 +8253,7 @@ def api_vm_tags_get(vm_id):
 
 @app.route("/api/vms/<vm_id>/tags", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_tags_set(vm_id):
     d = request.get_json() or {}
     if not tag_mgr: return err("Tag manager unavailable")
@@ -8189,6 +8261,7 @@ def api_vm_tags_set(vm_id):
 
 @app.route("/api/vms/<vm_id>/tags/add", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_tag_add(vm_id):
     d = request.get_json() or {}
     if not tag_mgr: return err("Tag manager unavailable")
@@ -8196,6 +8269,7 @@ def api_vm_tag_add(vm_id):
 
 @app.route("/api/vms/<vm_id>/tags/<tag>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_tag_remove(vm_id, tag):
     if not tag_mgr: return err("Tag manager unavailable")
     tag_mgr.remove_tag(vm_id, tag)
@@ -8226,6 +8300,7 @@ def api_vm_note_get(vm_id):
 
 @app.route("/api/vms/<vm_id>/note", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_note_save(vm_id):
     d = request.get_json() or {}
     if not notes_mgr: return err("Notes manager unavailable")
@@ -8233,6 +8308,7 @@ def api_vm_note_save(vm_id):
 
 @app.route("/api/vms/<vm_id>/note", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_note_delete(vm_id):
     if not notes_mgr: return ok()
     notes_mgr.delete_note(vm_id)
@@ -8297,6 +8373,7 @@ def api_cost_config_get():
 
 @app.route("/api/cost/config", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_cost_config_save():
     if not cost_mgr: return err("Cost tracker unavailable")
     d = request.get_json() or {}
@@ -8315,6 +8392,7 @@ def api_cost_estimate():
 
 @app.route("/api/cost/summary", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_cost_summary():
     if not cost_mgr: return ok({"total_monthly": 0, "vms": []})
     d = request.get_json() or {}
@@ -8333,6 +8411,7 @@ def api_alert_rules_list():
 
 @app.route("/api/alerts/rules", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_alert_rule_create():
     d = request.get_json() or {}
     if not alert_mgr: return err("Alert manager unavailable")
@@ -8346,6 +8425,7 @@ def api_alert_rule_create():
 
 @app.route("/api/alerts/rules/<rule_id>", methods=["PUT"])
 @require_auth
+@require_role("admin", "administrator")
 def api_alert_rule_update(rule_id):
     d = request.get_json() or {}
     if not alert_mgr: return err("Alert manager unavailable")
@@ -8354,6 +8434,7 @@ def api_alert_rule_update(rule_id):
 
 @app.route("/api/alerts/rules/<rule_id>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_alert_rule_delete(rule_id):
     if not alert_mgr: return ok()
     alert_mgr.delete_rule(rule_id)
@@ -8409,6 +8490,7 @@ def api_ai_recs():
 
 @app.route("/api/ai/analyze", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_ai_analyze():
     if not ai_planner: return err("AI modülü yüklenemedi")
     return ok(ai_planner.analyze_resources())
@@ -8428,12 +8510,14 @@ def api_ai_predict():
 
 @app.route("/api/ai/suggest/vm/<vm_id>", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_ai_suggest_vm(vm_id):
     if not ai_planner: return ok({})
     return ok(ai_planner.suggest_vm_sizing(vm_id))
 
 @app.route("/api/ai/nl", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_ai_nl():
     if not ai_planner: return err("AI modülü yüklenemedi")
     username = get_jwt_identity()
@@ -8456,6 +8540,7 @@ def api_ai_nl():
 
 @app.route("/api/ai/plan", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_ai_plan():
     """VM creation planning endpoint — accepts {prompt} and returns vm_config suggestion."""
     if not ai_planner: return err("AI modülü yüklenemedi")
@@ -8485,6 +8570,7 @@ def api_anomaly_summary():
 
 @app.route("/api/anomalies/config", methods=["GET", "PUT"])
 @require_auth
+@require_role("admin", "administrator")
 def api_anomaly_config():
     if not anomaly_det: return ok({})
     if request.method == "GET":
@@ -8500,6 +8586,7 @@ def api_scaler_list():
 
 @app.route("/api/autoscaler/policies", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_scaler_create():
     if not auto_scaler: return err("Auto-scaler modülü yüklenemedi")
     d = request.json or {}
@@ -8507,6 +8594,7 @@ def api_scaler_create():
 
 @app.route("/api/autoscaler/policies/<pid>", methods=["PUT", "DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_scaler_policy(pid):
     if not auto_scaler: return err("Auto-scaler modülü yüklenemedi")
     if request.method == "DELETE":
@@ -8555,6 +8643,7 @@ def api_sdn_status():
 
 @app.route("/api/sdn/networks", methods=["GET", "POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_sdn_networks():
     if not sdn_mgr: return ok({"networks": []})
     if request.method == "GET":
@@ -8564,12 +8653,14 @@ def api_sdn_networks():
 
 @app.route("/api/sdn/networks/<nid>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_sdn_delete(nid):
     if not sdn_mgr: return err("SDN modülü yüklenemedi")
     return ok(sdn_mgr.delete_sdn_network(nid))
 
 @app.route("/api/sdn/bridges", methods=["GET", "POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_sdn_bridges():
     if not sdn_mgr: return ok({"bridges": []})
     if request.method == "GET":
@@ -8600,18 +8691,21 @@ def api_ids_summary():
 
 @app.route("/api/ids/start", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ids_start():
     if not ids_mgr: return err("IDS modülü yüklenemedi")
     return ok(ids_mgr.start())
 
 @app.route("/api/ids/stop", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ids_stop():
     if not ids_mgr: return err("IDS modülü yüklenemedi")
     return ok(ids_mgr.stop())
 
 @app.route("/api/ids/rules", methods=["GET", "POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ids_rules():
     if not ids_mgr: return ok({"rules": []})
     if request.method == "GET":
@@ -8621,6 +8715,7 @@ def api_ids_rules():
 # ── MinIO / S3 ────────────────────────────────────────────────────────────────
 @app.route("/api/s3/config", methods=["GET", "POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_s3_config():
     if not minio_mgr: return ok({"available": False})
     if request.method == "GET":
@@ -8630,6 +8725,7 @@ def api_s3_config():
 
 @app.route("/api/s3/test", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_s3_test():
     if not minio_mgr: return err("MinIO modülü yüklenemedi")
     return ok(minio_mgr.test_connection())
@@ -8678,6 +8774,7 @@ def api_uptime_vm(vm_id):
 # ── LDAP ──────────────────────────────────────────────────────────────────────
 @app.route("/api/ldap/config", methods=["GET", "POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ldap_config():
     if not ldap_mgr: return ok({"available": False, "enabled": False})
     if request.method == "GET":
@@ -8699,12 +8796,14 @@ def api_ldap_config():
 
 @app.route("/api/ldap/test", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ldap_test():
     if not ldap_mgr: return err("LDAP modülü yüklenemedi")
     return ok(ldap_mgr.test_connection())
 
 @app.route("/api/ldap/sync", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_ldap_sync():
     if not ldap_mgr: return err("LDAP modülü yüklenemedi")
     return ok(ldap_mgr.sync_users())
@@ -8712,6 +8811,7 @@ def api_ldap_sync():
 # ── Notifications / Alerts ────────────────────────────────────────────────────
 @app.route("/api/notifications/email-config", methods=["GET", "POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_email_config():
     if request.method == "GET":
         return ok(notifications.get_email_config() if hasattr(notifications, "get_email_config") else {})
@@ -8722,6 +8822,7 @@ def api_email_config():
 
 @app.route("/api/notifications/test-email", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_test_email():
     to = (request.json or {}).get("to","")
     if hasattr(notifications, "test_email"):
@@ -8730,6 +8831,7 @@ def api_test_email():
 
 @app.route("/api/notifications/test-channel", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_test_notification_channel():
     channel = (request.json or {}).get("channel", "telegram")
     if hasattr(notifications, "send_alert"):
@@ -8806,6 +8908,7 @@ def upload_iso():
 
 @app.route("/api/storage/iso/fetch", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def fetch_iso_url():
     """URL'den ISO indir (arka planda wget). Ubuntu ISO'ları için."""
     import re as _re, threading, uuid
@@ -8914,6 +9017,7 @@ def fetch_iso_status(job_id):
 
 @app.route("/api/storage/iso/fetch/<job_id>/cancel", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def cancel_iso_fetch(job_id):
     """ISO indirme işini iptal et."""
     job = _iso_fetch_jobs.get(job_id)
@@ -8951,6 +9055,7 @@ def license_status():
 
 @app.route("/api/license/validate", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def license_validate():
     try:
         m = _license_mgr()
@@ -8991,6 +9096,7 @@ def license_activations():
 
 @app.route("/api/license/deactivate", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def license_deactivate():
     try:
         m = _license_mgr()
@@ -9239,6 +9345,7 @@ def api_vm_sched_list():
 
 @app.route("/api/vm-schedules", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_sched_add():
     if not vm_sched: return err("vm_scheduler modülü yüklenemedi")
     d = request.get_json() or {}
@@ -9255,6 +9362,7 @@ def api_vm_sched_add():
 
 @app.route("/api/vm-schedules/<sched_id>", methods=["PUT"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_sched_update(sched_id):
     if not vm_sched: return err("vm_scheduler modülü yüklenemedi")
     d = request.get_json() or {}
@@ -9263,6 +9371,7 @@ def api_vm_sched_update(sched_id):
 
 @app.route("/api/vm-schedules/<sched_id>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_sched_delete(sched_id):
     if not vm_sched: return err("vm_scheduler modülü yüklenemedi")
     ok_flag = vm_sched.delete_schedule(sched_id)
@@ -9280,6 +9389,7 @@ def api_sessions_list():
 
 @app.route("/api/sessions/<session_id>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_session_revoke(session_id):
     if not sess_mgr: return err("session_manager modülü yüklenemedi")
     ok_flag = sess_mgr.revoke_by_short_id(session_id)
@@ -9555,6 +9665,7 @@ def api_backup_schedule_get():
 
 @app.route("/api/backup/schedule", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_backup_schedule_set():
     data = request.get_json() or {}
     try:
@@ -17768,6 +17879,7 @@ def api_catalog_delete(cid):
 
 @app.route("/api/service-catalog/<cid>/deploy", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_catalog_deploy(cid):
     if not svc_catalog: return err("modül yok", 503)
     try:
@@ -19862,6 +19974,7 @@ def api_vm_network_info(vm_id):
 
 @app.route("/api/vms/<vm_id>/network-info/validate-ip", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vm_validate_ip(vm_id):
     """Check if a static IP assignment will work for this VM."""
     if not net_mode_mgr: return ok(valid=True)
@@ -20009,6 +20122,7 @@ def api_regions_remove(name):
 
 @app.route("/api/regions/place", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")
 def api_regions_place_vm():
     if not multi_region_mgr: return err("modül yok", 503)
     d = request.get_json() or {}
