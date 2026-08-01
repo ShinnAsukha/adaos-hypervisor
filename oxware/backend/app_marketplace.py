@@ -16,6 +16,12 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
+try:                                     # paket içi / düz import (app.py kalıbı)
+    from . import security_utils as _sec_utils   # type: ignore
+except ImportError:                      # pragma: no cover
+    import security_utils as _sec_utils  # type: ignore
+_safe_tar_extract = _sec_utils.safe_tar_extract
+
 CACHE_DIR = Path("/var/lib/oxware/marketplace")
 INDEX_FILE = CACHE_DIR / "index.json"
 INSTALLED_FILE = CACHE_DIR / "installed.json"
@@ -169,8 +175,12 @@ def install_app(app_id: str, target_dir=None) -> dict:
                 tarball_path.unlink(missing_ok=True)
                 raise ValueError(f"sha256 mismatch: got {actual_sha} expected {expected_sha}")
             if tarfile.is_tarfile(tarball_path):
-                with tarfile.open(tarball_path, "r:*") as tf:
-                    tf.extractall(dest)
+                # SEC: uzaktan indirilen tarball — doğrulamasız extractall
+                # tar-slip ile root olarak keyfi dosya yazmaya izin verirdi.
+                # safe_tar_extract mutlak yol / .. / dışarı gösteren sym-hardlink
+                # / aygıt dosyalarını reddeder (SecurityValidationError = ValueError,
+                # aşağıdaki except onu yakalayıp yükseltir → kurulum başarısız).
+                _safe_tar_extract(str(tarball_path), str(dest))
         except (urllib.error.URLError, OSError, ValueError) as e:
             _audit("install_failed", {"app_id": app_id, "error": str(e)})
             if not isinstance(e, ValueError):

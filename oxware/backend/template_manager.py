@@ -12,6 +12,12 @@ import shutil
 import time
 import re
 import tarfile
+
+try:                                     # paket içi / düz import (app.py kalıbı)
+    from . import security_utils as _sec_utils   # type: ignore
+except ImportError:                      # pragma: no cover
+    import security_utils as _sec_utils  # type: ignore
+_safe_tar_extract = _sec_utils.safe_tar_extract
 import xml.etree.ElementTree as ET
 
 log = logging.getLogger("oxware.templates")
@@ -383,12 +389,12 @@ def import_from_ova(ova_path: str, name: str, description: str = "",
             os.makedirs(extract_dir, exist_ok=True)
 
             log.info("OVA çıkartılıyor: %s", ova_path)
-            with tarfile.open(ova_path, "r") as tar:
-                # Güvenlik: path traversal engelle
-                for m in tar.getmembers():
-                    if ".." in m.name or m.name.startswith("/"):
-                        return {"success": False, "error": "Güvensiz OVA içeriği"}
-                tar.extractall(extract_dir)
+            # SEC: eski kontrol yalnızca ".." / mutlak yola bakıyordu; dışarı
+            # gösteren sym/hardlink ve aygıt dosyalarını kaçırıyordu.
+            try:
+                _safe_tar_extract(ova_path, extract_dir)
+            except Exception as _te:
+                return {"success": False, "error": f"Güvensiz OVA içeriği: {_te}"}
 
             # VMDK dosyasını bul
             vmdk_file = None
@@ -603,13 +609,12 @@ def import_template(tar_path):
             os.makedirs(TEMPLATE_DIR, exist_ok=True)
 
             with tarfile.open(tar_path, "r:gz") as tar:
-                # Güvenlik: path traversal kontrolü
-                members = tar.getmembers()
-                for m in members:
-                    if ".." in m.name or m.name.startswith("/"):
-                        return {"success": False, "error": "Güvensiz tar içeriği"}
-
-                tar.extractall(path=TEMPLATE_DIR)
+                members = tar.getmembers()      # meta.json aramasında aşağıda kullanılıyor
+            # SEC: sym/hardlink + aygıt dosyası kontrolü de yapan ortak helper.
+            try:
+                _safe_tar_extract(tar_path, TEMPLATE_DIR)
+            except Exception as _te:
+                return {"success": False, "error": f"Güvensiz tar içeriği: {_te}"}
 
             # meta.json bul ve doğrula
             meta = None
