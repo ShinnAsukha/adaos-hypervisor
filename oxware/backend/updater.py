@@ -532,7 +532,9 @@ def start_auto_check(interval_seconds: int = 3600):
 
 
 def _log_update(old_sha: str, new_sha: str, repo_url: str, branch: str, steps: list):
-    os.makedirs(os.path.dirname(UPDATE_LOG_FILE), exist_ok=True)
+    """Güncelleme kaydını yaz. Log yazılamıyorsa SESSİZCE geç — burada
+    fırlatılan OSError, git reset zaten başarılı olmuşken apply_update'i
+    'success: False' döndürüp servis yeniden başlatmasını da atlatıyordu."""
     entry = {
         "timestamp": time.time(),
         "datetime":  datetime.now().isoformat(),
@@ -542,5 +544,9 @@ def _log_update(old_sha: str, new_sha: str, repo_url: str, branch: str, steps: l
         "branch":    branch,
         "steps":     steps,
     }
-    with open(UPDATE_LOG_FILE, "a") as f:
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    try:
+        os.makedirs(os.path.dirname(UPDATE_LOG_FILE), exist_ok=True)
+        with open(UPDATE_LOG_FILE, "a") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError as e:
+        log.warning("Güncelleme logu yazılamadı (%s) — güncelleme yine de uygulandı", e)

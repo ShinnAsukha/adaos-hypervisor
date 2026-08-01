@@ -53,7 +53,28 @@ def _is_running(vm: str) -> bool:
 
 
 def _disk_paths_from_xml(xml: str) -> list:
-    return re.findall(r"<source file='([^']+)'/>", xml)
+    """Yazılabilir dosya-tabanlı disklerin yolları.
+
+    Bug: eski regex `<source file='...'/>` idi. libvirt >= 5.10 `index='N'`
+    özniteliği ekliyor (`<source file='...' index='2'/>`) → hiç eşleşmiyor ve
+    Debian 12 / Ubuntu 22+ üzerinde "kaynak diskleri bulunamadı" hatası
+    veriyordu. Ayrıca CD-ROM'lar da eşleşiyordu; artık device='disk' filtresi
+    ve salt-okunur atlaması var.
+    """
+    out = []
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError:
+        return out
+    for disk in root.iter("disk"):
+        if disk.get("device") != "disk" or disk.get("type") != "file":
+            continue
+        if disk.find("readonly") is not None:
+            continue
+        src = disk.find("source")
+        if src is not None and src.get("file"):
+            out.append(src.get("file"))
+    return out
 
 
 def _new_mac() -> str:
@@ -117,7 +138,7 @@ def instant_clone(src_vm: str, clone_prefix: str, count: int = 1,
             return {"ok": False, "error": "kaynak disk yok: %s" % d}
 
     src_mem = os.path.join(_STATE_DIR, "src-%s.save" % _uuid.uuid4().hex[:8])
-    created, clones = [], []
+    created, clones = [], []      # `created` = YALNIZCA işlenmekte olan klonun dosyaları
     try:
         # 1) Kaynağın RAM'ini dosyaya al (kaynak duraklar)
         r = _virsh(["save", src_vm, src_mem], timeout=300)
@@ -125,6 +146,10 @@ def instant_clone(src_vm: str, clone_prefix: str, count: int = 1,
             return {"ok": False, "error": "virsh save başarısız: %s" % r.stderr.strip()}
 
         for i in range(count):
+            # Bug: `created` tüm iterasyonlar boyunca birikiyordu; 3. klon
+            # patlayınca ZATEN ÇALIŞAN 1. ve 2. klonun diskleri/RAM dosyaları
+            # altlarından siliniyordu. Artık her klon kendi listesini tutar.
+            created = []
             clone_name = "%s-%d" % (clone_prefix, i + 1)
             new_uuid = str(_uuid.uuid4())
             disk_map = {}
@@ -157,6 +182,15 @@ def instant_clone(src_vm: str, clone_prefix: str, count: int = 1,
             _virsh(["define", tmp_xml])
             clones.append({"name": clone_name, "uuid": new_uuid,
                            "disks": list(disk_map.values())})
+            # Klon ayakta: RAM görüntüsü + geçici XML artık gereksiz. Bunlar
+            # KAYNAK MİSAFİRİN BELLEĞİNİN tam kopyası (sırlar dahil) ve her biri
+            # RAM boyutunda — temizlenmezse host'u doldurur ve veri sızdırır.
+            for _tmpf in (clone_mem, tmp_xml):
+                try:
+                    os.remove(_tmpf)
+                except OSError:
+                    pass
+            created = []          # bu klon tamam — rollback listesinden düş
 
         return {"ok": True, "source": src_vm, "count": len(clones),
                 "clones": clones,

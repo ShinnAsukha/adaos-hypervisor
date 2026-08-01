@@ -226,6 +226,10 @@ def _stream_download(url: str, tmp: str, fn: str) -> None:
                         if j:
                             j["pct"] = pct
                             j["downloaded_mb"] = round(done / 1048576, 1)
+    # Kesik indirmeyi tamamlanmış sayma: bağlantı yarıda koparsa boş read EOF
+    # gibi görünüyor ve dosya "done" olarak ISO dizinine taşınıyordu.
+    if total and done != total:
+        raise RuntimeError("eksik indirme: %d/%d bayt" % (done, total))
 
 
 def _do_download(e: dict, mirror_index: int) -> None:
@@ -292,7 +296,15 @@ def download(iso_id: str, mirror_index: int = 0) -> dict:
         cur = _JOBS.get(e["filename"])
         if cur and cur.get("state") in ("downloading", "verifying"):
             return {"ok": True, "state": cur["state"], "filename": e["filename"]}
-    t = threading.Thread(target=_do_download, args=(e, max(0, mirror_index)),
+    # SEC/DoS: mirror index sınırlanmalı. Sınırsızken _do_download içindeki
+    # list(range(mirror_index, ...)) devasa bir liste ayırıp (ör. mirror=2e9)
+    # servisi OOM-kill ettirebiliyordu; ayrıca aralık dışı indeks urls[idx]'te
+    # try bloğunun DIŞINDA IndexError atıp job'ı sonsuza "downloading" bırakıyordu.
+    try:
+        mirror_index = int(mirror_index) % len(e["mirrors"])
+    except (ValueError, TypeError, ZeroDivisionError):
+        mirror_index = 0
+    t = threading.Thread(target=_do_download, args=(e, mirror_index),
                          daemon=True)
     t.start()
     return {"ok": True, "state": "downloading", "filename": e["filename"],

@@ -180,8 +180,13 @@ def verify_setup_token(token: str) -> bool:
         if not os.path.exists(SETUP_TOKEN_FILE):
             return False
         stored = Path(SETUP_TOKEN_FILE).read_text().strip()
-        return bool(stored) and secrets.compare_digest(token.strip(), stored)
-    except OSError:
+        if not stored:
+            return False
+        # compare_digest str girdide non-ASCII olursa TypeError atar → bytes karşılaştır
+        # (aksi halde `{"setup_token":"ü"}` 403 yerine 500 döndürüyordu).
+        return secrets.compare_digest(token.strip().encode("utf-8"),
+                                      stored.encode("utf-8"))
+    except (OSError, TypeError, ValueError, UnicodeError):
         return False
 
 

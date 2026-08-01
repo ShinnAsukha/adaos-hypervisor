@@ -285,9 +285,31 @@ def generate_plan(pci: str) -> dict:
 
 # ── 5. vfio-pci'ye canlı bağla (reboot'suz, mümkünse) ──────────────────────────
 
+def _assert_is_gpu(pci: str) -> dict | None:
+    """SEC: yalnızca gerçekten GPU olan aygıtlara izin ver.
+
+    Eskiden sadece /sys/bus/pci/devices/<pci> var mı diye bakılıyordu; bu,
+    `0000:00:17.0` (SATA/NVMe denetleyici) veya yönetim NIC'i verilerek host'un
+    kök diskini / panel erişimini kalıcı olarak koparmaya izin veriyordu.
+    Ayrıca `../` içeren yollar PCI_DEVICES dizininden dışarı çıkabiliyordu.
+    """
+    if not re.fullmatch(r"(?:[0-9a-fA-F]{4}:)?[0-9a-fA-F]{2}:[0-9a-fA-F]{2}\.[0-7]", pci or ""):
+        return {"ok": False, "error": "Geçersiz PCI adresi: %r" % pci}
+    known = {g["pci"] for g in list_passthrough_gpus()}
+    known |= {g["audio_companion"] for g in list_passthrough_gpus() if g["audio_companion"]}
+    if pci not in known:
+        return {"ok": False,
+                "error": "%s bir GPU (veya GPU ses fonksiyonu) değil — reddedildi. "
+                         "Passthrough'a uygun aygıtlar için /api/gpu/wizard/overview." % pci}
+    return None
+
+
 def bind_vfio(pci: str) -> dict:
     """GPU'yu mevcut sürücüden ayırıp vfio-pci'ye bağla. Root gerekir.
     Not: aktif kullanılan (host ekranı süren) GPU'da başarısız olabilir."""
+    guard = _assert_is_gpu(pci)
+    if guard:
+        return guard
     dev = PCI_DEVICES / pci
     if not dev.exists():
         return {"ok": False, "error": "PCI aygıtı yok: %s" % pci}
@@ -318,7 +340,8 @@ def _write(path, value):
 # ── 6. VM'e <hostdev> PCI olarak ekle/çıkar ────────────────────────────────────
 
 def _pci_addr_xml(pci: str) -> dict:
-    m = re.match(r"(?:([0-9a-fA-F]{4}):)?([0-9a-fA-F]{2}):([0-9a-fA-F]{2})\.([0-7])", pci)
+    # fullmatch: sonuna eklenmiş çöp (ör. "0000:65:00.0/../x") reddedilsin
+    m = re.fullmatch(r"(?:([0-9a-fA-F]{4}):)?([0-9a-fA-F]{2}):([0-9a-fA-F]{2})\.([0-7])", pci or "")
     if not m:
         raise ValueError("geçersiz PCI adresi: %s" % pci)
     dom = m.group(1) or "0000"
@@ -340,8 +363,24 @@ def _connect():
     return libvirt.open(config.LIBVIRT_URI)
 
 
+def _lookup_domain(conn, vm_id: str):
+    """VM'i önce UUID sonra isimle bul.
+
+    Bug: yalnızca lookupByName kullanılıyordu; panel ise UUID gönderiyor
+    (vm.id = dom.UUIDString()) → attach/detach HER ZAMAN
+    'no domain with matching name' ile patlıyordu.
+    """
+    try:
+        return conn.lookupByUUIDString(vm_id)
+    except Exception:
+        return conn.lookupByName(vm_id)
+
+
 def attach_to_vm(vm_id: str, pci: str, with_audio: bool = True) -> dict:
     """GPU'yu (ve varsa ses fonksiyonunu) VM'e hostdev PCI olarak ekle."""
+    guard = _assert_is_gpu(pci)
+    if guard:
+        return guard      # SEC: managed='yes' hostdev, VM açılışında aygıtı host'tan söker
     try:
         targets = [pci]
         if with_audio:
@@ -350,7 +389,7 @@ def attach_to_vm(vm_id: str, pci: str, with_audio: bool = True) -> dict:
                 targets.append(gpu["audio_companion"])
         conn = _connect()
         try:
-            dom = conn.lookupByName(vm_id)
+            dom = _lookup_domain(conn, vm_id)
             live = dom.isActive()
             flags = 0
             if live and libvirt:
@@ -371,7 +410,7 @@ def detach_from_vm(vm_id: str, pci: str) -> dict:
     try:
         conn = _connect()
         try:
-            dom = conn.lookupByName(vm_id)
+            dom = _lookup_domain(conn, vm_id)
             dom.detachDeviceFlags(_hostdev_xml(pci),
                                   libvirt.VIR_DOMAIN_AFFECT_CONFIG if libvirt else 0)
             return {"ok": True, "vm_id": vm_id, "detached": pci}

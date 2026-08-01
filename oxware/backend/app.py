@@ -305,6 +305,25 @@ if config.CORS_ORIGINS:
     CORS(app, resources={r"/api/*": {"origins": config.CORS_ORIGINS}}, supports_credentials=True)
 # else: CORS yok — frontend same-origin'den serve edilir
 jwt     = JWTManager(app)
+
+
+@jwt.token_in_blocklist_loader
+def _jwt_is_revoked(_jwt_header, jwt_payload) -> bool:
+    """SEC: iptal (logout / admin session kill / kullanıcı silme) kontrolünü
+    TEK noktadan uygula.
+
+    Eskiden bu kontrol sadece @require_auth içindeydi; yalnızca @require_role
+    taşıyan ~48 uçta çalınmış/logout edilmiş token doğal süresi dolana dek
+    geçerli kalıyordu. Bilinmeyen jti False döner (kilitlenme riski yok) —
+    yalnızca açıkça iptal edilmiş oturumlar reddedilir.
+    """
+    try:
+        jti = jwt_payload.get("jti", "")
+        return bool(jti) and sess_mgr.is_revoked(jti)
+    except Exception:
+        return False
+
+
 # OXW-2026-002 fix: SocketIO CORS da config'den gelsin
 _sock_origins = config.CORS_ORIGINS if config.CORS_ORIGINS else []
 # Test/CI'da eventlet kurulu olmayabilir; async_mode="eventlet" import'u
@@ -1207,15 +1226,51 @@ def _attach_session_cookies(resp, token: str):
     return resp
 
 
+def _is_admin_user(username: str) -> bool:
+    """Kullanıcı primary admin veya admin rolünde mi (require_role ile aynı çözüm)."""
+    try:
+        _primary = cred_mgr.get_username() if hasattr(cred_mgr, "get_username") else ""
+        if _primary and username and username.lower() == _primary.lower():
+            return True
+        if hasattr(cred_mgr, "get_role"):
+            role = cred_mgr.get_role(username) or "viewer"
+        else:
+            role = user_manager.get_user_role(username)
+        return role in ("admin", "administrator")
+    except Exception:
+        return False
+
+
 def _is_local_request() -> bool:
-    """Allow setup only from loopback or trusted unix socket / X-Real-IP local.
-    Blocks remote first-admin takeover on a freshly booted, publicly-bound node.
-    Override with OXWARE_SETUP_ALLOW_REMOTE=1 (development only — logged on use)."""
+    """İlk kurulumun token'sız yapılabileceği tek durum: DOĞRUDAN bağlı loopback peer.
+
+    SEC (kritik): eskiden yalnızca request.remote_addr'a bakıyordu. Önerilen
+    dağıtım nginx reverse-proxy arkasında olduğu için remote_addr HER ZAMAN
+    127.0.0.1 oluyordu → token hiç sorulmuyor, internetten gelen herkes taze
+    kurulumda admin hesabını açabiliyordu. Artık:
+      - proxy'lenmiş istek (XFF/X-Real-IP başlığı var) ASLA local sayılmaz,
+      - boş remote_addr (unix socket) local sayılmaz,
+      - güvenilir proxy arkasındaki gerçek istemci IP'si de kontrol edilir.
+    Bu yollarda token gerekir; token yalnızca gerçekten sunucunun üstünden
+    (curl 127.0.0.1) yapılan kurulumda atlanır.
+    """
     if os.environ.get("OXWARE_SETUP_ALLOW_REMOTE") == "1":
         log.warning("Setup remote-allow override active (OXWARE_SETUP_ALLOW_REMOTE=1) — INSECURE")
         return True
+    # Proxy başlığı varsa istek dışarıdan gelmiştir — token şart.
+    if request.headers.get("X-Forwarded-For") or request.headers.get("X-Real-IP"):
+        return False
     addr = (request.remote_addr or "").strip()
-    return addr in ("127.0.0.1", "::1", "localhost", "")
+    if addr not in ("127.0.0.1", "::1", "localhost"):
+        return False
+    # Güvenilir proxy arkasındaysak gerçek istemciyi de doğrula.
+    try:
+        real = security._get_real_ip()
+        if real and real not in ("127.0.0.1", "::1"):
+            return False
+    except Exception:
+        pass
+    return True
 
 
 @app.route("/api/setup/init", methods=["POST"])
@@ -6099,6 +6154,7 @@ def api_list_keys():
 
 @app.route("/api/apikeys", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator")   # SEC: API anahtarları provisioning yetkisi taşır
 def api_create_key():
     username = get_jwt_identity()
     data = request.json or {}
@@ -6111,6 +6167,11 @@ def api_create_key():
 def api_delete_key(key_id):
     username = get_jwt_identity()
     if not api_key_mgr: return err("API key modülü yüklenemedi")
+    # SEC (IDOR): eskiden sahiplik hiç kontrol edilmiyordu — herhangi bir
+    # kullanıcı admin'in anahtarını silebiliyordu.
+    entry = api_key_mgr.get_key(key_id) or {}
+    if entry and entry.get("username") != username and not _is_admin_user(username):
+        return err("Bu anahtar size ait değil", 403)
     return ok({"deleted": api_key_mgr.delete_key(key_id)})
 
 @app.route("/api/apikeys/<key_id>/revoke", methods=["POST"])
@@ -8064,6 +8125,7 @@ def api_hook_get(event, name):
 
 @app.route("/api/hooks/<event>/<name>", methods=["POST", "PUT"])
 @require_auth
+@require_role("admin", "administrator")   # SEC: hook içeriği root olarak /bin/bash ile çalışır
 def api_hook_save(event, name):
     if not hook_mgr: return err("Hook yöneticisi kullanılamıyor")
     d = request.get_json() or {}
@@ -8075,6 +8137,7 @@ def api_hook_save(event, name):
 
 @app.route("/api/hooks/<event>/<name>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator")
 def api_hook_delete(event, name):
     if not hook_mgr: return err("Hook yöneticisi kullanılamıyor")
     try:
@@ -9258,8 +9321,12 @@ def _check_ip_allowlist():
     # Login ve setup her zaman geçsin
     if request.path in ("/api/auth/login", "/api/setup/init", "/api/setup/status"):
         return
-    remote = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
-    if remote not in allowed_ips and "127.0.0.1" not in remote:
+    # SEC: XFF'e körü körüne güvenmek allowlist'i tek başlıkla bypass ettiriyordu
+    # (`X-Forwarded-For: 127.0.0.1`). _get_real_ip yalnızca TRUSTED_PROXIES'ten
+    # gelen XFF'e güvenir. Ayrıca substring değil TAM eşleşme kullanılır —
+    # "127.0.0.1" in remote testi "10.127.0.0.1.evil" gibi değerleri de geçiriyordu.
+    remote = security._get_real_ip()
+    if remote not in allowed_ips and remote not in ("127.0.0.1", "::1"):
         log.warning("IP allowlist engelledi: %s → %s", remote, request.path)
         return jsonify({"error": "IP adresi izin listesinde değil"}), 403
 
@@ -11823,8 +11890,10 @@ def _require_provision_key():
     info = api_key_mgr.validate_key(raw) if api_key_mgr else None
     if not info:
         return jsonify({"status": "error", "error": "Geçersiz API anahtarı"}), 401
-    perms = info.get("permissions", [])
-    if perms and "provisioning" not in perms and "all" not in perms:
+    # SEC: fail-closed. Eskiden `if perms and ...` idi → izin listesi BOŞ olan
+    # anahtar tüm kontrolü atlıyordu (en az yetkili anahtar en güçlüsü oluyordu).
+    perms = info.get("permissions") or []
+    if "provisioning" not in perms and "all" not in perms:
         return jsonify({"status": "error", "error": "Bu anahtar provisioning yetkisine sahip değil"}), 403
     return None
 
@@ -16623,6 +16692,7 @@ def api_v254_vgpu_assign():
 
 # ── GPU Passthrough Wizard (tam-GPU VFIO) ────────────────────────────────────
 @app.route("/api/gpu/wizard/overview", methods=["GET"])
+@require_auth
 @require_role("admin", "administrator")
 def api_gpu_wizard_overview():
     """IOMMU durumu + passthrough'a uygun GPU listesi (wizard açılışı)."""
@@ -16633,6 +16703,7 @@ def api_gpu_wizard_overview():
         return ok({"iommu": {"enabled": False}, "gpus": [], "error": str(e)})
 
 @app.route("/api/gpu/wizard/preflight/<path:pci>", methods=["GET"])
+@require_auth
 @require_role("admin", "administrator")
 def api_gpu_wizard_preflight(pci):
     """Seçilen GPU için hazırlık kontrolleri (IOMMU/vfio/grup temizliği)."""
@@ -16643,6 +16714,7 @@ def api_gpu_wizard_preflight(pci):
         return err(e, 400)
 
 @app.route("/api/gpu/wizard/plan/<path:pci>", methods=["GET"])
+@require_auth
 @require_role("admin", "administrator")
 def api_gpu_wizard_plan(pci):
     """Otomatik remediation planı (kernel cmdline, modprobe, reboot)."""
@@ -16703,6 +16775,7 @@ def api_instant_clone(vm_id):
         return err(e, 400)
 
 @app.route("/api/instant-clone/status", methods=["GET"])
+@require_auth
 @require_role("admin", "administrator", "operator")
 def api_instant_clone_status():
     if not instant_clone: return ok({"available": False})
@@ -20215,9 +20288,10 @@ if __name__ == "__main__":
     if not cred_mgr.is_setup_done():
         _stok = cred_mgr.ensure_setup_token()
         if _stok:
-            log.warning("═══ KURULUM TOKEN: %s ═══", _stok)
-            log.warning("Uzaktan (public IP) ilk kurulum için web formuna bu token'ı "
-                        "girin. Sunucuda: sudo cat %s", cred_mgr.SETUP_TOKEN_FILE)
+            # SEC: token'ın DEĞERİ loglanmaz — oxware.log 0644 ve stdout systemd'ye
+            # akıyor; değeri basmak 0600'lük token dosyasını anlamsız kılardı.
+            log.warning("İlk kurulum bekliyor. Uzaktan (public IP) kurulum için token: "
+                        "sudo cat %s", cred_mgr.SETUP_TOKEN_FILE)
     if ssh_watchdog:
         ssh_watchdog.start()
         log.info("SSH watchdog başlatıldı.")

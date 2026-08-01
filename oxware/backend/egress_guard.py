@@ -135,19 +135,47 @@ def _blocked_error(host: str, ip: str, port) -> OSError:
 
 # ── Sarmalayıcılar ─────────────────────────────────────────────────────────────
 
+def _cache_hostnames(results, hostname: str) -> None:
+    """Çözülen TÜM adresleri isim ipucu olarak önbelleğe al.
+
+    SEC/bug: eskiden yalnızca results[0] önbelleğe alınıyordu. create_connection
+    listedeki adresleri sırayla dener; ilk adres (çoğu kez AAAA) başarısız olup
+    sonraki A kaydına düşünce host_hint bulunamıyor ve ALLOWLIST'TEKİ host
+    bloklanıyordu. Ayrıca clear() yerine en eski kayıtlar atılır (uçuştaki
+    bağlantıların ipucu kaybolmasın).
+    """
+    if not hostname or not results:
+        return
+    with _resolved_lock:
+        for r in results:
+            try:
+                _resolved[r[4][0]] = hostname
+            except (IndexError, TypeError):
+                continue
+        while len(_resolved) > 4096:
+            try:
+                _resolved.pop(next(iter(_resolved)))
+            except (StopIteration, KeyError):
+                break
+
+
 def _guarded_getaddrinfo(host, port, *args, **kwargs):
-    results = _orig_getaddrinfo(host, port, *args, **kwargs)
     hostname = host if isinstance(host, str) else ""
-    # İsim→IP eşlemesini connect log'u için önbelleğe al
-    if hostname and results:
+    # SEC: isim çözümlemesini KARARDAN ÖNCE yapma. Aksi halde
+    # `<gizli-veri>.attacker.tld` sorgusu UDP/53 ile dışarı çıkar ve enforce
+    # modunda bile canlı bir DNS exfil kanalı kalır. Allowlist'te olmayan bir
+    # isim için hiç sorgu göndermiyoruz.
+    if MODE == "enforce" and hostname and not _host_allowed(hostname):
         try:
-            ip0 = results[0][4][0]
-            with _resolved_lock:
-                if len(_resolved) > 4096:
-                    _resolved.clear()
-                _resolved[ip0] = hostname
-        except (IndexError, TypeError):
-            pass
+            ipaddress.ip_address(hostname)      # IP-literal ise aşağıda IP'ye göre karar verilir
+        except ValueError:
+            _audit("block", "dns-not-allowlisted", hostname, "", port)
+            raise _socket.gaierror(
+                _socket.EAI_FAIL if hasattr(_socket, "EAI_FAIL") else -4,
+                "OXware egress-guard: '%s' allowlist'te değil, DNS sorgusu yapılmadı" % hostname)
+
+    results = _orig_getaddrinfo(host, port, *args, **kwargs)
+    _cache_hostnames(results, hostname)
     if MODE == "off":
         return results
     # Çözülen adreslerden en az biri izinliyse geçir (connect asıl kapıdır)
@@ -174,6 +202,35 @@ def _check_sockaddr(address):
     port = address[1]
     with _resolved_lock:
         host_hint = _resolved.get(ip, "")
+
+    # SEC (bypass): connect(("evil.tld", 443)) tamamen geçerli bir çağrı ve
+    # address[0] IP'ye parse edilemediği için _decide "non-ip" deyip İZİN
+    # veriyordu; ad çözümü C tarafında yapılıp yamalı getaddrinfo'yu da
+    # atlıyordu. Artık isim adresleri burada çözülüp politikadan geçiriliyor.
+    try:
+        ipaddress.ip_address(ip.split("%")[0])
+    except ValueError:
+        if not _host_allowed(ip):
+            if MODE == "monitor":
+                _audit("allow", "monitor", ip, "", port)
+                return
+            _audit("block", "hostname-denied", ip, "", port)
+            raise _blocked_error(ip, "", port)
+        # Allowlist'teki isim: çözülen adreslerden en az biri politikayı geçmeli
+        try:
+            infos = _orig_getaddrinfo(ip, port)
+        except Exception:
+            return                      # çözülemiyorsa zaten bağlanamaz
+        _cache_hostnames(infos, ip)
+        for r in infos:
+            if _decide(r[4][0], ip)[0]:
+                return
+        if MODE == "monitor":
+            _audit("allow", "monitor", ip, "", port)
+            return
+        _audit("block", "hostname-denied", ip, "", port)
+        raise _blocked_error(ip, "", port)
+
     allowed, reason = _decide(ip, host_hint)
     if allowed:
         return
