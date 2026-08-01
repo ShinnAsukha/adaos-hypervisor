@@ -5521,6 +5521,35 @@ def _ws_emit_vm_event(vm_id: str, event_type: str, data: dict):
 app.ws_emit_vm_event = _ws_emit_vm_event
 
 
+def _ws_identity(data=None):
+    """SocketIO handler'ları için kimlik çöz. (username, role) veya (None, None).
+
+    SEC: subscribe_* handler'ları kimlik doğrulamıyordu — kimliksiz bir istemci
+    host metriklerini ve tüm VM'lerin id/ad/durumunu canlı akıtabiliyordu.
+    Sunucu tarafı HttpOnly JWT cookie'sini (handshake ile gelir) kabul eder;
+    cookie yoksa payload'daki açık token'a düşer.
+    """
+    try:
+        verify_jwt_in_request()
+        user = get_jwt_identity()
+        if user:
+            return user, _resolve_user_role(user)
+    except Exception:
+        pass
+    try:
+        from flask_jwt_extended import decode_token
+        tok = (data or {}).get("token", "")
+        if tok:
+            dec = decode_token(tok)
+            user = dec.get("sub") or dec.get("identity", "")
+            jti = dec.get("jti", "")
+            if user and not (jti and sess_mgr and sess_mgr.is_revoked(jti)):
+                return user, _resolve_user_role(user)
+    except Exception:
+        pass
+    return None, None
+
+
 @sock.on("subscribe_vm_events")
 def on_subscribe_vm_events(data):
     """
@@ -5533,20 +5562,18 @@ def on_subscribe_vm_events(data):
     sid = request.sid
     vm_ids = (data or {}).get("vm_ids", "*")
 
-    # rapor #28 fix: rol bazlı wildcard kontrolü
-    try:
-        verify_jwt_in_request()
-        _ws_username = get_jwt_identity()
-        _ws_prim = cred_mgr.get_username() if hasattr(cred_mgr, "get_username") else ""
-        if _ws_username == _ws_prim:
-            _ws_role = "administrator"
-        else:
-            _ws_role = user_manager.get_user_role(_ws_username) if user_manager else "viewer"
-        if _ws_role == "vm-user" and vm_ids == "*":
-            # vm-user: yalnızca kendi VM'leri
+    # SEC: auth başarısızlığı eskiden `except: pass` ile yutuluyor ve akış
+    # vm_ids="*" ile devam ediyordu → kimliksiz istemci tüm VM'leri görüyordu.
+    _ws_username, _ws_role = _ws_identity(data)
+    if not _ws_username:
+        emit("error", {"message": "Kimlik doğrulama gerekli"})
+        return
+    if _ws_role == "vm-user" and vm_ids == "*":
+        # vm-user: yalnızca kendi VM'leri
+        try:
             vm_ids = list(user_manager.get_user_vms(_ws_username) or [])
-    except Exception:
-        pass
+        except Exception:
+            vm_ids = []
 
     with _vm_event_subscribers_lock:
         _vm_event_subscribers[sid] = vm_ids if vm_ids == "*" else set(vm_ids)
@@ -5577,6 +5604,20 @@ def on_subscribe_vm_metrics(data):
     sid      = request.sid
     vm_id    = (data or {}).get("vm_id", "")
     interval = max(1, int((data or {}).get("interval", 3)))
+    # SEC: hiç kimlik doğrulaması yoktu — herkes herhangi bir VM'in canlı
+    # CPU/RAM/disk/ağ metriklerini alabiliyordu.
+    _u, _r = _ws_identity(data)
+    if not _u:
+        emit("error", {"message": "Kimlik doğrulama gerekli"})
+        return
+    if _r == "vm-user":
+        try:
+            if vm_id not in (user_manager.get_user_vms(_u) or []):
+                emit("error", {"message": "Bu VM size atanmamış"})
+                return
+        except Exception:
+            emit("error", {"message": "Yetki doğrulanamadı"})
+            return
     if not vm_id:
         emit("error", {"message": "vm_id gerekli"})
         return
@@ -5608,6 +5649,12 @@ def on_subscribe_vm_metrics(data):
 @sock.on("subscribe_stats")
 def on_subscribe_stats(data):
     sid = request.sid
+    # SEC: kimlik doğrulaması yoktu — kimliksiz istemci host CPU/RAM/disk
+    # istatistiklerini ve tüm VM özetini 5 saniyede bir alabiliyordu.
+    _u, _r = _ws_identity(data)
+    if not _u:
+        emit("error", {"message": "Kimlik doğrulama gerekli"})
+        return
 
     def push():
         for _ in range(720):
@@ -20400,7 +20447,28 @@ def api_oauth2_callback(provider):
         if not email:
             return err("E-posta alınamadı", 400)
         # Create/update user
+        # SEC: kullanıcı adı e-postanın yerel kısmından türetiliyordu ve
+        # require_role primary admin'i düz isim karşılaştırmasıyla tanıyor.
+        # Saldırgan `admin@kendi-domaini.tld` ile giriş yapıp sub="admin"
+        # taşıyan bir JWT alarak TAM ADMIN olabiliyordu. Çakışma olursa
+        # (primary admin veya OAuth2 dışı mevcut yerel hesap) isim alan adıyla
+        # ayrıştırılır; böylece SSO kimlikleri yerel hesapları ele geçiremez.
         username = email.split("@")[0]
+        try:
+            _prim = cred_mgr.get_username() if hasattr(cred_mgr, "get_username") else ""
+            _collides = bool(_prim) and username.lower() == _prim.lower()
+            if not _collides:
+                _existing = user_manager.get_user(username) if user_manager else None
+                if _existing and not _existing.get("oauth2"):
+                    _collides = True
+            if _collides:
+                import re as _re_sso     # app.py'de modül seviyesinde 're' bağlı değil
+                _safe_provider = _re_sso.sub(r"[^a-zA-Z0-9_.-]", "", str(provider))[:24] or "sso"
+                username = f"{_safe_provider}_{username}"
+                log.warning("OAuth2 kullanıcı adı çakışması — %s olarak ayrıştırıldı", username)
+        except Exception as _ce:
+            log.warning("OAuth2 çakışma kontrolü başarısız: %s", _ce)
+            username = f"sso_{username}"
         try:
             if not user_manager.get_user(username):
                 user_manager.create_user(username=username, password=None,

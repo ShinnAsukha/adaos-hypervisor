@@ -126,12 +126,21 @@ def saml_authn_request() -> dict:
 
 def saml_process_acs(saml_response_b64: str, relay_state: str = "") -> dict:
     """Process SAML AssertionConsumerService callback.
-    Fail-closed: refuses the assertion unless python3-saml is installed
-    OR OXWARE_ALLOW_UNVERIFIED_SSO=1 is set (dev only)."""
-    if not _SAML_VERIFY_AVAILABLE and not _allow_unverified():
+
+    SEC: the gate used to pass when python3-saml was merely *importable*, but
+    the code below never calls it — it does naive ElementTree extraction and
+    returns `warning: Signature NOT verified`. Installing the library therefore
+    REMOVED the fail-closed guard without adding any verification, so a forged
+    assertion was accepted. Until real signature verification is implemented,
+    an unverified assertion is only accepted behind the explicit dev flag.
+    """
+    if not _allow_unverified():
         return {"ok": False,
-                "error": "SAML signature verification unavailable — "
-                         "install python3-saml or set OXWARE_ALLOW_UNVERIFIED_SSO=1 (dev only)"}
+                "error": "SAML assertion signature verification is not implemented yet. "
+                         "Refusing the assertion (fail-closed). Use OIDC, which is "
+                         "verified, or set OXWARE_ALLOW_UNVERIFIED_SSO=1 for a dev "
+                         "environment only.",
+                "verified": False}
     try:
         decoded = base64.b64decode(saml_response_b64)
     except Exception:

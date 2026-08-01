@@ -35187,7 +35187,7 @@ function _initVmEventsSocket() {
 
     _sock.on("connect", () => {
       // Re-subscribe after every (re)connect
-      _sock.emit("subscribe_vm_events", { vm_ids: "*" });
+      _sock.emit("subscribe_vm_events", { vm_ids: "*", token: TOKEN() });
     });
 
     // VM state change → update tree badge + list row
@@ -35223,7 +35223,7 @@ function _initVmEventsSocket() {
 function subscribeVmMetrics(vmId, interval = 3) {
   if (!_vmEventsSocket) return;
   const _s = _vmEventsSocket;
-  _s.emit("subscribe_vm_metrics", { vm_id: vmId, interval });
+  _s.emit("subscribe_vm_metrics", { vm_id: vmId, interval, token: TOKEN() });
   _s.off("vm_metrics");
   _s.on("vm_metrics", (data) => {
     if (data.vm_id !== vmId) return;
