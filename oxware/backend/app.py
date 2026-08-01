@@ -41,7 +41,7 @@ dark_site.apply()
 import egress_guard
 egress_guard.install()
 
-from flask import Flask, request, jsonify, send_from_directory, render_template, make_response, send_file
+from flask import Flask, request, jsonify, send_from_directory, render_template, make_response, send_file, g
 from flask_socketio import SocketIO, emit
 from flask_jwt_extended import (
     JWTManager, create_access_token, get_jwt_identity, verify_jwt_in_request,
@@ -177,6 +177,7 @@ vgpu_mgr        = _safe_import("vgpu_manager")
 gpu_pt          = _safe_import("gpu_passthrough")
 instant_clone   = _safe_import("instant_clone")
 iso_lib         = _safe_import("iso_library")
+prov_owner      = _safe_import("provision_owner")   # provisioning tenant izolasyonu
 cdp_mgr         = _safe_import("cdp_manager")
 boot_order_mgr  = _safe_import("boot_order_manager")
 geo_dns_mgr     = _safe_import("geo_dns_manager")
@@ -1226,19 +1227,23 @@ def _attach_session_cookies(resp, token: str):
     return resp
 
 
-def _is_admin_user(username: str) -> bool:
-    """Kullanıcı primary admin veya admin rolünde mi (require_role ile aynı çözüm)."""
+def _resolve_user_role(username: str) -> str:
+    """Kullanıcının rolünü çöz (require_role / VNC middleware ile aynı mantık).
+    Çözülemezse en kısıtlı rol: viewer."""
     try:
         _primary = cred_mgr.get_username() if hasattr(cred_mgr, "get_username") else ""
         if _primary and username and username.lower() == _primary.lower():
-            return True
+            return "admin"
         if hasattr(cred_mgr, "get_role"):
-            role = cred_mgr.get_role(username) or "viewer"
-        else:
-            role = user_manager.get_user_role(username)
-        return role in ("admin", "administrator")
+            return cred_mgr.get_role(username) or "viewer"
+        return user_manager.get_user_role(username) if user_manager else "viewer"
     except Exception:
-        return False
+        return "viewer"
+
+
+def _is_admin_user(username: str) -> bool:
+    """Kullanıcı primary admin veya admin rolünde mi."""
+    return _resolve_user_role(username) in ("admin", "administrator")
 
 
 def _is_local_request() -> bool:
@@ -5860,6 +5865,24 @@ def ws_vnc_connect(data=None):
         if not identity:
             emit("vnc_proxy_error", {"msg": "geçersiz token"})
             return
+        # SEC: yalnızca kimliğin VARLIĞI kontrol ediliyordu — rol yoktu. Bir
+        # viewer/vm-user, vnc_proxy_connect emit ederek herhangi bir VM'in
+        # konsolunda tam klavye/fare erişimi alabiliyordu (tek-kullanımlık
+        # token'lı /ws/vnc yolu ve /vnc-token ucu bu kontrolü zaten yapıyor).
+        _role = _resolve_user_role(identity)
+        if _role not in ("admin", "administrator", "operator"):
+            log.warning("SocketIO VNC engellendi: vm=%s user=%s role=%s",
+                        data.get("vm_id", ""), identity, _role)
+            emit("vnc_proxy_error", {"msg": "Konsol erişimi için yetki gerekli"})
+            return
+        # İptal edilmiş oturum bu yoldan da geçmesin
+        try:
+            _jti = decoded.get("jti", "")
+            if _jti and sess_mgr and sess_mgr.is_revoked(_jti):
+                emit("vnc_proxy_error", {"msg": "Oturum iptal edildi"})
+                return
+        except Exception:
+            pass
     except Exception as ex:
         emit("vnc_proxy_error", {"msg": f"auth: {ex}"})
         return
@@ -8222,12 +8245,14 @@ vault_mgr = _safe_import("vault_manager")
 
 @app.route("/api/vms/<vm_id>/credentials", methods=["GET"])
 @require_auth
+@require_role("admin", "administrator", "operator")   # SEC: guest root/SSH şifreleri
 def api_vault_list(vm_id):
     if not vault_mgr: return ok({"credentials": []})
     return ok({"credentials": vault_mgr.list_credentials(vm_id)})
 
 @app.route("/api/vms/<vm_id>/credentials", methods=["POST"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vault_store(vm_id):
     d = request.get_json() or {}
     if not vault_mgr: return err("Vault unavailable")
@@ -8238,6 +8263,7 @@ def api_vault_store(vm_id):
 
 @app.route("/api/vms/<vm_id>/credentials/<cred_type>", methods=["GET"])
 @require_auth
+@require_role("admin", "administrator", "operator")   # SEC: cleartext şifre döner
 def api_vault_get(vm_id, cred_type):
     if not vault_mgr: return err("Vault unavailable")
     c = vault_mgr.get_credential(vm_id, cred_type)
@@ -8246,6 +8272,7 @@ def api_vault_get(vm_id, cred_type):
 
 @app.route("/api/vms/<vm_id>/credentials/<cred_type>", methods=["DELETE"])
 @require_auth
+@require_role("admin", "administrator", "operator")
 def api_vault_delete(vm_id, cred_type):
     if not vault_mgr: return ok()
     vault_mgr.delete_credential(vm_id, cred_type)
@@ -11884,8 +11911,16 @@ def api_hosting_download(module_name):
 # ── Provisioning API (WiseCP / WHMCS / Billing entegrasyonu) ─────────────────
 # API key auth: X-API-Key header, oxw_xxx prefix, permissions=["provisioning"]
 
-def _require_provision_key():
-    """X-API-Key header ile provisioning yetkisi doğrula. Hata varsa Response döner, None döner ise OK."""
+def _require_provision_key(vm_id=None):
+    """X-API-Key ile provisioning yetkisi + (vm_id verildiyse) SAHİPLİK doğrula.
+
+    Hata varsa Response döner, None dönerse OK. Doğrulanan anahtar bilgisi
+    `g._provision_key` içine konur (create sahibi kaydetmek için kullanır).
+
+    SEC: `vm_id` parametresi olmadan bu uçlar tenant izolasyonsuzdu — bir bayi
+    anahtarı başka müşterinin VM UUID'siyle silme/reinstall/kimlik-okuma
+    yapabiliyordu (IDOR).
+    """
     raw = request.headers.get("X-API-Key", "")
     info = api_key_mgr.validate_key(raw) if api_key_mgr else None
     if not info:
@@ -11895,6 +11930,17 @@ def _require_provision_key():
     perms = info.get("permissions") or []
     if "provisioning" not in perms and "all" not in perms:
         return jsonify({"status": "error", "error": "Bu anahtar provisioning yetkisine sahip değil"}), 403
+    try:
+        g._provision_key = info
+    except Exception:
+        pass
+    if vm_id is not None and prov_owner is not None:
+        try:
+            if not prov_owner.check(vm_id, info.get("username", ""), perms):
+                return jsonify({"status": "error",
+                                "error": "Bu VM bu API anahtarına ait değil"}), 403
+        except Exception as _oe:      # sahiplik deposu okunamıyorsa erişimi kesme
+            log.warning("provision sahiplik kontrolü başarısız (%s) — izin verildi", _oe)
     return None
 
 
@@ -11985,6 +12031,15 @@ def api_provision_create():
 
     vm_id = vm["id"]
 
+    # SEC: VM'i oluşturan API anahtarının sahibini kaydet — sonraki tüm
+    # /api/provision/<vm_id> çağrıları buna karşı doğrulanır (tenant izolasyonu).
+    if prov_owner is not None:
+        try:
+            _pk = getattr(g, "_provision_key", None) or {}
+            prov_owner.record(vm_id, _pk.get("username", ""))
+        except Exception as _re:
+            log.warning("provision sahiplik kaydı yazılamadı: %s", _re)
+
     if auto_start:
         try:
             vm_manager.start_vm(vm_id)
@@ -12017,7 +12072,7 @@ def api_provision_create():
 
 @app.route("/api/provision/<vm_id>", methods=["DELETE"])
 def api_provision_terminate(vm_id):
-    auth_err = _require_provision_key()
+    auth_err = _require_provision_key(vm_id)
     if auth_err: return auth_err
     try:
         vm_manager.stop_vm(vm_id, force=True)
@@ -12025,6 +12080,11 @@ def api_provision_terminate(vm_id):
         pass
     try:
         result = vm_manager.delete_vm(vm_id, delete_disk=True)
+        if prov_owner is not None:
+            try:
+                prov_owner.forget(vm_id)      # sahiplik kaydını da temizle
+            except Exception:
+                pass
         ev.info(f"Provisioning: VM silindi id={vm_id}", category="provision")
         return ok(deleted=True)
     except Exception as e:
@@ -12033,7 +12093,7 @@ def api_provision_terminate(vm_id):
 
 @app.route("/api/provision/<vm_id>/suspend", methods=["POST"])
 def api_provision_suspend(vm_id):
-    auth_err = _require_provision_key()
+    auth_err = _require_provision_key(vm_id)
     if auth_err: return auth_err
     try:
         vm_manager.stop_vm(vm_id, force=False)
@@ -12045,7 +12105,7 @@ def api_provision_suspend(vm_id):
 
 @app.route("/api/provision/<vm_id>/unsuspend", methods=["POST"])
 def api_provision_unsuspend(vm_id):
-    auth_err = _require_provision_key()
+    auth_err = _require_provision_key(vm_id)
     if auth_err: return auth_err
     try:
         vm_manager.start_vm(vm_id)
@@ -12057,7 +12117,7 @@ def api_provision_unsuspend(vm_id):
 
 @app.route("/api/provision/<vm_id>/status", methods=["GET"])
 def api_provision_status(vm_id):
-    auth_err = _require_provision_key()
+    auth_err = _require_provision_key(vm_id)
     if auth_err: return auth_err
     try:
         vm = vm_manager.get_vm(vm_id)
@@ -12094,7 +12154,7 @@ def api_provision_status(vm_id):
 
 @app.route("/api/provision/<vm_id>/resize", methods=["PUT"])
 def api_provision_resize(vm_id):
-    auth_err = _require_provision_key()
+    auth_err = _require_provision_key(vm_id)
     if auth_err: return auth_err
     d = request.get_json() or {}
     try:
@@ -12142,7 +12202,7 @@ def api_provision_templates():
 @app.route("/api/provision/<vm_id>/reinstall", methods=["POST"])
 def api_provision_reinstall(vm_id):
     """VM diski sıfırla ve yeni OS şablonuyla yeniden kur."""
-    auth_err = _require_provision_key()
+    auth_err = _require_provision_key(vm_id)
     if auth_err: return auth_err
     d = request.get_json() or {}
     os_template = d.get("os_template", "").strip()
@@ -12243,7 +12303,7 @@ def api_provision_reinstall(vm_id):
 @app.route("/api/provision/<vm_id>/assign-ip", methods=["POST"])
 def api_provision_assign_ip(vm_id):
     """IP havuzundan VM'e otomatik IP ata."""
-    auth_err = _require_provision_key()
+    auth_err = _require_provision_key(vm_id)
     if auth_err: return auth_err
     d = request.get_json() or {}
     pool_name = d.get("pool", "").strip()
@@ -12283,7 +12343,7 @@ def api_provision_assign_ip(vm_id):
 @app.route("/api/provision/<vm_id>/credentials", methods=["GET"])
 def api_provision_credentials_get(vm_id):
     """VM kimlik bilgilerini getir (provision key ile erişilebilir)."""
-    auth_err = _require_provision_key()
+    auth_err = _require_provision_key(vm_id)
     if auth_err: return auth_err
     if not vault_mgr:
         return ok(credentials=[])
@@ -12293,7 +12353,7 @@ def api_provision_credentials_get(vm_id):
 @app.route("/api/provision/<vm_id>/credentials", methods=["POST"])
 def api_provision_credentials_set(vm_id):
     """VM kimlik bilgilerini kaydet (provision key ile erişilebilir)."""
-    auth_err = _require_provision_key()
+    auth_err = _require_provision_key(vm_id)
     if auth_err: return auth_err
     d = request.get_json() or {}
     if not vault_mgr:
@@ -12315,7 +12375,7 @@ def api_provision_credentials_set(vm_id):
 @app.route("/api/provision/<vm_id>/console-token", methods=["POST"])
 def api_provision_console_token(vm_id):
     """Billing panel için kısa ömürlü noVNC console token üret."""
-    auth_err = _require_provision_key()
+    auth_err = _require_provision_key(vm_id)
     if auth_err: return auth_err
     try:
         vm = vm_manager.get_vm(vm_id)
@@ -12347,7 +12407,7 @@ def api_provision_console_token(vm_id):
 @app.route("/api/provision/<vm_id>/start", methods=["POST"])
 def api_provision_start(vm_id):
     """Provision key ile VM başlat (WHMCS/WiseCP start butonu)."""
-    auth_err = _require_provision_key()
+    auth_err = _require_provision_key(vm_id)
     if auth_err: return auth_err
     try:
         r = vm_manager.start_vm(vm_id)
@@ -12361,7 +12421,7 @@ def api_provision_start(vm_id):
 @app.route("/api/provision/<vm_id>/stop", methods=["POST"])
 def api_provision_stop(vm_id):
     """Provision key ile VM durdur (WHMCS/WiseCP stop butonu)."""
-    auth_err = _require_provision_key()
+    auth_err = _require_provision_key(vm_id)
     if auth_err: return auth_err
     d = request.get_json() or {}
     force = bool(d.get("force", False))
@@ -12377,7 +12437,7 @@ def api_provision_stop(vm_id):
 @app.route("/api/provision/<vm_id>/reboot", methods=["POST"])
 def api_provision_reboot(vm_id):
     """Provision key ile VM yeniden başlat (WHMCS/WiseCP reboot butonu)."""
-    auth_err = _require_provision_key()
+    auth_err = _require_provision_key(vm_id)
     if auth_err: return auth_err
     try:
         r = vm_manager.reboot_vm(vm_id)
