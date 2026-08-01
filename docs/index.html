@@ -480,6 +480,29 @@
         <li><strong>2FA</strong> — optional TOTP two-factor authentication.</li>
       </ol>
       <div class="callout callout-info"><strong>Tip</strong> All wizard settings are changeable later from Settings &rarr; General.</div>
+
+      <h3>Setup token — remote first install</h3>
+      <p>Creating the first admin account is the one moment a fresh node is unowned. On a
+      server with a public IP, anyone who reaches port 8006 first could claim it — so the
+      wizard only accepts a <strong>remote</strong> first install when it is presented with a
+      one-time <strong>setup token</strong>.</p>
+      <ul>
+        <li><strong>From the server itself</strong> (<code>localhost</code>) — no token needed.</li>
+        <li><strong>From a browser on another machine</strong> — the wizard shows a
+        <em>Setup token</em> field; paste the token there.</li>
+      </ul>
+      <p>Read the token on the server:</p>
+      <pre><code>sudo cat /etc/oxware/setup-token
+# or, from the service log:
+journalctl -u oxware | grep "KURULUM TOKEN"</code></pre>
+      <p>The token is generated on first boot, stored root-only (<code>0600</code>), and
+      <strong>deleted automatically</strong> as soon as setup completes — it is single use.</p>
+      <p>You can also complete setup entirely from the shell; loopback requests need no token:</p>
+      <pre><code>curl -k -X POST https://127.0.0.1:8006/api/setup/init \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"&lt;min-8-chars&gt;"}'</code></pre>
+      <div class="callout callout-info"><strong>Air-gapped / Dark Site installs</strong> behave the
+      same way — the token lives on disk, so no outbound connectivity is required.</div>
     </section>
 
     <section id="vm-management">
