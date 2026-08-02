@@ -1086,13 +1086,54 @@ ethernets:
 
 # ── Cloud Image URL map ───────────────────────────────────────────────────────
 _CLOUD_IMAGE_URLS: dict[str, str] = {
-    "ubuntu22.04": "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img",
-    "ubuntu20.04": "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img",
-    "ubuntu24.04": "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img",
-    "debian12":    "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2",
-    "debian11":    "https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-generic-amd64.qcow2",
-    "rocky9":      "https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2",
-    "alma9":       "https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/AlmaLinux-9-GenericCloud-latest.x86_64.qcow2",
+    # ── Ubuntu (Canonical cloud-images) ──────────────────────────────────────
+    "ubuntu24.04":     "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img",
+    "ubuntu24.04-arm": "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-arm64.img",
+    "ubuntu22.04":     "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img",
+    "ubuntu22.04-arm": "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-arm64.img",
+    "ubuntu20.04":     "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img",
+    "ubuntu-minimal24.04": "https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img",
+    "ubuntu-minimal22.04": "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img",
+
+    # ── Debian (cloud.debian.org) ────────────────────────────────────────────
+    "debian13":        "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-amd64.qcow2",
+    "debian13-arm":    "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-arm64.qcow2",
+    "debian12":        "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2",
+    "debian12-arm":    "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-arm64.qcow2",
+    "debian12-nocloud":"https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-amd64.qcow2",
+    "debian11":        "https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-generic-amd64.qcow2",
+
+    # ── RHEL-compatible ──────────────────────────────────────────────────────
+    "rocky10":         "https://dl.rockylinux.org/pub/rocky/10/images/x86_64/Rocky-10-GenericCloud-Base.latest.x86_64.qcow2",
+    "rocky9":          "https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2",
+    "rocky9-arm":      "https://dl.rockylinux.org/pub/rocky/9/images/aarch64/Rocky-9-GenericCloud-Base.latest.aarch64.qcow2",
+    "rocky8":          "https://dl.rockylinux.org/pub/rocky/8/images/x86_64/Rocky-8-GenericCloud-Base.latest.x86_64.qcow2",
+    "alma10":          "https://repo.almalinux.org/almalinux/10/cloud/x86_64/images/AlmaLinux-10-GenericCloud-latest.x86_64.qcow2",
+    "alma9":           "https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/AlmaLinux-9-GenericCloud-latest.x86_64.qcow2",
+    "alma9-arm":       "https://repo.almalinux.org/almalinux/9/cloud/aarch64/images/AlmaLinux-9-GenericCloud-latest.aarch64.qcow2",
+    "alma8":           "https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/AlmaLinux-8-GenericCloud-latest.x86_64.qcow2",
+    "centos-stream10": "https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-10-latest.x86_64.qcow2",
+    "centos-stream9":  "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2",
+    "oracle9":         "https://yum.oracle.com/templates/OracleLinux/OL9/u5/x86_64/OL9U5_x86_64-kvm-b253.qcow2",
+    "oracle8":         "https://yum.oracle.com/templates/OracleLinux/OL8/u10/x86_64/OL8U10_x86_64-kvm-b258.qcow2",
+
+    # ── Fedora ───────────────────────────────────────────────────────────────
+    "fedora42":        "https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2",
+    "fedora41":        "https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2",
+
+    # ── SUSE ─────────────────────────────────────────────────────────────────
+    "opensuse-tumbleweed": "https://download.opensuse.org/tumbleweed/appliances/openSUSE-MicroOS.x86_64-OpenStack-Cloud.qcow2",
+
+    # ── Alpine / minimal ─────────────────────────────────────────────────────
+    "alpine3.21":      "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/cloud/generic_alpine-3.21.0-x86_64-bios-cloudinit-r0.qcow2",
+    "alpine3.20":      "https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/cloud/generic_alpine-3.20.3-x86_64-bios-cloudinit-r0.qcow2",
+
+    # ── Arch / Gentoo ────────────────────────────────────────────────────────
+    "archlinux":       "https://geo.mirror.pkgbuild.com/images/latest/Arch-Linux-x86_64-cloudimg.qcow2",
+
+    # ── Container/edge oriented ──────────────────────────────────────────────
+    "flatcar-stable":  "https://stable.release.flatcar-linux.net/amd64-usr/current/flatcar_production_qemu_image.img",
+
 }
 _CLOUD_CACHE_DIR = "/var/lib/libvirt/images"
 

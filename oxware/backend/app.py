@@ -178,6 +178,8 @@ gpu_pt          = _safe_import("gpu_passthrough")
 instant_clone   = _safe_import("instant_clone")
 iso_lib         = _safe_import("iso_library")
 prov_owner      = _safe_import("provision_owner")   # provisioning tenant izolasyonu
+billing_meter   = _safe_import("billing_meter")     # saatlik/kullanım faturalama
+xcluster        = _safe_import("xcluster_migrate")  # cluster'lar arası canlı göç
 cdp_mgr         = _safe_import("cdp_manager")
 boot_order_mgr  = _safe_import("boot_order_manager")
 geo_dns_mgr     = _safe_import("geo_dns_manager")
@@ -16976,6 +16978,83 @@ def api_gpu_detach_vm(vm_id):
     except Exception as e:
         return err(e, 400)
 
+# ── Metered / hourly billing ─────────────────────────────────────────────────
+@app.route("/api/billing/rates", methods=["GET"])
+@require_auth
+@require_role("admin", "administrator")
+def api_billing_rates_get():
+    if not billing_meter: return ok(rates={})
+    return ok(rates=billing_meter.get_rates(), periods=billing_meter.periods())
+
+@app.route("/api/billing/rates", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator")
+def api_billing_rates_set():
+    if not billing_meter: return err("module unavailable")
+    try:
+        return ok(rates=billing_meter.set_rates(**(request.get_json() or {})))
+    except Exception as e:
+        return err(e, 400)
+
+@app.route("/api/billing/invoice", methods=["GET"])
+@require_auth
+@require_role("admin", "administrator")
+def api_billing_invoice():
+    """Dönem faturası (kalem kalem). ?period=YYYY-MM&vm_id=..."""
+    if not billing_meter: return err("module unavailable")
+    try:
+        return ok(**billing_meter.invoice(request.args.get("period"),
+                                          request.args.get("vm_id")))
+    except Exception as e:
+        return err(e, 400)
+
+@app.route("/api/billing/record", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator")
+def api_billing_record():
+    """Kullanım örneğini elle kaydet (normalde saatlik thread yapar)."""
+    if not billing_meter: return err("module unavailable")
+    try:
+        return ok(**billing_meter.record_usage())
+    except Exception as e:
+        return err(e, 400)
+
+# ── Cross-cluster live migration ─────────────────────────────────────────────
+@app.route("/api/xcluster/plan", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator")
+def api_xcluster_plan():
+    """Cluster'lar arası taşıma uygunluk kontrolü (salt-okunur)."""
+    if not xcluster: return err("module unavailable")
+    try:
+        d = request.get_json() or {}
+        return ok(**xcluster.plan(d.get("vm_id", ""), d.get("target", ""),
+                                  d.get("mode", "auto")))
+    except Exception as e:
+        return err(e, 400)
+
+@app.route("/api/xcluster/migrate", methods=["POST"])
+@require_auth
+@require_role("admin", "administrator")
+def api_xcluster_migrate():
+    """Cluster'lar arası taşımayı uygula. Varsayılan dry_run=true."""
+    if not xcluster: return err("module unavailable")
+    try:
+        d = request.get_json() or {}
+        return ok(**xcluster.migrate(d.get("vm_id", ""), d.get("target", ""),
+                                     d.get("mode", "auto"),
+                                     bool(d.get("dry_run", True)),
+                                     d.get("target_host", "")))
+    except Exception as e:
+        return err(e, 400)
+
+@app.route("/api/xcluster/jobs", methods=["GET"])
+@require_auth
+@require_role("admin", "administrator")
+def api_xcluster_jobs():
+    if not xcluster: return ok(jobs=[])
+    return ok(jobs=xcluster.jobs(), status=xcluster.status())
+
 # ── Instant Clone (memory-fork) ──────────────────────────────────────────────
 @app.route("/api/vms/<vm_id>/instant-clone", methods=["POST"])
 @require_auth
@@ -20537,6 +20616,11 @@ if __name__ == "__main__":
     if ssh_watchdog:
         ssh_watchdog.start()
         log.info("SSH watchdog başlatıldı.")
+    if billing_meter:
+        try:
+            billing_meter.start_meter()      # saatlik kullanım sayacı
+        except Exception as _bm:
+            log.warning("Faturalama sayacı başlatılamadı: %s", _bm)
     log.info("Dinleniyor: %s:%s (SSL: %s)", config.HOST, config.PORT, config.SSL_ENABLED)
 
     use_ssl = (

@@ -30,6 +30,9 @@ _DEFAULT_POLICY = {
     "min_imbalance_pct":  20,           # < %20 imbalance varsa hareket etme
     "check_interval_sec": 300,
     "respect_affinity":   True,
+    # Otomatik taşıma freni: bir turda en fazla kaç VM taşınsın.
+    # Düşük tutmak dengesizliği kademeli düzeltir, göç fırtınasını önler.
+    "max_moves_per_run":  1,
 }
 
 
@@ -139,20 +142,62 @@ def suggest_moves() -> list:
     return suggestions
 
 
-def auto_balance(dry_run: bool = True) -> dict:
-    """Önerileri uygula (tek-host — şu an sadece dry_run mantığında)."""
+def _live_migrate(vm_id: str, target_host: str, timeout: int = 300) -> tuple:
+    """VM'i hedef host'a canlı taşı. (ok, mesaj) döner.
+
+    /api/vms/migrate ile aynı yolu kullanır: virsh migrate --live --persistent.
+    """
+    import subprocess
+    cmd = ["virsh", "-c", "qemu:///system", "migrate", "--live", "--persistent",
+           vm_id, f"qemu+ssh://{target_host}/system"]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        if r.returncode != 0:
+            return False, (r.stderr or "").strip()[:200]
+        return True, ""
+    except subprocess.TimeoutExpired:
+        return False, "timeout"
+    except Exception as e:                       # pragma: no cover - host dependent
+        return False, str(e)[:200]
+
+
+def auto_balance(dry_run: bool = True, max_moves: int = 0) -> dict:
+    """Dengeleme önerilerini uygula.
+
+    Eskiden bu fonksiyon hiçbir zaman taşıma yapmıyordu ("cluster_manager yok")
+    — DRS yalnızca analiz üretiyordu. Artık öneriler gerçek canlı göçe bağlı.
+
+    Güvenlik freni: her çağrıda en fazla `max_moves` taşıma yapılır
+    (0 = politikadaki `max_moves_per_run`, varsayılan 1). Bir taşıma
+    başarısız olursa döngü durur — art arda hatayı çoğaltmaz.
+    """
+    policy = get_policy()
     suggestions = suggest_moves()
     if dry_run or not suggestions:
-        return {
-            "dry_run":     dry_run,
-            "suggestions": suggestions,
-            "applied":     0,
-        }
-    # Gerçek uygulama: cluster_manager olmadığı için sadece log
-    log.info("DRS auto_balance: %d öneri uygulanmadı (cluster_manager yok)", len(suggestions))
+        return {"dry_run": dry_run, "suggestions": suggestions, "applied": 0}
+
+    limit = max_moves or int(policy.get("max_moves_per_run", 1) or 1)
+    applied, results = 0, []
+    for s in suggestions[:max(1, limit)]:
+        vm_id = s.get("vm_id") or s.get("vm") or ""
+        target = s.get("target_host") or s.get("target") or ""
+        if not vm_id or not target:
+            results.append({**s, "applied": False, "error": "vm_id/target eksik"})
+            continue
+        ok_, msg = _live_migrate(vm_id, target)
+        results.append({**s, "applied": ok_, "error": msg})
+        if ok_:
+            applied += 1
+            log.info("DRS auto_balance: %s → %s taşındı", vm_id, target)
+        else:
+            log.warning("DRS auto_balance: %s → %s başarısız (%s) — tur durduruldu",
+                        vm_id, target, msg)
+            break
+
     return {
         "dry_run":     False,
         "suggestions": suggestions,
-        "applied":     0,
-        "note":        "Multi-node cluster_manager olmadan auto-migrate devre dışı",
+        "results":     results,
+        "applied":     applied,
+        "limit":       limit,
     }

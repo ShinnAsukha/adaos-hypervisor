@@ -10592,7 +10592,7 @@ const LANGS = {
     topology:'Topology', templates:'Templates', backup:'Backup',
     firewall:'Firewall', vpn:'VPN', dns:'DNS', proxy:'Proxy & LB',
     monitoring:'Monitoring', ai:'AI Assistant', security:'Security',
-    integrations:'Integrations', settings:'System Settings',
+    integrations:'Integrations', migration:'Migration', settings:'System Settings',
     'shell console':'Shell Console','general':'General','virtualization':'Virtualization',
     'system':'System','management':'Management'
   }},
@@ -10602,7 +10602,7 @@ const LANGS = {
     topology:'Topoloji', templates:'Şablonlar', backup:'Yedekleme',
     firewall:'Güvenlik Duvarı', vpn:'VPN', dns:'DNS', proxy:'Proxy & LB',
     monitoring:'İzleme', ai:'AI Asistan', security:'Güvenlik',
-    integrations:'Entegrasyonlar', settings:'Sistem Ayarları',
+    integrations:'Entegrasyonlar', migration:'Toplu Taşıma', settings:'Sistem Ayarları',
     'shell console':'Shell Console','general':'Genel Bakış','virtualization':'Sanallaştırma',
     'system':'Sistem','management':'Yönetim'
   }},
@@ -10612,7 +10612,7 @@ const LANGS = {
     topology:'Topología', templates:'Plantillas', backup:'Copia de seguridad',
     firewall:'Firewall', vpn:'VPN', dns:'DNS', proxy:'Proxy & LB',
     monitoring:'Monitoreo', ai:'Asistente IA', security:'Seguridad',
-    integrations:'Integraciones', settings:'Config. Sistema',
+    integrations:'Integraciones', migration:'Migración', settings:'Config. Sistema',
     'shell console':'Consola Shell','general':'General','virtualization':'Virtualización',
     'system':'Sistema','management':'Gestión'
   }},
@@ -10622,7 +10622,7 @@ const LANGS = {
     topology:'Topologie', templates:'Vorlagen', backup:'Backup',
     firewall:'Firewall', vpn:'VPN', dns:'DNS', proxy:'Proxy & LB',
     monitoring:'Überwachung', ai:'KI-Assistent', security:'Sicherheit',
-    integrations:'Integrationen', settings:'Systemeinstellungen',
+    integrations:'Integrationen', migration:'Migration', settings:'Systemeinstellungen',
     'shell console':'Shell-Konsole','general':'Überblick','virtualization':'Virtualisierung',
     'system':'System','management':'Verwaltung'
   }},
@@ -10632,7 +10632,7 @@ const LANGS = {
     topology:'拓扑', templates:'模板', backup:'备份',
     firewall:'防火墙', vpn:'VPN', dns:'DNS', proxy:'代理 & 负载均衡',
     monitoring:'监控', ai:'AI助手', security:'安全',
-    integrations:'集成', settings:'系统设置',
+    integrations:'集成', migration:'迁移', settings:'系统设置',
     'shell console':'Shell控制台','general':'总览','virtualization':'虚拟化',
     'system':'系统','management':'管理'
   }},
@@ -10642,7 +10642,7 @@ const LANGS = {
     topology:'Topologie', templates:'Modèles', backup:'Sauvegarde',
     firewall:'Pare-feu', vpn:'VPN', dns:'DNS', proxy:'Proxy & LB',
     monitoring:'Surveillance', ai:'Assistant IA', security:'Sécurité',
-    integrations:'Intégrations', settings:'Paramètres système',
+    integrations:'Intégrations', migration:'Migration', settings:'Paramètres système',
     'shell console':'Console Shell','general':'Général','virtualization':'Virtualisation',
     'system':'Système','management':'Gestion'
   }}
@@ -24818,6 +24818,9 @@ function buildContextNav(type) {
     <div class="ctx-item" data-page="users" onclick="navigate('users');closeMobileNav()">
       <i class="fa-solid fa-users fa-fw"></i>${t('users')}
     </div>
+    <div class="ctx-item" data-page="tab-migration" onclick="openMigrationWizard();closeMobileNav()" title="VMware ESXi / Proxmox'tan VM aktar">
+      <i class="fa-solid fa-right-left fa-fw"></i>${t('migration')}
+    </div>
     <div class="ctx-item" data-page="tab-settings" onclick="navigate('tab-settings');closeMobileNav()">
       <i class="fa-solid fa-gear fa-fw"></i>${t('settings')}
     </div>
@@ -26168,6 +26171,20 @@ async function loadVMDetail(vmId) {
 }
 
 // ── Settings Sub-Tab Switch ────────────────────────────────────────────────────
+// VMware ESXi / Proxmox toplu taşıma sihirbazını doğrudan aç. Bu özellik
+// Ayarlar sayfasının içine gömülü olduğu için kimse bulamıyordu; sol menüden
+// tek tıkla buraya gelinir.
+function openMigrationWizard() {
+  navigate('tab-settings');
+  setTimeout(() => {
+    try {
+      cfgTab('migration');
+      const el = document.getElementById('cfg-pane-migration');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) {}
+  }, 60);
+}
+
 const _cfgPanes = ['general','resources','schedule','network','migration','host','dpm'];
 function cfgTab(name) {
   _cfgPanes.forEach(p => {

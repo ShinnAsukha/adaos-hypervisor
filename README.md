@@ -99,6 +99,11 @@ test suite on every push (badge above is live).
 | GPU passthrough wizard (VFIO/IOMMU/ACS) | 🟡 Beta | Auto-detect + preflight + generated remediation plan + live bind/attach. Needs a KVM host with root; safe/empty elsewhere |
 | Ansible collection (`oxware.kvm`) | 🟡 Beta | 7 modules (vm/network/disk/snapshot/template/firewall/user), idempotent, matched to real REST paths; validate against staging before prod |
 | Billing modules (WHMCS/WiseCP/HostBill/Blesta) | 🟡 Beta | WHMCS/WiseCP proven; HostBill/Blesta ports lint-clean but need e2e on a real panel |
+| ESXi / Proxmox VM import | 🟡 Beta | Panel wizard: scan the source, batch-import up to 20 VMs, disks pulled over SSH and converted to qcow2, NICs/firmware rebuilt. Shipped since 2.7 but was buried in Settings — now has its own nav entry |
+| Cloud image catalog (32 images) | 🟢 Stable | Ubuntu/Debian/Rocky/Alma/CentOS/Fedora/Oracle/Alpine/Arch/Flatcar/MicroOS incl. 5 ARM64 builds. Every URL HEAD-verified against upstream; broken ones removed rather than shipped |
+| Metered / hourly billing | 🟡 Beta | Built-in usage meter + itemised invoices (no external panel needed). Stopped VMs bill storage only. Idempotent per hour |
+| DRS auto-balance | 🟡 Beta | Now actually performs live migrations — it previously only ever produced suggestions. Brake: 1 move/run by default, stops the run on the first failure |
+| Cross-cluster live migration | 🟡 Beta | Plan (read-only feasibility) + migrate across federated OXware clusters. Defaults to dry-run; offline mode still goes through the import wizard |
 | Instant Clone (memory-fork) | 🟠 Experimental | virsh save-image fork — clones resume from RAM in seconds; source pauses briefly. Needs real KVM host; not vmfork-live |
 
 Legend: 🟢 stable · 🟡 beta/optional · 🟠 partial/early. If something here drifts
@@ -148,6 +153,27 @@ curl -k -X POST https://127.0.0.1:8006/api/setup/init \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"<min-8-chars>"}'
 ```
+
+---
+
+## 🚚 Coming from VMware or Proxmox?
+
+OXware imports your existing VMs — no manual disk juggling.
+
+```
+Panel → Migration → pick source → scan → select VMs → import
+```
+
+| Source | What it does |
+|---|---|
+| **VMware ESXi** | Connects over SSH, pulls the VMDK, converts to qcow2, rebuilds the domain (BIOS/UEFI, NICs, CPU/RAM) |
+| **Proxmox VE** | Talks the Proxmox API with an API token, reads the VM config, exports the disks over SSH/SFTP, maps `vmbrX` bridges to libvirt networks |
+
+Batch import (up to 20 VMs per job), live progress, and a job list you can cancel
+from. OVA and raw qcow2 import are available too.
+
+> Windows guests: install VirtIO drivers before or right after the move.
+> Powered-off VMs import cleanest; snapshots on the source slow it down.
 
 ---
 

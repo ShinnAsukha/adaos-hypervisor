@@ -169,6 +169,15 @@ FEATURE_MANIFEST = [
 
     # ── v2.8.7 — Instant Clone (memory-fork) ──────────────────────────────────────
     {"id": "instant_clone", "name": "Instant Clone (memory-fork)","category": "compute",  "module": "instant_clone",       "status": "experimental", "version": "2.8.7"},
+
+    # ── v2.9.0 — Migration wizard (shipped since 2.7 but never registered) ────────
+    {"id": "migrate_esxi",  "name": "VMware ESXi Import",       "category": "lifecycle",   "module": "_migration",          "status": "beta",   "version": "2.9.0"},
+    {"id": "migrate_proxmox","name": "Proxmox VE Import",       "category": "lifecycle",   "module": "_migration",          "status": "beta",   "version": "2.9.0"},
+
+    # ── v2.9.0 — Tenant isolation + metered billing + cross-cluster ───────────────
+    {"id": "provision_owner","name": "Provisioning Tenant Isolation","category": "security","module": "provision_owner",   "status": "stable", "version": "2.9.0"},
+    {"id": "metered_billing","name": "Metered / Hourly Billing", "category": "multi-tenancy","module": "billing_meter",     "status": "beta",   "version": "2.9.0"},
+    {"id": "xcluster_migrate","name": "Cross-Cluster Live Migration","category": "automation","module": "xcluster_migrate", "status": "beta",   "version": "2.9.0"},
 ]
 
 
