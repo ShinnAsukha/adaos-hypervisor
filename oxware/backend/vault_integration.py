@@ -75,12 +75,33 @@ def get_config() -> dict:
     return cfg
 
 
+def _safe_secret_path(path: str) -> str:
+    """Secret yolunu yapılandırılmış KV mount'u içinde tut.
+
+    SEC: yol uzak Vault API URL'sine gömülüyor. `..` segmentleri
+    `secret/data/../../sys/policies/acl/root` gibi bir URL üretip saklı Vault
+    token'ıyla KV mount'unun DIŞINDAKİ Vault uçlarına erişilmesine izin
+    verebilirdi. (Uç admin-only, bu yüzden şiddet düşük — yine de kapatıldı.)
+    """
+    p = (path or "").strip().lstrip("/")
+    segs = []
+    for seg in p.split("/"):
+        if seg in ("", ".", ".."):
+            if seg == "..":
+                raise ValueError("secret yolunda '..' kullanılamaz")
+            continue
+        segs.append(seg)
+    if not segs:
+        raise ValueError("secret yolu boş")
+    return "/".join(segs)
+
+
 def read_secret(path: str) -> dict:
     """KV v2 read: <mount>/data/<path>."""
     try:
         cfg = _load()
         mount = cfg.get("mount_path", "secret/").rstrip("/")
-        full = f"{mount}/data/{path.lstrip('/')}"
+        full = f"{mount}/data/{_safe_secret_path(path)}"
         r = _req("GET", full)
         return {"ok": True, "data": (r.get("data") or {}).get("data", {}),
                 "metadata": (r.get("data") or {}).get("metadata", {})}
@@ -93,7 +114,7 @@ def write_secret(path: str, data: dict) -> dict:
     try:
         cfg = _load()
         mount = cfg.get("mount_path", "secret/").rstrip("/")
-        full = f"{mount}/data/{path.lstrip('/')}"
+        full = f"{mount}/data/{_safe_secret_path(path)}"
         r = _req("POST", full, body={"data": data})
         return {"ok": True, "version": (r.get("data") or {}).get("version")}
     except Exception as e:
@@ -105,7 +126,7 @@ def delete_secret(path: str) -> dict:
     try:
         cfg = _load()
         mount = cfg.get("mount_path", "secret/").rstrip("/")
-        full = f"{mount}/metadata/{path.lstrip('/')}"
+        full = f"{mount}/metadata/{_safe_secret_path(path)}"
         _req("DELETE", full)
         return {"ok": True}
     except Exception as e:
@@ -118,7 +139,9 @@ def list_secrets(path: str = "") -> dict:
     try:
         cfg = _load()
         mount = cfg.get("mount_path", "secret/").rstrip("/")
-        full = f"{mount}/metadata/{path.lstrip('/')}?list=true"
+        # list kökten de çağrılabilir → boş yola izin ver, ama '..' kaçışını engelle
+        safe = _safe_secret_path(path) if (path or "").strip().strip("/") else ""
+        full = f"{mount}/metadata/{safe}?list=true"
         r = _req("GET", full)
         return {"ok": True, "keys": (r.get("data") or {}).get("keys", [])}
     except Exception as e:

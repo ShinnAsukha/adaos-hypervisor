@@ -214,6 +214,19 @@ def authenticate(username, password):
         log.debug("authenticate: ldap3 not available")
         return _fail
 
+    # SEC (auth bypass — VMware CVE-2026-59309 ile aynı sınıf):
+    # Boş/boşluk şifreyle SIMPLE bind, RFC 4513'te "unauthenticated bind"tır ve
+    # LDAP sunucularının çoğu bunu ANONYMOUS bind sayıp BAŞARILI döner. auto_bind
+    # başarılı olunca kod şifreyi doğru sanıyordu → geçerli bir kullanıcı adı
+    # bilen herkes boş şifreyle giriş yapabiliyor, hatta kurban admin_group
+    # üyesiyse admin oluyordu. Bind'e hiç gitmeden reddet.
+    if not username or not str(username).strip():
+        return _fail
+    if password is None or str(password).strip() == "":
+        log.warning("authenticate: '%s' için BOŞ ŞİFRE reddedildi "
+                    "(anonymous-bind auth bypass denemesi olabilir)", username)
+        return _fail
+
     cfg = _full_config()
     if not cfg.get("enabled") or not cfg.get("server"):
         return _fail
@@ -274,10 +287,25 @@ def authenticate(username, password):
             auto_bind=True,
             receive_timeout=15,
         )
+        # Derinlemesine savunma: bind gerçekten BAĞLI mı ve anonim'e düşmemiş mi?
+        # Bazı sunucular başarısız kimlik doğrulamada exception yerine
+        # bound=False / anonim kimlik döndürür.
+        _bound = bool(getattr(user_conn, "bound", False))
+        _whoami = ""
+        try:
+            _whoami = user_conn.extend.standard.who_am_i() or ""
+        except Exception:
+            _whoami = ""            # sunucu desteklemiyorsa bu kontrolü atla
         try:
             user_conn.unbind()
         except Exception:
             pass
+        if not _bound:
+            log.info("authenticate: '%s' bind edilmedi", username)
+            return _fail
+        if _whoami and _whoami.strip().lower() in ("", "dn:", "anonymous"):
+            log.warning("authenticate: '%s' ANONİM bind'e düştü — reddedildi", username)
+            return _fail
     except Exception as exc:
         log.info("authenticate: invalid credentials for '%s': %s", username, exc)
         return _fail
